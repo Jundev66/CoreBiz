@@ -1,4 +1,4 @@
-import { ok, err, type Result } from '../shared/result.js';
+import { ok, err, type Result } from '../shared/result';
 
 /**
  * Planes, cuotas y gating de modulos.

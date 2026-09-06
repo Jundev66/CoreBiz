@@ -1,6 +1,6 @@
-import { ok, err, type Result } from '../result.js';
-import type { QuantityError } from '../errors.js';
-import { pow10 } from './money.js';
+import { ok, err, type Result } from '../result';
+import type { QuantityError } from '../errors';
+import { pow10 } from './money';
 
 /**
  * Decimales de una cantidad. Tres permite vender fracciones reales (0,250 kg de queso,

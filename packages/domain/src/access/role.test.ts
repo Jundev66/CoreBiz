@@ -10,7 +10,7 @@ import {
   WRITE_ROLES,
   type Actor,
   type Role,
-} from './role.js';
+} from './role';
 
 const actor = (role: Role): Actor => ({ userId: 'u1', role });
 

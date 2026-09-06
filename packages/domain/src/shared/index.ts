@@ -1,8 +1,8 @@
-export { ok, err, isOk, isErr, map, flatMap, mapErr, combine, unwrap, unwrapOr } from './result.js';
-export type { Result, Ok, Err } from './result.js';
+export { ok, err, isOk, isErr, map, flatMap, mapErr, combine, unwrap, unwrapOr } from './result';
+export type { Result, Ok, Err } from './result';
 
-export { assertNever } from './errors.js';
-export { AggregateRoot, asId } from './entity.js';
+export { assertNever } from './errors';
+export { AggregateRoot, asId } from './entity';
 export type {
   Branded,
   DomainEvent,
@@ -15,13 +15,13 @@ export type {
   PurchaseOrderId,
   TenantId,
   UserId,
-} from './entity.js';
+} from './entity';
 export type {
   DomainErrorShape,
   ValidationError,
   MoneyError,
   ExchangeRateError,
   QuantityError,
-} from './errors.js';
+} from './errors';
 
-export * from './value-objects/index.js';
+export * from './value-objects/index';

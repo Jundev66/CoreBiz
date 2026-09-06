@@ -3,8 +3,18 @@ packages:
   - 'packages/*'
   - 'e2e'
 
+# Scripts de instalacion permitidos explicitamente.
+#
+# pnpm bloquea por defecto los scripts postinstall de las dependencias, que es un
+# vector real de ataque en la cadena de suministro: un paquete comprometido ejecuta
+# codigo arbitrario en cada `install`, tambien en CI. Aqui solo se autoriza a los
+# que descargan binarios nativos y realmente los necesitan.
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
+  - '@swc/core'
+  - '@parcel/watcher'
   - esbuild
   - sharp
   - supabase
+  - lefthook
+  - unrs-resolver

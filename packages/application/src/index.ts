@@ -6,5 +6,5 @@
  * adaptadores concretos viven en @corebiz/infrastructure y se inyectan en el
  * composition root de apps/web.
  */
-export * from './ports/index.js';
-export * from './use-cases/customers/create-customer.js';
+export * from './ports/index';
+export * from './use-cases/customers/create-customer';

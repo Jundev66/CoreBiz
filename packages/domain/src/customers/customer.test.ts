@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { Customer } from './customer.js';
-import { Money } from '../shared/value-objects/money.js';
-import { asId, type CustomerId, type TenantId } from '../shared/entity.js';
-import { unwrap } from '../shared/result.js';
+import { Customer } from './customer';
+import { Money } from '../shared/value-objects/money';
+import { asId, type CustomerId, type TenantId } from '../shared/entity';
+import { unwrap } from '../shared/result';
 
 const ID = asId<CustomerId>('c-1');
 const TENANT = asId<TenantId>('t-1');

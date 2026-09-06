@@ -10,9 +10,9 @@ import {
   type CustomerError,
   type QuotaError,
 } from '@corebiz/domain';
-import type { Clock } from '../../ports/clock.js';
-import type { IdGenerator } from '../../ports/id-generator.js';
-import type { TenantContext, UnitOfWork } from '../../ports/repositories.js';
+import type { Clock } from '../../ports/clock';
+import type { IdGenerator } from '../../ports/id-generator';
+import type { TenantContext, UnitOfWork } from '../../ports/repositories';
 
 /**
  * Caso de uso: dar de alta un cliente.

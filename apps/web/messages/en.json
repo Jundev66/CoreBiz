@@ -1,0 +1,59 @@
+{
+  "app": {
+    "name": "CoreBiz",
+    "tagline": "Mini ERP for small businesses"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "products": "Products",
+    "deliveryNotes": "Delivery notes",
+    "purchases": "Purchases",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "customers": {
+    "title": "Customers",
+    "subtitle": "Business customer directory",
+    "new": "New customer",
+    "code": "Code",
+    "name": "Name",
+    "taxId": "Tax ID",
+    "email": "Email",
+    "phone": "Phone",
+    "creditLimit": "Credit limit",
+    "noCreditLimit": "No limit",
+    "empty": "No customers registered yet.",
+    "search": "Search by name, code or tax ID",
+    "created": "Customer created successfully."
+  },
+  "quota": {
+    "usage": "{current} of {limit} {resource}",
+    "nearLimit": "You are approaching your plan limit.",
+    "exceeded": "You have reached your plan limit."
+  },
+  "errors": {
+    "Forbidden": "You do not have permission to do this.",
+    "DuplicateCode": "A customer with code {code} already exists.",
+    "QuotaExceeded": "You have reached the limit of {limit} on your current plan.",
+    "Required": "The {field} field is required.",
+    "TooShort": "The {field} field is too short.",
+    "TooLong": "The {field} field is too long.",
+    "InvalidFormat": "The {field} field has an invalid format.",
+    "InvalidCreditLimit": "The credit limit is not a valid amount.",
+    "unexpected": "An unexpected error occurred."
+  },
+  "legal": {
+    "nonFiscal": "Non-fiscal document / no tax value",
+    "notice": "CoreBiz issues delivery notes: internal documents with no fiscal value."
+  },
+  "demo": {
+    "banner": "Demo mode",
+    "memoryDriver": "Running without a database, using in-memory sample data."
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "language": "Language"
+  }
+}

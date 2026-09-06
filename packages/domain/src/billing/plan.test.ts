@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Plan, PLAN_CODES, RESOURCES, FEATURES } from './plan.js';
+import { Plan, PLAN_CODES, RESOURCES, FEATURES } from './plan';
 
 const free = Plan.of('free');
 const pro = Plan.of('pro');

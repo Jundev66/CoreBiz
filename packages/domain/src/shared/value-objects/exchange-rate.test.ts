@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { ExchangeRate } from './exchange-rate.js';
-import { Money } from './money.js';
-import { unwrap } from '../result.js';
+import { ExchangeRate } from './exchange-rate';
+import { Money } from './money';
+import { unwrap } from '../result';
 
 const AT = new Date('2026-03-15T10:00:00.000Z');
 const rate = (v: string, at: Date = AT) => unwrap(ExchangeRate.of(v, 'USD', 'VES', at));

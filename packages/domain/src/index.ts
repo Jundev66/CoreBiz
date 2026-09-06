@@ -6,7 +6,7 @@
  * negocio y tipos. La regla `domain-is-pure` de .dependency-cruiser.cjs lo verifica
  * en cada build.
  */
-export * from './shared/index.js';
-export * from './customers/index.js';
-export * from './access/index.js';
-export * from './billing/index.js';
+export * from './shared/index';
+export * from './customers/index';
+export * from './access/index';
+export * from './billing/index';

@@ -1,0 +1,59 @@
+{
+  "app": {
+    "name": "CoreBiz",
+    "tagline": "Mini ERP para pequeños comercios"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "customers": "Clientes",
+    "products": "Productos",
+    "deliveryNotes": "Notas de entrega",
+    "purchases": "Compras",
+    "reports": "Reportes",
+    "settings": "Ajustes"
+  },
+  "customers": {
+    "title": "Clientes",
+    "subtitle": "Directorio de clientes del comercio",
+    "new": "Nuevo cliente",
+    "code": "Código",
+    "name": "Nombre",
+    "taxId": "RIF / Cédula",
+    "email": "Correo",
+    "phone": "Teléfono",
+    "creditLimit": "Límite de crédito",
+    "noCreditLimit": "Sin límite",
+    "empty": "Aún no hay clientes registrados.",
+    "search": "Buscar por nombre, código o RIF",
+    "created": "Cliente creado correctamente."
+  },
+  "quota": {
+    "usage": "{current} de {limit} {resource}",
+    "nearLimit": "Te estás acercando al límite de tu plan.",
+    "exceeded": "Alcanzaste el límite de tu plan."
+  },
+  "errors": {
+    "Forbidden": "No tienes permiso para hacer esto.",
+    "DuplicateCode": "Ya existe un cliente con el código {code}.",
+    "QuotaExceeded": "Alcanzaste el límite de {limit} en tu plan actual.",
+    "Required": "El campo {field} es obligatorio.",
+    "TooShort": "El campo {field} es demasiado corto.",
+    "TooLong": "El campo {field} es demasiado largo.",
+    "InvalidFormat": "El campo {field} no tiene un formato válido.",
+    "InvalidCreditLimit": "El límite de crédito no es un monto válido.",
+    "unexpected": "Ocurrió un error inesperado."
+  },
+  "legal": {
+    "nonFiscal": "Documento no fiscal / sin valor fiscal",
+    "notice": "CoreBiz genera notas de entrega, documentos internos sin valor fiscal."
+  },
+  "demo": {
+    "banner": "Modo demostración",
+    "memoryDriver": "Ejecutándose sin base de datos, con datos de ejemplo en memoria."
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "language": "Idioma"
+  }
+}

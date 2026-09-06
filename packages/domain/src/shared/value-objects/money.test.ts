@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { Money } from './money.js';
-import { unwrap } from '../result.js';
+import { Money } from './money';
+import { unwrap } from '../result';
 
 const usd = (v: string | number) => unwrap(Money.of(v, 'USD'));
 

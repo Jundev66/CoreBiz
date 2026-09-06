@@ -1,7 +1,7 @@
-import { ok, err, type Result } from '../shared/result.js';
-import type { ValidationError } from '../shared/errors.js';
-import { AggregateRoot, type CustomerId, type TenantId } from '../shared/entity.js';
-import { Money, type Currency } from '../shared/value-objects/money.js';
+import { ok, err, type Result } from '../shared/result';
+import type { ValidationError } from '../shared/errors';
+import { AggregateRoot, type CustomerId, type TenantId } from '../shared/entity';
+import { Money, type Currency } from '../shared/value-objects/money';
 
 /**
  * Cliente del comercio.

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Plan, asId, type Customer, type TenantId, type UserId } from '@corebiz/domain';
 import { InMemoryUnitOfWork, InMemoryAuditLogger, makeTestContext } from '@corebiz/testing';
-import { fixedClock } from '../../ports/clock.js';
-import { sequentialIdGenerator } from '../../ports/id-generator.js';
-import { makeCreateCustomer } from './create-customer.js';
+import { fixedClock } from '../../ports/clock';
+import { sequentialIdGenerator } from '../../ports/id-generator';
+import { makeCreateCustomer } from './create-customer';
 
 const TENANT = asId<TenantId>('tenant-test');
 const NOW = new Date('2026-09-06T12:00:00.000Z');

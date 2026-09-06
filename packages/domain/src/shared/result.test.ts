@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ok, err, isOk, isErr, map, flatMap, mapErr, combine, unwrap, unwrapOr } from './result.js';
+import { ok, err, isOk, isErr, map, flatMap, mapErr, combine, unwrap, unwrapOr } from './result';
 
 describe('Result', () => {
   it('distingue exito de fallo sin lanzar excepciones', () => {

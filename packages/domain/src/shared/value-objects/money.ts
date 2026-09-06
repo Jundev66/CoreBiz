@@ -1,5 +1,5 @@
-import { ok, err, type Result } from '../result.js';
-import type { MoneyError } from '../errors.js';
+import { ok, err, type Result } from '../result';
+import type { MoneyError } from '../errors';
 
 /**
  * Monedas soportadas. El negocio venezolano opera de facto en dolares y liquida en

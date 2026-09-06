@@ -5,4 +5,4 @@
  * la Server Action. Asi la validacion de cliente y la de servidor no pueden divergir,
  * que es de donde salen la mitad de los agujeros de validacion en un CRUD.
  */
-export * from './common.js';
+export * from './common';

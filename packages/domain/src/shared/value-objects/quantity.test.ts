@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Quantity } from './quantity.js';
-import { unwrap } from '../result.js';
+import { Quantity } from './quantity';
+import { unwrap } from '../result';
 
 const q = (v: string | number) => unwrap(Quantity.of(v));
 

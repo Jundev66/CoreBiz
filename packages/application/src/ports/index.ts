@@ -1,7 +1,7 @@
-export { systemClock, fixedClock } from './clock.js';
-export type { Clock } from './clock.js';
-export { sequentialIdGenerator } from './id-generator.js';
-export type { IdGenerator } from './id-generator.js';
+export { systemClock, fixedClock } from './clock';
+export type { Clock } from './clock';
+export { sequentialIdGenerator } from './id-generator';
+export type { IdGenerator } from './id-generator';
 export type {
   Page,
   ListCustomersFilter,
@@ -13,4 +13,4 @@ export type {
   TenantContext,
   Repositories,
   UnitOfWork,
-} from './repositories.js';
+} from './repositories';

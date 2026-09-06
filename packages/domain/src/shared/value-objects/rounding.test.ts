@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { Money, pow10 } from './money.js';
-import { Quantity } from './quantity.js';
-import { ExchangeRate } from './exchange-rate.js';
-import { unwrap } from '../result.js';
-import { assertNever } from '../errors.js';
+import { Money, pow10 } from './money';
+import { Quantity } from './quantity';
+import { ExchangeRate } from './exchange-rate';
+import { unwrap } from '../result';
+import { assertNever } from '../errors';
 
 const usd = (v: string) => unwrap(Money.of(v, 'USD'));
 const AT = new Date('2026-03-15T10:00:00.000Z');

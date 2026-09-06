@@ -1,6 +1,6 @@
-import { ok, err, type Result } from '../result.js';
-import type { ExchangeRateError, MoneyError } from '../errors.js';
-import { Money, parseDecimalToMinor, pow10, type Currency, type Rounding } from './money.js';
+import { ok, err, type Result } from '../result';
+import type { ExchangeRateError, MoneyError } from '../errors';
+import { Money, parseDecimalToMinor, pow10, type Currency, type Rounding } from './money';
 
 /**
  * Decimales con los que se guarda la tasa. Ocho es holgado: cubre tanto tasas de
