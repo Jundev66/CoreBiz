@@ -27,9 +27,17 @@ test.describe('Recorrido basico', () => {
 
     // La cuota se expone como progressbar con sus valores ARIA: se puede verificar sin
     // depender de como este redactado el texto, y ademas es accesible.
+    //
+    // El limite se comprueba exacto porque es una regla del plan; el consumo solo se
+    // comprueba coherente, porque los escenarios BDD comparten servidor y pueden haber
+    // dado de alta clientes antes. Fijar aqui un numero exacto haria que este test
+    // fallase segun el ORDEN de ejecucion, que no es lo que pretende verificar.
     const quota = page.getByRole('progressbar');
     await expect(quota).toHaveAttribute('aria-valuemax', '50');
-    await expect(quota).toHaveAttribute('aria-valuenow', '8');
+
+    const used = Number(await quota.getAttribute('aria-valuenow'));
+    expect(used).toBeGreaterThanOrEqual(8);
+    expect(used).toBeLessThanOrEqual(50);
   });
 
   test('el aviso de documento no fiscal esta presente', async ({ page }) => {
