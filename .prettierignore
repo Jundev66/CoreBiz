@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+pnpm-lock.yaml
+e2e/.features-gen/
+docs/diagrams/*.svg
+supabase/.temp/

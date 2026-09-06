@@ -1,0 +1,21 @@
+{
+  "name": "@corebiz/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shared": "./src/shared/index.ts",
+    "./access": "./src/access/index.ts",
+    "./billing": "./src/billing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "fast-check": "^4.3.0"
+  }
+}

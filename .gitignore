@@ -1,0 +1,45 @@
+# dependencias
+node_modules/
+.pnpm-store/
+
+# builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# entorno  — NUNCA commitear secretos
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# tests
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright-cache/
+e2e/.features-gen/
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# turbo
+.turbo/
+
+# editores / SO
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

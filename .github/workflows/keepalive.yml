@@ -1,0 +1,56 @@
+name: Keepalive
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Por que existe este workflow:
+#
+# Supabase PAUSA los proyectos del plan gratuito tras 7 dias sin actividad de base
+# de datos. Como el objetivo de CoreBiz es que un reclutador pueda abrir el link del
+# CV en cualquier momento, un proyecto pausado es el peor fallo posible del sistema:
+# la aplicacion no se cae, simplemente deja de existir hasta que alguien la reactive
+# a mano.
+#
+# Este cron toca la base de datos cada dos dias para que eso no ocurra.
+#
+# ⚠️ AVISO: GitHub deshabilita los workflows programados de un repositorio tras 60
+# dias SIN COMMITS. Este keepalive no basta por si solo. Hay que configurar ademas un
+# monitor externo gratuito (cron-job.org o UptimeRobot) apuntando a /api/health cada
+# 6 horas. Ver docs/RUNBOOK.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    # A las 06:17 UTC en dias alternos. Minuto no redondo a proposito: las horas en
+    # punto son las mas congestionadas en los runners de GitHub y el disparo se retrasa.
+    - cron: '17 6 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Mantener Supabase despierto
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar el endpoint de salud
+        run: |
+          set -euo pipefail
+          URL="${{ vars.APP_URL }}/api/health"
+
+          if [ -z "${{ vars.APP_URL }}" ]; then
+            echo "APP_URL no esta configurada todavia; nada que hacer."
+            exit 0
+          fi
+
+          # Se reintenta porque una funcion en frio de Vercel puede tardar en responder.
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 30 "$URL" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "OK (intento $attempt):"
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Intento $attempt devolvio $code; reintentando..."
+            sleep 15
+          done
+
+          echo "::error::El endpoint de salud no respondio 200 tras 3 intentos."
+          cat /tmp/health.json || true
+          exit 1

@@ -1,0 +1,32 @@
+# Hooks de git.
+#
+# El pre-commit tiene que ser RAPIDO o la gente lo salta con --no-verify. Aqui solo
+# corren comprobaciones que tardan segundos; la suite completa (integracion, E2E) es
+# trabajo de CI.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: formato
+      glob: '*.{ts,tsx,js,cjs,mjs,json,md,yaml,yml,css}'
+      run: pnpm prettier --write {staged_files}
+      stage_fixed: true
+
+    - name: lint
+      glob: '*.{ts,tsx}'
+      run: pnpm eslint --fix {staged_files}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: tipos
+      run: pnpm typecheck
+
+    # Empujar codigo que rompe los limites hexagonales es peor que empujar un test roto:
+    # el test se arregla, la arquitectura erosionada se queda.
+    - name: arquitectura
+      run: pnpm arch
+
+    - name: tests unitarios
+      run: pnpm test:unit

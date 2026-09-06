@@ -1,0 +1,24 @@
+# Finales de linea normalizados a LF en el repositorio.
+#
+# Sin esto, un colaborador en Windows commitea CRLF, el CI en Linux ve el archivo
+# entero como modificado y Prettier discute con Git en cada push. Fijarlo aqui es
+# lo que hace que el proyecto se comporte igual en cualquier equipo.
+* text=auto eol=lf
+
+# Los scripts de shell DEBEN llevar LF o el interprete falla con "bad interpreter".
+*.sh text eol=lf
+
+# Binarios: nunca tocar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Archivos generados: fuera de las estadisticas de lenguaje y del diff por defecto.
+pnpm-lock.yaml linguist-generated=true -diff
+docs/diagrams/*.svg linguist-generated=true -diff
+e2e/.features-gen/** linguist-generated=true

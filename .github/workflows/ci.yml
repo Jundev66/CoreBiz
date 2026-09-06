@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Un push nuevo sobre la misma rama cancela la corrida anterior: no tiene sentido
+# gastar minutos verificando un commit que ya quedo atras.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  quality:
+    name: Formato, lint y tipos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Formato
+        run: pnpm format:check
+      - name: Lint
+        run: pnpm lint
+      - name: Tipos
+        run: pnpm typecheck
+
+  architecture:
+    name: Limites hexagonales
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Si esto falla, alguien acaba de acoplar el dominio a la infraestructura.
+      # No es un aviso de estilo: la arquitectura del proyecto depende de este check.
+      - name: Verificar dependencias entre capas
+        run: pnpm arch
+
+  unit:
+    name: Tests unitarios y cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Los umbrales de cobertura del dominio viven en vitest.config.ts y rompen el build.
+      - name: Ejecutar tests
+        run: pnpm test:coverage
+      - name: Publicar informe de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  secrets:
+    name: Fuga de secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  non-fiscal-guard:
+    name: Guardia de lenguaje no fiscal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # CoreBiz emite NOTAS DE ENTREGA, documentos sin valor fiscal. Este check impide
+      # que en algun momento se cuele vocabulario de facturacion fiscal en el producto,
+      # que es justo lo que crearia un problema legal para el negocio.
+      - name: Verificar que no aparece vocabulario fiscal
+        run: bash scripts/check-non-fiscal.sh
