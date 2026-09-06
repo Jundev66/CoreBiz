@@ -17,7 +17,7 @@ import type { Product, ProductError } from '../../products/product';
  * NOTA DE ENTREGA — documento interno NO FISCAL.
  *
  * Respalda la salida de mercancia y descuenta el inventario. No es un comprobante
- * tributario: no lleva numeracion de control, y el impuesto que muestra es informativo.
+ * tributario: el correlativo es interno y el impuesto que muestra es informativo.
  * Ver docs/adr/003-notas-de-entrega.md.
  *
  * Es el agregado con mas reglas del sistema, y donde de verdad se justifica la

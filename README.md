@@ -17,7 +17,7 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                         |
 | **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla. |
-| **Testing**       | Unitarios (Vitest + property-based), integración contra Postgres real, BDD en Gherkin y E2E con Playwright.                                                                        |
+| **Testing**       | **211 tests**: 196 unitarios (Vitest + property-based con fast-check), 6 escenarios BDD en Gherkin y 9 E2E con Playwright, incluida accesibilidad con axe.                         |
 | **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                       |
 | **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                   |
 
@@ -61,7 +61,7 @@ pnpm dev
 | ----------------------- | ----------------------------------------------------------------------------- |
 | `pnpm check`            | Formato, lint, tipos, arquitectura y tests unitarios. Lo que corre en CI.     |
 | `pnpm test:unit`        | Dominio y aplicación. Sin IO, menos de 5 segundos.                            |
-| `pnpm test:integration` | Repositorios y **matriz de aislamiento RLS**. Requiere Docker.                |
+| `pnpm test:integration` | Repositorios y **matriz de aislamiento RLS**. Requiere Docker. _(pendiente)_  |
 | `pnpm test:bdd`         | Escenarios Gherkin sobre la aplicación real.                                  |
 | `pnpm test:e2e`         | Playwright con trazas y vídeo en los fallos.                                  |
 | `pnpm arch`             | Verifica los límites entre capas. **Falla el build si el dominio se acopla.** |
@@ -90,7 +90,32 @@ lo comprueba `pnpm arch` en cada push, y romperlo rompe el build.
 
 ## Decisiones de arquitectura
 
-Las decisiones con su contexto y sus alternativas descartadas están en [`docs/adr/`](docs/adr/).
+Las decisiones con su contexto y sus alternativas descartadas están en [`docs/adr/`](docs/adr/):
+
+1. [Arquitectura hexagonal con el dominio sin dependencias](docs/adr/001-arquitectura-hexagonal.md)
+2. [Dinero en bigint y moneda dual con tasa congelada](docs/adr/002-dinero-y-moneda-dual.md)
+3. [Notas de entrega en lugar de facturas fiscales](docs/adr/003-notas-de-entrega.md)
+4. [Drizzle sobre postgres.js, no PostgREST](docs/adr/004-drizzle-sobre-postgrest.md)
+5. [Aislamiento multi-tenant en cuatro capas](docs/adr/005-aislamiento-multi-tenant.md)
+
+El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
+[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
+
+## Tres detalles que resumen el enfoque
+
+**La arquitectura rompe el build si se viola.** No es una convención documentada: se
+comprobó inyectando a propósito un `import { z } from 'zod'` en el dominio, y `pnpm arch`
+lo detectó. Además, `pnpm` con `hoist=false` hace que ese import ni siquiera resuelva.
+
+**Los tests encuentran bugs de verdad.** Tres ejemplos reales de este repositorio: el
+descuento de stock se aplicaba línea a línea, así que un fallo en la última dejaba las
+anteriores ya descontadas; la validación de formularios fallaba siempre porque React
+inyecta campos propios en el `FormData`; y un test de coherencia de la matriz de permisos
+detectó una contradicción entre dos reglas que yo mismo había escrito.
+
+**La tasa de cambio queda congelada en cada documento.** Reimprimir una nota de marzo con
+la tasa de septiembre no es un detalle cosmético: reescribiría el histórico contable del
+negocio cada vez que alguien abre un PDF antiguo.
 
 ---
 

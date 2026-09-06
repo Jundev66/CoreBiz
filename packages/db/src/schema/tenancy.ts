@@ -109,7 +109,7 @@ export const tenantUsage = pgTable(
  * documento. Es la razon por la que el proyecto necesita transacciones reales y no
  * puede usar PostgREST: sin bloqueo, dos ventas simultaneas obtienen el mismo numero.
  *
- * Numeracion INTERNA. No es numeracion de control de ningun regimen tributario.
+ * El correlativo es INTERNO de cada tenant y no tiene valor tributario alguno.
  */
 export const documentSequences = pgTable(
   'document_sequences',
