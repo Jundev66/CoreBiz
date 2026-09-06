@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Plan, asId, type Customer, type TenantId, type UserId } from '@corebiz/domain';
-import { InMemoryUnitOfWork, InMemoryAuditLogger, makeTestContext } from '@corebiz/testing';
+import {
+  InMemoryUnitOfWork,
+  InMemoryAuditLogger,
+  makeTestContext,
+} from '../../adapters/memory/index';
 import { fixedClock } from '../../ports/clock';
 import { sequentialIdGenerator } from '../../ports/id-generator';
 import { makeCreateCustomer } from './create-customer';

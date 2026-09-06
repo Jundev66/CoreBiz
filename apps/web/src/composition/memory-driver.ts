@@ -1,7 +1,7 @@
 import 'server-only';
 import { Customer, Money, asId, type CustomerId, type TenantId } from '@corebiz/domain';
 import type { Page, ListCustomersFilter } from '@corebiz/application';
-import { InMemoryUnitOfWork, InMemoryCustomerRepository } from '@corebiz/testing';
+import { InMemoryUnitOfWork, InMemoryCustomerRepository } from '@corebiz/application';
 
 /**
  * Almacen en memoria para `pnpm dev:nodb`.

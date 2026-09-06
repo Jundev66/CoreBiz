@@ -62,9 +62,6 @@ importers:
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@corebiz/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
       next:
         specifier: ^16.3.4
         version: 16.3.4(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -109,9 +106,6 @@ importers:
         specifier: workspace:*
         version: link:../domain
     devDependencies:
-      '@corebiz/testing':
-        specifier: workspace:*
-        version: link:../testing
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -165,19 +159,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@26.4.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)
-
-  packages/testing:
-    dependencies:
-      '@corebiz/application':
-        specifier: workspace:*
-        version: link:../application
-      '@corebiz/domain':
-        specifier: workspace:*
-        version: link:../domain
-    devDependencies:
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
 
 packages:
 

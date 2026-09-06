@@ -1,4 +1,16 @@
-import type { Customer, CustomerId, Plan, Role, TenantId, UserId } from '@corebiz/domain';
+import type {
+  Customer,
+  CustomerId,
+  DeliveryNote,
+  DeliveryNoteId,
+  Money,
+  Plan,
+  Product,
+  ProductId,
+  Role,
+  TenantId,
+  UserId,
+} from '@corebiz/domain';
 
 /**
  * Puertos de persistencia.
@@ -83,6 +95,10 @@ export interface TenantContext {
 /** Repositorios disponibles dentro de una unidad de trabajo. */
 export interface Repositories {
   readonly customers: CustomerRepository;
+  readonly products: ProductRepository;
+  readonly deliveryNotes: DeliveryNoteRepository;
+  readonly sequences: DocumentSequences;
+  readonly payments: PaymentQueries;
   readonly usage: UsageCounter;
   readonly audit: AuditLogger;
 }
@@ -99,4 +115,42 @@ export interface Repositories {
  */
 export interface UnitOfWork {
   run<T>(fn: (repos: Repositories) => Promise<T>): Promise<T>;
+}
+
+export interface ProductRepository {
+  findById(id: ProductId): Promise<Product | null>;
+  findBySku(sku: string): Promise<Product | null>;
+  findManyByIds(ids: readonly ProductId[]): Promise<Product[]>;
+  list(filter: { search?: string; belowMinimum?: boolean; limit?: number }): Promise<Page<Product>>;
+  save(product: Product): Promise<void>;
+  /** Guarda varios en una pasada, con sus movimientos de stock pendientes. */
+  saveMany(products: readonly Product[]): Promise<void>;
+}
+
+export interface DeliveryNoteRepository {
+  findById(id: DeliveryNoteId): Promise<DeliveryNote | null>;
+  findByNumber(number: string): Promise<DeliveryNote | null>;
+  list(filter: {
+    status?: string;
+    customerId?: string;
+    limit?: number;
+  }): Promise<Page<DeliveryNote>>;
+  save(note: DeliveryNote): Promise<void>;
+}
+
+/**
+ * Secuencias de numeracion por tipo de documento.
+ *
+ * `next()` DEBE consumir el correlativo con bloqueo dentro de la transaccion en curso
+ * (SELECT ... FOR UPDATE). Sin ese bloqueo, dos ventas simultaneas obtienen el mismo
+ * numero, y dos documentos con el mismo correlativo es un problema que solo se descubre
+ * al cerrar el mes.
+ */
+export interface DocumentSequences {
+  next(docType: 'delivery_note' | 'quote' | 'purchase_order' | 'payment'): Promise<string>;
+}
+
+export interface PaymentQueries {
+  /** Saldo pendiente del cliente. Vive fuera del agregado Customer a proposito. */
+  outstandingBalanceFor(customerId: CustomerId, currency: 'USD' | 'VES'): Promise<Money>;
 }

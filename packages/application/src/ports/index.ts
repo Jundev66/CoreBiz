@@ -13,4 +13,8 @@ export type {
   TenantContext,
   Repositories,
   UnitOfWork,
+  ProductRepository,
+  DeliveryNoteRepository,
+  DocumentSequences,
+  PaymentQueries,
 } from './repositories';

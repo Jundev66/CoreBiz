@@ -7,6 +7,8 @@
  * en cada build.
  */
 export * from './shared/index';
-export * from './customers/index';
 export * from './access/index';
 export * from './billing/index';
+export * from './customers/index';
+export * from './products/index';
+export * from './sales/index';

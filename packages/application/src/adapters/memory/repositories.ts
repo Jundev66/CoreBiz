@@ -6,6 +6,14 @@ import {
   type UserId,
   asId,
 } from '@corebiz/domain';
+import {
+  InMemoryProductRepository,
+  InMemoryDeliveryNoteRepository,
+  InMemoryDocumentSequences,
+  InMemoryPaymentQueries,
+  createSalesStores,
+  type SalesStores,
+} from './sales';
 import type {
   AuditEntry,
   AuditLogger,
@@ -16,7 +24,7 @@ import type {
   TenantContext,
   UnitOfWork,
   UsageCounter,
-} from '@corebiz/application';
+} from '../../ports/index';
 
 /**
  * Adaptadores en memoria.
@@ -135,33 +143,52 @@ export class InMemoryAuditLogger implements AuditLogger {
  * Unidad de trabajo en memoria con rollback real.
  *
  * Un doble de test que siempre "confirma" ocultaria justo los bugs que la transaccion
- * existe para evitar. Este toma una instantanea antes de ejecutar y la restaura si algo
- * lanza, de modo que un test puede comprobar que un fallo a mitad no deja basura.
+ * existe para evitar. Este toma una instantanea de TODOS los almacenes antes de
+ * ejecutar y la restaura si algo lanza, de modo que un test puede comprobar que un
+ * fallo a mitad no deja el inventario descuadrado ni numeracion consumida.
  */
 export class InMemoryUnitOfWork implements UnitOfWork {
+  private readonly stores: SalesStores;
+
   constructor(
-    private readonly customers: Map<string, Customer>,
-    private readonly usage: Map<string, number>,
-    private readonly tenantId: TenantId,
+    customersOrStores: Map<string, Customer> | SalesStores,
+    private readonly usageMap: Map<string, number> = new Map(),
+    private readonly tenantId: TenantId = asId<TenantId>('tenant-test'),
     readonly audit = new InMemoryAuditLogger(tenantId),
-  ) {}
+  ) {
+    this.stores =
+      customersOrStores instanceof Map
+        ? { ...createSalesStores(), customers: customersOrStores, usage: usageMap }
+        : customersOrStores;
+  }
 
   async run<T>(fn: (repos: Repositories) => Promise<T>): Promise<T> {
-    const customersSnapshot = new Map(this.customers);
-    const usageSnapshot = new Map(this.usage);
+    const snapshots = {
+      customers: new Map(this.stores.customers),
+      products: new Map(this.stores.products),
+      deliveryNotes: new Map(this.stores.deliveryNotes),
+      usage: new Map(this.stores.usage),
+      sequences: new Map(this.stores.sequences),
+    };
     const auditLength = this.audit.entries.length;
 
     try {
       return await fn({
-        customers: new InMemoryCustomerRepository(this.customers, this.tenantId),
-        usage: new InMemoryUsageCounter(this.usage, this.tenantId),
+        customers: new InMemoryCustomerRepository(this.stores.customers, this.tenantId),
+        products: new InMemoryProductRepository(this.stores.products, this.tenantId),
+        deliveryNotes: new InMemoryDeliveryNoteRepository(this.stores.deliveryNotes, this.tenantId),
+        sequences: new InMemoryDocumentSequences(this.stores.sequences, this.tenantId),
+        payments: new InMemoryPaymentQueries(),
+        usage: new InMemoryUsageCounter(this.stores.usage, this.tenantId),
         audit: this.audit,
       });
     } catch (error) {
-      this.customers.clear();
-      customersSnapshot.forEach((v, k) => this.customers.set(k, v));
-      this.usage.clear();
-      usageSnapshot.forEach((v, k) => this.usage.set(k, v));
+      // Rollback: se restaura cada almacen a su estado previo.
+      for (const key of Object.keys(snapshots) as (keyof typeof snapshots)[]) {
+        const target = this.stores[key] as Map<string, unknown>;
+        target.clear();
+        (snapshots[key] as Map<string, unknown>).forEach((v, k) => target.set(k, v));
+      }
       this.audit.entries.length = auditLength;
       throw error;
     }

@@ -7,4 +7,6 @@
  * composition root de apps/web.
  */
 export * from './ports/index';
+export * from './adapters/memory/index';
 export * from './use-cases/customers/create-customer';
+export * from './use-cases/sales/issue-delivery-note';
