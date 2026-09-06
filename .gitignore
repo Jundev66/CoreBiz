@@ -43,3 +43,6 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# playwright-bdd genera estos specs a partir de los .feature
+e2e/.features-gen/

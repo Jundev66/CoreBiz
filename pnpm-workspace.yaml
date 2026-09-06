@@ -18,3 +18,16 @@ onlyBuiltDependencies:
   - supabase
   - lefthook
   - unrs-resolver
+
+# Correcciones a dependencias mal declaradas por terceros.
+#
+# Con `hoist=false` estas omisiones dejan de ser invisibles y rompen en el arranque,
+# que es justo lo que se busca. `packageExtensions` las corrige en el sitio adecuado
+# —la declaracion del paquete— en lugar de relajar el aislamiento de todo el monorepo.
+packageExtensions:
+  playwright-bdd:
+    dependencies:
+      # playwright-bdd resuelve `playwright` y `playwright-core` en runtime, pero solo
+      # declara `@playwright/test` como peer.
+      playwright: '*'
+      playwright-core: '*'

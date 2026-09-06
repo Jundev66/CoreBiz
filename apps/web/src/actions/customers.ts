@@ -1,0 +1,72 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { parseCustomerForm } from '@corebiz/contracts';
+import { forRequest } from '@/composition/container';
+
+/**
+ * Server Action: crear un cliente.
+ *
+ * Es un ADAPTADOR PRIMARIO. Su trabajo es traducir entre el mundo HTTP y el caso de
+ * uso, y nada mas: no decide reglas de negocio, no consulta cuotas y no comprueba
+ * permisos por su cuenta. Todo eso vive en el caso de uso, que es lo unico que
+ * garantiza que la regla se aplique venga la peticion de donde venga.
+ *
+ * Next valida el Origin de las Server Actions automaticamente, asi que no hace falta
+ * un token CSRF propio.
+ */
+
+export interface ActionState {
+  readonly status: 'idle' | 'success' | 'error';
+  /** Clave de traduccion del error, nunca texto ya redactado. La UI decide el idioma. */
+  readonly errorKind?: string;
+  readonly errorParams?: Readonly<Record<string, string | number>>;
+  /** Errores por campo, para pintarlos junto a su input. */
+  readonly fieldErrors?: Readonly<Record<string, string>>;
+  readonly createdCode?: string;
+}
+
+export async function createCustomerAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  // 1. Validacion de forma en el borde. Lo que pasa de aqui ya tiene la estructura
+  //    correcta; que sea valido para el NEGOCIO lo decide el dominio.
+  const parsed = parseCustomerForm(formData);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0];
+      if (typeof field === 'string' && !(field in fieldErrors)) {
+        fieldErrors[field] = issue.message;
+      }
+    }
+    return { status: 'error', errorKind: 'InvalidFormat', fieldErrors };
+  }
+
+  const { createCustomer } = await forRequest();
+
+  const result = await createCustomer({
+    code: parsed.data.code,
+    name: parsed.data.name,
+    taxId: parsed.data.taxId || null,
+    email: parsed.data.email || null,
+    phone: parsed.data.phone || null,
+    creditLimit: parsed.data.creditLimit || null,
+  });
+
+  if (!result.ok) {
+    // El error del dominio se traduce a una clave; el texto lo pone la capa de
+    // presentacion segun el idioma activo.
+    const error = result.error;
+    const params: Record<string, string | number> = {};
+    if ('code' in error) params.code = error.code;
+    if ('limit' in error) params.limit = error.limit;
+    if ('field' in error) params.field = error.field;
+
+    return { status: 'error', errorKind: error.kind, errorParams: params };
+  }
+
+  revalidatePath('/customers');
+  return { status: 'success', createdCode: result.value.code };
+}

@@ -6,3 +6,4 @@
  * que es de donde salen la mitad de los agujeros de validacion en un CRUD.
  */
 export * from './common';
+export * from './customers';

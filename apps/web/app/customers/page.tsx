@@ -29,6 +29,12 @@ export default async function CustomersPage() {
           </Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{t('customers.title')}</h1>
           <p className="mt-1 text-[var(--color-muted)]">{t('customers.subtitle')}</p>
+          <Link
+            href="/customers/new"
+            className="mt-4 inline-block rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
+          >
+            {t('customers.new')}
+          </Link>
         </div>
 
         {/* La cuota se muestra siempre, no solo al agotarse: enterarse del limite justo
