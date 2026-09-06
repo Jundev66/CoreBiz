@@ -7,3 +7,5 @@
  * en cada build.
  */
 export * from './shared/index.js';
+export * from './access/index.js';
+export * from './billing/index.js';
