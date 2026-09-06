@@ -1,0 +1,138 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { forRequest } from '@/composition/container';
+import type { ActionState } from './customers';
+
+/**
+ * Server Actions de ventas e inventario.
+ *
+ * Igual que las de clientes, son adaptadores primarios: traducen entre HTTP y el caso
+ * de uso. Ninguna decide reglas de negocio ni comprueba permisos por su cuenta.
+ */
+
+export interface IssueNoteState extends ActionState {
+  readonly createdNumber?: string;
+}
+
+/**
+ * Extrae un campo de texto del formulario.
+ *
+ * `FormData.get` devuelve `File | string | null`: un `String(...)` directo sobre un
+ * archivo produciria "[object File]" y lo colaria como si fuese un dato valido. Aqui
+ * cualquier cosa que no sea texto se trata como ausente.
+ */
+function field(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * Las lineas llegan como campos repetidos del formulario (`line-product`,
+ * `line-quantity`). Se recomponen aqui emparejando por posicion, y se descartan las
+ * filas vacias: dejar una fila en blanco sin querer no deberia impedir emitir.
+ */
+function parseLines(formData: FormData) {
+  const productIds = formData.getAll('line-product').filter((v) => typeof v === 'string');
+  const quantities = formData.getAll('line-quantity').filter((v) => typeof v === 'string');
+
+  return productIds
+    .map((productId, index) => ({ productId, quantity: quantities[index] ?? '' }))
+    .filter((line) => line.productId !== '' && line.quantity.trim() !== '');
+}
+
+export async function issueDeliveryNoteAction(
+  _prev: IssueNoteState,
+  formData: FormData,
+): Promise<IssueNoteState> {
+  const customerId = field(formData, 'customerId');
+  const notes = field(formData, 'notes');
+  const lines = parseLines(formData);
+
+  if (customerId === '') {
+    return { status: 'error', errorKind: 'Required', errorParams: { field: 'customerId' } };
+  }
+  if (lines.length === 0) {
+    return { status: 'error', errorKind: 'NoLines' };
+  }
+
+  const { issueDeliveryNote } = await forRequest();
+  const result = await issueDeliveryNote({ customerId, lines, notes: notes || null });
+
+  if (!result.ok) {
+    const error = result.error;
+    const params: Record<string, string | number> = {};
+    // Cada variante lleva los datos que su mensaje necesita. Se copian de forma
+    // explicita para que la traduccion nunca reciba un parametro ausente.
+    if ('sku' in error) params.sku = error.sku;
+    if ('available' in error) params.available = error.available;
+    if ('requested' in error) params.requested = error.requested;
+    if ('limit' in error) params.limit = error.limit;
+    if ('field' in error) params.field = error.field;
+    if ('from' in error) params.from = error.from;
+    if ('to' in error) params.to = error.to;
+
+    return { status: 'error', errorKind: error.kind, errorParams: params };
+  }
+
+  revalidatePath('/delivery-notes');
+  revalidatePath('/products');
+  return { status: 'success', createdNumber: result.value.number };
+}
+
+export async function voidDeliveryNoteAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const deliveryNoteId = field(formData, 'deliveryNoteId');
+  const reason = field(formData, 'reason');
+
+  const { voidDeliveryNote } = await forRequest();
+  const result = await voidDeliveryNote({ deliveryNoteId, reason });
+
+  if (!result.ok) {
+    const error = result.error;
+    const params: Record<string, string | number> = {};
+    if ('field' in error) params.field = error.field;
+    if ('from' in error) params.from = error.from;
+    if ('to' in error) params.to = error.to;
+    return { status: 'error', errorKind: error.kind, errorParams: params };
+  }
+
+  revalidatePath('/delivery-notes');
+  revalidatePath('/products');
+  return { status: 'success' };
+}
+
+export async function createProductAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { createProduct } = await forRequest();
+
+  // `exactOptionalPropertyTypes` distingue "ausente" de "presente pero undefined".
+  // Un campo opcional vacio se OMITE, en lugar de enviarse como undefined.
+  const unit = field(formData, 'unit').trim();
+
+  const result = await createProduct({
+    sku: field(formData, 'sku'),
+    name: field(formData, 'name'),
+    price: field(formData, 'price'),
+    cost: field(formData, 'cost') || null,
+    initialStock: field(formData, 'initialStock') || null,
+    minStock: field(formData, 'minStock') || null,
+    ...(unit ? { unit } : {}),
+  });
+
+  if (!result.ok) {
+    const error = result.error;
+    const params: Record<string, string | number> = {};
+    if ('sku' in error) params.sku = error.sku;
+    if ('limit' in error) params.limit = error.limit;
+    if ('field' in error) params.field = error.field;
+    return { status: 'error', errorKind: error.kind, errorParams: params };
+  }
+
+  revalidatePath('/products');
+  return { status: 'success', createdCode: result.value.sku };
+}

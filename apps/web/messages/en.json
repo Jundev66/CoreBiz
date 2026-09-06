@@ -30,7 +30,8 @@
   "quota": {
     "usage": "{current} of {limit} {resource}",
     "nearLimit": "You are approaching your plan limit.",
-    "exceeded": "You have reached your plan limit."
+    "exceeded": "You have reached your plan limit.",
+    "monthly": "{current} of {limit} documents this month"
   },
   "errors": {
     "Forbidden": "You do not have permission to do this.",
@@ -41,7 +42,22 @@
     "TooLong": "The {field} field is too long.",
     "InvalidFormat": "The {field} field has an invalid format.",
     "InvalidCreditLimit": "The credit limit is not a valid amount.",
-    "unexpected": "An unexpected error occurred."
+    "unexpected": "An unexpected error occurred.",
+    "DuplicateSku": "A product with SKU {sku} already exists.",
+    "ProductNotFound": "The product does not exist.",
+    "CustomerNotFound": "The customer does not exist.",
+    "DeliveryNoteNotFound": "The delivery note does not exist.",
+    "InsufficientStock": "Not enough stock for {sku}: {available} available, {requested} requested.",
+    "CreditLimitExceeded": "This operation exceeds the customer credit limit.",
+    "NoExchangeRate": "No exchange rate configured for this business.",
+    "NoLines": "The document must have at least one line.",
+    "DuplicateProduct": "Product {sku} appears more than once in the document.",
+    "InvalidQuantity": "The quantity is not valid.",
+    "InvalidPrice": "The price is not valid.",
+    "InvalidCost": "The cost is not valid.",
+    "InvalidStock": "The inventory quantity is not valid.",
+    "OutOfRange": "The {field} field is out of range.",
+    "FeatureNotAvailable": "This feature requires the {requiredPlan} plan."
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
@@ -54,6 +70,69 @@
   "common": {
     "save": "Save",
     "cancel": "Cancel",
-    "language": "Language"
+    "language": "Language",
+    "back": "Back",
+    "add": "Add",
+    "remove": "Remove",
+    "issue": "Issue",
+    "print": "Print"
+  },
+  "products": {
+    "title": "Products",
+    "subtitle": "Catalogue and inventory",
+    "new": "New product",
+    "sku": "SKU",
+    "name": "Name",
+    "unit": "Unit",
+    "price": "Price",
+    "cost": "Cost",
+    "stock": "On hand",
+    "minStock": "Minimum",
+    "initialStock": "Initial stock",
+    "notTracked": "Not tracked",
+    "lowStock": "Below minimum",
+    "belowMinimum": "{count, plural, one {# product is below its minimum} other {# products are below their minimum}}.",
+    "empty": "No products in the catalogue yet.",
+    "created": "Product created successfully."
+  },
+  "deliveryNotes": {
+    "title": "Delivery notes",
+    "subtitle": "Goods dispatch documents",
+    "new": "New delivery note",
+    "number": "Number",
+    "customer": "Customer",
+    "status": "Status",
+    "issuedAt": "Issued",
+    "exchangeRate": "Applied rate",
+    "description": "Description",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "lineTotal": "Line total",
+    "subtotal": "Subtotal",
+    "total": "Total USD",
+    "totalBs": "Total Bs",
+    "empty": "No delivery notes issued yet.",
+    "created": "Delivery note {number} issued successfully.",
+    "voidedWithReason": "Document voided. Reason: {reason}",
+    "statuses": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "delivered": "Delivered",
+      "voided": "Voided"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Sales and inventory analysis",
+    "locked": "This module is available on the PRO plan.",
+    "lockedDetail": "Includes sales reports, inventory analysis and CSV export.",
+    "simulate": "Preview with PRO plan",
+    "back": "Back to free plan",
+    "salesTotal": "Period sales",
+    "documentsIssued": "Documents issued",
+    "averageTicket": "Average ticket",
+    "stockValue": "Inventory value",
+    "topProducts": "Best selling products",
+    "units": "Units"
   }
 }

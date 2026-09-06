@@ -12,6 +12,8 @@ import type { Page } from '@playwright/test';
 export interface CustomerWorld {
   /** Ultimo codigo escrito en el formulario. Lo comparten pasos consecutivos. */
   lastCode?: string;
+  /** Saldo de inventario leido antes de una operacion, para comprobar la variacion. */
+  stockBefore?: number;
 }
 
 export const test = base.extend<{ world: CustomerWorld }>({

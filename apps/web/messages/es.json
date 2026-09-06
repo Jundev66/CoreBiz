@@ -30,7 +30,8 @@
   "quota": {
     "usage": "{current} de {limit} {resource}",
     "nearLimit": "Te estás acercando al límite de tu plan.",
-    "exceeded": "Alcanzaste el límite de tu plan."
+    "exceeded": "Alcanzaste el límite de tu plan.",
+    "monthly": "{current} de {limit} documentos este mes"
   },
   "errors": {
     "Forbidden": "No tienes permiso para hacer esto.",
@@ -41,7 +42,22 @@
     "TooLong": "El campo {field} es demasiado largo.",
     "InvalidFormat": "El campo {field} no tiene un formato válido.",
     "InvalidCreditLimit": "El límite de crédito no es un monto válido.",
-    "unexpected": "Ocurrió un error inesperado."
+    "unexpected": "Ocurrió un error inesperado.",
+    "DuplicateSku": "Ya existe un producto con el SKU {sku}.",
+    "ProductNotFound": "El producto no existe.",
+    "CustomerNotFound": "El cliente no existe.",
+    "DeliveryNoteNotFound": "La nota de entrega no existe.",
+    "InsufficientStock": "Stock insuficiente para {sku}: disponible {available}, solicitado {requested}.",
+    "CreditLimitExceeded": "La operación supera el límite de crédito del cliente.",
+    "NoExchangeRate": "No hay una tasa de cambio configurada para la empresa.",
+    "NoLines": "El documento debe tener al menos una línea.",
+    "DuplicateProduct": "El producto {sku} está repetido en el documento.",
+    "InvalidQuantity": "La cantidad no es válida.",
+    "InvalidPrice": "El precio no es válido.",
+    "InvalidCost": "El costo no es válido.",
+    "InvalidStock": "La cantidad de inventario no es válida.",
+    "OutOfRange": "El campo {field} está fuera de rango.",
+    "FeatureNotAvailable": "Esta función requiere el plan {requiredPlan}."
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
@@ -54,6 +70,69 @@
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
-    "language": "Idioma"
+    "language": "Idioma",
+    "back": "Volver",
+    "add": "Agregar",
+    "remove": "Quitar",
+    "issue": "Emitir",
+    "print": "Imprimir"
+  },
+  "products": {
+    "title": "Productos",
+    "subtitle": "Catálogo e inventario",
+    "new": "Nuevo producto",
+    "sku": "SKU",
+    "name": "Nombre",
+    "unit": "Unidad",
+    "price": "Precio",
+    "cost": "Costo",
+    "stock": "Existencias",
+    "minStock": "Mínimo",
+    "initialStock": "Stock inicial",
+    "notTracked": "Sin inventario",
+    "lowStock": "Bajo mínimo",
+    "belowMinimum": "{count, plural, one {# producto esta bajo su minimo} other {# productos estan bajo su minimo}}.",
+    "empty": "Aún no hay productos en el catálogo.",
+    "created": "Producto creado correctamente."
+  },
+  "deliveryNotes": {
+    "title": "Notas de entrega",
+    "subtitle": "Documentos de salida de mercancía",
+    "new": "Nueva nota de entrega",
+    "number": "Número",
+    "customer": "Cliente",
+    "status": "Estado",
+    "issuedAt": "Emitida",
+    "exchangeRate": "Tasa aplicada",
+    "description": "Descripción",
+    "quantity": "Cantidad",
+    "unitPrice": "Precio unitario",
+    "lineTotal": "Total línea",
+    "subtotal": "Subtotal",
+    "total": "Total USD",
+    "totalBs": "Total Bs",
+    "empty": "Aún no se han emitido notas de entrega.",
+    "created": "Nota de entrega {number} emitida correctamente.",
+    "voidedWithReason": "Documento anulado. Motivo: {reason}",
+    "statuses": {
+      "draft": "Borrador",
+      "issued": "Emitida",
+      "delivered": "Entregada",
+      "voided": "Anulada"
+    }
+  },
+  "reports": {
+    "title": "Reportes",
+    "subtitle": "Análisis de ventas e inventario",
+    "locked": "Este módulo está disponible en el plan PRO.",
+    "lockedDetail": "Incluye reportes de ventas, análisis de inventario y exportación a CSV.",
+    "simulate": "Ver con plan PRO",
+    "back": "Volver al plan gratuito",
+    "salesTotal": "Ventas del período",
+    "documentsIssued": "Documentos emitidos",
+    "averageTicket": "Ticket promedio",
+    "stockValue": "Valor del inventario",
+    "topProducts": "Productos más vendidos",
+    "units": "Unidades"
   }
 }

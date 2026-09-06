@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { forRequest } from '@/composition/container';
-import { memoryCustomerQueries } from '@/composition/memory-driver';
+import { memoryQueries } from '@/composition/memory-driver';
 
 /**
  * Listado de clientes.
@@ -15,8 +15,8 @@ export default async function CustomersPage() {
   const t = await getTranslations();
   const { ctx } = await forRequest();
 
-  const queries = memoryCustomerQueries(ctx.tenantId);
-  const page = await queries.list({ limit: 25 });
+  const queries = memoryQueries(ctx.tenantId);
+  const page = await queries.customers.list({ limit: 25 });
   const used = queries.usage('customers');
   const quota = ctx.plan.quota('customers', used);
 

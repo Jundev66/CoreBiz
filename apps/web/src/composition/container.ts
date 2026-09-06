@@ -4,6 +4,10 @@ import { cookies } from 'next/headers';
 import { Plan, asId, isRole, type Role, type UserId } from '@corebiz/domain';
 import {
   makeCreateCustomer,
+  makeCreateProduct,
+  makeAdjustStock,
+  makeIssueDeliveryNote,
+  makeVoidDeliveryNote,
   systemClock,
   type TenantContext,
   type UnitOfWork,
@@ -101,6 +105,10 @@ export async function forRequest(_tenantSlug?: string) {
   return {
     ctx,
     createCustomer: makeCreateCustomer(shared),
+    createProduct: makeCreateProduct(shared),
+    adjustStock: makeAdjustStock(shared),
+    issueDeliveryNote: makeIssueDeliveryNote(shared),
+    voidDeliveryNote: makeVoidDeliveryNote(shared),
   };
 }
 
