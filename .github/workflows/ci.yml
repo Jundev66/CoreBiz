@@ -140,8 +140,13 @@ jobs:
       # Postgres con RLS activo. Que ninguno necesite cambiar es la comprobacion
       # ejecutable de que la arquitectura hexagonal es real y no decorativa: si el
       # dominio supiera de la base de datos, esta linea no podria existir.
-      - name: Los mismos escenarios BDD, ahora sobre Postgres
-        run: pnpm test:bdd:pg
+      #
+      # Se corre la suite ENTERA y no solo los BDD, porque hay specs que solo
+      # tienen sentido con base de datos y por tanto SOLO se ejecutan aqui: el
+      # alta de cuenta, el aislamiento entre dos cuentas reales, y el que
+      # comprueba que dos visitantes de la demostracion no se ven entre si.
+      - name: La suite completa, ahora sobre Postgres
+        run: pnpm test:e2e:pg
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
 

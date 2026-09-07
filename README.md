@@ -64,6 +64,7 @@ pnpm dev
 | `pnpm test:integration` | Repositorios y **matriz de aislamiento RLS**. Requiere Docker.                |
 | `pnpm test:bdd`         | Escenarios Gherkin sobre la aplicación real, en memoria.                      |
 | `pnpm test:bdd:pg`      | **Los mismos escenarios**, sin tocar una línea, contra Postgres con RLS.      |
+| `pnpm test:e2e:pg`      | La suite E2E entera contra Postgres, incluidos sesión y demo aislada.         |
 | `pnpm test:e2e`         | Playwright con trazas y vídeo en los fallos.                                  |
 | `pnpm arch`             | Verifica los límites entre capas. **Falla el build si el dominio se acopla.** |
 | `pnpm arch:graph`       | Regenera el grafo exhaustivo de dependencias (~900 nodos, ignorado por git).  |
