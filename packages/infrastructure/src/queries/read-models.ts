@@ -21,6 +21,7 @@ import type {
   UsageQueries,
 } from '@corebiz/application';
 import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../drizzle/pagination';
+import { drizzleAdminQueries } from './administration';
 import { readOnly } from '../drizzle/session';
 import { usagePeriod } from '../drizzle/usage';
 
@@ -448,5 +449,6 @@ export function drizzleReadModels(db: Database, ctx: TenantContext, clock: Clock
     deliveryNotes: new DrizzleDeliveryNoteQueries(db, ctx),
     usage: new DrizzleUsageQueries(db, ctx, clock),
     reports: new DrizzleReportQueries(db, ctx),
+    admin: drizzleAdminQueries(db, ctx),
   };
 }

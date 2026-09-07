@@ -165,3 +165,38 @@ export const systemFlags = pgTable('system_flags', {
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Invitaciones al equipo.
+ *
+ * `tokenHash` y no `token`: lo que se guarda es el SHA-256 del valor entregado,
+ * igual que una contrasena. Un token de invitacion es una credencial —quien lo
+ * tenga entra con el rol que diga la fila— y guardarlo en claro convertiria
+ * cualquier lectura de esta tabla en una entrada a la empresa.
+ *
+ * Espejo de supabase/migrations/20260907140000_invitations.sql.
+ */
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid('id').primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+
+    email: text('email').notNull(),
+    /** admin | sales | warehouse | viewer. `owner` NO se invita: se transfiere. */
+    role: text('role').notNull(),
+
+    tokenHash: text('token_hash').notNull(),
+
+    invitedBy: uuid('invited_by'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedBy: uuid('accepted_by'),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('invitations_token_key').on(t.tokenHash),
+    index('invitations_tenant_idx').on(t.tenantId, t.createdAt),
+  ],
+);

@@ -72,7 +72,7 @@ export default async function ProductsPage() {
                 <td className="px-4 py-3 text-right tabular-nums">$ {product.price}</td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {product.trackStock ? (
-                    <span className={product.belowMinimum ? 'text-[var(--color-warn)]' : ''}>
+                    <span className={product.belowMinimum ? 'text-[var(--color-warn-ink)]' : ''}>
                       {product.onHand} {product.unit}
                       {product.belowMinimum && (
                         <span aria-label={t('products.lowStock')} className="ml-1">

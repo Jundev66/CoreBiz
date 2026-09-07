@@ -32,7 +32,7 @@ Lo verificado, no lo aspiracional.
 | Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy     |
 | Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`        |
 | Compras y proveedores         | ❌ El directorio del dominio está vacío                               |
-| Administración                | ❌ Sin invitaciones, sin gestión de roles, sin visor de auditoría     |
+| Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes        |
 | Demo efímero                  | ❌ Sin función de clonado, sin TTL, sin purga                         |
 | Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                             |
 
@@ -63,6 +63,7 @@ graph LR
   style H1 fill:#efe,stroke:#0a0
   style H2 fill:#efe,stroke:#0a0
   style H3 fill:#efe,stroke:#0a0
+  style H4 fill:#efe,stroke:#0a0
   style H8 fill:#efe,stroke:#0a0
 ```
 
@@ -190,18 +191,36 @@ identificador de usuario como parámetro**. Editar la cookie a mano no lleva a n
 
 ---
 
-## H4 · Módulo de administración
+## H4 · Módulo de administración — ✅ HECHA
 
 Cierra el bucle de la multi-tenancy: sin esto un tenant no puede crecer más allá de su fundador.
 
-- [ ] Invitaciones por correo con token de un solo uso y caducidad.
-- [ ] Gestión de roles, respetando el trigger `enforce_last_owner` que ya impide quedarse sin dueño.
-- [ ] Visor del `audit_log` con filtros por actor, acción y fecha; exportación **gated a PRO**.
-- [ ] Ajustes del tenant: etiqueta y tasa del impuesto informativo, moneda base, tasa de cambio.
-- [ ] Panel de consumo del plan, con los mismos contadores que ya bloquean en el caso de uso.
+- [x] Invitaciones por correo con token de un solo uso y caducidad.
+- [x] Gestión de roles, respetando el trigger `enforce_last_owner` que ya impide quedarse sin dueño.
+- [x] Visor del `audit_log` con filtros por actor, acción y fecha; exportación **gated a PRO**.
+- [x] Ajustes del tenant: etiqueta y tasa del impuesto informativo, moneda base, tasa de cambio.
+- [x] Panel de consumo del plan, con los mismos contadores que ya bloquean en el caso de uso.
 
-**Hecho cuando:** el límite de 2 usuarios del plan FREE se puede alcanzar por la interfaz y el bloqueo
-viene del caso de uso, no del botón. Se prueba invocando la Server Action directamente.
+**Hecho:** hay un escenario BDD que invita en bucle hasta que el servidor dice que no, y el mensaje
+que aparece habla del **límite del plan** — algo que la pantalla no podría decir si el bloqueo
+viviera en el botón. El formulario se deja enviable a propósito con las plazas agotadas.
+
+**Tres decisiones que merecen leerse:**
+
+- **El token de invitación no se guarda.** Se guarda su SHA-256, igual que una contraseña. Un token
+  es una credencial: quien lo tenga entra con el rol que diga la fila. En claro, cualquier lectura
+  de esa tabla —una copia de seguridad, un volcado de depuración— es una entrada a la empresa.
+  El original existe dos veces: en el enlace que se entrega y en la URL que abre quien acepta.
+
+- **La plaza se reserva al INVITAR, no al aceptar.** Cobrarla al aceptar dejaría que un propietario
+  mandase diez invitaciones válidas y que la novena persona se encontrase rechazada dos días
+  después, sin nada que pudiera hacer. El precio es que una invitación olvidada retiene una plaza,
+  y se paga con `app.release_expired_invitations()`.
+
+- **El correo del equipo sale de `app.tenant_members()`, no de un join a `auth.users`.** El rol
+  `authenticated` no puede leer esa tabla, y el `GRANT SELECT` que sugiere el propio mensaje de
+  error de Postgres daría a cualquier usuario del proyecto el correo y el hash de contraseña de
+  todos los demás. Es la fuga que las políticas RLS evitan, abierta por la puerta de al lado.
 
 ---
 
@@ -303,7 +322,7 @@ Decidido, no olvidado:
 
 **H1 → H2 → H3 → H6 → H8**, y después H4, H5 y H7 sobre un sistema ya vivo.
 
-H1, H2 y H3 están hechas. La siguiente en la línea recta es **H6**, y después **H8**.
+H1, H2, H3 y H4 están hechas. La siguiente en la línea recta es **H6**, y después **H8**.
 
 La tentación es construir Compras primero porque es el módulo que más se parece a lo ya hecho y sale
 rápido. Sería un error: añadiría superficie sobre un almacén en memoria y alejaría el despliegue.

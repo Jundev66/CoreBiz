@@ -33,6 +33,7 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
     { href: '/products', label: t('nav.products') },
     { href: '/delivery-notes', label: t('nav.deliveryNotes') },
     { href: '/reports', label: t('nav.reports'), pro: true },
+    { href: '/settings', label: t('nav.settings') },
   ];
 
   return (
@@ -195,7 +196,7 @@ export function QuotaBar({
           style={{ width: `${Math.round(ratio * 100)}%` }}
         />
       </div>
-      {near && <p className="mt-1 text-xs text-[var(--color-warn)]">{nearLimitLabel}</p>}
+      {near && <p className="mt-1 text-xs text-[var(--color-warn-ink)]">{nearLimitLabel}</p>}
     </div>
   );
 }

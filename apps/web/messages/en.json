@@ -203,5 +203,117 @@
   "home": {
     "ownAccount": "Want your own system?",
     "ownAccountHint": "Create a free account and get your business running in under a minute."
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Administrator",
+    "sales": "Sales",
+    "warehouse": "Warehouse",
+    "viewer": "Read only"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "How your business is set up and who works in it",
+    "saved": "Saved.",
+    "readOnlyNotice": "Only the owner and administrators can change this.",
+    "tabs": {
+      "business": "Business",
+      "team": "Team",
+      "audit": "Activity"
+    },
+    "business": {
+      "heading": "Business details",
+      "description": "These appear on every delivery note you issue."
+    },
+    "plan": {
+      "heading": "Your plan: {plan}",
+      "description": "What you have used this month."
+    },
+    "resources": {
+      "customers": "customers",
+      "products": "products",
+      "users": "people",
+      "documents_month": "notes this month"
+    },
+    "fields": {
+      "taxLabel": "Tax label",
+      "taxRate": "Tax percentage",
+      "baseCurrency": "Main currency",
+      "exchangeRate": "Exchange rate"
+    },
+    "hints": {
+      "taxLabel": "This is the text printed on the note. It is not a declared tax.",
+      "taxRate": "Write it as a percentage. For example: 16",
+      "baseCurrency": "New prices are written in this currency. Existing ones do not change.",
+      "exchangeRate": "Each note keeps the rate of the day it was issued. Changing it here does not alter earlier notes."
+    },
+    "errors": {
+      "Forbidden": "You do not have permission to do this.",
+      "InvalidFormat": "Check the details.",
+      "InvalidTaxRate": "That tax percentage is not valid.",
+      "InvalidCurrency": "That currency is not supported.",
+      "InvalidExchangeRate": "That exchange rate is not valid.",
+      "TooShort": "That text is too short.",
+      "CannotInviteOwner": "Owners are not invited: ownership is transferred from inside.",
+      "InvalidEmail": "That email does not look valid.",
+      "AlreadyMember": "{email} already works in this business.",
+      "AlreadyInvited": "There is already a pending invitation for {email}.",
+      "QuotaExceeded": "Your plan allows {limit}. Remove someone or cancel an invitation.",
+      "UnknownRole": "That role does not exist.",
+      "MemberNotFound": "That person is no longer in the business.",
+      "OnlyOwnerGrantsOwnership": "Only the owner can appoint another owner.",
+      "LastOwner": "The business needs at least one owner.",
+      "CannotRemoveSelf": "You cannot remove yourself.",
+      "InvitationNotFound": "That invitation is no longer active."
+    },
+    "team": {
+      "heading": "People",
+      "person": "Person",
+      "role": "Role",
+      "since": "Since",
+      "actions": "Actions",
+      "you": "you",
+      "noEmail": "No email",
+      "remove": "Remove",
+      "revoke": "Cancel",
+      "expires": "Expires",
+      "pendingHeading": "Pending invitations",
+      "noPending": "No pending invitations.",
+      "inviteHeading": "Invite someone",
+      "invite": "Send invitation",
+      "roleHint": "Sales issues notes; Warehouse adjusts stock; Read only just looks.",
+      "seatsExplanation": "A pending invitation holds a seat until it is accepted or cancelled.",
+      "seatsExhausted": "You have no seats left on your plan. You can still try: the system will say no.",
+      "inviteCreated": "Invitation created.",
+      "inviteShare": "Copy this link and send it to that person. It is shown only once.",
+      "inviteLink": "Invitation link"
+    },
+    "audit": {
+      "heading": "Business activity",
+      "description": "What was done, who did it and when. It cannot be edited or deleted.",
+      "when": "When",
+      "who": "Who",
+      "action": "Action",
+      "detail": "Detail",
+      "from": "From",
+      "to": "To",
+      "filter": "Filter",
+      "clear": "Clear filters",
+      "allActions": "All actions",
+      "empty": "No activity matches those filters.",
+      "export": "Download CSV",
+      "exportRequiresPro": "Downloading requires the PRO plan",
+      "notAllowed": "Only the owner and administrators can see the activity."
+    }
+  },
+  "invitation": {
+    "title": "You have been invited",
+    "invitedTo": "You are invited to join {business} as {role}.",
+    "expires": "The invitation expires on {date}.",
+    "accept": "Accept and enter",
+    "signInFirst": "You need an account to accept this invitation. Create one or sign in.",
+    "invalidTitle": "This invitation is no longer valid",
+    "invalidBody": "It may have expired, been cancelled, or already been used. Ask that business to send you a new one.",
+    "needsDatabase": "Invitations need the database. This demo runs in memory."
   }
 }

@@ -55,6 +55,7 @@ const COVERED = [
   'document_sequences',
   'tenant_usage',
   'memberships',
+  'invitations',
 ] as const;
 
 const SPECIAL_CASED = ['audit_log'] as const;
@@ -134,6 +135,17 @@ async function seedOneRowPerTable(tenant: TestTenant): Promise<void> {
   await db.execute(sql`
     insert into public.audit_log (id, tenant_id, actor_id, action, entity_type, entity_id)
     values (${crypto.randomUUID()}, ${t}, ${tenant.userId}, 'rls.probe', 'customer', ${customerId})
+  `);
+
+  // El hash es de un token que no existe: aqui no se prueba el flujo de
+  // aceptacion, solo que la fila queda fuera del alcance de otro tenant.
+  await db.execute(sql`
+    insert into public.invitations (id, tenant_id, email, role, token_hash, expires_at)
+    values (
+      ${crypto.randomUUID()}, ${t}, 'invitado@corebiz.test', 'sales',
+      encode(extensions.digest(${crypto.randomUUID()}, 'sha256'), 'hex'),
+      now() + interval '7 days'
+    )
   `);
 }
 

@@ -152,6 +152,65 @@ export interface ReportQueries {
   salesSummary(): Promise<SalesReport>;
 }
 
+// ─── Administracion ──────────────────────────────────────────────────────────
+
+export interface TeamMemberView {
+  readonly userId: string;
+  readonly email: string | null;
+  readonly role: string;
+  readonly joinedAt: Date;
+  /** Marca a quien esta mirando la pantalla, para no ofrecerle expulsarse. */
+  readonly isYou: boolean;
+}
+
+export interface PendingInvitationView {
+  readonly id: string;
+  readonly email: string;
+  readonly role: string;
+  readonly expiresAt: Date;
+}
+
+/**
+ * Una entrada del registro de auditoria, ya lista para pintar.
+ *
+ * `summary` viaja como objeto plano y NO como texto ya redactado: quien lo pinta
+ * decide el idioma. Es la misma razon por la que los errores del dominio viajan
+ * como codigos.
+ */
+export interface AuditEntryView {
+  readonly id: string;
+  readonly occurredAt: Date;
+  readonly actorEmail: string | null;
+  readonly action: string;
+  readonly entityType: string | null;
+  readonly entityId: string | null;
+  readonly summary: Readonly<Record<string, unknown>> | null;
+}
+
+export interface AuditFilter {
+  readonly action?: string;
+  readonly actorEmail?: string;
+  readonly from?: Date;
+  readonly to?: Date;
+  readonly limit?: number;
+  readonly cursor?: string;
+}
+
+export interface AdminQueries {
+  team(): Promise<readonly TeamMemberView[]>;
+  pendingInvitations(): Promise<readonly PendingInvitationView[]>;
+  /**
+   * El registro de auditoria, del mas reciente al mas antiguo.
+   *
+   * Lo protege la politica RLS —solo owner y admin— y no un `if` de la pantalla.
+   * Que la auditoria diga quien hizo que la convierte en un panel de vigilancia
+   * entre companeros si la lee cualquiera con permiso de escritura.
+   */
+  auditLog(filter: AuditFilter): Promise<Page<AuditEntryView>>;
+  /** Acciones distintas presentes en el registro, para poblar el filtro. */
+  auditActions(): Promise<readonly string[]>;
+}
+
 /** Todo el lado de lectura disponible para un request. */
 export interface ReadModels {
   readonly customers: CustomerQueries;
@@ -159,4 +218,5 @@ export interface ReadModels {
   readonly deliveryNotes: DeliveryNoteQueries;
   readonly usage: UsageQueries;
   readonly reports: ReportQueries;
+  readonly admin: AdminQueries;
 }

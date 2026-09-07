@@ -1,6 +1,9 @@
 import { Money, type Currency, type TenantId } from '@corebiz/domain';
 import type { Page } from '../../ports/repositories';
 import type {
+  AdminQueries,
+  AuditEntryView,
+  AuditFilter,
   BestSeller,
   CustomerListItem,
   CustomerOption,
@@ -12,8 +15,10 @@ import type {
   ProductOption,
   ProductQueries,
   ReadModels,
+  PendingInvitationView,
   ReportQueries,
   SalesReport,
+  TeamMemberView,
   UsageQueries,
 } from '../../queries/read-models';
 import type { SalesStores } from './sales';
@@ -259,10 +264,128 @@ class InMemoryReportQueries implements ReportQueries {
   }
 }
 
+/**
+ * Lado de lectura de administracion, en memoria.
+ *
+ * Lee de los MISMOS almacenes en los que escriben los casos de uso, incluido el
+ * registro de auditoria. Si leyera de otro sitio, el visor mostraria un mundo
+ * distinto del que la aplicacion acaba de escribir, y el modulo no se podria
+ * probar sin base de datos — que es justo lo que `pnpm dev:nodb` promete.
+ */
+class InMemoryAdminQueries implements AdminQueries {
+  constructor(
+    private readonly stores: SalesStores,
+    private readonly tenantId: TenantId,
+    private readonly viewerId: string,
+  ) {}
+
+  team(): Promise<readonly TeamMemberView[]> {
+    const members = [...this.stores.members.values()] as {
+      tenantId: TenantId;
+      userId: string;
+      email: string | null;
+      role: string;
+      joinedAt: Date;
+    }[];
+
+    return Promise.resolve(
+      members
+        .filter((m) => m.tenantId === this.tenantId)
+        .map((m) => ({
+          userId: m.userId,
+          email: m.email,
+          role: m.role,
+          joinedAt: m.joinedAt,
+          isYou: m.userId === this.viewerId,
+        }))
+        .sort((a, b) => a.role.localeCompare(b.role)),
+    );
+  }
+
+  pendingInvitations(): Promise<readonly PendingInvitationView[]> {
+    const now = new Date();
+    const rows = [...this.stores.invitations.values()] as {
+      id: string;
+      tenantId: TenantId;
+      email: string;
+      role: string;
+      expiresAt: Date;
+      acceptedAt: Date | null;
+      revokedAt: Date | null;
+    }[];
+
+    return Promise.resolve(
+      rows
+        .filter(
+          (i) =>
+            i.tenantId === this.tenantId &&
+            i.acceptedAt === null &&
+            i.revokedAt === null &&
+            i.expiresAt > now,
+        )
+        .map((i) => ({ id: i.id, email: i.email, role: i.role, expiresAt: i.expiresAt })),
+    );
+  }
+
+  private entries(): {
+    id: string;
+    tenantId: TenantId;
+    occurredAt: Date;
+    action: string;
+    entityType?: string;
+    entityId?: string;
+    summary?: Readonly<Record<string, unknown>>;
+  }[] {
+    return (this.stores.auditEntries as never[]).filter(
+      (e: { tenantId: TenantId }) => e.tenantId === this.tenantId,
+    );
+  }
+
+  auditLog(filter: AuditFilter): Promise<Page<AuditEntryView>> {
+    let rows = this.entries();
+
+    if (filter.action !== undefined && filter.action !== '') {
+      rows = rows.filter((e) => e.action === filter.action);
+    }
+    if (filter.from !== undefined) {
+      rows = rows.filter((e) => e.occurredAt >= (filter.from as Date));
+    }
+    if (filter.to !== undefined) {
+      rows = rows.filter((e) => e.occurredAt <= (filter.to as Date));
+    }
+
+    // Del mas reciente al mas antiguo: quien abre un registro de auditoria busca
+    // lo que acaba de pasar, no lo que paso el primer dia.
+    rows = [...rows].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+
+    const limit = filter.limit ?? 50;
+    const start = filter.cursor !== undefined ? Number(filter.cursor) : 0;
+    const slice = rows.slice(start, start + limit);
+
+    return Promise.resolve({
+      items: slice.map((e) => ({
+        id: e.id,
+        occurredAt: e.occurredAt,
+        actorEmail: null,
+        action: e.action,
+        entityType: e.entityType ?? null,
+        entityId: e.entityId ?? null,
+        summary: e.summary ?? null,
+      })),
+      nextCursor: start + limit < rows.length ? String(start + limit) : null,
+    });
+  }
+
+  auditActions(): Promise<readonly string[]> {
+    return Promise.resolve([...new Set(this.entries().map((e) => e.action))].sort());
+  }
+}
+
 export function inMemoryReadModels(
   stores: SalesStores,
   tenantId: TenantId,
   currency: Currency,
+  viewerId = '',
 ): ReadModels {
   return {
     customers: new InMemoryCustomerQueries(stores, tenantId),
@@ -270,5 +393,6 @@ export function inMemoryReadModels(
     deliveryNotes: new InMemoryDeliveryNoteQueries(stores, tenantId),
     usage: new InMemoryUsageQueries(stores, tenantId),
     reports: new InMemoryReportQueries(stores, tenantId, currency),
+    admin: new InMemoryAdminQueries(stores, tenantId, viewerId),
   };
 }

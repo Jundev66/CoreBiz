@@ -111,7 +111,7 @@ function Field({ name, label, type = 'text', required, error, t, ...rest }: Fiel
       <label htmlFor={name} className="block text-sm font-medium">
         {label}
         {required && (
-          <span aria-hidden="true" className="ml-0.5 text-[var(--color-danger)]">
+          <span aria-hidden="true" className="ml-0.5 text-[var(--color-danger-ink)]">
             *
           </span>
         )}
@@ -127,7 +127,7 @@ function Field({ name, label, type = 'text', required, error, t, ...rest }: Fiel
         {...rest}
       />
       {error && (
-        <p id={errorId} className="mt-1 text-xs text-[var(--color-danger)]">
+        <p id={errorId} className="mt-1 text-xs text-[var(--color-danger-ink)]">
           {t(`errors.${error}`, { field: label })}
         </p>
       )}

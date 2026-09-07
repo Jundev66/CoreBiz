@@ -1,4 +1,9 @@
 import type {
+  InvitationRepository,
+  MembershipRepository,
+  TenantSettingsRepository,
+} from './administration';
+import type {
   Customer,
   CustomerId,
   DeliveryNote,
@@ -101,6 +106,15 @@ export interface Repositories {
   readonly payments: PaymentQueries;
   readonly usage: UsageCounter;
   readonly audit: AuditLogger;
+
+  // Administracion. Estan en la MISMA unidad de trabajo que el resto por una
+  // razon concreta: invitar consume una plaza del plan y escribe auditoria, y
+  // esas tres escrituras tienen que ocurrir juntas o no ocurrir. Con un
+  // contenedor aparte, una invitacion podria quedar creada sin haber descontado
+  // la plaza, y el limite del plan dejaria de significar nada.
+  readonly invitations: InvitationRepository;
+  readonly members: MembershipRepository;
+  readonly settings: TenantSettingsRepository;
 }
 
 /**

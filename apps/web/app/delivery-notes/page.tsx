@@ -8,7 +8,7 @@ const STATUS_STYLES: Record<string, string> = {
   draft: 'border-[var(--color-line)] text-[var(--color-muted)]',
   issued: 'border-[var(--color-brand)] text-[var(--color-brand)]',
   delivered: 'border-[var(--color-brand)] text-[var(--color-brand)]',
-  voided: 'border-[var(--color-danger)] text-[var(--color-danger)] line-through',
+  voided: 'border-[var(--color-danger)] text-[var(--color-danger-ink)] line-through',
 };
 
 export default async function DeliveryNotesPage() {

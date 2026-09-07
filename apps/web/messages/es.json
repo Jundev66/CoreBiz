@@ -203,5 +203,117 @@
   "home": {
     "ownAccount": "¿Quieres tu propio sistema?",
     "ownAccountHint": "Crea una cuenta gratuita y empieza con tu negocio en menos de un minuto."
+  },
+  "roles": {
+    "owner": "Dueño",
+    "admin": "Administrador",
+    "sales": "Ventas",
+    "warehouse": "Almacén",
+    "viewer": "Solo lectura"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "subtitle": "Cómo está configurada tu empresa y quién trabaja en ella",
+    "saved": "Guardado.",
+    "readOnlyNotice": "Solo el dueño y los administradores pueden cambiar esto.",
+    "tabs": {
+      "business": "Empresa",
+      "team": "Equipo",
+      "audit": "Actividad"
+    },
+    "business": {
+      "heading": "Datos de la empresa",
+      "description": "Se usan en todas tus notas de entrega."
+    },
+    "plan": {
+      "heading": "Tu plan: {plan}",
+      "description": "Lo que llevas usado este mes."
+    },
+    "resources": {
+      "customers": "clientes",
+      "products": "productos",
+      "users": "personas",
+      "documents_month": "notas este mes"
+    },
+    "fields": {
+      "taxLabel": "Nombre del impuesto",
+      "taxRate": "Porcentaje del impuesto",
+      "baseCurrency": "Moneda principal",
+      "exchangeRate": "Tasa de cambio"
+    },
+    "hints": {
+      "taxLabel": "Es el texto que aparece en la nota. No es un tributo declarado.",
+      "taxRate": "Escríbelo como porcentaje. Por ejemplo: 16",
+      "baseCurrency": "En esta moneda se escriben los precios nuevos. Los que ya tienes no cambian.",
+      "exchangeRate": "Cada nota guarda la tasa del día en que se emitió. Cambiarla aquí no altera las notas anteriores."
+    },
+    "errors": {
+      "Forbidden": "No tienes permiso para hacer esto.",
+      "InvalidFormat": "Revisa los datos.",
+      "InvalidTaxRate": "El porcentaje del impuesto no es válido.",
+      "InvalidCurrency": "Esa moneda no está soportada.",
+      "InvalidExchangeRate": "La tasa de cambio no es válida.",
+      "TooShort": "Ese texto es demasiado corto.",
+      "CannotInviteOwner": "El dueño no se invita: se transfiere desde dentro.",
+      "InvalidEmail": "Ese correo no parece válido.",
+      "AlreadyMember": "{email} ya trabaja en esta empresa.",
+      "AlreadyInvited": "Ya hay una invitación pendiente para {email}.",
+      "QuotaExceeded": "Tu plan admite {limit}. Quita a alguien o cancela una invitación.",
+      "UnknownRole": "Ese rol no existe.",
+      "MemberNotFound": "Esa persona ya no está en la empresa.",
+      "OnlyOwnerGrantsOwnership": "Solo el dueño puede nombrar a otro dueño.",
+      "LastOwner": "La empresa necesita al menos un dueño.",
+      "CannotRemoveSelf": "No puedes quitarte a ti mismo.",
+      "InvitationNotFound": "Esa invitación ya no está activa."
+    },
+    "team": {
+      "heading": "Personas",
+      "person": "Persona",
+      "role": "Rol",
+      "since": "Desde",
+      "actions": "Acciones",
+      "you": "tú",
+      "noEmail": "Sin correo",
+      "remove": "Quitar",
+      "revoke": "Cancelar",
+      "expires": "Caduca",
+      "pendingHeading": "Invitaciones pendientes",
+      "noPending": "No hay invitaciones pendientes.",
+      "inviteHeading": "Invitar a alguien",
+      "invite": "Enviar invitación",
+      "roleHint": "Ventas emite notas; Almacén ajusta inventario; Solo lectura únicamente mira.",
+      "seatsExplanation": "Una invitación pendiente ocupa una plaza hasta que se acepta o se cancela.",
+      "seatsExhausted": "No te quedan plazas en tu plan. Puedes intentarlo igual: el sistema te dirá que no.",
+      "inviteCreated": "Invitación creada.",
+      "inviteShare": "Copia este enlace y pásaselo a esa persona. Solo se muestra una vez.",
+      "inviteLink": "Enlace de invitación"
+    },
+    "audit": {
+      "heading": "Actividad de la empresa",
+      "description": "Qué se hizo, quién lo hizo y cuándo. No se puede modificar ni borrar.",
+      "when": "Cuándo",
+      "who": "Quién",
+      "action": "Acción",
+      "detail": "Detalle",
+      "from": "Desde",
+      "to": "Hasta",
+      "filter": "Filtrar",
+      "clear": "Quitar filtros",
+      "allActions": "Todas las acciones",
+      "empty": "No hay actividad que mostrar con esos filtros.",
+      "export": "Descargar CSV",
+      "exportRequiresPro": "Descargar requiere el plan PRO",
+      "notAllowed": "Solo el dueño y los administradores pueden ver la actividad."
+    }
+  },
+  "invitation": {
+    "title": "Te han invitado",
+    "invitedTo": "Te invitan a unirte a {business} como {role}.",
+    "expires": "La invitación caduca el {date}.",
+    "accept": "Aceptar y entrar",
+    "signInFirst": "Para aceptar esta invitación necesitas una cuenta. Crea una o entra con la tuya.",
+    "invalidTitle": "Esta invitación ya no vale",
+    "invalidBody": "Puede que haya caducado, que se haya cancelado o que ya la hayas usado. Pídele a esa empresa que te mande una nueva.",
+    "needsDatabase": "Las invitaciones necesitan la base de datos. Esta demostración corre en memoria."
   }
 }

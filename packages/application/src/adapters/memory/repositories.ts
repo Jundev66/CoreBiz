@@ -7,6 +7,11 @@ import {
   asId,
 } from '@corebiz/domain';
 import {
+  InMemoryInvitationRepository,
+  InMemoryMembershipRepository,
+  InMemoryTenantSettingsRepository,
+} from './administration';
+import {
   InMemoryProductRepository,
   InMemoryDeliveryNoteRepository,
   InMemoryDocumentSequences,
@@ -128,13 +133,31 @@ export class InMemoryUsageCounter implements UsageCounter {
   }
 }
 
-export class InMemoryAuditLogger implements AuditLogger {
-  readonly entries: (AuditEntry & { tenantId: TenantId })[] = [];
+/** Una entrada tal como queda registrada, con lo que anade el propio registro. */
+export interface RecordedAuditEntry extends AuditEntry {
+  readonly id: string;
+  readonly tenantId: TenantId;
+  readonly occurredAt: Date;
+}
 
-  constructor(private readonly tenantId: TenantId) {}
+export class InMemoryAuditLogger implements AuditLogger {
+  /**
+   * El array puede venir de fuera para que el lado de LECTURA vea lo mismo que
+   * se acaba de escribir. Sin eso, el visor de auditoria de `pnpm dev:nodb`
+   * saldria siempre vacio y el modulo no se podria ni mirar sin base de datos.
+   */
+  constructor(
+    private readonly tenantId: TenantId,
+    readonly entries: RecordedAuditEntry[] = [],
+  ) {}
 
   record(entry: AuditEntry): Promise<void> {
-    this.entries.push({ ...entry, tenantId: this.tenantId });
+    this.entries.push({
+      ...entry,
+      id: `audit-${this.entries.length + 1}`,
+      tenantId: this.tenantId,
+      occurredAt: new Date(),
+    });
     return Promise.resolve();
   }
 }
@@ -149,17 +172,23 @@ export class InMemoryAuditLogger implements AuditLogger {
  */
 export class InMemoryUnitOfWork implements UnitOfWork {
   private readonly stores: SalesStores;
+  readonly audit: InMemoryAuditLogger;
 
   constructor(
     customersOrStores: Map<string, Customer> | SalesStores,
     private readonly usageMap: Map<string, number> = new Map(),
     private readonly tenantId: TenantId = asId<TenantId>('tenant-test'),
-    readonly audit = new InMemoryAuditLogger(tenantId),
+    audit?: InMemoryAuditLogger,
   ) {
     this.stores =
       customersOrStores instanceof Map
         ? { ...createSalesStores(), customers: customersOrStores, usage: usageMap }
         : customersOrStores;
+
+    // El logger se monta DESPUES de resolver los almacenes, para poder apuntarlo
+    // al array compartido. Como parametro con valor por defecto no se podria:
+    // `this.stores` todavia no existe cuando se evalua.
+    this.audit = audit ?? new InMemoryAuditLogger(tenantId, this.stores.auditEntries as never);
   }
 
   async run<T>(fn: (repos: Repositories) => Promise<T>): Promise<T> {
@@ -169,6 +198,9 @@ export class InMemoryUnitOfWork implements UnitOfWork {
       deliveryNotes: new Map(this.stores.deliveryNotes),
       usage: new Map(this.stores.usage),
       sequences: new Map(this.stores.sequences),
+      invitations: new Map(this.stores.invitations),
+      members: new Map(this.stores.members),
+      tenantSettings: new Map(this.stores.tenantSettings),
     };
     const auditLength = this.audit.entries.length;
 
@@ -181,6 +213,16 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         payments: new InMemoryPaymentQueries(),
         usage: new InMemoryUsageCounter(this.stores.usage, this.tenantId),
         audit: this.audit,
+        invitations: new InMemoryInvitationRepository(
+          this.stores.invitations as never,
+          this.tenantId,
+          () => new Date(),
+        ),
+        members: new InMemoryMembershipRepository(this.stores.members as never, this.tenantId),
+        settings: new InMemoryTenantSettingsRepository(
+          this.stores.tenantSettings as never,
+          this.tenantId,
+        ),
       });
     } catch (error) {
       // Rollback: se restaura cada almacen a su estado previo.

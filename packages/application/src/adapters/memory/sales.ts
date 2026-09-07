@@ -163,6 +163,16 @@ export interface SalesStores {
   readonly deliveryNotes: Map<string, DeliveryNote>;
   readonly usage: Map<string, number>;
   readonly sequences: Map<string, number>;
+  // Administracion. Van en el MISMO conjunto de almacenes y no en otro aparte
+  // porque el rollback de la unidad de trabajo los tiene que revertir igual:
+  // invitar consume una plaza del plan, y si la escritura se deshace, la plaza
+  // tiene que volver.
+  // Un ARRAY y no un Map: la auditoria es un registro append-only y el orden
+  // de llegada es parte del dato.
+  readonly auditEntries: unknown[];
+  readonly invitations: Map<string, unknown>;
+  readonly members: Map<string, unknown>;
+  readonly tenantSettings: Map<string, unknown>;
 }
 
 export function createSalesStores(): SalesStores {
@@ -172,5 +182,9 @@ export function createSalesStores(): SalesStores {
     deliveryNotes: new Map(),
     usage: new Map(),
     sequences: new Map(),
+    auditEntries: [],
+    invitations: new Map(),
+    members: new Map(),
+    tenantSettings: new Map(),
   };
 }

@@ -9,12 +9,22 @@ import {
   makeAdjustStock,
   makeIssueDeliveryNote,
   makeVoidDeliveryNote,
+  makeInviteUser,
+  makeChangeMemberRole,
+  makeRemoveMember,
+  makeRevokeInvitation,
+  makeUpdateTenantSettings,
   systemClock,
   type ReadModels,
   type TenantContext,
   type UnitOfWork,
 } from '@corebiz/application';
-import { listMemberships, loadTenantProfile, postgresRuntime } from '@corebiz/infrastructure';
+import {
+  cryptoTokenFactory,
+  listMemberships,
+  loadTenantProfile,
+  postgresRuntime,
+} from '@corebiz/infrastructure';
 import type { Membership } from '@corebiz/infrastructure';
 import { currentUser, supabaseIsConfigured, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
 import { getMemoryUnitOfWork, memoryReadModels, MEMORY_TENANT } from './memory-driver';
@@ -249,7 +259,7 @@ function resolveRuntime(ctx: TenantContext): Runtime {
   if (activeDriver() === 'memory') {
     return {
       uow: getMemoryUnitOfWork(ctx.tenantId),
-      queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency),
+      queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency, ctx.actor.userId),
     };
   }
 
@@ -279,6 +289,10 @@ export async function forRequest(_tenantSlug?: string) {
     ids: { next: () => uuidv7() },
   };
 
+  // Los tokens de invitacion se generan con `randomBytes`, no con Math.random:
+  // un token predecible es una puerta abierta a la empresa que lo espera.
+  const withTokens = { ...shared, tokens: cryptoTokenFactory() };
+
   return {
     ctx,
     session,
@@ -288,6 +302,13 @@ export async function forRequest(_tenantSlug?: string) {
     adjustStock: makeAdjustStock(shared),
     issueDeliveryNote: makeIssueDeliveryNote(shared),
     voidDeliveryNote: makeVoidDeliveryNote(shared),
+
+    // Administracion.
+    inviteUser: makeInviteUser(withTokens),
+    changeMemberRole: makeChangeMemberRole(shared),
+    removeMember: makeRemoveMember(shared),
+    revokeInvitation: makeRevokeInvitation(shared),
+    updateTenantSettings: makeUpdateTenantSettings(shared),
   };
 }
 

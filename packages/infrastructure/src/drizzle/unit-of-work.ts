@@ -13,6 +13,11 @@ import { DrizzleDocumentSequences } from './sequences';
 import { DrizzleUsageCounter } from './usage';
 import { DrizzleAuditLogger } from './audit';
 import { DrizzlePaymentQueries } from './payments';
+import {
+  DrizzleInvitationRepository,
+  DrizzleMembershipRepository,
+  DrizzleTenantSettingsRepository,
+} from './administration';
 import { establishTenantContext } from './session';
 
 export interface UnitOfWorkDeps {
@@ -53,6 +58,9 @@ export class DrizzleUnitOfWork implements UnitOfWork {
         payments: new DrizzlePaymentQueries(),
         usage: new DrizzleUsageCounter(tx, ctx.tenantId, clock),
         audit: new DrizzleAuditLogger(tx, ctx, ids, clock),
+        invitations: new DrizzleInvitationRepository(tx, ctx.tenantId),
+        members: new DrizzleMembershipRepository(tx, ctx.tenantId),
+        settings: new DrizzleTenantSettingsRepository(tx, ctx.tenantId),
       });
     });
   }

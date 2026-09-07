@@ -62,7 +62,7 @@ test.describe('Internacionalizacion', () => {
 });
 
 test.describe('Accesibilidad', () => {
-  for (const path of ['/', '/customers', '/customers/new']) {
+  for (const path of ['/', '/customers', '/customers/new', '/settings', '/settings/team']) {
     test(`sin violaciones serias en ${path}`, async ({ page }) => {
       await page.goto(path);
 

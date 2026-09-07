@@ -63,7 +63,7 @@ export function DeliveryNoteForm({
       <div>
         <label htmlFor="customerId" className="block text-sm font-medium">
           {t('deliveryNotes.customer')}
-          <span aria-hidden="true" className="ml-0.5 text-[var(--color-danger)]">
+          <span aria-hidden="true" className="ml-0.5 text-[var(--color-danger-ink)]">
             *
           </span>
         </label>

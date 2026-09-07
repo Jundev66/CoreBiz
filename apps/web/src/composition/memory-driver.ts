@@ -220,9 +220,22 @@ function seed(target: MemoryStore): void {
   // Los movimientos de la siembra ya estan reflejados en el saldo.
   for (const product of target.products.values()) product.pullStockMovements();
 
+  // El equipo: una sola persona, la duena. Es lo mismo que siembra `seed.sql`, y
+  // deja el plan gratuito con una plaza libre — justo la que hace falta para que
+  // se pueda probar invitar a alguien y chocar despues con el limite.
+  target.members.set(`${MEMORY_TENANT}:${DEMO_USER}`, {
+    tenantId: MEMORY_TENANT,
+    userId: DEMO_USER,
+    email: 'demo@corebiz.local',
+    role: 'owner',
+    status: 'active',
+    joinedAt: SEEDED_AT,
+  });
+
   target.usage.set(`${MEMORY_TENANT}:customers`, target.customers.size);
   target.usage.set(`${MEMORY_TENANT}:products`, target.products.size);
   target.usage.set(`${MEMORY_TENANT}:documents_month`, target.deliveryNotes.size);
+  target.usage.set(`${MEMORY_TENANT}:users`, target.members.size);
   target.sequences.set(`${MEMORY_TENANT}:delivery_note`, NOTES.length);
 }
 
@@ -238,6 +251,10 @@ export function getMemoryUnitOfWork(tenantId: TenantId): InMemoryUnitOfWork {
  * implementaciones cumplan un contrato explicito es lo que permite que las
  * pantallas no sepan cual esta detras.
  */
-export function memoryReadModels(tenantId: TenantId, currency: Currency): ReadModels {
-  return inMemoryReadModels(store(), tenantId, currency);
+export function memoryReadModels(
+  tenantId: TenantId,
+  currency: Currency,
+  viewerId = '',
+): ReadModels {
+  return inMemoryReadModels(store(), tenantId, currency, viewerId);
 }

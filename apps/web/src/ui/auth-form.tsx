@@ -66,7 +66,7 @@ export function AuthForm({
       {state.status === 'error' && state.errorKind !== undefined && (
         <p
           role="alert"
-          className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]"
+          className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
         >
           {t(`auth.errors.${state.errorKind}`, {
             // El limitador devuelve segundos; en pantalla se leen mejor minutos.
@@ -121,7 +121,7 @@ function AuthField({ field, error }: { field: AuthFieldSpec; error: string | und
       )}
 
       {error !== undefined && (
-        <p id={`${field.name}-error`} className="mt-1.5 text-xs text-[var(--color-danger)]">
+        <p id={`${field.name}-error`} className="mt-1.5 text-xs text-[var(--color-danger-ink)]">
           {t(`auth.fieldErrors.${error}`, { field: field.label })}
         </p>
       )}
