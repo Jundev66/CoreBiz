@@ -25,17 +25,19 @@ Lo verificado, no lo aspiracional.
 | Interfaz (`apps/web`)         | ✅ 9 páginas, Server Actions, i18n ES/EN, gating PRO                  |
 | Tests E2E + BDD               | ✅ 14 escenarios Gherkin, 23 tests, independientes del orden          |
 | Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla        |
-| **Persistencia real**         | ❌ `packages/infrastructure` está **vacío**                           |
-| **Tablas de negocio**         | ❌ **Cero migraciones `create table`**. Solo existen las de RLS       |
+| Persistencia real             | ✅ Adaptadores Drizzle de cada puerto, UoW sobre transacción real     |
+| Tablas de negocio             | ✅ 11 tablas, migraciones aplicadas y semilla que cuadra sola         |
+| Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 27 tests de integración   |
 | **Autenticación**             | ❌ El rol y el plan salen de dos cookies de demo                      |
-| **Aislamiento probado**       | ❌ Las políticas están escritas; ningún test las ha ejecutado nunca   |
 | Compras y proveedores         | ❌ El directorio del dominio está vacío                               |
 | Administración                | ❌ Sin invitaciones, sin gestión de roles, sin visor de auditoría     |
 | Demo efímero                  | ❌ Sin función de clonado, sin TTL, sin purga                         |
 | Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                             |
 
-**La lectura honesta:** el 70 % del valor arquitectónico está construido y probado, pero corre
-sobre un almacén en memoria. Lo que falta no es refinamiento — es la mitad que toca el mundo real.
+**La lectura honesta:** el sistema ya corre sobre Postgres con las políticas RLS ejecutándose
+en CI, y los 14 escenarios BDD pasan contra los dos adaptadores sin cambiar una línea. Lo que
+queda por delante es lo que separa un repositorio de un producto: una sesión de verdad, un
+demo que se pueda visitar y un despliegue que sobreviva a la pausa de Supabase.
 
 ---
 
@@ -54,8 +56,8 @@ graph LR
   H1 --> H5[H5 · Compras]
   H8 --> H7[H7 · Acabado]
 
-  style H1 fill:#fee,stroke:#c00
-  style H2 fill:#fee,stroke:#c00
+  style H1 fill:#efe,stroke:#0a0
+  style H2 fill:#efe,stroke:#0a0
   style H3 fill:#fee,stroke:#c00
   style H8 fill:#efe,stroke:#0a0
 ```
@@ -65,35 +67,40 @@ y ninguna se puede saltar.
 
 ---
 
-## H1 · Esquema y persistencia real
+## H1 · Esquema y persistencia real — ✅ HECHA
 
-**Por qué bloquea todo:** hoy no existe ni una sola tabla de negocio. `resolveUnitOfWork` lanza una
-excepción explícita para el driver `postgres`, que es la decisión correcta —fallar claro en vez de
-arrancar a medias— pero significa que sin esta fase no hay nada que desplegar.
+**Por qué bloqueaba todo:** no existía ni una sola tabla de negocio, y el composition root
+lanzaba una excepción explícita para el driver `postgres` —fallar claro en vez de arrancar a
+medias— así que no había nada que desplegar.
 
-Es la fase más grande y la de menor riesgo de diseño: los puertos ya existen y los adaptadores en
-memoria son la especificación ejecutable de lo que hay que reproducir contra Postgres.
+Fue la fase más grande y la de menor riesgo de diseño: los puertos ya existían y los adaptadores
+en memoria eran la especificación ejecutable de lo que había que reproducir contra Postgres.
+
+**Lo que costó más de lo previsto:** la semilla. `config.toml` apuntaba a un `seed.sql` que no
+existía, y escribirlo obligó a decidir algo que el plan daba por hecho — que los datos de Postgres
+fuesen **exactamente** los del driver en memoria. Sin esa igualdad, los escenarios Gherkin
+necesitan una variante por adaptador y el criterio de abajo deja de poder cumplirse.
 
 **Qué construir**
 
-- [ ] Esquema Drizzle de los módulos de negocio en `packages/db/src/schema/`: `customers`,
+- [x] Esquema Drizzle de los módulos de negocio en `packages/db/src/schema/`: `customers`,
       `products`, `product_stock`, `stock_movements`, `delivery_notes`, `delivery_note_lines`,
       `payments`. Los nombres ya están comprometidos en la lista de la migración de políticas.
-- [ ] Migraciones `create table` correspondientes. **Sin ellas, la migración de RLS salta las tablas
+- [x] Migraciones `create table` correspondientes. **Sin ellas, la migración de RLS salta las tablas
       en silencio** (`if to_regclass(...) is null then continue`) y el sistema queda sin políticas
       pareciendo que las tiene. Este es el fallo más peligroso del estado actual.
-- [ ] Convenciones ya decididas y que hay que respetar fila a fila: `bigint` en unidades mínimas para
+- [x] Convenciones ya decididas y que hay que respetar fila a fila: `bigint` en unidades mínimas para
       dinero, `uuid v7` como PK, índice compuesto con `tenant_id` **siempre primero**, tasa de cambio
       congelada en cada documento.
-- [ ] `packages/infrastructure/` con los adaptadores Drizzle de cada puerto. Un archivo por
+- [x] `packages/infrastructure/` con los adaptadores Drizzle de cada puerto. Un archivo por
       repositorio, espejo de los de memoria.
-- [ ] `UnitOfWork` real sobre una transacción de `postgres.js`, con `set_config(..., true)` para las
+- [x] `UnitOfWork` real sobre una transacción de `postgres.js`, con `set_config(..., true)` para las
       GUCs de tenant. **Local a la transacción, nunca a la sesión** — con `false`, Supavisor reutiliza
       la conexión para otro tenant y la fuga es directa.
-- [ ] `DocumentSequences` con `select ... for update`: el correlativo de las notas de entrega no
+- [x] `DocumentSequences` con `select ... for update`: el correlativo de las notas de entrega no
       admite huecos ni duplicados bajo concurrencia.
-- [ ] Conectar el driver `postgres` en el composition root, sustituyendo el `throw`.
-- [ ] Cliente `postgres.js` con `prepare: false` y `max: 1` como singleton de módulo. Sin esto
+- [x] Conectar el driver `postgres` en el composition root, sustituyendo el `throw`.
+- [x] Cliente `postgres.js` con `prepare: false` y `max: 1` como singleton de módulo. Sin esto
       funciona en local y revienta en producción, que es la peor forma de descubrirlo.
 
 **Hecho cuando:** `DATA_DRIVER=postgres pnpm dev` levanta la aplicación contra Supabase local y los
@@ -102,29 +109,38 @@ adaptador, la arquitectura hexagonal era real.
 
 ---
 
-## H2 · El aislamiento, probado
+## H2 · El aislamiento, probado — ✅ HECHA
 
-**Por qué bloquea el despliegue:** las políticas RLS están escritas y son buenas. Nunca se han
-ejecutado. Una política no probada es una hipótesis, y publicar un SaaS multi-tenant sobre una
-hipótesis es exactamente lo que este proyecto dice saber evitar.
+**Por qué bloqueaba el despliegue:** las políticas RLS estaban escritas y eran buenas, pero
+nunca se habían ejecutado. Una política no probada es una hipótesis, y publicar un SaaS
+multi-tenant sobre una hipótesis es exactamente lo que este proyecto dice saber evitar.
+
+La matriz se comprobó por mutación, no solo por estar en verde: quitar `force row level security`
+de una tabla y aflojar una política a `using (true)` ponen la suite en rojo. Un test de
+aislamiento que nunca ha fallado no ha demostrado nada.
 
 **Qué construir**
 
-- [ ] Matriz de aislamiento parametrizada: recorre la lista de tablas con `tenant_id` y, para cada
+- [x] Matriz de aislamiento parametrizada: recorre la lista de tablas con `tenant_id` y, para cada
       una, autentica como tenant A e intenta `select` / `update` / `delete` sobre filas del tenant B,
       exigiendo cero filas afectadas. **Al añadirse una tabla nueva sin política, el test falla solo.**
-- [ ] Test de la fuga por GUC pegada: dos transacciones seguidas sobre la **misma conexión** con
+- [x] Test de la fuga por GUC pegada: dos transacciones seguidas sobre la **misma conexión** con
       tenants distintos, comprobando que la segunda no ve nada de la primera. Es la prueba directa de
       por qué `set_config` va con `true`.
-- [ ] Test del `with check` en `update`: intentar mover una fila propia al tenant ajeno cambiándole
+- [x] Test del `with check` en `update`: intentar mover una fila propia al tenant ajeno cambiándole
       el `tenant_id` debe fallar.
-- [ ] Test de `force row level security`: comprobar que el propietario de la tabla tampoco se salta
-      las políticas.
-- [ ] Test de inmutabilidad del `audit_log`: `insert` y `select` permitidos, `update` y `delete`
+- [x] Test de `force row level security`, con un matiz que conviene decir: la comprobación es
+      **estructural** (`relforcerowsecurity` en toda tabla con `tenant_id`) y no conductual. En
+      Supabase el propietario de las tablas es `postgres`, que además tiene `BYPASSRLS`, así que
+      desde su sesión no hay forma de observar el efecto de FORCE. A cambio hay un test que sí es
+      conductual y cubre el riesgo real: dentro del Unit of Work, `current_user` es `authenticated`
+      y ese rol no tiene ni `rolsuper` ni `rolbypassrls`.
+- [x] Test de inmutabilidad del `audit_log`: `insert` y `select` permitidos, `update` y `delete`
       denegados.
-- [ ] Job `integration` en CI con `supabase start` sobre `ubuntu-latest`.
+- [x] Job `integration` en CI con `supabase start` sobre `ubuntu-latest`.
 
-**Hecho cuando:** el job está en verde en CI y `pnpm test:integration` deja de llevar _(pendiente)_
+**Hecho:** el job `integration` levanta Supabase en CI, corre la matriz y después ejecuta los
+mismos 14 escenarios BDD contra Postgres. `pnpm test:integration` ya no lleva _(pendiente)_
 en la tabla del README. Esta es la fase que responde la pregunta de entrevista _"¿cómo sabes que tu
 multi-tenant no filtra datos?"_ con un comando en vez de con una explicación.
 

@@ -13,13 +13,13 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 
 ## Qué demuestra este proyecto
 
-|                   |                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                         |
-| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla. |
-| **Testing**       | **211 tests**: 196 unitarios (Vitest + property-based con fast-check), 6 escenarios BDD en Gherkin y 9 E2E con Playwright, incluida accesibilidad con axe.                         |
-| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                       |
-| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                   |
+|                   |                                                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                          |
+| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                  |
+| **Testing**       | **270 tests**: 220 unitarios (Vitest + property-based con fast-check), 27 de integración contra Postgres real, 14 escenarios BDD en Gherkin y 9 E2E con Playwright, incluida accesibilidad con axe. |
+| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                        |
+| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                    |
 
 ## Stack
 
@@ -61,8 +61,9 @@ pnpm dev
 | ----------------------- | ----------------------------------------------------------------------------- |
 | `pnpm check`            | Formato, lint, tipos, arquitectura y tests unitarios. Lo que corre en CI.     |
 | `pnpm test:unit`        | Dominio y aplicación. Sin IO, menos de 5 segundos.                            |
-| `pnpm test:integration` | Repositorios y **matriz de aislamiento RLS**. Requiere Docker. _(pendiente)_  |
-| `pnpm test:bdd`         | Escenarios Gherkin sobre la aplicación real.                                  |
+| `pnpm test:integration` | Repositorios y **matriz de aislamiento RLS**. Requiere Docker.                |
+| `pnpm test:bdd`         | Escenarios Gherkin sobre la aplicación real, en memoria.                      |
+| `pnpm test:bdd:pg`      | **Los mismos escenarios**, sin tocar una línea, contra Postgres con RLS.      |
 | `pnpm test:e2e`         | Playwright con trazas y vídeo en los fallos.                                  |
 | `pnpm arch`             | Verifica los límites entre capas. **Falla el build si el dominio se acopla.** |
 | `pnpm arch:graph`       | Regenera el diagrama de dependencias.                                         |
@@ -103,16 +104,22 @@ El análisis STRIDE completo, con los riesgos aceptados de forma consciente, est
 
 ## Qué falta
 
-El ciclo de venta funciona y está probado, pero sobre adaptadores en memoria: aún no hay
-persistencia real, autenticación ni despliegue. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice
-exactamente qué queda, en qué orden y por qué ese orden — incluyendo el estado honesto de
-cada capa y las tres fases que son innegociables antes de publicar.
+El ciclo de venta funciona y está probado sobre Postgres real, con las políticas RLS
+ejecutándose en cada push. Lo que queda es **autenticación** —hoy el rol y el plan salen de
+dos cookies de demostración, deliberadamente— y el **despliegue**.
+[`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué orden y por qué ese
+orden, incluyendo el estado honesto de cada capa.
 
 ## Tres detalles que resumen el enfoque
 
 **La arquitectura rompe el build si se viola.** No es una convención documentada: se
 comprobó inyectando a propósito un `import { z } from 'zod'` en el dominio, y `pnpm arch`
 lo detectó. Además, `pnpm` con `hoist=false` hace que ese import ni siquiera resuelva.
+
+**Los mismos escenarios corren sobre los dos adaptadores.** Los 14 escenarios Gherkin
+pasan en memoria y contra Postgres con RLS activo, sin cambiar una línea. Esa es la
+comprobación ejecutable de que la arquitectura hexagonal es real: si el dominio supiera que
+existe una base de datos, `pnpm test:bdd:pg` no podría existir.
 
 **Los tests encuentran bugs de verdad.** Tres ejemplos reales de este repositorio: el
 descuento de stock se aplicaba línea a línea, así que un fallo en la última dejaba las

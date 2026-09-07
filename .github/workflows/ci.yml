@@ -95,6 +95,68 @@ jobs:
       - name: Verificar que no aparece vocabulario fiscal
         run: bash scripts/check-non-fiscal.sh
 
+  integration:
+    name: Persistencia y matriz de aislamiento RLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # `ubuntu-latest` trae Docker preinstalado, asi que Supabase local arranca sin
+      # provisionar nada. Es lo que permite que las politicas RLS se EJECUTEN en cada
+      # push en lugar de quedarse como una hipotesis escrita en un archivo SQL.
+      - name: Levantar Supabase local
+        run: pnpm db:start
+
+      # La matriz recorre TODA tabla con tenant_id descubierta del catalogo y exige
+      # cero filas en select, update y delete cruzados. Si alguien anade una tabla
+      # nueva sin politica, este job se pone en rojo sin que nadie tenga que acordarse.
+      - name: Matriz de aislamiento y adaptadores Drizzle
+        run: pnpm test:integration
+
+      # Cachear los navegadores aqui tambien: la clave es la misma que en el job e2e,
+      # asi que el segundo que corra reutiliza la descarga del primero.
+      - name: Cachear navegadores de Playwright
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Instalar Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @corebiz/e2e exec playwright install chromium --with-deps
+
+      - name: Construir la aplicacion contra Postgres
+        run: pnpm --filter @corebiz/web exec next build
+        env:
+          DATA_DRIVER: postgres
+
+      # LOS MISMOS escenarios Gherkin que el job e2e corre en memoria, ahora contra
+      # Postgres con RLS activo. Que ninguno necesite cambiar es la comprobacion
+      # ejecutable de que la arquitectura hexagonal es real y no decorativa: si el
+      # dominio supiera de la base de datos, esta linea no podria existir.
+      - name: Los mismos escenarios BDD, ahora sobre Postgres
+        run: pnpm test:bdd:pg
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+      - name: Publicar el reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-postgres
+          path: e2e/playwright-report/
+          retention-days: 7
+
+      - name: Apagar Supabase
+        if: always()
+        run: pnpm db:stop
+
   e2e:
     name: E2E y BDD (Playwright)
     runs-on: ubuntu-latest
