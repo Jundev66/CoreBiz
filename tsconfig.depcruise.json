@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": [
+    "Solo lo lee dependency-cruiser. No compila nada.",
+    "",
+    "Existe porque el alias `@/` vive en apps/web/tsconfig.json, y depcruise lee",
+    "UN solo tsconfig para resolver rutas. Sin esta pieza, las 22 importaciones",
+    "escritas como `@/...` quedaban sin resolver, y el grafo de la aplicacion",
+    "web aparecia roto por la mitad: las reglas que recorren el grafo (ciclos,",
+    "huerfanos) no podian seguir esas aristas. Ver el comentario extenso en",
+    ".dependency-cruiser.cjs."
+  ],
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["apps/web/src/*"] }
+  }
+}

@@ -61,7 +61,8 @@
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
-    "notice": "CoreBiz issues delivery notes: internal documents with no fiscal value."
+    "notice": "CoreBiz issues delivery notes: internal documents with no fiscal value.",
+    "deliveryNoteKind": "Delivery note — internal document"
   },
   "demo": {
     "banner": "Demo mode",
@@ -121,7 +122,11 @@
       "issued": "Issued",
       "delivered": "Delivered",
       "voided": "Voided"
-    }
+    },
+    "printHint": "In the dialog, choose “Save as PDF” to get the file.",
+    "deliveredBy": "Delivered by",
+    "receivedBy": "Received by",
+    "print": "Print or save as PDF"
   },
   "reports": {
     "title": "Reports",

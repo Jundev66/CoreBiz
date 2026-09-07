@@ -65,6 +65,7 @@ graph LR
   style H3 fill:#efe,stroke:#0a0
   style H4 fill:#efe,stroke:#0a0
   style H5 fill:#efe,stroke:#0a0
+  style H7 fill:#efe,stroke:#0a0
   style H8 fill:#efe,stroke:#0a0
 ```
 
@@ -284,14 +285,29 @@ circuit breaker cae a modo degradado en lugar de fallar.
 
 ---
 
-## H7 · Acabado
+## H7 · Acabado — ✅ HECHA
 
-- [ ] PDF de la nota de entrega, con el aviso **"Documento no fiscal / sin valor fiscal"** en el pie.
-      El guardián `check-non-fiscal.sh` ya vigila el vocabulario; esto es su contraparte visible.
-- [ ] Landing pública que explique qué es CoreBiz y lleve al demo en un clic.
-- [ ] Observabilidad mínima: `/api/health`, registro estructurado de errores.
-- [ ] Tests de accesibilidad con `@axe-core/playwright` sobre las rutas principales.
-- [ ] Diagrama de dependencias regenerado (`pnpm arch:graph`) y ADRs de las decisiones de H1–H6.
+- [x] La nota de entrega **imprimible**, con el aviso _"Documento no fiscal / sin valor fiscal"_
+      en el pie y espacio para las dos firmas. **No es un PDF de servidor**, y la razón está en
+      [ADR 008](adr/008-imprimir-en-el-navegador.md): una librería que dibuja cajas maqueta peor y
+      cuesta cientos de líneas, y un navegador sin cabeza no cabe en el límite de tamaño de una
+      función del plan gratuito. El navegador de quien usa el sistema ya sabe hacerlo, mejor y
+      gratis — y "Imprimir" es un botón que esa persona ya sabe usar.
+- [x] Portada que explica qué es CoreBiz, lleva a cada módulo en un clic y ofrece crear cuenta
+      solo a quien no ha entrado.
+- [x] Observabilidad mínima: `/api/health` que **toca la base de datos de verdad** —un 200 que no
+      consulta nada mantiene viva la función de Vercel y deja dormirse a Postgres, que es lo
+      contrario de lo que hace falta— y registro estructurado de errores en JSON.
+- [x] Tests de accesibilidad con `@axe-core/playwright` sobre siete rutas. Encontraron un fallo
+      real: el rojo de los rellenos no llega a 4.5:1 como texto pequeño, así que los tonos de
+      relleno y de texto están separados.
+- [x] Diagrama de dependencias y ADRs 006, 007 y 008.
+
+**Lo que salió de aquí y no estaba previsto.** Regenerar el diagrama destapó que el alias `@/` no
+resolvía en `dependency-cruiser`: 22 importaciones aparecían como módulos fantasma, y el grafo de
+`apps/web` estaba roto por la mitad. Las reglas por ruta seguían funcionando; las que recorren el
+grafo —ciclos, huérfanos— no podían seguir esas aristas. Se descubrió por un aviso sobre un
+componente que sí estaba importado: el aviso era la punta del problema, no el problema.
 
 ---
 
@@ -341,8 +357,8 @@ Decidido, no olvidado:
 
 **H1 → H2 → H3 → H6 → H8**, y después H4, H5 y H7 sobre un sistema ya vivo.
 
-H1, H2, H3, H4 y H5 están hechas. Queda **H6** (demo efímero), **H7** (acabado) y **H8**
-(despliegue), y solo H8 depende de credenciales que no están en el repositorio.
+H1, H2, H3, H4, H5 y H7 están hechas. Queda **H6** (demo efímero) y **H8** (despliegue), y
+solo H8 depende de credenciales que no están en el repositorio.
 
 La tentación es construir Compras primero porque es el módulo que más se parece a lo ya hecho y sale
 rápido. Sería un error: añadiría superficie sobre un almacén en memoria y alejaría el despliegue.

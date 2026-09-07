@@ -20,5 +20,5 @@
 
 # Archivos generados: fuera de las estadisticas de lenguaje y del diff por defecto.
 pnpm-lock.yaml linguist-generated=true -diff
-docs/diagrams/*.svg linguist-generated=true -diff
+docs/diagrams/*.generated.md linguist-generated=true -diff
 e2e/.features-gen/** linguist-generated=true

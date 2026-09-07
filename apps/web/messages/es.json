@@ -61,7 +61,8 @@
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
-    "notice": "CoreBiz genera notas de entrega, documentos internos sin valor fiscal."
+    "notice": "CoreBiz genera notas de entrega, documentos internos sin valor fiscal.",
+    "deliveryNoteKind": "Nota de entrega — documento interno"
   },
   "demo": {
     "banner": "Modo demostración",
@@ -121,7 +122,11 @@
       "issued": "Emitida",
       "delivered": "Entregada",
       "voided": "Anulada"
-    }
+    },
+    "printHint": "En el diálogo, elige «Guardar como PDF» para tener el archivo.",
+    "deliveredBy": "Entregado por",
+    "receivedBy": "Recibido por",
+    "print": "Imprimir o guardar en PDF"
   },
   "reports": {
     "title": "Reportes",

@@ -126,9 +126,29 @@ module.exports = {
 
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '\.(spec|test)\.tsx?$|/__tests__/|^e2e/\.features-gen/' },
+    // `.next` es salida de build: incluirla no anade informacion y llena el
+    // diagrama de dependencias de archivos generados con nombres ilegibles.
+    exclude: { path: '\.(spec|test)\.tsx?$|/__tests__/|^e2e/\.features-gen/|^apps/web/\.next/' },
     tsPreCompilationDeps: true,
-    tsConfig: { fileName: 'tsconfig.base.json' },
+    /**
+     * `tsconfig.depcruise.json` y no el base, a proposito.
+     *
+     * El alias `@/` vive en apps/web/tsconfig.json, y depcruise lee UN solo
+     * tsconfig para resolver rutas. Con el base, las 22 importaciones escritas
+     * como `@/...` quedaban SIN RESOLVER: aparecian como modulos fantasma sin
+     * destino, y el grafo real de la aplicacion web estaba roto por la mitad.
+     *
+     * Lo que eso costaba: las reglas que dependen de ALCANZABILIDAD —ciclos,
+     * modulos huerfanos— no podian seguir esas aristas, y el diagrama de
+     * dependencias mostraba un `apps/web` desconectado de su propio `src/`.
+     * Las reglas por RUTA (`domain-is-pure`, `ui-no-direct-db`, la cuarentena de
+     * la clave privilegiada) seguian funcionando, porque comparan rutas de
+     * archivo y no recorren el grafo.
+     *
+     * Se descubrio por un aviso de `no-orphans` sobre un componente que si
+     * estaba importado: el aviso era la punta del problema, no el problema.
+     */
+    tsConfig: { fileName: 'tsconfig.depcruise.json' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],

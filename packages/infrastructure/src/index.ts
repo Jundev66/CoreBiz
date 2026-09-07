@@ -46,3 +46,4 @@ export {
 } from './drizzle/invitations-flow';
 export { DrizzleSupplierRepository, DrizzleGoodsReceiptRepository } from './drizzle/purchasing';
 export { drizzlePurchasingQueries } from './queries/purchasing';
+export { databaseIsReachable } from './drizzle/health';

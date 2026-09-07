@@ -39,6 +39,10 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 
+# Salida de herramienta, no fuente: mil nodos regenerables con `pnpm arch:graph`.
+# El diagrama que se lee esta escrito a mano en el mismo directorio.
+docs/diagrams/dependency-graph.generated.md
+
 # logs
 *.log
 npm-debug.log*

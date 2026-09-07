@@ -14,7 +14,7 @@ name: Keepalive
 # ⚠️ AVISO: GitHub deshabilita los workflows programados de un repositorio tras 60
 # dias SIN COMMITS. Este keepalive no basta por si solo. Hay que configurar ademas un
 # monitor externo gratuito (cron-job.org o UptimeRobot) apuntando a /api/health cada
-# 6 horas. Ver docs/RUNBOOK.md.
+# 6 horas. El procedimiento completo esta en docs/DEPLOY.md, seccion 5.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:

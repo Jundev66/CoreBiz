@@ -81,7 +81,16 @@ export default defineConfig({
     env: {
       DATA_DRIVER: DRIVER,
       NODE_ENV: 'production',
-      ...(DRIVER === 'postgres' ? { DATABASE_URL } : {}),
+      ...(DRIVER === 'postgres'
+        ? {
+            DATABASE_URL,
+            // `next start` es UN proceso de larga vida sirviendo peticiones en
+            // paralelo, no una funcion serverless. Con el pool en uno, cada
+            // transaccion bloquea a las demas y los tests fallan por espera —
+            // que es exactamente lo que le pasaria a quien autoalojara esto.
+            DATABASE_MAX_CONNECTIONS: '10',
+          }
+        : {}),
     },
   },
 });

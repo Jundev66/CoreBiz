@@ -17,7 +17,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,cjs,mjs,json,md,yaml,yml,css}\"",
     "typecheck": "turbo run typecheck",
     "arch": "depcruise --config .dependency-cruiser.cjs packages apps",
-    "arch:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot packages apps | dot -T svg > docs/diagrams/dependency-graph.svg",
+    "arch:graph": "depcruise --config .dependency-cruiser.cjs --output-type mermaid packages apps > docs/diagrams/dependency-graph.generated.md",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run --project domain --project application",

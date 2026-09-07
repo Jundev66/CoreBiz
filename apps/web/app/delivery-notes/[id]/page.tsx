@@ -32,9 +32,23 @@ export default async function DeliveryNoteDetailPage({
       title={note.number}
       subtitle={note.customerName}
       action={
-        <Link href="/delivery-notes" className="text-sm text-[var(--color-muted)] hover:underline">
-          ← {t('deliveryNotes.title')}
-        </Link>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link
+            href="/delivery-notes"
+            className="text-sm text-[var(--color-muted)] hover:underline"
+          >
+            ← {t('deliveryNotes.title')}
+          </Link>
+          {/* La vista de impresion se sirve sin el marco de la aplicacion: lo
+              que se imprime tiene que ser el documento, no una captura de la
+              aplicacion con el documento dentro. */}
+          <Link
+            href={`/delivery-notes/${id}/print`}
+            className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
+          >
+            {t('deliveryNotes.print')}
+          </Link>
+        </div>
       }
     >
       <dl className="mb-8 grid gap-4 sm:grid-cols-3">
