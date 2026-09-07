@@ -89,6 +89,10 @@ export default defineConfig({
             // transaccion bloquea a las demas y los tests fallan por espera —
             // que es exactamente lo que le pasaria a quien autoalojara esto.
             DATABASE_MAX_CONNECTIONS: '10',
+            // La suite abre varios visitantes desde la MISMA maquina para
+            // comprobar que sus sandboxes estan aislados. Con el limite de
+            // produccion —uno por hora y origen— ese test no se puede escribir.
+            DEMO_MAX_PER_HOUR: '20',
           }
         : {}),
     },

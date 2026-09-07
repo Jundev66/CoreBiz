@@ -17,7 +17,7 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                           |
 | **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                   |
-| **Testing**       | **378 tests**: 264 unitarios (Vitest + property-based con fast-check), 56 de integración contra Postgres real, 22 escenarios BDD en Gherkin y 36 E2E con Playwright, incluida accesibilidad con axe. |
+| **Testing**       | **395 tests**: 264 unitarios (Vitest + property-based con fast-check), 65 de integración contra Postgres real, 22 escenarios BDD en Gherkin y 44 E2E con Playwright, incluida accesibilidad con axe. |
 | **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                         |
 | **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                     |
 
@@ -108,20 +108,30 @@ El análisis STRIDE completo, con los riesgos aceptados de forma consciente, est
 ## Qué falta
 
 El ciclo de venta funciona sobre Postgres real, con las políticas RLS ejecutándose en cada
-push y con autenticación de verdad. Lo que queda ya no es fundacional: el **sandbox
-efímero** de la demo y el **despliegue**. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
+push y con autenticación de verdad. Lo que queda ya no es fundacional: el **despliegue**: es
+lo único que no se puede hacer desde el repositorio, porque necesita una cuenta de Supabase
+y una de Vercel. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
 orden y por qué ese orden, incluyendo el estado honesto de cada capa.
 
 ### La demostración se abre sin cuenta, a propósito
 
-Quien llega desde un enlace ve el sistema funcionando sin registrarse: sin sesión, la
-aplicación sirve un tenant marcado `is_demo`, donde las cookies de rol y plan permiten
-cambiar de papel y ver el RBAC y las cuotas actuando en vivo. Con sesión iniciada esas
-cookies dejan de tener efecto.
+`/demo` entrega a cada visitante **su propia copia** del comercio de ejemplo: puede tocarlo
+todo, nadie más ve lo que hace, y se borra sola a las 24 horas. Sin registro y sin dar un
+correo.
 
-La protección no es que la constante apunte al sitio correcto, es que **se comprueba la
-marca `is_demo` en la fila**: apuntarla a una empresa real no la expone, redirige a la
-pantalla de acceso. `DEMO_ENABLED=false` cierra la puerta entera.
+Tres cosas que la sostienen y que no se ven:
+
+- **La provisión va por POST, nunca por GET.** Un GET que provisiona lo dispara cualquier
+  rastreador o previsualización de enlace de un chat: publicar el enlace crearía decenas de
+  copias de la base antes de que lo abriese una persona.
+- **Un disyuntor sobre el tamaño de la base.** Por encima del 70 % del presupuesto se deja
+  de crear copias y se sirve la plantilla compartida; por encima del 85 % se purga sin
+  esperar al TTL. El visitante **siempre ve algo funcionando** — un error de cuota en el
+  enlace del CV es el peor resultado posible del proyecto entero.
+- **Sin sesión, solo se sirve un tenant marcado `is_demo`.** La protección no es que una
+  constante apunte al sitio correcto: es que se comprueba la marca en la fila. Apuntarla a
+  una empresa real no la expone, redirige a la pantalla de acceso. `DEMO_ENABLED=false`
+  cierra la puerta entera.
 
 ## Tres detalles que resumen el enfoque
 

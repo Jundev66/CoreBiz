@@ -66,7 +66,15 @@
   },
   "demo": {
     "banner": "Modo demostración",
-    "memoryDriver": "Ejecutándose sin base de datos, con datos de ejemplo en memoria."
+    "memoryDriver": "Ejecutándose sin base de datos, con datos de ejemplo en memoria.",
+    "title": "Prueba CoreBiz",
+    "intro": "Te damos una copia propia del sistema, con datos de un comercio de ejemplo. Puedes tocarlo todo.",
+    "pointOwnCopy": "Es tu copia: nadie más ve lo que hagas.",
+    "pointNoSignup": "No hace falta registrarse ni dar un correo.",
+    "pointExpires": "Se borra sola a las 24 horas.",
+    "start": "Entrar a la demostración",
+    "orSignUp": "¿Prefieres empezar con tu negocio de verdad?",
+    "rateLimited": "Ya creaste una demostración hace poco. Vuelve a intentarlo dentro de un rato, o entra con la que ya tienes."
   },
   "common": {
     "save": "Guardar",

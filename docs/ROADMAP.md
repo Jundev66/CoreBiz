@@ -65,6 +65,7 @@ graph LR
   style H3 fill:#efe,stroke:#0a0
   style H4 fill:#efe,stroke:#0a0
   style H5 fill:#efe,stroke:#0a0
+  style H6 fill:#efe,stroke:#0a0
   style H7 fill:#efe,stroke:#0a0
   style H8 fill:#efe,stroke:#0a0
 ```
@@ -260,28 +261,48 @@ tomarla por él en silencio le cambiaría los márgenes sin avisar.
 
 ---
 
-## H6 · Demo efímero y control de coste
+## H6 · Demo efímero y control de coste — ✅ HECHA
 
 Es la fase que convierte el proyecto en un link del CV en vez de un repo más.
 
-- [ ] Función SQL `clone_demo_tenant()`: `insert ... select` desde el tenant plantilla, remapeando
+- [x] Función SQL `clone_demo_tenant()`: `insert ... select` desde el tenant plantilla, remapeando
       las claves con `uuid_generate_v5(nuevo_tenant, id_viejo::text)`. Determinista, sin tabla de
       mapeo, sin orden de dependencias, una transacción.
-- [ ] Ruta `/demo`: cookie firmada que **reutiliza** el sandbox existente en vez de crear otro.
-- [ ] Semilla compacta (~600–900 filas, ≈1,5 MB) que aparente un negocio con historia.
-- [ ] Purga con `pg_cron` cada 10 minutos, TTL de 24 h. Va dentro de Postgres porque el cron de
+- [x] Ruta `/demo`: cookie firmada que **reutiliza** el sandbox existente en vez de crear otro.
+- [x] Semilla compacta (~600–900 filas, ≈1,5 MB) que aparente un negocio con historia.
+- [x] Purga con `pg_cron` cada 10 minutos, TTL de 24 h. Va dentro de Postgres porque el cron de
       Vercel Hobby es diario. Respaldos: purga perezosa dentro de la propia provisión, y el cron
       diario de Vercel como tercera red.
-- [ ] Circuit breaker sobre `pg_database_size()`: por encima del **70 %** de los 500 MB se deja de
+- [x] Circuit breaker sobre `pg_database_size()`: por encima del **70 %** de los 500 MB se deja de
       crear sandboxes y se sirve un demo compartido de solo lectura; por encima del **85 %**, purga
       agresiva sin esperar al TTL.
-- [ ] Anti-abuso: 1 sandbox por IP y hora, tope global de 50 concurrentes (≈20 MB, 6 % del presupuesto).
+- [x] Anti-abuso: 1 sandbox por IP y hora, tope global de 50 concurrentes (≈20 MB, 6 % del presupuesto).
 
 **Por qué el modo degradado importa más que el límite:** un reclutador tiene que ver algo funcionando
 siempre. Un error de cuota en el link del CV es el peor resultado posible del proyecto entero.
 
-**Hecho cuando:** `/demo` en incógnito entrega un tenant sembrado propio, y forzar el umbral del
-circuit breaker cae a modo degradado en lugar de fallar.
+**Hecho:** hay un test E2E que abre dos visitantes en contextos distintos, escribe un cliente en
+el sandbox de uno y comprueba que **no aparece** en el del otro. Y un test de integración que fuerza
+el umbral del disyuntor con un presupuesto absurdamente pequeño y verifica que cae a modo degradado
+en lugar de fallar.
+
+**Dos decisiones que merecen leerse:**
+
+- **La provisión va por POST, nunca por GET.** Es lo que más protege el presupuesto: un GET que
+  provisiona lo dispara cualquier rastreador, cualquier previsualización de enlace de un chat y
+  cualquier antivirus de correo. Publicar el enlace en una red social crearía decenas de copias de
+  la base antes de que lo abriese una persona.
+
+- **Los identificadores del clon se DERIVAN, no se generan.** `uuid_generate_v5(nuevo_tenant,
+id_viejo)` da siempre la misma salida para la misma entrada, así que una clave foránea se remapea
+  aplicando la fórmula al identificador al que apunta — sin consultar nada y sin importar el orden
+  en que se copien las tablas. Con una tabla de correspondencias habría que copiar en orden de
+  dependencias, mantener el mapa vivo toda la transacción y limpiarlo después.
+
+**Un tercer detalle, que salió de un test que falló.** El límite de un sandbox por IP y hora hizo
+imposible escribir el test de aislamiento entre visitantes, porque todos salen de la misma máquina.
+El límite es correcto y se queda; lo que cambia es que ahora es configurable, y la suite lo sube.
+Un límite que no se puede relajar para probarlo acaba probándose en producción.
 
 ---
 
@@ -357,8 +378,9 @@ Decidido, no olvidado:
 
 **H1 → H2 → H3 → H6 → H8**, y después H4, H5 y H7 sobre un sistema ya vivo.
 
-H1, H2, H3, H4, H5 y H7 están hechas. Queda **H6** (demo efímero) y **H8** (despliegue), y
-solo H8 depende de credenciales que no están en el repositorio.
+**Todas las fases están hechas menos H8.** El despliegue es lo único que queda, y es lo único
+que no se puede hacer desde el repositorio: necesita una cuenta de Supabase y una de Vercel.
+El recorrido está en [`DEPLOY.md`](DEPLOY.md).
 
 La tentación es construir Compras primero porque es el módulo que más se parece a lo ya hecho y sale
 rápido. Sería un error: añadiría superficie sobre un almacén en memoria y alejaría el despliegue.

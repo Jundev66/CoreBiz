@@ -47,3 +47,13 @@ export {
 export { DrizzleSupplierRepository, DrizzleGoodsReceiptRepository } from './drizzle/purchasing';
 export { drizzlePurchasingQueries } from './queries/purchasing';
 export { databaseIsReachable } from './drizzle/health';
+export {
+  demoCapacity,
+  provisionDemoSandbox,
+  demoSandboxIsAlive,
+  purgeExpiredDemos,
+  type DemoMode,
+  type DemoCapacity,
+  type ProvisionDemoResult,
+  type ProvisionDemoOptions,
+} from './drizzle/demo';

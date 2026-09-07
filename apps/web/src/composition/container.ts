@@ -23,12 +23,14 @@ import {
 } from '@corebiz/application';
 import {
   cryptoTokenFactory,
+  demoSandboxIsAlive,
   listMemberships,
   loadTenantProfile,
   postgresRuntime,
 } from '@corebiz/infrastructure';
 import type { Membership } from '@corebiz/infrastructure';
 import { currentUser, supabaseIsConfigured, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
+import { readSandboxCookie } from '@/demo/sandbox';
 import { getMemoryUnitOfWork, memoryReadModels, MEMORY_TENANT } from './memory-driver';
 
 /**
@@ -230,7 +232,29 @@ async function resolveContext(): Promise<ResolvedContext> {
   // ── Sin sesion: solo la demostracion publica, y solo si de verdad lo es ─────
   if (!demoIsOpen()) redirect('/login');
 
-  const demo = demoContext(cookieRole, planOverride, false);
+  /*
+   * El sandbox propio de este visitante, si lo tiene.
+   *
+   * La cookie va FIRMADA, asi que escribir a mano el identificador de otro
+   * sandbox no lleva a ninguna parte. Y se comprueba que siga VIVO: un tenant
+   * caducado ya es inaccesible por `app.is_member()`, pero enterarse aqui
+   * permite servir la plantilla compartida en lugar de una aplicacion vacia
+   * sin explicacion.
+   *
+   * Sin sandbox —o con uno caducado— se cae a la plantilla. Es el modo
+   * degradado: el visitante sigue viendo el sistema funcionando, que es lo
+   * unico que de verdad importa de esta pantalla.
+   */
+  const sandbox = await readSandboxCookie();
+  const tenantId =
+    sandbox !== null && (await demoSandboxIsAlive(url, sandbox))
+      ? asId<TenantId>(sandbox)
+      : DEMO_TENANT_ID;
+
+  const demo: TenantContext = {
+    ...demoContext(cookieRole, planOverride, false),
+    tenantId,
+  };
   const profile = await loadTenantProfile(url, demo);
 
   if (profile === null || !profile.isDemo) redirect('/login');

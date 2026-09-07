@@ -13,7 +13,10 @@
     "SUPABASE_SERVICE_ROLE_KEY",
     "DEMO_ENABLED",
     "DEMO_COOKIE_SECRET",
-    "CRON_SECRET"
+    "CRON_SECRET",
+    "DEMO_TTL_HOURS",
+    "DEMO_MAX_CONCURRENT",
+    "DEMO_MAX_PER_HOUR"
   ],
   "globalDependencies": ["tsconfig.base.json", ".env.example"],
   "tasks": {

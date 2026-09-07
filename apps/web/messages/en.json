@@ -66,7 +66,15 @@
   },
   "demo": {
     "banner": "Demo mode",
-    "memoryDriver": "Running without a database, using in-memory sample data."
+    "memoryDriver": "Running without a database, using in-memory sample data.",
+    "title": "Try CoreBiz",
+    "intro": "We give you your own copy of the system, with data from a sample shop. You can touch everything.",
+    "pointOwnCopy": "It is your copy: nobody else sees what you do.",
+    "pointNoSignup": "No sign-up, no email needed.",
+    "pointExpires": "It deletes itself after 24 hours.",
+    "start": "Open the demo",
+    "orSignUp": "Would you rather start with your real business?",
+    "rateLimited": "You created a demo recently. Try again in a while, or use the one you already have."
   },
   "common": {
     "save": "Save",

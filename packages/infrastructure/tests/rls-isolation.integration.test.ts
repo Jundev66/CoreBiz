@@ -61,7 +61,16 @@ const COVERED = [
   'goods_receipt_lines',
 ] as const;
 
-const SPECIAL_CASED = ['audit_log'] as const;
+/**
+ * Fuera del bucle generico, cada una por su motivo:
+ *
+ * `audit_log`     — UPDATE y DELETE estan REVOCADOS por GRANT, asi que fallan
+ *                   con permiso denegado en vez de devolver cero filas.
+ * `demo_sessions` — la aplicacion NO la toca con rol de usuario: la gestionan
+ *                   funciones con privilegios propios, y todos los privilegios
+ *                   estan revocados de `authenticated` y `anon`.
+ */
+const SPECIAL_CASED = ['audit_log', 'demo_sessions'] as const;
 
 /** Ejecuta SQL crudo con el contexto del tenant puesto y el rol ya cambiado. */
 async function asTenant<T>(
@@ -483,6 +492,16 @@ describe('Aislamiento multi-tenant', () => {
         await dropTestTenant(vendedor.tenantId);
       }
     });
+  });
+
+  it('demo_sessions esta fuera del alcance de cualquier rol de aplicacion', async () => {
+    // Guarda el hash de IP de cada visitante de la demostracion. No hay ninguna
+    // pantalla que la lea, asi que el privilegio correcto es ninguno: lo que no
+    // se puede consultar no se puede filtrar.
+    await expectRejection(
+      asTenant(alpha, (tx) => tx.execute(sql`select 1 from public.demo_sessions`)),
+      /permission denied/i,
+    );
   });
 
   // ───────────────────────────────────────────────────────────────────────────
