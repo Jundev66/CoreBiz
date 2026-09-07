@@ -101,6 +101,13 @@ Las decisiones con su contexto y sus alternativas descartadas están en [`docs/a
 El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
+## Qué falta
+
+El ciclo de venta funciona y está probado, pero sobre adaptadores en memoria: aún no hay
+persistencia real, autenticación ni despliegue. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice
+exactamente qué queda, en qué orden y por qué ese orden — incluyendo el estado honesto de
+cada capa y las tres fases que son innegociables antes de publicar.
+
 ## Tres detalles que resumen el enfoque
 
 **La arquitectura rompe el build si se viola.** No es una convención documentada: se
