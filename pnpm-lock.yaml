@@ -64,6 +64,9 @@ importers:
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@corebiz/infrastructure':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure
       next:
         specifier: ^16.3.4
         version: 16.3.4(@playwright/test@1.63.0)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

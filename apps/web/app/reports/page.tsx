@@ -1,7 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { Money } from '@corebiz/domain';
 import { forRequest, DEMO_PLAN_COOKIE } from '@/composition/container';
-import { memoryQueries } from '@/composition/memory-driver';
 import { Shell, TableFrame } from '@/ui/shell';
 import { PlanToggle } from '@/ui/plan-toggle';
 
@@ -14,7 +12,7 @@ import { PlanToggle } from '@/ui/plan-toggle';
  */
 export default async function ReportsPage() {
   const t = await getTranslations();
-  const { ctx } = await forRequest();
+  const { ctx, queries } = await forRequest();
 
   if (!ctx.plan.has('reports')) {
     return (
@@ -38,47 +36,10 @@ export default async function ReportsPage() {
     );
   }
 
-  const queries = memoryQueries(ctx.tenantId);
-  const notes = await queries.deliveryNotes.list({ limit: 500 });
-  const products = await queries.products.list({ limit: 500 });
-
-  // Las notas anuladas no cuentan como venta: incluirlas inflaria las cifras con
-  // documentos que el negocio ya revirtio.
-  const active = notes.items.filter((n) => !n.isVoided);
-
-  const salesTotal = active.reduce((acc, note) => {
-    const sum = acc.add(note.totals.total);
-    return sum.ok ? sum.value : acc;
-  }, Money.zero(ctx.settings.baseCurrency));
-
-  const averageTicket =
-    active.length > 0
-      ? Money.fromMinor(salesTotal.minorUnits / BigInt(active.length), salesTotal.currency)
-      : Money.zero(ctx.settings.baseCurrency);
-
-  const stockValue = products.items.reduce((acc, product) => {
-    if (!product.trackStock) return acc;
-    const line = product.price.multiplyScaled(product.onHand.scaledValue, 3);
-    const sum = acc.add(line);
-    return sum.ok ? sum.value : acc;
-  }, Money.zero(ctx.settings.baseCurrency));
-
-  // Ranking por unidades despachadas, agregando todas las lineas de todas las notas.
-  const unitsBySku = new Map<string, { name: string; units: number; revenue: Money }>();
-  for (const note of active) {
-    for (const line of note.lines) {
-      const entry = unitsBySku.get(line.descriptionSnapshot) ?? {
-        name: line.descriptionSnapshot,
-        units: 0,
-        revenue: Money.zero(ctx.settings.baseCurrency),
-      };
-      entry.units += Number(line.quantity.scaledValue) / 1000;
-      const sum = entry.revenue.add(line.lineTotal);
-      if (sum.ok) entry.revenue = sum.value;
-      unitsBySku.set(line.descriptionSnapshot, entry);
-    }
-  }
-  const top = [...unitsBySku.values()].sort((a, b) => b.units - a.units).slice(0, 8);
+  // Una sola llamada: contra Postgres son agregados que la base de datos calcula
+  // sin traer las filas. La version anterior se bajaba quinientas notas y
+  // quinientos productos para sumarlos en JavaScript.
+  const report = await queries.reports.salesSummary();
 
   return (
     <Shell
@@ -88,10 +49,10 @@ export default async function ReportsPage() {
       action={<PlanToggle current="pro" cookieName={DEMO_PLAN_COOKIE} label={t('reports.back')} />}
     >
       <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t('reports.salesTotal')} value={`$ ${salesTotal.toString()}`} />
-        <Stat label={t('reports.documentsIssued')} value={String(active.length)} />
-        <Stat label={t('reports.averageTicket')} value={`$ ${averageTicket.toString()}`} />
-        <Stat label={t('reports.stockValue')} value={`$ ${stockValue.toString()}`} />
+        <Stat label={t('reports.salesTotal')} value={`$ ${report.salesTotal}`} />
+        <Stat label={t('reports.documentsIssued')} value={String(report.documentCount)} />
+        <Stat label={t('reports.averageTicket')} value={`$ ${report.averageTicket}`} />
+        <Stat label={t('reports.stockValue')} value={`$ ${report.inventoryValue}`} />
       </div>
 
       <h2 className="mb-4 text-lg font-semibold">{t('reports.topProducts')}</h2>
@@ -110,13 +71,13 @@ export default async function ReportsPage() {
           </tr>
         </thead>
         <tbody>
-          {top.map((row) => (
+          {report.bestSellers.map((row) => (
             <tr key={row.name} className="border-b border-[var(--color-line)] last:border-0">
               <td className="px-4 py-3">{row.name}</td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {row.units.toLocaleString('es-VE', { maximumFractionDigits: 3 })}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums">$ {row.revenue.toString()}</td>
+              <td className="px-4 py-3 text-right tabular-nums">$ {row.revenue}</td>
             </tr>
           ))}
         </tbody>

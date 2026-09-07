@@ -25,6 +25,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm --filter @corebiz/e2e test",
     "test:bdd": "pnpm --filter @corebiz/e2e test:bdd",
+    "test:bdd:pg": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e test:bdd",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm arch && pnpm test:unit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

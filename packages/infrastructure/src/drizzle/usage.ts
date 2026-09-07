@@ -7,6 +7,25 @@ import type { Tx } from './tx';
 const { tenantUsage } = schema;
 
 /**
+ * Deriva el periodo del nombre del recurso.
+ *
+ * El puerto no lo expresa —`current('customers')` no dice nada de fechas— pero la
+ * tabla lo necesita en su clave. La convencion es el sufijo: `documents_month` se
+ * reinicia cada mes, `customers` y `products` se acumulan para siempre. Vive aqui
+ * y no en el puerto porque es un detalle de como se almacena, no de lo que el
+ * negocio pregunta.
+ *
+ * Lo comparten el contador de escritura y el lado de lectura: si cada uno
+ * calculara el suyo, una discrepancia haria que la pantalla mostrase un consumo y
+ * la cuota bloquease por otro.
+ */
+export function usagePeriod(resource: string, now: Date): string {
+  if (!resource.endsWith('_month')) return 'total';
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${now.getUTCFullYear()}-${month}`;
+}
+
+/**
  * Contadores de consumo del plan.
  *
  * Existen para que comprobar una cuota sea una lectura por clave primaria en
@@ -21,21 +40,8 @@ export class DrizzleUsageCounter implements UsageCounter {
     private readonly clock: Clock,
   ) {}
 
-  /**
-   * Deriva el periodo del nombre del recurso.
-   *
-   * El puerto no lo expresa —`current('customers')` no dice nada de fechas— pero
-   * la tabla lo necesita en su clave. La convencion es el sufijo: `documents_month`
-   * se reinicia cada mes, `customers` y `products` se acumulan para siempre.
-   * Vive aqui y no en el puerto porque es un detalle de como se almacena, no de
-   * lo que el negocio pregunta.
-   */
   private periodFor(resource: string): string {
-    if (!resource.endsWith('_month')) return 'total';
-
-    const now = this.clock.now();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    return `${now.getUTCFullYear()}-${month}`;
+    return usagePeriod(resource, this.clock.now());
   }
 
   async current(resource: string): Promise<number> {

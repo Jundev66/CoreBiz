@@ -1,17 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { forRequest } from '@/composition/container';
-import { memoryQueries } from '@/composition/memory-driver';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 export default async function ProductsPage() {
   const t = await getTranslations();
-  const { ctx } = await forRequest();
+  const { ctx, queries } = await forRequest();
 
-  const queries = memoryQueries(ctx.tenantId);
   const page = await queries.products.list({ limit: 50 });
-  const quota = ctx.plan.quota('products', queries.usage('products'));
+  const quota = ctx.plan.quota('products', await queries.usage.current('products'));
 
-  const belowMinimum = page.items.filter((p) => p.isBelowMinimum);
+  const belowMinimum = page.items.filter((p) => p.belowMinimum);
 
   return (
     <Shell
@@ -70,12 +68,12 @@ export default async function ProductsPage() {
               <tr key={product.id} className="border-b border-[var(--color-line)] last:border-0">
                 <td className="px-4 py-3 font-mono text-xs">{product.sku}</td>
                 <td className="px-4 py-3 font-medium">{product.name}</td>
-                <td className="px-4 py-3 text-right tabular-nums">$ {product.price.toString()}</td>
+                <td className="px-4 py-3 text-right tabular-nums">$ {product.price}</td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {product.trackStock ? (
-                    <span className={product.isBelowMinimum ? 'text-[var(--color-warn)]' : ''}>
-                      {product.onHand.toCompactString()} {product.unit}
-                      {product.isBelowMinimum && (
+                    <span className={product.belowMinimum ? 'text-[var(--color-warn)]' : ''}>
+                      {product.onHand} {product.unit}
+                      {product.belowMinimum && (
                         <span aria-label={t('products.lowStock')} className="ml-1">
                           ⚠
                         </span>

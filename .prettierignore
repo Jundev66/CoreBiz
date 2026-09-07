@@ -7,3 +7,7 @@ pnpm-lock.yaml
 e2e/.features-gen/
 docs/diagrams/*.svg
 supabase/.temp/
+
+# Lo regenera `next build` en cada corrida, con su propio estilo de comillas.
+# Sin esta linea, `pnpm format:check` falla despues de cada build.
+apps/web/next-env.d.ts

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { forRequest } from '@/composition/container';
-import { memoryQueries } from '@/composition/memory-driver';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
@@ -15,15 +14,10 @@ const STATUS_STYLES: Record<string, string> = {
 export default async function DeliveryNotesPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx } = await forRequest();
+  const { ctx, queries } = await forRequest();
 
-  const queries = memoryQueries(ctx.tenantId);
   const page = await queries.deliveryNotes.list({ limit: 50 });
-  const quota = ctx.plan.quota('documents_month', queries.usage('documents_month'));
-
-  // Se resuelven los nombres de cliente de una vez, no uno por fila.
-  const customers = await queries.customers.list({ limit: 500, includeArchived: true });
-  const customerNames = new Map(customers.items.map((c) => [c.id, c.name]));
+  const quota = ctx.plan.quota('documents_month', await queries.usage.current('documents_month'));
 
   return (
     <Shell
@@ -81,7 +75,7 @@ export default async function DeliveryNotesPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">{customerNames.get(note.customerId) ?? '—'}</td>
+                <td className="px-4 py-3">{note.customerName}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full border px-2 py-0.5 text-xs ${STATUS_STYLES[note.status] ?? ''}`}
@@ -89,13 +83,11 @@ export default async function DeliveryNotesPage() {
                     {t(`deliveryNotes.statuses.${note.status}`)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  $ {note.totals.total.toString()}
-                </td>
+                <td className="px-4 py-3 text-right tabular-nums">$ {note.total}</td>
                 {/* El equivalente en bolivares usa la tasa CONGELADA del documento,
                     no la vigente hoy. Ver ADR 002. */}
                 <td className="px-4 py-3 text-right tabular-nums text-[var(--color-muted)]">
-                  Bs {note.totals.totalInSecondaryCurrency.toString()}
+                  Bs {note.totalSecondary}
                 </td>
               </tr>
             ))}

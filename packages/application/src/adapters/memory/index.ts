@@ -12,3 +12,4 @@
  */
 export * from './repositories';
 export * from './sales';
+export { inMemoryReadModels } from './queries';

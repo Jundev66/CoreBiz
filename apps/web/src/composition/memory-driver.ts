@@ -10,15 +10,15 @@ import {
   type CustomerId,
   type DeliveryNoteId,
   type ProductId,
+  type Currency,
   type TenantId,
   type UserId,
 } from '@corebiz/domain';
 import {
   InMemoryUnitOfWork,
-  InMemoryCustomerRepository,
-  InMemoryProductRepository,
-  InMemoryDeliveryNoteRepository,
   createSalesStores,
+  inMemoryReadModels,
+  type ReadModels,
   type SalesStores,
 } from '@corebiz/application';
 
@@ -234,15 +234,10 @@ export function getMemoryUnitOfWork(tenantId: TenantId): InMemoryUnitOfWork {
 /**
  * Lado de LECTURA (CQRS ligero).
  *
- * Los Server Components consultan por aqui: no pasan por casos de uso ni rehidratan
- * agregados para pintar una tabla. La escritura si pasa siempre por un caso de uso.
+ * Devuelve los mismos modelos planos que la version sobre Postgres. Que las dos
+ * implementaciones cumplan un contrato explicito es lo que permite que las
+ * pantallas no sepan cual esta detras.
  */
-export function memoryQueries(tenantId: TenantId) {
-  const current = store();
-  return {
-    customers: new InMemoryCustomerRepository(current.customers, tenantId),
-    products: new InMemoryProductRepository(current.products, tenantId),
-    deliveryNotes: new InMemoryDeliveryNoteRepository(current.deliveryNotes, tenantId),
-    usage: (resource: string): number => current.usage.get(`${tenantId}:${resource}`) ?? 0,
-  };
+export function memoryReadModels(tenantId: TenantId, currency: Currency): ReadModels {
+  return inMemoryReadModels(store(), tenantId, currency);
 }

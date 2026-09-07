@@ -14,3 +14,12 @@ export { DrizzleDocumentSequences } from './drizzle/sequences';
 export { DrizzleUsageCounter } from './drizzle/usage';
 export { DrizzleAuditLogger } from './drizzle/audit';
 export { DrizzlePaymentQueries } from './drizzle/payments';
+export { drizzleReadModels } from './queries/read-models';
+export {
+  postgresRuntime,
+  loadTenantProfile,
+  type PostgresRuntime,
+  type PostgresRuntimeDeps,
+  type TenantProfile,
+} from './runtime';
+export { establishTenantContext, readOnly } from './drizzle/session';

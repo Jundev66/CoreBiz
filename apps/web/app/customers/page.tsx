@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { forRequest } from '@/composition/container';
-import { memoryQueries } from '@/composition/memory-driver';
 
 /**
  * Listado de clientes.
@@ -13,12 +12,10 @@ import { memoryQueries } from '@/composition/memory-driver';
  */
 export default async function CustomersPage() {
   const t = await getTranslations();
-  const { ctx } = await forRequest();
+  const { ctx, queries } = await forRequest();
 
-  const queries = memoryQueries(ctx.tenantId);
   const page = await queries.customers.list({ limit: 25 });
-  const used = queries.usage('customers');
-  const quota = ctx.plan.quota('customers', used);
+  const quota = ctx.plan.quota('customers', await queries.usage.current('customers'));
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -106,7 +103,7 @@ export default async function CustomersPage() {
                   <td className="px-4 py-3 text-[var(--color-muted)]">{customer.taxId ?? '—'}</td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {customer.creditLimit ? (
-                      `$ ${customer.creditLimit.toString()}`
+                      `$ ${customer.creditLimit}`
                     ) : (
                       <span className="text-[var(--color-muted)]">
                         {t('customers.noCreditLimit')}
