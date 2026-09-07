@@ -14,6 +14,8 @@ import {
   makeRemoveMember,
   makeRevokeInvitation,
   makeUpdateTenantSettings,
+  makeCreateSupplier,
+  makeReceiveGoods,
   systemClock,
   type ReadModels,
   type TenantContext,
@@ -309,6 +311,11 @@ export async function forRequest(_tenantSlug?: string) {
     removeMember: makeRemoveMember(shared),
     revokeInvitation: makeRevokeInvitation(shared),
     updateTenantSettings: makeUpdateTenantSettings(shared),
+
+    // Compras. Modulo entero gated a PRO: el gate vive en el caso de uso, no en
+    // la ruta ni en el enlace del menu.
+    createSupplier: makeCreateSupplier(shared),
+    receiveGoods: makeReceiveGoods(shared),
   };
 }
 

@@ -17,7 +17,7 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                           |
 | **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                   |
-| **Testing**       | **334 tests**: 251 unitarios (Vitest + property-based con fast-check), 47 de integración contra Postgres real, 18 escenarios BDD en Gherkin y 18 E2E con Playwright, incluida accesibilidad con axe. |
+| **Testing**       | **360 tests**: 264 unitarios (Vitest + property-based con fast-check), 54 de integración contra Postgres real, 22 escenarios BDD en Gherkin y 20 E2E con Playwright, incluida accesibilidad con axe. |
 | **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                         |
 | **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                     |
 
@@ -105,8 +105,8 @@ El análisis STRIDE completo, con los riesgos aceptados de forma consciente, est
 ## Qué falta
 
 El ciclo de venta funciona sobre Postgres real, con las políticas RLS ejecutándose en cada
-push y con autenticación de verdad. Lo que queda ya no es fundacional: el módulo de
-**compras**, el **sandbox efímero** de la demo y el **despliegue**. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
+push y con autenticación de verdad. Lo que queda ya no es fundacional: el **sandbox
+efímero** de la demo y el **despliegue**. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
 orden y por qué ese orden, incluyendo el estado honesto de cada capa.
 
 ### La demostración se abre sin cuenta, a propósito

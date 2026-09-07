@@ -31,7 +31,7 @@ Lo verificado, no lo aspiracional.
 | Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación     |
 | Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy     |
 | Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`        |
-| Compras y proveedores         | ❌ El directorio del dominio está vacío                               |
+| Compras y proveedores         | ✅ `Supplier` y `GoodsReceipt`, gated a PRO. Orden de compra, fuera   |
 | Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes        |
 | Demo efímero                  | ❌ Sin función de clonado, sin TTL, sin purga                         |
 | Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                             |
@@ -64,6 +64,7 @@ graph LR
   style H2 fill:#efe,stroke:#0a0
   style H3 fill:#efe,stroke:#0a0
   style H4 fill:#efe,stroke:#0a0
+  style H5 fill:#efe,stroke:#0a0
   style H8 fill:#efe,stroke:#0a0
 ```
 
@@ -224,19 +225,37 @@ viviera en el botón. El formulario se deja enviable a propósito con las plazas
 
 ---
 
-## H5 · Compras y proveedores
+## H5 · Compras y proveedores — ✅ HECHA (con un recorte declarado)
 
 El único módulo del alcance acordado que no se ha empezado. Cierra el ciclo **comprar → stock → vender**.
 
-- [ ] Agregados `Supplier`, `PurchaseOrder`, `GoodsReceipt` en `packages/domain/src/purchasing/`.
-- [ ] La recepción de mercancía **suma stock generando movimientos**, igual que la emisión resta.
-      Reutiliza el libro mayor que ya existe, sin tocar el saldo directamente.
-- [ ] Casos de uso, adaptadores, esquema, interfaz y escenarios BDD, siguiendo el patrón ya establecido.
-- [ ] Módulo completo **gated a PRO**, como se decidió en la tabla de planes.
+- [x] Agregados `Supplier` y `GoodsReceipt` en `packages/domain/src/purchasing/`.
+- [ ] **`PurchaseOrder` NO se implementó.** Es el único punto del plan que queda sin cumplir, y
+      conviene decirlo claro en vez de darlo por hecho. La orden de compra es el documento de "voy
+      a pedir esto", con su propia máquina de estados y sus recepciones parciales contra ella. Para
+      un comercio pequeño, lo que mueve el negocio es registrar lo que **llegó**; pedir antes es un
+      flujo de empresas con departamento de compras. El ciclo comprar → stock → vender queda cerrado
+      sin ella. Si entra después, `goods_receipts.purchase_order_id` ya está en el esquema esperándola.
+- [x] La recepción de mercancía **suma stock generando movimientos**, igual que la emisión resta.
+      Reutiliza el libro mayor que ya existe, sin tocar el saldo directamente. Hay un test de
+      integración que comprueba la fila de `stock_movements`, no solo el saldo: un test que solo
+      mirase `on_hand` pasaría igual con dos inventarios paralelos, que es el error a impedir.
+- [x] Casos de uso, adaptadores, esquema, interfaz y escenarios BDD, siguiendo el patrón ya establecido.
+- [x] Módulo completo **gated a PRO**, con el gate en el caso de uso. El módulo se ve bloqueado en
+      el menú en lugar de desaparecer: saber que existe algo más es parte de un freemium honesto.
 
 **Nota de alcance:** `Supplier` es un CRUD casi plano y está bien que lo sea. El músculo hexagonal se
 demuestra en `GoodsReceipt`, donde hay invariante real. Aplicar la misma ceremonia a todo sería peor
 ingeniería, y explicar por qué vale más que hacerlo.
+
+Una decisión que merece leerse: `GoodsReceipt` **no toca el saldo de los productos**. Devuelve lo que
+hay que sumar, y es el caso de uso quien llama a `Product.addStock()`. El inventario pertenece a
+`Product` y solo él puede moverlo — si el documento escribiera saldos, habría dos sitios capaces de
+descuadrarlo. Es el mismo reparto que en la emisión de notas.
+
+El coste de compra se guarda por línea y **no se propaga al producto**. Recalcular el coste medio es
+una decisión contable —FIFO, medio ponderado, último coste— que un comercio pequeño no ha tomado, y
+tomarla por él en silencio le cambiaría los márgenes sin avisar.
 
 ---
 
@@ -322,7 +341,8 @@ Decidido, no olvidado:
 
 **H1 → H2 → H3 → H6 → H8**, y después H4, H5 y H7 sobre un sistema ya vivo.
 
-H1, H2, H3 y H4 están hechas. La siguiente en la línea recta es **H6**, y después **H8**.
+H1, H2, H3, H4 y H5 están hechas. Queda **H6** (demo efímero), **H7** (acabado) y **H8**
+(despliegue), y solo H8 depende de credenciales que no están en el repositorio.
 
 La tentación es construir Compras primero porque es el módulo que más se parece a lo ya hecho y sale
 rápido. Sería un error: añadiría superficie sobre un almacén en memoria y alejaría el despliegue.

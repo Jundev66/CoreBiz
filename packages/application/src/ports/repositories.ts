@@ -1,3 +1,5 @@
+import type { Page } from './page';
+import type { GoodsReceiptRepository, SupplierRepository } from './purchasing';
 import type {
   InvitationRepository,
   MembershipRepository,
@@ -24,12 +26,6 @@ import type {
  * construir el Unit of Work, de modo que un caso de uso no puede olvidarlo ni elegir
  * uno distinto — no llega siquiera a tener la oportunidad. Ver ADR 005.
  */
-
-export interface Page<T> {
-  readonly items: readonly T[];
-  /** Cursor de la siguiente pagina, o null si no hay mas. Paginacion por keyset. */
-  readonly nextCursor: string | null;
-}
 
 export interface ListCustomersFilter {
   readonly search?: string;
@@ -115,6 +111,12 @@ export interface Repositories {
   readonly invitations: InvitationRepository;
   readonly members: MembershipRepository;
   readonly settings: TenantSettingsRepository;
+
+  // Compras. Entran en la misma unidad de trabajo que productos y movimientos
+  // porque recibir mercancia toca las tres cosas a la vez: el documento, el
+  // saldo de cada producto y el libro mayor de inventario.
+  readonly suppliers: SupplierRepository;
+  readonly goodsReceipts: GoodsReceiptRepository;
 }
 
 /**
@@ -160,11 +162,18 @@ export interface DeliveryNoteRepository {
  * numero, y dos documentos con el mismo correlativo es un problema que solo se descubre
  * al cerrar el mes.
  */
+export type DocumentType =
+  'delivery_note' | 'quote' | 'purchase_order' | 'payment' | 'goods_receipt';
+
 export interface DocumentSequences {
-  next(docType: 'delivery_note' | 'quote' | 'purchase_order' | 'payment'): Promise<string>;
+  next(docType: DocumentType): Promise<string>;
 }
 
 export interface PaymentQueries {
   /** Saldo pendiente del cliente. Vive fuera del agregado Customer a proposito. */
   outstandingBalanceFor(customerId: CustomerId, currency: 'USD' | 'VES'): Promise<Money>;
 }
+
+// Se reexporta para no romper los import existentes; la definicion vive en
+// `page.ts` para evitar un ciclo con los puertos de compras.
+export type { Page };

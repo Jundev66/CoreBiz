@@ -1,4 +1,4 @@
-import type { Page } from '../ports/repositories';
+import type { Page } from '../ports/page';
 
 /**
  * Lado de LECTURA (CQRS ligero).
@@ -211,6 +211,43 @@ export interface AdminQueries {
   auditActions(): Promise<readonly string[]>;
 }
 
+// ─── Compras ─────────────────────────────────────────────────────────────────
+
+export interface SupplierListItem {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly taxId: string | null;
+  readonly contactName: string | null;
+  readonly phone: string | null;
+}
+
+export interface SupplierOption {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+}
+
+export interface GoodsReceiptListItem {
+  readonly id: string;
+  readonly number: string;
+  readonly status: string;
+  readonly supplierName: string;
+  readonly total: string;
+  readonly lineCount: number;
+  readonly receivedAt: Date | null;
+}
+
+export interface PurchasingQueries {
+  suppliers(filter: {
+    search?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<SupplierListItem>>;
+  supplierOptions(limit?: number): Promise<readonly SupplierOption[]>;
+  receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>>;
+}
+
 /** Todo el lado de lectura disponible para un request. */
 export interface ReadModels {
   readonly customers: CustomerQueries;
@@ -219,4 +256,5 @@ export interface ReadModels {
   readonly usage: UsageQueries;
   readonly reports: ReportQueries;
   readonly admin: AdminQueries;
+  readonly purchasing: PurchasingQueries;
 }

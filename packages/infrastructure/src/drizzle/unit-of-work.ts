@@ -18,6 +18,7 @@ import {
   DrizzleMembershipRepository,
   DrizzleTenantSettingsRepository,
 } from './administration';
+import { DrizzleGoodsReceiptRepository, DrizzleSupplierRepository } from './purchasing';
 import { establishTenantContext } from './session';
 
 export interface UnitOfWorkDeps {
@@ -61,6 +62,8 @@ export class DrizzleUnitOfWork implements UnitOfWork {
         invitations: new DrizzleInvitationRepository(tx, ctx.tenantId),
         members: new DrizzleMembershipRepository(tx, ctx.tenantId),
         settings: new DrizzleTenantSettingsRepository(tx, ctx.tenantId),
+        suppliers: new DrizzleSupplierRepository(tx, ctx.tenantId),
+        goodsReceipts: new DrizzleGoodsReceiptRepository(tx, ctx.tenantId),
       });
     });
   }

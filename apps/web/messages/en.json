@@ -76,7 +76,8 @@
     "remove": "Remove",
     "issue": "Issue",
     "print": "Print",
-    "change": "Switch"
+    "change": "Switch",
+    "optional": "(optional)"
   },
   "products": {
     "title": "Products",
@@ -315,5 +316,66 @@
     "invalidTitle": "This invitation is no longer valid",
     "invalidBody": "It may have expired, been cancelled, or already been used. Ask that business to send you a new one.",
     "needsDatabase": "Invitations need the database. This demo runs in memory."
+  },
+  "purchases": {
+    "title": "Purchases",
+    "subtitle": "What you buy from your suppliers",
+    "new": "Record a delivery",
+    "newSubtitle": "Write down what just arrived and the stock updates itself",
+    "suppliers": "Suppliers",
+    "empty": "You have not recorded any incoming goods yet.",
+    "number": "Number",
+    "supplier": "Supplier",
+    "received": "Received",
+    "lines": "Goods received",
+    "product": "Product",
+    "quantity": "Quantity",
+    "unitCost": "Unit cost",
+    "total": "Total",
+    "voided": "voided",
+    "reference": "Supplier reference",
+    "referenceHint": "The number on their document, if it has one.",
+    "receive": "Record the delivery",
+    "received_ok": "Delivery {number} recorded. Stock is already updated.",
+    "estimatedTotal": "Approximate total: $ {total}",
+    "needsSupplier": "You need at least one supplier before recording a delivery.",
+    "errors": {
+      "Forbidden": "You do not have permission to do this.",
+      "FeatureNotAvailable": "Purchases requires the {requiredPlan} plan.",
+      "InvalidFormat": "Check the details.",
+      "DuplicateCode": "A supplier with code {code} already exists.",
+      "QuotaExceeded": "You reached the limit of {limit} on your current plan.",
+      "SupplierNotFound": "That supplier does not exist.",
+      "ProductNotFound": "One of the products does not exist.",
+      "InvalidQuantity": "One of the quantities is not valid.",
+      "InvalidCost": "One of the costs is not valid.",
+      "NoLines": "Add at least one product.",
+      "DuplicateProduct": "Product {sku} is repeated.",
+      "StockNotTracked": "{sku} does not track stock, so it cannot be received.",
+      "OutOfRange": "The {field} field is out of range.",
+      "TooShort": "The {field} field is too short.",
+      "TooLong": "The {field} field is too long.",
+      "Required": "The {field} field is required.",
+      "AlreadyVoided": "This delivery was already voided.",
+      "CannotVoidDraft": "This delivery has not been recorded yet.",
+      "InsufficientStock": "There is not enough stock of {sku}."
+    }
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "subtitle": "Who you buy from",
+    "new": "New supplier",
+    "code": "Code",
+    "name": "Name",
+    "contact": "Contact person",
+    "phone": "Phone",
+    "email": "Email",
+    "taxId": "Tax ID",
+    "empty": "You have not registered any suppliers yet.",
+    "created": "Supplier {code} created."
+  },
+  "plans": {
+    "lockedHeading": "{feature} is on the PRO plan",
+    "lockedBody": "Your current plan does not include this module. You can see it here to know what it does, and turn it on when you need it."
   }
 }

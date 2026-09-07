@@ -76,7 +76,8 @@
     "remove": "Quitar",
     "issue": "Emitir",
     "print": "Imprimir",
-    "change": "Cambiar"
+    "change": "Cambiar",
+    "optional": "(opcional)"
   },
   "products": {
     "title": "Productos",
@@ -315,5 +316,66 @@
     "invalidTitle": "Esta invitación ya no vale",
     "invalidBody": "Puede que haya caducado, que se haya cancelado o que ya la hayas usado. Pídele a esa empresa que te mande una nueva.",
     "needsDatabase": "Las invitaciones necesitan la base de datos. Esta demostración corre en memoria."
+  },
+  "purchases": {
+    "title": "Compras",
+    "subtitle": "Lo que le compras a tus proveedores",
+    "new": "Registrar entrada",
+    "newSubtitle": "Anota lo que acaba de llegar y el inventario se actualiza solo",
+    "suppliers": "Proveedores",
+    "empty": "Todavía no has registrado ninguna entrada de mercancía.",
+    "number": "Número",
+    "supplier": "Proveedor",
+    "received": "Recibido",
+    "lines": "Productos recibidos",
+    "product": "Producto",
+    "quantity": "Cantidad",
+    "unitCost": "Costo unitario",
+    "total": "Total",
+    "voided": "anulada",
+    "reference": "Referencia del proveedor",
+    "referenceHint": "El número que trae su documento, si lo trae.",
+    "receive": "Registrar la entrada",
+    "received_ok": "Entrada {number} registrada. El inventario ya está actualizado.",
+    "estimatedTotal": "Total aproximado: $ {total}",
+    "needsSupplier": "Antes de registrar una entrada necesitas al menos un proveedor.",
+    "errors": {
+      "Forbidden": "No tienes permiso para hacer esto.",
+      "FeatureNotAvailable": "Compras requiere el plan {requiredPlan}.",
+      "InvalidFormat": "Revisa los datos.",
+      "DuplicateCode": "Ya existe un proveedor con el código {code}.",
+      "QuotaExceeded": "Alcanzaste el límite de {limit} en tu plan actual.",
+      "SupplierNotFound": "El proveedor no existe.",
+      "ProductNotFound": "Uno de los productos no existe.",
+      "InvalidQuantity": "Una de las cantidades no es válida.",
+      "InvalidCost": "Uno de los costos no es válido.",
+      "NoLines": "Agrega al menos un producto.",
+      "DuplicateProduct": "El producto {sku} está repetido.",
+      "StockNotTracked": "{sku} no lleva inventario, así que no se puede recibir.",
+      "OutOfRange": "El campo {field} está fuera de rango.",
+      "TooShort": "El campo {field} es demasiado corto.",
+      "TooLong": "El campo {field} es demasiado largo.",
+      "Required": "El campo {field} es obligatorio.",
+      "AlreadyVoided": "Esta entrada ya estaba anulada.",
+      "CannotVoidDraft": "Esta entrada todavía no se ha registrado.",
+      "InsufficientStock": "No hay suficiente inventario de {sku}."
+    }
+  },
+  "suppliers": {
+    "title": "Proveedores",
+    "subtitle": "A quién le compras",
+    "new": "Nuevo proveedor",
+    "code": "Código",
+    "name": "Nombre",
+    "contact": "Persona de contacto",
+    "phone": "Teléfono",
+    "email": "Correo",
+    "taxId": "RIF",
+    "empty": "Todavía no has registrado proveedores.",
+    "created": "Proveedor {code} creado."
+  },
+  "plans": {
+    "lockedHeading": "{feature} está en el plan PRO",
+    "lockedBody": "Tu plan actual no incluye este módulo. Puedes verlo aquí para saber qué hace, y activarlo cuando lo necesites."
   }
 }

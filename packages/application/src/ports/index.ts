@@ -16,6 +16,7 @@ export type {
   ProductRepository,
   DeliveryNoteRepository,
   DocumentSequences,
+  DocumentType,
   PaymentQueries,
 } from './repositories';
 export { inMemoryRateLimiter, RATE_LIMITS } from './rate-limiter';
@@ -30,3 +31,4 @@ export type {
   TenantSettingsUpdate,
   TenantSettingsRepository,
 } from './administration';
+export type { SupplierRepository, GoodsReceiptRepository } from './purchasing';

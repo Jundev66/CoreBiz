@@ -32,7 +32,8 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
     { href: '/customers', label: t('nav.customers') },
     { href: '/products', label: t('nav.products') },
     { href: '/delivery-notes', label: t('nav.deliveryNotes') },
-    { href: '/reports', label: t('nav.reports'), pro: true },
+    { href: '/purchases', label: t('nav.purchases'), pro: 'purchasing' as const },
+    { href: '/reports', label: t('nav.reports'), pro: 'reports' as const },
     { href: '/settings', label: t('nav.settings') },
   ];
 
@@ -54,7 +55,7 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
                 {item.label}
                 {/* El candado se muestra siempre, no se oculta el modulo: saber que
                     existe algo mas es parte de como funciona un freemium honesto. */}
-                {item.pro && !ctx.plan.has('reports') && (
+                {item.pro !== undefined && !ctx.plan.has(item.pro) && (
                   <span aria-label="PRO" className="ml-1.5 text-xs opacity-60">
                     🔒
                   </span>

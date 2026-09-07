@@ -81,9 +81,9 @@ export function InviteForm({ exhausted }: { exhausted: boolean }) {
       {/*
         El enlace se muestra en pantalla en lugar de mandarse por correo, y
         conviene decir por que: enviar correo exige un proveedor de SMTP con su
-        cuenta y su factura, y este proyecto opera a coste cero. Copiar el enlace
-        y pasarlo por donde ya se habla con esa persona funciona igual de bien y
-        no depende de que un correo no acabe en spam.
+        cuenta y su coste mensual, y este proyecto opera a cero euros. Copiar el
+        enlace y pasarlo por donde ya se habla con esa persona funciona igual de
+        bien y no depende de que un correo no acabe en spam.
 
         El token aparece UNA vez. No se guarda en claro en ningun sitio, asi que
         no hay forma de volver a consultarlo: si se pierde, se revoca y se manda

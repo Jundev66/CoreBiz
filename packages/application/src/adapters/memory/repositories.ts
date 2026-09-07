@@ -11,6 +11,7 @@ import {
   InMemoryMembershipRepository,
   InMemoryTenantSettingsRepository,
 } from './administration';
+import { InMemoryGoodsReceiptRepository, InMemorySupplierRepository } from './purchasing';
 import {
   InMemoryProductRepository,
   InMemoryDeliveryNoteRepository,
@@ -201,6 +202,8 @@ export class InMemoryUnitOfWork implements UnitOfWork {
       invitations: new Map(this.stores.invitations),
       members: new Map(this.stores.members),
       tenantSettings: new Map(this.stores.tenantSettings),
+      suppliers: new Map(this.stores.suppliers),
+      goodsReceipts: new Map(this.stores.goodsReceipts),
     };
     const auditLength = this.audit.entries.length;
 
@@ -221,6 +224,11 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         members: new InMemoryMembershipRepository(this.stores.members as never, this.tenantId),
         settings: new InMemoryTenantSettingsRepository(
           this.stores.tenantSettings as never,
+          this.tenantId,
+        ),
+        suppliers: new InMemorySupplierRepository(this.stores.suppliers as never, this.tenantId),
+        goodsReceipts: new InMemoryGoodsReceiptRepository(
+          this.stores.goodsReceipts as never,
           this.tenantId,
         ),
       });

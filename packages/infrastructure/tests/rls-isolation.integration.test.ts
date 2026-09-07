@@ -56,6 +56,9 @@ const COVERED = [
   'tenant_usage',
   'memberships',
   'invitations',
+  'suppliers',
+  'goods_receipts',
+  'goods_receipt_lines',
 ] as const;
 
 const SPECIAL_CASED = ['audit_log'] as const;
@@ -145,6 +148,31 @@ async function seedOneRowPerTable(tenant: TestTenant): Promise<void> {
       ${crypto.randomUUID()}, ${t}, 'invitado@corebiz.test', 'sales',
       encode(extensions.digest(${crypto.randomUUID()}, 'sha256'), 'hex'),
       now() + interval '7 days'
+    )
+  `);
+
+  const supplierId = crypto.randomUUID();
+  const receiptId = crypto.randomUUID();
+
+  await db.execute(sql`
+    insert into public.suppliers (id, tenant_id, code, name)
+    values (${supplierId}, ${t}, 'PRV-RLS', 'Proveedor de la matriz')
+  `);
+
+  await db.execute(sql`
+    insert into public.goods_receipts (
+      id, tenant_id, number, supplier_id, status, currency, total_minor, received_at
+    ) values (
+      ${receiptId}, ${t}, 'RM-RLS-001', ${supplierId}, 'received', 'USD', 1000, now()
+    )
+  `);
+
+  await db.execute(sql`
+    insert into public.goods_receipt_lines (
+      tenant_id, goods_receipt_id, line_no, product_id,
+      description_snapshot, unit_snapshot, quantity, unit_cost_minor, line_total_minor
+    ) values (
+      ${t}, ${receiptId}, 1, ${productId}, 'Producto de la matriz', 'und', 1000, 1000, 1000
     )
   `);
 }

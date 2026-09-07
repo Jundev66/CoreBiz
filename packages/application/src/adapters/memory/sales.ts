@@ -11,6 +11,7 @@ import {
 import type {
   DeliveryNoteRepository,
   DocumentSequences,
+  DocumentType,
   Page,
   PaymentQueries,
   ProductRepository,
@@ -138,9 +139,10 @@ export class InMemoryDocumentSequences implements DocumentSequences {
     quote: 'PRE',
     purchase_order: 'OC',
     payment: 'REC',
+    goods_receipt: 'RM',
   };
 
-  next(docType: 'delivery_note' | 'quote' | 'purchase_order' | 'payment'): Promise<string> {
+  next(docType: DocumentType): Promise<string> {
     const key = `${this.tenantId}:${docType}`;
     const next = (this.counters.get(key) ?? 0) + 1;
     this.counters.set(key, next);
@@ -173,6 +175,8 @@ export interface SalesStores {
   readonly invitations: Map<string, unknown>;
   readonly members: Map<string, unknown>;
   readonly tenantSettings: Map<string, unknown>;
+  readonly suppliers: Map<string, unknown>;
+  readonly goodsReceipts: Map<string, unknown>;
 }
 
 export function createSalesStores(): SalesStores {
@@ -186,5 +190,7 @@ export function createSalesStores(): SalesStores {
     invitations: new Map(),
     members: new Map(),
     tenantSettings: new Map(),
+    suppliers: new Map(),
+    goodsReceipts: new Map(),
   };
 }

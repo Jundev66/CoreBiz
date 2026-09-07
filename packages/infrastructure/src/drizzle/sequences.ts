@@ -1,12 +1,12 @@
 import { sql } from 'drizzle-orm';
 import { schema } from '@corebiz/db';
 import type { TenantId } from '@corebiz/domain';
-import type { DocumentSequences } from '@corebiz/application';
+import type { DocumentSequences, DocumentType } from '@corebiz/application';
 import type { Tx } from './tx';
 
 const { documentSequences } = schema;
 
-type DocType = 'delivery_note' | 'quote' | 'purchase_order' | 'payment';
+type DocType = DocumentType;
 
 /**
  * Prefijos con los que se crea la secuencia la primera vez.
@@ -19,6 +19,7 @@ const INITIAL_PREFIXES: Readonly<Record<DocType, string>> = {
   quote: 'PRE',
   purchase_order: 'OC',
   payment: 'REC',
+  goods_receipt: 'RM',
 };
 
 export class DrizzleDocumentSequences implements DocumentSequences {

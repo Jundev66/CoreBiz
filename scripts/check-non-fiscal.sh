@@ -58,7 +58,12 @@ for term in "${FORBIDDEN[@]}"; do
   # -I ignora binarios, -i sin distinguir mayusculas, -n con numero de linea.
   # El `|| true` es imprescindible con `pipefail`: cuando el filtro se lleva todas
   # las coincidencias, grep sale con 1 y el script moriria dando por bueno el resto.
-  matches=$(git grep -Iin -- "$term" -- . "${exclusions[@]}" 2>/dev/null | grep -v "$ESCAPE" || true)
+  # --untracked incluye los archivos que aun no estan en el indice. Sin el, un
+  # archivo NUEVO pasa el check sin revisarse y solo salta en el commit
+  # siguiente, que es exactamente cuando ya nadie lo esta mirando. Ocurrio: un
+  # comentario con la palabra prohibida entro en un commit y se detecto en el
+  # posterior, por otro cambio que no tenia nada que ver.
+  matches=$(git grep -Iin --untracked -- "$term" -- . "${exclusions[@]}" 2>/dev/null     | grep -v "$ESCAPE" || true)
 
   if [ -n "$matches" ]; then
     echo "ERROR: se encontro vocabulario fiscal prohibido: '$term'"

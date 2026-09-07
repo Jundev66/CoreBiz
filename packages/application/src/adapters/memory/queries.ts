@@ -1,10 +1,17 @@
-import { Money, type Currency, type TenantId } from '@corebiz/domain';
+import {
+  Money,
+  type Currency,
+  type GoodsReceipt,
+  type Supplier,
+  type TenantId,
+} from '@corebiz/domain';
 import type { Page } from '../../ports/repositories';
 import type {
   AdminQueries,
   AuditEntryView,
   AuditFilter,
   BestSeller,
+  GoodsReceiptListItem,
   CustomerListItem,
   CustomerOption,
   CustomerQueries,
@@ -16,8 +23,11 @@ import type {
   ProductQueries,
   ReadModels,
   PendingInvitationView,
+  PurchasingQueries,
   ReportQueries,
   SalesReport,
+  SupplierListItem,
+  SupplierOption,
   TeamMemberView,
   UsageQueries,
 } from '../../queries/read-models';
@@ -394,5 +404,91 @@ export function inMemoryReadModels(
     usage: new InMemoryUsageQueries(stores, tenantId),
     reports: new InMemoryReportQueries(stores, tenantId, currency),
     admin: new InMemoryAdminQueries(stores, tenantId, viewerId),
+    purchasing: new InMemoryPurchasingQueries(stores, tenantId),
   };
+}
+
+/**
+ * Lado de lectura de compras, en memoria.
+ *
+ * Deriva los mismos modelos planos que la version SQL recorriendo los agregados
+ * del almacen. El nombre del proveedor se resuelve aqui, en lugar de guardarse
+ * en el documento: a diferencia del nombre del PRODUCTO en una linea —que se
+ * congela porque describe lo que se recibio— el proveedor es una referencia
+ * viva, y si cambia de razon social conviene ver la actual.
+ */
+class InMemoryPurchasingQueries implements PurchasingQueries {
+  constructor(
+    private readonly stores: SalesStores,
+    private readonly tenantId: TenantId,
+  ) {}
+
+  private scopedSuppliers(): Supplier[] {
+    return ([...this.stores.suppliers.values()] as Supplier[]).filter(
+      (s) => s.tenantId === this.tenantId && !s.isArchived,
+    );
+  }
+
+  suppliers(filter: {
+    search?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<SupplierListItem>> {
+    let items = this.scopedSuppliers();
+
+    if (filter.search !== undefined && filter.search !== '') {
+      const needle = filter.search.toLowerCase();
+      items = items.filter(
+        (s) => s.name.toLowerCase().includes(needle) || s.code.toLowerCase().includes(needle),
+      );
+    }
+
+    items.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+    const limit = filter.limit ?? 25;
+    const start = filter.cursor !== undefined ? Number(filter.cursor) : 0;
+    const slice = items.slice(start, start + limit);
+
+    return Promise.resolve({
+      items: slice.map((s) => ({
+        id: s.id,
+        code: s.code,
+        name: s.name,
+        taxId: s.taxId,
+        contactName: s.contactName,
+        phone: s.phone,
+      })),
+      nextCursor: start + limit < items.length ? String(start + limit) : null,
+    });
+  }
+
+  supplierOptions(limit = 500): Promise<readonly SupplierOption[]> {
+    return Promise.resolve(
+      this.scopedSuppliers()
+        .slice(0, limit)
+        .map((s) => ({ id: s.id, code: s.code, name: s.name })),
+    );
+  }
+
+  receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>> {
+    const byId = new Map(this.scopedSuppliers().map((s) => [s.id as string, s.name]));
+
+    const items = ([...this.stores.goodsReceipts.values()] as GoodsReceipt[])
+      .filter((r) => r.tenantId === this.tenantId)
+      .sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0))
+      .slice(0, filter.limit ?? 25);
+
+    return Promise.resolve({
+      items: items.map((r) => ({
+        id: r.id,
+        number: r.number,
+        status: r.status,
+        supplierName: byId.get(r.supplierId) ?? '—',
+        total: r.total.toString(),
+        lineCount: r.lines.length,
+        receivedAt: r.receivedAt,
+      })),
+      nextCursor: null,
+    });
+  }
 }
