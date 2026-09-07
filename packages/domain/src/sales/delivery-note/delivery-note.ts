@@ -75,7 +75,14 @@ export interface DeliveryNoteTotals {
   readonly totalInSecondaryCurrency: Money;
 }
 
-interface DeliveryNoteProps {
+/**
+ * Estado interno del agregado.
+ *
+ * Se exporta porque es el argumento de `rehydrate()`, y quien reconstruye el
+ * agregado desde la base de datos vive fuera del dominio. No es una invitacion a
+ * construirlo a mano: crear un DeliveryNote valido sigue pasando por `issue()`.
+ */
+export interface DeliveryNoteProps {
   readonly tenantId: TenantId;
   readonly number: string;
   readonly customerId: CustomerId;

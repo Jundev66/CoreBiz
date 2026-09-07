@@ -31,7 +31,14 @@ export interface StockMovement {
   readonly occurredAt: Date;
 }
 
-interface ProductProps {
+/**
+ * Estado interno del agregado.
+ *
+ * Se exporta porque es el argumento de `rehydrate()`, y quien reconstruye el
+ * agregado desde la base de datos vive fuera del dominio. No es una invitacion a
+ * construirlo a mano: crear un Product valido sigue pasando por `create()`.
+ */
+export interface ProductProps {
   readonly tenantId: TenantId;
   readonly sku: string;
   readonly name: string;

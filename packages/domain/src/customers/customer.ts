@@ -21,7 +21,14 @@ export interface CustomerAddress {
 export type CustomerError =
   ValidationError | { kind: 'CreditLimitBelowBalance'; balance: string; requested: string };
 
-interface CustomerProps {
+/**
+ * Estado interno del agregado.
+ *
+ * Se exporta porque es el argumento de `rehydrate()`, y quien reconstruye el
+ * agregado desde la base de datos vive fuera del dominio. No es una invitacion a
+ * construirlo a mano: crear un Customer valido sigue pasando por `create()`.
+ */
+export interface CustomerProps {
   readonly tenantId: TenantId;
   readonly code: string;
   readonly name: string;

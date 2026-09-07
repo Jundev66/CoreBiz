@@ -188,6 +188,16 @@ as $$
 declare
   remaining int;
 begin
+  -- Si el tenant ya no existe, esta pertenencia esta cayendo en cascada porque se
+  -- esta borrando la empresa entera. Proteger ahi al ultimo propietario no
+  -- protege a nadie: impediria purgar los sandboxes caducados, que es lo unico
+  -- que evita agotar los 500 MB del plan gratuito. Postgres borra la fila padre
+  -- antes de disparar la cascada, asi que a estas alturas ya no esta.
+  if tg_op = 'DELETE'
+     and not exists (select 1 from public.tenants t where t.id = old.tenant_id) then
+    return old;
+  end if;
+
   if (tg_op = 'DELETE' and old.role = 'owner')
      or (tg_op = 'UPDATE' and old.role = 'owner' and new.role <> 'owner') then
     select count(*) into remaining

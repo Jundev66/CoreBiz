@@ -115,6 +115,13 @@ revoke all on function app.can_write() from public;
 revoke all on function app.is_admin() from public;
 revoke all on function app.is_owner() from public;
 
+-- USAGE sobre el esquema es imprescindible ANTES que cualquier EXECUTE: sin el,
+-- el rol no puede ni nombrar las funciones, y todas las politicas RLS fallan con
+-- "permission denied for schema app". Como las politicas se evaluan dentro de
+-- cada consulta, el sintoma no es un error de permisos legible sino que deja de
+-- funcionar absolutamente todo.
+grant usage on schema app to authenticated;
+
 grant execute on function app.current_tenant() to authenticated;
 grant execute on function app.current_role() to authenticated;
 grant execute on function app.is_member() to authenticated;

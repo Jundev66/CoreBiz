@@ -62,6 +62,10 @@ export default tseslint.config(
         { type: 'ports', pattern: 'packages/application/src/ports/**' },
         { type: 'use-cases', pattern: 'packages/application/src/use-cases/**' },
         { type: 'queries', pattern: 'packages/application/src/queries/**' },
+        // El esquema y el cliente de Postgres. Es un elemento propio para que solo
+        // la infraestructura pueda alcanzarlo: si los casos de uso pudieran
+        // importarlo, la arquitectura hexagonal seria decorativa.
+        { type: 'db', pattern: 'packages/db/src/**' },
         { type: 'infrastructure', pattern: 'packages/infrastructure/src/**' },
       ],
       'boundaries/include': ['packages/**/*.ts'],
@@ -91,6 +95,12 @@ export default tseslint.config(
               from: [{ element: { type: 'queries' } }],
               allow: [{ to: { element: { type: ['domain', 'ports', 'queries'] } } }],
             },
+            // El esquema solo conoce el dominio (para tipar) y a si mismo. No puede
+            // depender de casos de uso: una tabla no orquesta nada.
+            {
+              from: [{ element: { type: 'db' } }],
+              allow: [{ to: { element: { type: ['domain', 'db'] } } }],
+            },
             // La infraestructura implementa puertos: puede ver todo lo de arriba.
             {
               from: [{ element: { type: 'infrastructure' } }],
@@ -98,7 +108,7 @@ export default tseslint.config(
                 {
                   to: {
                     element: {
-                      type: ['domain', 'ports', 'use-cases', 'queries', 'infrastructure'],
+                      type: ['domain', 'ports', 'use-cases', 'queries', 'infrastructure', 'db'],
                     },
                   },
                 },
