@@ -15,7 +15,11 @@ import {
  * Notas de entrega.
  *
  * CoreBiz emite NOTAS DE ENTREGA: documentos internos sin valor fiscal. No hay
- * numeracion de control ni tributo declarado. Ver docs/adr/003-notas-de-entrega.md.
+ * numeracion de control ni tributo declarado.  [no-fiscal-ok]
+ *
+ * El marcador exime a la linea del guardian de vocabulario tributario: el aviso
+ * NIEGA tener esa numeracion, no la reclama. Ver scripts/check-non-fiscal.sh y
+ * docs/adr/003-notas-de-entrega.md.
  *
  * La tasa de cambio y el impuesto quedan congelados en el documento. Reimprimir
  * una nota de marzo con la tasa de septiembre reescribiria el historico contable

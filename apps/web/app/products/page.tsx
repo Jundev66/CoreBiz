@@ -4,7 +4,7 @@ import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 export default async function ProductsPage() {
   const t = await getTranslations();
-  const { ctx, queries } = await forRequest();
+  const { ctx, session, queries } = await forRequest();
 
   const page = await queries.products.list({ limit: 50 });
   const quota = ctx.plan.quota('products', await queries.usage.current('products'));
@@ -14,6 +14,7 @@ export default async function ProductsPage() {
   return (
     <Shell
       ctx={ctx}
+      session={session}
       title={t('products.title')}
       subtitle={t('products.subtitle')}
       action={

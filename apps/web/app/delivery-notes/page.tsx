@@ -14,7 +14,7 @@ const STATUS_STYLES: Record<string, string> = {
 export default async function DeliveryNotesPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await forRequest();
+  const { ctx, session, queries } = await forRequest();
 
   const page = await queries.deliveryNotes.list({ limit: 50 });
   const quota = ctx.plan.quota('documents_month', await queries.usage.current('documents_month'));
@@ -22,6 +22,7 @@ export default async function DeliveryNotesPage() {
   return (
     <Shell
       ctx={ctx}
+      session={session}
       title={t('deliveryNotes.title')}
       subtitle={t('deliveryNotes.subtitle')}
       action={

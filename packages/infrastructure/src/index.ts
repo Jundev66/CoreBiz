@@ -22,4 +22,12 @@ export {
   type PostgresRuntimeDeps,
   type TenantProfile,
 } from './runtime';
-export { establishTenantContext, readOnly } from './drizzle/session';
+export { establishTenantContext, readOnly, asUser } from './drizzle/session';
+export { DrizzleRateLimiter, postgresRateLimiter } from './drizzle/rate-limiter';
+export {
+  listMemberships,
+  provisionTenant,
+  type Membership,
+  type ProvisionError,
+  type ProvisionResult,
+} from './drizzle/identity';

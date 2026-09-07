@@ -1,0 +1,291 @@
+'use server';
+
+import { redirect } from 'next/navigation';
+import { cookies, headers } from 'next/headers';
+import { z } from 'zod';
+import { RATE_LIMITS } from '@corebiz/application';
+import { provisionTenant } from '@corebiz/infrastructure';
+import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
+import { clientFingerprint, rateLimiter } from '@/auth/request-identity';
+
+/**
+ * Server Actions de autenticacion.
+ *
+ * Son adaptadores primarios: traducen entre un formulario HTML y Supabase Auth.
+ * Ninguna decide reglas de negocio, y ninguna confia en lo que llega del cliente
+ * mas alla de validar su forma.
+ *
+ * Next comprueba el `Origin` de toda Server Action, asi que no hace falta un
+ * token CSRF propio; lo que si hace falta —y aqui esta— es limitar los intentos,
+ * porque un formulario de acceso sin limite es un diccionario esperando.
+ */
+
+export interface AuthState {
+  readonly status: 'idle' | 'error' | 'sent';
+  /** Clave de traduccion. El texto lo decide la interfaz segun el idioma. */
+  readonly errorKind?: string;
+  readonly retryAfter?: number;
+  readonly fieldErrors?: Readonly<Record<string, string>>;
+}
+
+const credentials = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  // Ocho es el minimo que impone Supabase por defecto. No se anaden reglas de
+  // composicion —una mayuscula, un simbolo— a proposito: empujan a la gente
+  // hacia "Password1!" y hacia el post-it, y las guias actuales del NIST
+  // recomiendan longitud antes que teatro.
+  password: z.string().min(8).max(72),
+});
+
+const signUpInput = credentials.extend({
+  businessName: z.string().trim().min(2).max(80),
+});
+
+/**
+ * Traduce los codigos de Zod a un vocabulario propio y corto.
+ *
+ * Los codigos de Zod cambian entre versiones mayores —`invalid_string` paso a
+ * ser `invalid_format` en la 4— y si viajaran tal cual hasta la interfaz, una
+ * actualizacion de la libreria dejaria mensajes sin traduccion en pantalla. Los
+ * cuatro de aqui son los unicos que un formulario de cuenta necesita distinguir.
+ */
+function fieldErrorsOf(error: z.ZodError): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path[0];
+    if (typeof field !== 'string' || field in result) continue;
+
+    result[field] =
+      issue.code === 'too_small' ? 'tooShort' : issue.code === 'too_big' ? 'tooLong' : 'invalid';
+  }
+
+  return result;
+}
+
+/**
+ * Consume un intento y devuelve el estado de bloqueo, si lo hay.
+ *
+ * La clave lleva el hash de la IP y NO el correo. Es deliberado: contar por
+ * correo permitiria a un atacante dejar fuera a una persona concreta gastandole
+ * los intentos, y ademas convertiria la respuesta en un oraculo sobre que
+ * direcciones existen.
+ */
+async function consumeAttempt(policy: keyof typeof RATE_LIMITS): Promise<AuthState | null> {
+  const { limit, windowSeconds } = RATE_LIMITS[policy];
+  const decision = await rateLimiter().hit(
+    `${policy}:${await clientFingerprint()}`,
+    limit,
+    windowSeconds,
+  );
+
+  return decision.allowed
+    ? null
+    : { status: 'error', errorKind: 'TooManyAttempts', retryAfter: decision.retryAfterSeconds };
+}
+
+// ─── Acceso ──────────────────────────────────────────────────────────────────
+
+export async function signInAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const blocked = await consumeAttempt('login');
+  if (blocked !== null) return blocked;
+
+  const parsed = credentials.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+  if (!parsed.success) {
+    return {
+      status: 'error',
+      errorKind: 'InvalidCredentials',
+      fieldErrors: fieldErrorsOf(parsed.error),
+    };
+  }
+
+  const supabase = await supabaseServer();
+  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+
+  if (error !== null) {
+    // Un solo mensaje para "no existe ese correo" y "la contrasena no es esa".
+    // Distinguirlos seria decirle a quien prueba direcciones cuales estan dadas
+    // de alta, que es la mitad del trabajo de un ataque.
+    return { status: 'error', errorKind: 'InvalidCredentials' };
+  }
+
+  // Al entrar se limpia el tenant activo: si venia de otra sesion, apuntaria a
+  // una empresa que este usuario quiza ni siquiera tiene.
+  (await cookies()).delete(ACTIVE_TENANT_COOKIE);
+
+  redirect('/');
+}
+
+// ─── Registro ────────────────────────────────────────────────────────────────
+
+export async function signUpAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const blocked = await consumeAttempt('signup');
+  if (blocked !== null) return blocked;
+
+  const parsed = signUpInput.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+    businessName: formData.get('businessName'),
+  });
+  if (!parsed.success) {
+    return {
+      status: 'error',
+      errorKind: 'InvalidFormat',
+      fieldErrors: fieldErrorsOf(parsed.error),
+    };
+  }
+
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.auth.signUp({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    // El nombre del negocio viaja en los metadatos para que, si el alta exige
+    // confirmar el correo, la empresa se pueda crear en el primer acceso sin
+    // volver a preguntarlo. Nadie deberia tener que escribir dos veces como se
+    // llama su negocio.
+    options: { data: { business_name: parsed.data.businessName } },
+  });
+
+  if (error !== null) {
+    return {
+      status: 'error',
+      errorKind: /already|registered|exists/i.test(error.message)
+        ? 'EmailAlreadyRegistered'
+        : 'SignUpFailed',
+    };
+  }
+
+  // Sin sesion inmediata significa que Supabase mando un correo de confirmacion.
+  if (data.session === null) return { status: 'sent' };
+
+  const provisioned = await provisionTenant(process.env.DATABASE_URL ?? '', data.user?.id ?? '', {
+    name: parsed.data.businessName,
+  });
+
+  // `ALREADY_OWNER` no es un fallo: es el doble envio del formulario. Se sigue
+  // hacia dentro como si nada, que es lo que la persona esperaba que pasara.
+  if (!provisioned.ok && provisioned.error !== 'ALREADY_OWNER') {
+    return { status: 'error', errorKind: 'SignUpFailed' };
+  }
+
+  redirect('/');
+}
+
+/**
+ * Crea la empresa de quien ya tiene cuenta pero todavia no tiene negocio.
+ *
+ * Existe porque el alta puede partirse en dos: si Supabase exige confirmar el
+ * correo, la cuenta se crea hoy y la primera sesion llega manana. La empresa se
+ * crea entonces, con el nombre que se guardo en los metadatos o con el que se
+ * escriba aqui.
+ */
+export async function createBusinessAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = z.object({ businessName: z.string().trim().min(2).max(80) }).safeParse({
+    businessName: formData.get('businessName'),
+  });
+  if (!parsed.success) {
+    return {
+      status: 'error',
+      errorKind: 'InvalidFormat',
+      fieldErrors: fieldErrorsOf(parsed.error),
+    };
+  }
+
+  const supabase = await supabaseServer();
+  const { data } = await supabase.auth.getUser();
+  if (data.user === null) redirect('/login');
+
+  const provisioned = await provisionTenant(process.env.DATABASE_URL ?? '', data.user.id, {
+    name: parsed.data.businessName,
+  });
+
+  if (!provisioned.ok && provisioned.error !== 'ALREADY_OWNER') {
+    return { status: 'error', errorKind: 'SignUpFailed' };
+  }
+
+  redirect('/');
+}
+
+// ─── Recuperacion ────────────────────────────────────────────────────────────
+
+export async function requestPasswordResetAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const blocked = await consumeAttempt('passwordReset');
+  if (blocked !== null) return blocked;
+
+  const parsed = z.string().trim().toLowerCase().email().safeParse(formData.get('email'));
+
+  // Se responde "enviado" pase lo que pase, incluso con un correo mal escrito o
+  // inexistente. Contestar "esa direccion no esta registrada" convertiria este
+  // formulario en un buscador de cuentas.
+  if (!parsed.success) return { status: 'sent' };
+
+  const origin = (await headers()).get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? '';
+  const supabase = await supabaseServer();
+  await supabase.auth.resetPasswordForEmail(parsed.data, {
+    redirectTo: `${origin}/reset-password`,
+  });
+
+  return { status: 'sent' };
+}
+
+export async function updatePasswordAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parsed = z.string().min(8).max(72).safeParse(formData.get('password'));
+  if (!parsed.success) {
+    return { status: 'error', errorKind: 'InvalidFormat', fieldErrors: { password: 'too_small' } };
+  }
+
+  const supabase = await supabaseServer();
+
+  // La sesion aqui viene del enlace del correo, que Supabase canjea por una
+  // sesion de recuperacion. Sin ella no hay nada que actualizar: quien llegue a
+  // esta accion sin haber pasado por el correo no puede cambiar ninguna clave.
+  const { data } = await supabase.auth.getUser();
+  if (data.user === null) return { status: 'error', errorKind: 'ResetLinkExpired' };
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data });
+  if (error !== null) return { status: 'error', errorKind: 'SignUpFailed' };
+
+  redirect('/');
+}
+
+// ─── Salida ──────────────────────────────────────────────────────────────────
+
+export async function signOutAction(): Promise<void> {
+  const supabase = await supabaseServer();
+  await supabase.auth.signOut();
+
+  const store = await cookies();
+  store.delete(ACTIVE_TENANT_COOKIE);
+
+  redirect('/login');
+}
+
+/** Cambia la empresa activa de quien pertenece a mas de una. */
+export async function switchTenantAction(formData: FormData): Promise<void> {
+  const tenantId = formData.get('tenantId');
+  if (typeof tenantId !== 'string') redirect('/');
+
+  // No se comprueba aqui que la empresa sea suya, y es intencionado: lo comprueba
+  // `forRequest()` contra la pertenencia real de la base de datos en cada
+  // request. Validarlo en dos sitios invita a que uno de los dos se relaje.
+  (await cookies()).set(ACTIVE_TENANT_COOKIE, tenantId, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
+
+  redirect('/');
+}

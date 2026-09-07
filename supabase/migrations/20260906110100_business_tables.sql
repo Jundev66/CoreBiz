@@ -2,7 +2,10 @@
 -- Tablas de negocio: clientes, catalogo, inventario y notas de entrega.
 --
 -- CoreBiz emite NOTAS DE ENTREGA, documentos internos sin valor fiscal. No hay
--- numeracion de control ni tributo declarado en ninguna parte de este esquema.
+-- numeracion de control ni tributo declarado en ninguna parte de este.  [no-fiscal-ok]
+--
+-- El marcador exime a la linea del guardian de vocabulario tributario: el aviso
+-- NIEGA tener esa numeracion, no la reclama. Ver scripts/check-non-fiscal.sh.
 -- Ver docs/adr/003-notas-de-entrega.md.
 --
 -- Correspondencia con el dominio (packages/domain/src):

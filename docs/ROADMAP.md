@@ -28,16 +28,20 @@ Lo verificado, no lo aspiracional.
 | Persistencia real             | ✅ Adaptadores Drizzle de cada puerto, UoW sobre transacción real     |
 | Tablas de negocio             | ✅ 11 tablas, migraciones aplicadas y semilla que cuadra sola         |
 | Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 27 tests de integración   |
-| **Autenticación**             | ❌ El rol y el plan salen de dos cookies de demo                      |
+| Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación     |
+| Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy     |
+| Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`        |
 | Compras y proveedores         | ❌ El directorio del dominio está vacío                               |
 | Administración                | ❌ Sin invitaciones, sin gestión de roles, sin visor de auditoría     |
 | Demo efímero                  | ❌ Sin función de clonado, sin TTL, sin purga                         |
 | Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                             |
 
-**La lectura honesta:** el sistema ya corre sobre Postgres con las políticas RLS ejecutándose
-en CI, y los 14 escenarios BDD pasan contra los dos adaptadores sin cambiar una línea. Lo que
-queda por delante es lo que separa un repositorio de un producto: una sesión de verdad, un
-demo que se pueda visitar y un despliegue que sobreviva a la pausa de Supabase.
+**La lectura honesta:** el sistema corre sobre Postgres con las políticas RLS ejecutándose en CI,
+tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 14 escenarios
+BDD pasan contra los dos adaptadores sin cambiar una línea. Lo que queda ya no es fundacional: es
+el módulo de compras, la administración de usuarios, el sandbox efímero y el despliegue.
+
+Dicho sin adornos: **el sistema está terminado como sistema y sin desplegar como producto.**
 
 ---
 
@@ -58,7 +62,7 @@ graph LR
 
   style H1 fill:#efe,stroke:#0a0
   style H2 fill:#efe,stroke:#0a0
-  style H3 fill:#fee,stroke:#c00
+  style H3 fill:#efe,stroke:#0a0
   style H8 fill:#efe,stroke:#0a0
 ```
 
@@ -146,30 +150,43 @@ multi-tenant no filtra datos?"_ con un comando en vez de con una explicación.
 
 ---
 
-## H3 · Autenticación y tenancy de verdad
+## H3 · Autenticación y tenancy de verdad — ✅ HECHA
 
-**Por qué bloquea:** hoy `resolveContext()` lee el rol y el plan de dos cookies que cualquiera puede
-editar desde las herramientas del navegador. Es deliberado y está comentado —permite a quien visita
-la demo ver el RBAC actuando en vivo— pero no es autenticación.
+**Por qué bloqueaba:** `resolveContext()` leía el rol y el plan de dos cookies que cualquiera podía
+editar desde las herramientas del navegador. Era deliberado y estaba comentado —permite a quien
+visita la demo ver el RBAC actuando en vivo— pero no era autenticación.
+
+**Cómo quedó resuelto sin perder la demo.** El orden de `resolveContext()` es: si hay sesión
+verificada manda ella, y las cookies de demostración solo se obedecen dentro de un tenant marcado
+`is_demo`. Sin sesión se cae al tenant público, y ahí está el detalle que importa: **se exige que la
+fila tenga `is_demo = true`**, no basta con que el identificador coincida con la constante. Si
+alguien apuntara `DEMO_TENANT_ID` a una empresa real por una variable mal puesta, la aplicación no
+la sirve — redirige a la pantalla de acceso. Sin esa comprobación, un error de configuración sería
+una empresa entera abierta al público.
 
 **Qué construir**
 
-- [ ] Supabase Auth con `@supabase/ssr`, sesión en cookies `httpOnly` `Secure` `SameSite=Lax`.
-- [ ] Rutas `(auth)`: registro, acceso, recuperación, aceptar invitación.
-- [ ] Alta de tenant en el registro: crear tenant, membresía `owner` y ajustes por defecto, en una
+- [x] Supabase Auth con `@supabase/ssr`, sesión en cookies `httpOnly` `Secure` `SameSite=Lax`.
+- [x] Rutas `(auth)`: registro, acceso, recuperación, aceptar invitación.
+- [x] Alta de tenant en el registro: crear tenant, membresía `owner` y ajustes por defecto, en una
       transacción.
-- [ ] `resolveContext()` pasa a validar la sesión y cargar la membresía desde la base de datos.
+- [x] `resolveContext()` pasa a validar la sesión y cargar la membresía desde la base de datos.
       **Las cookies de demo sobreviven solo dentro de un tenant marcado `is_demo`**, donde no hay nada
       que proteger y sí mucho que enseñar.
-- [ ] Middleware que resuelve el tenant activo y rechaza el acceso cruzado por URL.
-- [ ] Cabeceras de seguridad: CSP con nonce por request, HSTS, `Referrer-Policy`,
+- [x] Middleware que resuelve el tenant activo y rechaza el acceso cruzado por URL.
+- [x] Cabeceras de seguridad: CSP con nonce por request, HSTS, `Referrer-Policy`,
       `Permissions-Policy`, `X-Content-Type-Options`, `X-Frame-Options`.
-- [ ] Rate limiting con `security.rate_limit_hit()` en Postgres —un solo UPSERT atómico, $0, sin
+- [x] Rate limiting con `security.rate_limit_hit()` en Postgres —un solo UPSERT atómico, $0, sin
       servicio externo— detrás del puerto `RateLimiter`.
 
-**Hecho cuando:** dos cuentas reales en dos navegadores no ven nada la una de la otra, ni siquiera
-forzando identificadores en la URL. Comprobación manual además del test automático: aquí conviene
-mirarlo con los propios ojos.
+**Hecho:** hay un test E2E que crea una cuenta nueva desde el formulario de registro y comprueba que
+NO ve ni un cliente de la empresa de demostración. No es la matriz RLS otra vez desde otro ángulo:
+la matriz prueba las políticas a nivel de SQL, y esto prueba el camino completo —sesión real,
+cookies reales, políticas reales, navegador real— que es donde de verdad se rompen estas cosas.
+
+El tenant activo sale de una cookie, pero solo si está entre las empresas del usuario, y esa lista
+viene de `app.my_memberships()`, que resuelve la identidad con `auth.uid()` y **no acepta un
+identificador de usuario como parámetro**. Editar la cookie a mano no lleva a ninguna parte.
 
 ---
 
@@ -285,6 +302,8 @@ Decidido, no olvidado:
 ## Orden recomendado
 
 **H1 → H2 → H3 → H6 → H8**, y después H4, H5 y H7 sobre un sistema ya vivo.
+
+H1, H2 y H3 están hechas. La siguiente en la línea recta es **H6**, y después **H8**.
 
 La tentación es construir Compras primero porque es el módulo que más se parece a lo ya hecho y sale
 rápido. Sería un error: añadiría superficie sobre un almacén en memoria y alejaría el despliegue.

@@ -7,8 +7,18 @@
 # — es lo que haria que un documento generado por la aplicacion pareciese algo que
 # legalmente no es. Este check mantiene esa frontera visible y verificada.
 #
-# Si necesitas usar una de estas palabras de forma legitima (por ejemplo, explicando
-# en la documentacion por que NO se emiten facturas), anadela a ALLOWED_FILES.
+# Si necesitas usar una de estas palabras de forma legitima hay dos vias:
+#
+#   - ALLOWED_FILES, para archivos cuyo proposito ENTERO es explicar que CoreBiz no
+#     emite documentos tributarios (README, docs/).
+#   - El marcador `no-fiscal-ok` en la propia linea, para el caso contrario: un
+#     aviso legal dentro del codigo que NIEGA tener algo. Es exactamente la
+#     situacion que dejo este check en rojo durante dos commits sin que nadie se
+#     enterase — el aviso de las tablas de venta dice que NO hay numeracion de
+#     control, y el guardian solo veia el termino.
+#
+# La excepcion por linea es la buena por defecto: exceptuar un archivo entero
+# apaga la vigilancia sobre todo lo que se escriba en el en el futuro.
 
 set -euo pipefail
 
@@ -41,9 +51,16 @@ build_exclude_args() {
 status=0
 mapfile -t exclusions < <(build_exclude_args)
 
+# Marcador que exime una linea concreta. Va al final del comentario que lo usa.
+ESCAPE='no-fiscal-ok'
+
 for term in "${FORBIDDEN[@]}"; do
   # -I ignora binarios, -i sin distinguir mayusculas, -n con numero de linea.
-  if matches=$(git grep -Iin -- "$term" -- . "${exclusions[@]}" 2>/dev/null); then
+  # El `|| true` es imprescindible con `pipefail`: cuando el filtro se lleva todas
+  # las coincidencias, grep sale con 1 y el script moriria dando por bueno el resto.
+  matches=$(git grep -Iin -- "$term" -- . "${exclusions[@]}" 2>/dev/null | grep -v "$ESCAPE" || true)
+
+  if [ -n "$matches" ]; then
     echo "ERROR: se encontro vocabulario fiscal prohibido: '$term'"
     echo "$matches"
     echo ""
@@ -54,7 +71,8 @@ done
 if [ "$status" -ne 0 ]; then
   echo "-------------------------------------------------------------------"
   echo "CoreBiz genera NOTAS DE ENTREGA, no facturas fiscales."
-  echo "Renombra el termino o justifica la excepcion en ALLOWED_FILES."
+  echo "Renombra el termino, marca la linea con 'no-fiscal-ok' si es un aviso"
+  echo "legal que lo NIEGA, o justifica el archivo entero en ALLOWED_FILES."
   echo "-------------------------------------------------------------------"
   exit 1
 fi

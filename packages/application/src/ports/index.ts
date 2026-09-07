@@ -18,3 +18,5 @@ export type {
   DocumentSequences,
   PaymentQueries,
 } from './repositories';
+export { inMemoryRateLimiter, RATE_LIMITS } from './rate-limiter';
+export type { RateLimiter, RateLimitDecision, RateLimitPolicy } from './rate-limiter';

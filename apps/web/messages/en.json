@@ -75,7 +75,8 @@
     "add": "Add",
     "remove": "Remove",
     "issue": "Issue",
-    "print": "Print"
+    "print": "Print",
+    "change": "Switch"
   },
   "products": {
     "title": "Products",
@@ -134,5 +135,73 @@
     "stockValue": "Inventory value",
     "topProducts": "Best selling products",
     "units": "Units"
+  },
+  "auth": {
+    "email": "Email address",
+    "password": "Password",
+    "newPassword": "New password",
+    "businessName": "Your business name",
+    "passwordHint": "At least 8 characters. Longer is better.",
+    "account": "My account",
+    "signOut": "Sign out",
+    "switchBusiness": "Switch business",
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Use the email and password of your account.",
+      "submit": "Sign in",
+      "pending": "Signing in…",
+      "forgot": "I forgot my password",
+      "noAccount": "No account yet?",
+      "createAccount": "Create one",
+      "demoHint": "Just want to see how it works?",
+      "demoLink": "Open the demo"
+    },
+    "signup": {
+      "title": "Create account",
+      "subtitle": "Three fields and you are in. Everything else is set up later.",
+      "submit": "Create my account",
+      "pending": "Creating…",
+      "businessHint": "This is the name printed on your delivery notes.",
+      "checkEmail": "We sent you an email to confirm your account. Open it and you are in.",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in"
+    },
+    "forgot": {
+      "title": "Recover access",
+      "subtitle": "Type your email and we will send a link to set a new password.",
+      "submit": "Send the link",
+      "pending": "Sending…",
+      "sent": "If that address has an account, the link is on its way. Check your inbox.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "New password",
+      "subtitle": "Type the password you want to use from now on.",
+      "submit": "Save the password",
+      "pending": "Saving…"
+    },
+    "onboarding": {
+      "title": "What is your business called?",
+      "subtitle": "This is the last thing we need to get you set up.",
+      "submit": "Get started",
+      "pending": "Setting up…"
+    },
+    "errors": {
+      "InvalidCredentials": "That email and password do not match.",
+      "TooManyAttempts": "Too many attempts. Try again in {minutes} minute(s).",
+      "EmailAlreadyRegistered": "An account with that email already exists. Try signing in.",
+      "SignUpFailed": "We could not complete that. Please try again.",
+      "InvalidFormat": "Check the highlighted fields.",
+      "ResetLinkExpired": "The link expired. Request a new one from “I forgot my password”."
+    },
+    "fieldErrors": {
+      "invalid": "{field} is not in a valid format.",
+      "tooShort": "{field} is too short.",
+      "tooLong": "{field} is too long."
+    }
+  },
+  "home": {
+    "ownAccount": "Want your own system?",
+    "ownAccountHint": "Create a free account and get your business running in under a minute."
   }
 }

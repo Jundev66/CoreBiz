@@ -75,28 +75,49 @@ begin
   -- ─────────────────────────────────────────────────────────────────────────
   -- Cuenta de acceso
   --
-  -- Se crea con la contrasena ya cifrada por bcrypt para que sirva tal cual
-  -- cuando entre Supabase Auth (H3). `email_confirmed_at` va relleno: sin el,
-  -- GoTrue rechaza el acceso pidiendo una confirmacion que en local nadie va a
-  -- abrir, y la demo quedaria inaccesible por un correo que no existe.
+  -- Contrasena: `corebiz-demo`. Sirve para entrar de verdad por la pantalla de
+  -- acceso, no solo para que la fila exista. `email_confirmed_at` va relleno:
+  -- sin el, GoTrue rechaza el acceso pidiendo una confirmacion que en local
+  -- nadie va a abrir, y la cuenta quedaria inaccesible por un correo que no
+  -- existe.
   --
   -- El identificador coincide con DEMO_USER_ID del composition root, igual que
-  -- el del tenant coincide con DEMO_TENANT_ID. Es lo que permite que la
-  -- aplicacion arranque sin sesion mientras H3 no exista.
+  -- el del tenant coincide con DEMO_TENANT_ID. Es lo que permite que quien llega
+  -- sin cuenta vea la aplicacion funcionando.
   -- ─────────────────────────────────────────────────────────────────────────
+  --
+  -- Las cuatro columnas de token van a CADENA VACIA y no se dejan en NULL, que
+  -- es lo que Postgres pondria. GoTrue las lee en variables de texto que no
+  -- admiten nulo, asi que con NULL el acceso falla entero con un
+  -- "Database error querying schema" que no menciona ni la columna ni la tabla.
+  -- Es media hora de depuracion por cuatro cadenas vacias.
+  --
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
+    confirmation_token, recovery_token, email_change, email_change_token_new,
     raw_app_meta_data, raw_user_meta_data
   ) values (
     '00000000-0000-0000-0000-000000000000', v_owner, 'authenticated', 'authenticated',
     'demo@corebiz.local',
     extensions.crypt('corebiz-demo', extensions.gen_salt('bf')),
     now(), now() - interval '120 days', now(),
+    '', '', '', '',
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"name":"Ana Rodriguez"}'::jsonb
   )
   on conflict (id) do nothing;
+
+  -- Sin esta fila, GoTrue no reconoce que la cuenta tiene un metodo de acceso
+  -- por correo y contrasena: el usuario existe y aun asi no puede entrar.
+  insert into auth.identities (
+    provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+  ) values (
+    v_owner::text, v_owner,
+    jsonb_build_object('sub', v_owner::text, 'email', 'demo@corebiz.local', 'email_verified', true),
+    'email', now(), now() - interval '120 days', now()
+  )
+  on conflict (provider_id, provider) do nothing;
 
   -- ─────────────────────────────────────────────────────────────────────────
   -- Tenant y pertenencia

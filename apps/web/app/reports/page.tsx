@@ -12,11 +12,16 @@ import { PlanToggle } from '@/ui/plan-toggle';
  */
 export default async function ReportsPage() {
   const t = await getTranslations();
-  const { ctx, queries } = await forRequest();
+  const { ctx, session, queries } = await forRequest();
 
   if (!ctx.plan.has('reports')) {
     return (
-      <Shell ctx={ctx} title={t('reports.title')} subtitle={t('reports.subtitle')}>
+      <Shell
+        ctx={ctx}
+        session={session}
+        title={t('reports.title')}
+        subtitle={t('reports.subtitle')}
+      >
         <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-8 py-12 text-center">
           <p className="text-lg font-medium">{t('reports.locked')}</p>
           <p className="mt-2 text-[var(--color-muted)]">{t('reports.lockedDetail')}</p>
@@ -44,6 +49,7 @@ export default async function ReportsPage() {
   return (
     <Shell
       ctx={ctx}
+      session={session}
       title={t('reports.title')}
       subtitle={t('reports.subtitle')}
       action={<PlanToggle current="pro" cookieName={DEMO_PLAN_COOKIE} label={t('reports.back')} />}

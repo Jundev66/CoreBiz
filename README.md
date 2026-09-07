@@ -13,13 +13,13 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 
 ## Qué demuestra este proyecto
 
-|                   |                                                                                                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                          |
-| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                  |
-| **Testing**       | **270 tests**: 220 unitarios (Vitest + property-based con fast-check), 27 de integración contra Postgres real, 14 escenarios BDD en Gherkin y 9 E2E con Playwright, incluida accesibilidad con axe. |
-| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                        |
-| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                    |
+|                   |                                                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                           |
+| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                   |
+| **Testing**       | **296 tests**: 226 unitarios (Vitest + property-based con fast-check), 38 de integración contra Postgres real, 14 escenarios BDD en Gherkin y 18 E2E con Playwright, incluida accesibilidad con axe. |
+| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                         |
+| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                     |
 
 ## Stack
 
@@ -104,11 +104,22 @@ El análisis STRIDE completo, con los riesgos aceptados de forma consciente, est
 
 ## Qué falta
 
-El ciclo de venta funciona y está probado sobre Postgres real, con las políticas RLS
-ejecutándose en cada push. Lo que queda es **autenticación** —hoy el rol y el plan salen de
-dos cookies de demostración, deliberadamente— y el **despliegue**.
-[`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué orden y por qué ese
-orden, incluyendo el estado honesto de cada capa.
+El ciclo de venta funciona sobre Postgres real, con las políticas RLS ejecutándose en cada
+push y con autenticación de verdad. Lo que queda ya no es fundacional: el módulo de
+**compras**, la **administración de usuarios**, el **sandbox efímero** de la demo y el
+**despliegue**. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
+orden y por qué ese orden, incluyendo el estado honesto de cada capa.
+
+### La demostración se abre sin cuenta, a propósito
+
+Quien llega desde un enlace ve el sistema funcionando sin registrarse: sin sesión, la
+aplicación sirve un tenant marcado `is_demo`, donde las cookies de rol y plan permiten
+cambiar de papel y ver el RBAC y las cuotas actuando en vivo. Con sesión iniciada esas
+cookies dejan de tener efecto.
+
+La protección no es que la constante apunte al sitio correcto, es que **se comprueba la
+marca `is_demo` en la fila**: apuntarla a una empresa real no la expone, redirige a la
+pantalla de acceso. `DEMO_ENABLED=false` cierra la puerta entera.
 
 ## Tres detalles que resumen el enfoque
 

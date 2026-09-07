@@ -18,7 +18,7 @@ export default async function DeliveryNoteDetailPage({
   const { id } = await params;
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await forRequest();
+  const { ctx, session, queries } = await forRequest();
 
   const note = await queries.deliveryNotes.findById(id);
 
@@ -28,6 +28,7 @@ export default async function DeliveryNoteDetailPage({
   return (
     <Shell
       ctx={ctx}
+      session={session}
       title={note.number}
       subtitle={note.customerName}
       action={

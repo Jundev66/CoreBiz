@@ -75,7 +75,8 @@
     "add": "Agregar",
     "remove": "Quitar",
     "issue": "Emitir",
-    "print": "Imprimir"
+    "print": "Imprimir",
+    "change": "Cambiar"
   },
   "products": {
     "title": "Productos",
@@ -134,5 +135,73 @@
     "stockValue": "Valor del inventario",
     "topProducts": "Productos más vendidos",
     "units": "Unidades"
+  },
+  "auth": {
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "newPassword": "Nueva contraseña",
+    "businessName": "Nombre de tu negocio",
+    "passwordHint": "Mínimo 8 caracteres. Cuanto más larga, mejor.",
+    "account": "Mi cuenta",
+    "signOut": "Cerrar sesión",
+    "switchBusiness": "Cambiar de empresa",
+    "login": {
+      "title": "Entrar",
+      "subtitle": "Accede con el correo y la contraseña de tu cuenta.",
+      "submit": "Entrar",
+      "pending": "Entrando…",
+      "forgot": "Olvidé mi contraseña",
+      "noAccount": "¿Todavía no tienes cuenta?",
+      "createAccount": "Crear una",
+      "demoHint": "¿Solo quieres ver cómo funciona?",
+      "demoLink": "Abre la demostración"
+    },
+    "signup": {
+      "title": "Crear cuenta",
+      "subtitle": "Tres datos y ya puedes empezar. El resto se configura después.",
+      "submit": "Crear mi cuenta",
+      "pending": "Creando…",
+      "businessHint": "Es el nombre que aparecerá en tus notas de entrega.",
+      "checkEmail": "Te enviamos un correo para confirmar tu cuenta. Ábrelo y ya podrás entrar.",
+      "haveAccount": "¿Ya tienes cuenta?",
+      "signIn": "Entrar"
+    },
+    "forgot": {
+      "title": "Recuperar el acceso",
+      "subtitle": "Escribe tu correo y te enviamos un enlace para crear una contraseña nueva.",
+      "submit": "Enviar el enlace",
+      "pending": "Enviando…",
+      "sent": "Si esa dirección tiene una cuenta, el enlace ya va en camino. Revisa tu correo.",
+      "back": "Volver a entrar"
+    },
+    "reset": {
+      "title": "Nueva contraseña",
+      "subtitle": "Escribe la contraseña con la que quieres entrar a partir de ahora.",
+      "submit": "Guardar la contraseña",
+      "pending": "Guardando…"
+    },
+    "onboarding": {
+      "title": "¿Cómo se llama tu negocio?",
+      "subtitle": "Es lo último que necesitamos para dejarte todo listo.",
+      "submit": "Empezar",
+      "pending": "Preparando…"
+    },
+    "errors": {
+      "InvalidCredentials": "El correo o la contraseña no coinciden.",
+      "TooManyAttempts": "Demasiados intentos. Vuelve a probar en {minutes} minuto(s).",
+      "EmailAlreadyRegistered": "Ya existe una cuenta con ese correo. Prueba a entrar.",
+      "SignUpFailed": "No pudimos completar la operación. Inténtalo de nuevo.",
+      "InvalidFormat": "Revisa los datos marcados.",
+      "ResetLinkExpired": "El enlace caducó. Pide uno nuevo desde «Olvidé mi contraseña»."
+    },
+    "fieldErrors": {
+      "invalid": "{field} no tiene un formato válido.",
+      "tooShort": "{field} es demasiado corto.",
+      "tooLong": "{field} es demasiado largo."
+    }
+  },
+  "home": {
+    "ownAccount": "¿Quieres tu propio sistema?",
+    "ownAccountHint": "Crea una cuenta gratuita y empieza con tu negocio en menos de un minuto."
   }
 }

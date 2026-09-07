@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { TenantContext } from '@corebiz/application';
+import { signOutAction, switchTenantAction } from '@/actions/auth';
+import type { SessionInfo } from '@/composition/container';
 
 /**
  * Marco comun de las pantallas de la aplicacion.
@@ -15,9 +17,15 @@ interface ShellProps {
   readonly subtitle?: string;
   readonly action?: React.ReactNode;
   readonly children: React.ReactNode;
+  /**
+   * Opcional para que una pantalla que aun no la reciba siga compilando. Cuando
+   * falta, la barra de cuenta simplemente no se pinta — nunca se asume que haya
+   * sesion.
+   */
+  readonly session?: SessionInfo;
 }
 
-export async function Shell({ ctx, title, subtitle, action, children }: ShellProps) {
+export async function Shell({ ctx, session, title, subtitle, action, children }: ShellProps) {
   const t = await getTranslations();
 
   const nav = [
@@ -54,9 +62,12 @@ export async function Shell({ ctx, title, subtitle, action, children }: ShellPro
             ))}
           </nav>
 
-          <span className="ml-auto rounded-full border border-[var(--color-line)] px-3 py-1 text-xs uppercase tracking-wide">
-            {ctx.plan.code}
-          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-[var(--color-line)] px-3 py-1 text-xs uppercase tracking-wide">
+              {ctx.plan.code}
+            </span>
+            {session && <AccountArea session={session} activeTenantId={ctx.tenantId} />}
+          </div>
         </div>
       </header>
 
@@ -75,6 +86,80 @@ export async function Shell({ ctx, title, subtitle, action, children }: ShellPro
       <footer className="mx-auto max-w-6xl border-t border-[var(--color-line)] px-6 py-6">
         <p className="text-sm text-[var(--color-muted)]">{t('legal.notice')}</p>
       </footer>
+    </div>
+  );
+}
+
+/**
+ * Quien esta operando y como salir.
+ *
+ * Se pinta en el servidor y sin una linea de JavaScript: salir es un formulario
+ * que hace POST a una Server Action, y cambiar de empresa es un `select` que se
+ * envia al elegir. Un menu desplegable con estado de cliente seria mas vistoso y
+ * dejaria de funcionar exactamente cuando mas falta hace — con la conexion mala,
+ * en un movil viejo, en el mostrador de una tienda.
+ *
+ * Sin sesion NO se ofrece "cerrar sesion", que no cerraria nada y solo confunde:
+ * se ofrece crear una cuenta, que es lo que le falta a quien esta mirando la
+ * demostracion.
+ */
+async function AccountArea({
+  session,
+  activeTenantId,
+}: {
+  session: SessionInfo;
+  activeTenantId: string;
+}) {
+  const t = await getTranslations();
+
+  if (session.isPublicDemo) {
+    return (
+      <Link
+        href="/signup"
+        className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
+      >
+        {t('auth.signup.submit')}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {session.memberships.length > 1 && (
+        <form action={switchTenantAction}>
+          <label htmlFor="tenantId" className="sr-only">
+            {t('auth.switchBusiness')}
+          </label>
+          <select
+            id="tenantId"
+            name="tenantId"
+            defaultValue={activeTenantId}
+            className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
+          >
+            {session.memberships.map((m) => (
+              <option key={m.tenantId} value={m.tenantId}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="ml-2 text-sm underline underline-offset-4">
+            {t('common.change')}
+          </button>
+        </form>
+      )}
+
+      {session.email !== null && (
+        <span className="hidden text-sm text-[var(--color-muted)] sm:inline">{session.email}</span>
+      )}
+
+      <form action={signOutAction}>
+        <button
+          type="submit"
+          className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
+        >
+          {t('auth.signOut')}
+        </button>
+      </form>
     </div>
   );
 }

@@ -44,12 +44,12 @@ no cuando ocurre un incidente.
 
 ### S — Suplantación de identidad
 
-| Amenaza                            | Mitigación                                                                                                 |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Robo de sesión                     | Cookies `httpOnly`, `Secure`, `SameSite=Lax`. El JWT nunca toca `localStorage`.                            |
-| Token falsificado                  | En el servidor se usa `getClaims()`, que **verifica la firma**; nunca `getSession()` para decidir accesos. |
-| Enumeración de correos en el login | Respuesta genérica y de duración constante: no se distingue "no existe" de "contraseña incorrecta".        |
-| Fuerza bruta                       | Rate limit por IP y por correo en el endpoint de acceso.                                                   |
+| Amenaza                            | Mitigación                                                                                                                                                                                                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Robo de sesión                     | Cookies `httpOnly`, `Secure`, `SameSite=Lax`. El JWT nunca toca `localStorage`.                                                                                                                                                                                                                         |
+| Token falsificado                  | En el servidor se usa `getUser()`, que **verifica el token contra el servidor de autenticación**; nunca `getSession()`, que solo decodifica la cookie y aceptaría una fabricada a mano.                                                                                                                 |
+| Enumeración de correos en el login | Un único mensaje para "no existe" y "contraseña incorrecta", en acceso y en recuperación. La recuperación responde "enviado" siempre, incluso con una dirección sin cuenta.                                                                                                                             |
+| Fuerza bruta                       | Límite por **hash de IP**, no por correo: contar por correo permitiría dejar fuera a una persona concreta gastándole los intentos, y convertiría la respuesta en un oráculo sobre qué direcciones existen. UPSERT atómico en Postgres — un contador en memoria de proceso no limita nada en serverless. |
 
 ### T — Manipulación de datos
 
@@ -81,6 +81,9 @@ no cuando ocurre un incidente.
 | IDOR sobre documentos                                   | Identificadores UUID v7 y toda lectura acotada por tenant. Un id ajeno responde 404, no 403: un 403 confirmaría que el recurso existe.                                                                                                                                             |
 | Archivos accesibles sin permiso                         | Todos los buckets de Storage privados, con URLs firmadas de vida corta.                                                                                                                                                                                                            |
 | Reconocimiento del framework                            | `poweredByHeader: false`. No evita un ataque, pero no hay razón para regalar la versión.                                                                                                                                                                                           |
+| **Script inyectado que se ejecuta** (XSS)               | CSP con **nonce distinto por petición** y `strict-dynamic`, que descarta las listas de dominios y confía solo en el nonce. Como toda la autenticación es de servidor, el token de sesión vive en una cookie `httpOnly` y un XSS no llega a él.                                     |
+| Enmarcado de la aplicación en un sitio ajeno            | `frame-ancestors 'none'` y `X-Frame-Options: DENY`.                                                                                                                                                                                                                                |
+| Reescritura del destino de los formularios              | `base-uri 'none'` y `form-action 'self'`. Sin la primera, un `<base>` inyectado redirige **toda** URL relativa de la página, envíos con credenciales incluidos.                                                                                                                    |
 
 ### D — Denegación de servicio
 
@@ -105,13 +108,15 @@ no cuando ocurre un incidente.
 
 Decisiones conscientes, no descuidos:
 
-| Riesgo                                        | Por qué se acepta                                                                                                                             |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Sin autenticación de doble factor**         | Fuera del alcance de un proyecto de portafolio. Supabase Auth lo soporta; añadirlo sería configuración, no rediseño.                          |
-| **Rate limit de ventana fija**, no deslizante | Permite un pico al cambiar de ventana. A esta escala es irrelevante y evita una dependencia externa.                                          |
-| **Contador de invocaciones muestreado**       | Se estima con muestreo del 2 % en lugar de escribir en cada petición. Margen de error ~±5 %, suficiente para un disyuntor y mucho más barato. |
-| **Sin cifrado a nivel de campo**              | El cifrado en reposo de Supabase cubre el modelo de amenazas de un ERP de comercio pequeño.                                                   |
-| **Sin recuperación a un punto en el tiempo**  | El plan gratuito no la ofrece. Mitigado porque el entorno de demostración es reconstruible desde el seed versionado.                          |
+| Riesgo                                         | Por qué se acepta                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sin autenticación de doble factor**          | Fuera del alcance de un proyecto de portafolio. Supabase Auth lo soporta; añadirlo sería configuración, no rediseño.                                                                                                                                                               |
+| **Rate limit de ventana fija**, no deslizante  | Permite un pico al cambiar de ventana. A esta escala es irrelevante y evita una dependencia externa.                                                                                                                                                                               |
+| **Contador de invocaciones muestreado**        | Se estima con muestreo del 2 % en lugar de escribir en cada petición. Margen de error ~±5 %, suficiente para un disyuntor y mucho más barato.                                                                                                                                      |
+| **`style-src-attr 'unsafe-inline'` en la CSP** | La barra de cuota calcula su ancho en el servidor y lo pinta como atributo `style`. Generar una clase por porcentaje sería peor código para no ganar nada: un atributo de estilo no ejecuta código, y `script-src` sigue siendo estricto.                                          |
+| **La demostración se sirve sin sesión**        | Es el motivo de que el proyecto tenga un enlace visitable. Está acotado: solo se sirve un tenant cuya fila está marcada `is_demo`, así que apuntar la constante a una empresa real **no la expone** — redirige a la pantalla de acceso. Se cierra entero con `DEMO_ENABLED=false`. |
+| **Sin cifrado a nivel de campo**               | El cifrado en reposo de Supabase cubre el modelo de amenazas de un ERP de comercio pequeño.                                                                                                                                                                                        |
+| **Sin recuperación a un punto en el tiempo**   | El plan gratuito no la ofrece. Mitigado porque el entorno de demostración es reconstruible desde el seed versionado.                                                                                                                                                               |
 
 ---
 
@@ -127,12 +132,18 @@ Decisiones conscientes, no descuidos:
 
 ## 6. Verificación continua
 
-| Comprobación                                           | Dónde                                                                                |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| Aislamiento entre tenants, tabla por tabla             | Test de integración parametrizado. Añadir una tabla sin política **rompe el build**. |
-| Variable de tenant no persiste entre transacciones     | Test de integración sobre la misma conexión con dos tenants distintos.               |
-| La `service_role` no se importa fuera de su cuarentena | `pnpm arch` en CI                                                                    |
-| Secretos commiteados                                   | `gitleaks` en CI                                                                     |
-| Cabeceras de seguridad y caché                         | Test E2E                                                                             |
-| Accesibilidad                                          | `axe-core` en E2E                                                                    |
-| Vocabulario tributario en el producto                  | `scripts/check-non-fiscal.sh` en CI                                                  |
+| Comprobación                                            | Dónde                                                                                           |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Aislamiento entre tenants, tabla por tabla              | Test de integración parametrizado. Añadir una tabla sin política **rompe el build**.            |
+| Variable de tenant no persiste entre transacciones      | Test de integración sobre la misma conexión con dos tenants distintos.                          |
+| La `service_role` no se importa fuera de su cuarentena  | `pnpm arch` en CI                                                                               |
+| Secretos commiteados                                    | `gitleaks` en CI                                                                                |
+| Cabeceras de seguridad, nonce por petición y caché      | Test E2E, incluida la comprobación de que **no se dispara ninguna violación de CSP** al navegar |
+| El `WITH CHECK` impide mover una fila a otro tenant     | Test de integración                                                                             |
+| `audit_log` no admite `UPDATE` ni `DELETE`              | Test de integración                                                                             |
+| La conexión opera con un rol **sin** `BYPASSRLS`        | Test de integración: sin esto, toda la matriz seguiría verde con el aislamiento apagado         |
+| Los roles de `app.can_write()` coinciden con el dominio | Test de integración contra `pg_get_functiondef`                                                 |
+| El limitador no pierde intentos concurrentes            | Test de integración con 20 peticiones simultáneas                                               |
+| Una cuenta nueva no ve los datos de otra empresa        | Test E2E de punta a punta, con sesión y políticas reales                                        |
+| Accesibilidad                                           | `axe-core` en E2E                                                                               |
+| Vocabulario tributario en el producto                   | `scripts/check-non-fiscal.sh` en CI                                                             |

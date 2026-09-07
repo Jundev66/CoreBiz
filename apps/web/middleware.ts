@@ -1,0 +1,167 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+
+/**
+ * Middleware: cabeceras de seguridad y refresco de la sesion.
+ *
+ * Corre en el runtime Edge, asi que NO puede tocar la base de datos: `postgres.js`
+ * es Node puro. Es una limitacion util, porque empuja las decisiones a donde
+ * deben estar. Aqui solo pasan dos cosas:
+ *
+ *   1. Se renueva el token de Supabase si toca, escribiendo las cookies en la
+ *      RESPUESTA. Es el unico sitio donde se puede hacer: un Server Component no
+ *      puede escribir cookies.
+ *   2. Se ponen las cabeceras de seguridad, con una CSP que lleva un nonce
+ *      distinto en cada request.
+ *
+ * Quien decide si alguien puede ver una pantalla NO es este archivo: es
+ * `forRequest()` en el composition root, que consulta la pertenencia real en la
+ * base de datos. Un guardia en el middleware que se apoyara en "hay cookie de
+ * sesion" seria decorativo — la cookie puede estar y no valer nada.
+ */
+
+/**
+ * Directivas comunes a todos los entornos.
+ *
+ * `frame-ancestors 'none'` es la version moderna de X-Frame-Options y la que de
+ * verdad manda; la cabecera antigua se manda igual para los navegadores que no
+ * la implementan. `base-uri 'none'` cierra un vector poco conocido: inyectar un
+ * `<base>` reescribe el destino de TODA URL relativa de la pagina, formularios
+ * incluidos.
+ */
+function contentSecurityPolicy(nonce: string): string {
+  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const production = process.env.NODE_ENV === 'production';
+
+  const directives = [
+    `default-src 'self'`,
+
+    // `strict-dynamic` hace que los scripts que cargue un script ya confiado
+    // hereden la confianza, y de paso ANULA las listas de dominios: no hay forma
+    // de colar un origen permitido por descuido.
+    //
+    // En desarrollo hace falta `unsafe-eval`: la recarga en caliente de Next lo
+    // usa. No se manda en produccion, que es donde importa.
+    production
+      ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+      : `script-src 'self' 'unsafe-eval' 'unsafe-inline'`,
+
+    // En produccion el CSS viaja como archivo servido por el propio origen. En
+    // desarrollo Next lo inyecta en linea para poder recargarlo en caliente.
+    production ? `style-src 'self' 'nonce-${nonce}'` : `style-src 'self' 'unsafe-inline'`,
+
+    // Concesion consciente y acotada: la barra de cuota calcula su ancho en el
+    // servidor y lo pinta como atributo `style`, que es lo que gobierna
+    // `style-src-attr`. La alternativa —generar una clase por porcentaje— seria
+    // peor codigo para no ganar nada: un atributo de estilo no ejecuta nada.
+    `style-src-attr 'unsafe-inline'`,
+
+    `img-src 'self' data: blob:`,
+    `font-src 'self' data:`,
+    supabase === '' ? `connect-src 'self'` : `connect-src 'self' ${supabase}`,
+
+    // El destino de los formularios queda fijado al propio origen: si alguien
+    // logra inyectar marcado, no puede redirigir un envio con credenciales fuera.
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+    `base-uri 'none'`,
+    `object-src 'none'`,
+  ];
+
+  if (production) directives.push('upgrade-insecure-requests');
+
+  return directives.join('; ');
+}
+
+function applySecurityHeaders(headers: Headers, nonce: string): void {
+  headers.set('Content-Security-Policy', contentSecurityPolicy(nonce));
+
+  // Impide que el navegador "adivine" el tipo de un archivo servido: sin esto,
+  // un contenido subido por un usuario puede acabar interpretandose como HTML.
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+
+  // Al salir hacia otro sitio solo se manda el origen, nunca la ruta. La ruta de
+  // un ERP lleva identificadores de documentos y de clientes.
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Se apagan explicitamente las APIs que esta aplicacion no usa. Lo importante
+  // no es lo que hay en la lista, es que la lista sea corta.
+  headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  );
+
+  // Aislamiento entre pestanas: una ventana abierta desde aqui no conserva
+  // referencia a esta, y un recurso de otro origen no puede incrustarse.
+  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+
+  // HSTS solo en produccion: en local no hay TLS, y fijarlo en el navegador de
+  // quien desarrolla deja `localhost` inaccesible por http durante dos anos.
+  if (process.env.NODE_ENV === 'production') {
+    headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
+}
+
+export async function middleware(request: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  const csp = contentSecurityPolicy(nonce);
+
+  // Next lee el nonce de la CSP que llega en las cabeceras de PETICION para
+  // ponerselo a sus propios scripts de arranque. Sin esta linea, `strict-dynamic`
+  // bloquea el bootstrap del framework y la aplicacion se queda en blanco en
+  // produccion — funcionando en local, donde la politica es laxa.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', csp);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Refresco de la sesion. Si Supabase no esta configurado —`pnpm dev:nodb`— se
+  // salta entero: la demo en memoria no tiene sesiones que renovar.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+  if (url !== '' && key !== '') {
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (list) => {
+          for (const { name, value, options } of list) {
+            response.cookies.set(name, value, {
+              ...options,
+              httpOnly: true,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+              path: '/',
+            });
+          }
+        },
+      },
+    });
+
+    // Llamarlo es el efecto: `getUser()` verifica el token contra el servidor de
+    // autenticacion y, si estaba a punto de caducar, deja las cookies renovadas
+    // en la respuesta. El valor devuelto no se usa aqui a proposito — quien
+    // decide permisos es el composition root, con la pertenencia de la base de
+    // datos delante.
+    await supabase.auth.getUser();
+  }
+
+  applySecurityHeaders(response.headers, nonce);
+  return response;
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Todo menos los estaticos y el favicon.
+     *
+     * Se excluyen porque no llevan sesion que refrescar y porque anadirles una
+     * CSP por request rompe su cacheabilidad sin proteger nada: son archivos con
+     * hash en el nombre, servidos por el propio origen.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
+  ],
+};

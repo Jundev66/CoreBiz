@@ -6,7 +6,7 @@ import { DeliveryNoteForm } from '@/ui/delivery-note-form';
 
 export default async function NewDeliveryNotePage() {
   const t = await getTranslations();
-  const { ctx, queries } = await forRequest();
+  const { ctx, session, queries } = await forRequest();
 
   const [customers, products] = await Promise.all([
     queries.customers.options(),
@@ -18,6 +18,7 @@ export default async function NewDeliveryNotePage() {
   return (
     <Shell
       ctx={ctx}
+      session={session}
       title={t('deliveryNotes.new')}
       action={
         <Link href="/delivery-notes" className="text-sm text-[var(--color-muted)] hover:underline">

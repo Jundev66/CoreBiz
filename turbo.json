@@ -1,17 +1,41 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
-  "globalEnv": ["NODE_ENV", "DATA_DRIVER"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATA_DRIVER",
+    "DATABASE_URL",
+    "DIRECT_URL",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SITE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "DEMO_ENABLED",
+    "DEMO_COOKIE_SECRET",
+    "CRON_SECRET"
+  ],
   "globalDependencies": ["tsconfig.base.json", ".env.example"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
-    "dev": { "cache": false, "persistent": true },
-    "lint": { "dependsOn": ["^lint"] },
-    "typecheck": { "dependsOn": ["^typecheck"] },
-    "start": { "cache": false, "persistent": true },
-    "generate": { "cache": false }
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "generate": {
+      "cache": false
+    }
   }
 }
