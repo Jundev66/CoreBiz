@@ -1,0 +1,86 @@
+# ============================================================================
+# Supabase local
+#
+# Solo se levantan los servicios que el proyecto usa de verdad. Cada seccion
+# desactivada es un contenedor que no arranca: la diferencia entre que alguien
+# clone el repositorio y lo tenga corriendo en un minuto, o que abandone.
+# Los comentarios indican en que fase se vuelve a encender cada cosa.
+# ============================================================================
+
+project_id = "corebiz"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Misma version mayor que el plan gratuito de Supabase. Que local y produccion
+# coincidan evita descubrir en el despliegue que una funcion no existe alli.
+major_version = 17
+
+# El pooler local queda apagado: en desarrollo la conexion directa es mas simple
+# de depurar. En produccion SI se usa Supavisor, y por eso el cliente va con
+# `prepare: false` desde el primer commit (packages/db/src/client.ts).
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[studio]
+enabled = true
+port = 54323
+
+# Auth arranca desde ya: las politicas RLS leen auth.uid(), asi que el esquema
+# `auth` tiene que existir aunque todavia no haya pantallas de registro (H3).
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# En local se confirma solo: pedir confirmacion por correo obligaria a levantar
+# el servidor de pruebas para cada alta. En produccion va activado.
+enable_confirmations = false
+
+# ─── Apagados a proposito ────────────────────────────────────────────────────
+
+# Nada de la aplicacion se suscribe a cambios en vivo.
+[realtime]
+enabled = false
+
+# Se encendera si el PDF de la nota de entrega acaba guardandose (H7). Hoy no
+# hay un solo archivo que subir.
+[storage]
+enabled = false
+
+# El proyecto no tiene Edge Functions: los crons viven en pg_cron (H6) y la
+# logica de servidor en Server Actions de Next.
+[edge_runtime]
+enabled = false
+
+# Un contenedor de telemetria que nadie mira.
+[analytics]
+enabled = false
+
+# Servidor de correo de pruebas. Se enciende en H3, con las invitaciones.
+[local_smtp]
+enabled = false

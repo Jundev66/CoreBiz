@@ -1,24 +1,24 @@
 {
-  "name": "@corebiz/db",
+  "name": "@corebiz/infrastructure",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "studio": "drizzle-kit studio"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@corebiz/application": "workspace:*",
+    "@corebiz/db": "workspace:*",
     "@corebiz/domain": "workspace:*",
     "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
-    "drizzle-kit": "^0.31.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

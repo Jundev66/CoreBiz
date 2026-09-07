@@ -18,7 +18,7 @@ do $$
 declare
   t text;
   business_tables text[] := array[
-    'customers', 'products', 'product_stock', 'stock_movements',
+    'customers', 'products', 'stock_movements',
     'quotes', 'quote_lines',
     'delivery_notes', 'delivery_note_lines', 'payments',
     'suppliers', 'purchase_orders', 'purchase_order_lines', 'goods_receipts',

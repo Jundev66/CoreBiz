@@ -29,9 +29,9 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "db:generate": "pnpm --filter @corebiz/db generate",
     "prepare": "lefthook install",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "db:studio": "pnpm --filter @corebiz/db studio"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
