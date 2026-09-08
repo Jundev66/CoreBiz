@@ -106,9 +106,17 @@ module.exports = {
 
   options: {
     doNotFollow: { path: 'node_modules' },
-    // `.next` es salida de build: incluirla no anade informacion y llena el
-    // diagrama de dependencias de archivos generados con nombres ilegibles.
-    exclude: { path: '\.(spec|test)\.tsx?$|/__tests__/|^e2e/\.features-gen/|^apps/web/\.next/' },
+    // Salida de build: `.next` de la web y `dist` de la API. Incluirla no anade
+    // informacion y llena el diagrama de archivos generados con nombres ilegibles.
+    //
+    // En el caso de `apps/api/dist` ademas MIENTE: ahi dentro vive una copia
+    // compilada de packages/db y packages/infrastructure, y sus importaciones de
+    // drizzle disparaban `no-orm-outside-infra` 27 veces. La regla tenia razon
+    // sobre lo que veia y estaba mirando el sitio equivocado — el codigo fuente
+    // de apps/api no toca el ORM, y eso es lo que hay que vigilar.
+    exclude: {
+      path: '\.(spec|test)\.tsx?$|/__tests__/|^e2e/\.features-gen/|^apps/web/\.next/|^apps/api/dist/',
+    },
     tsPreCompilationDeps: true,
     /**
      * `tsconfig.depcruise.json` y no el base, a proposito.

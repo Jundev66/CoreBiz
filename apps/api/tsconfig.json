@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "verbatimModuleSyntax": false,
+    "esModuleInterop": true,
+    "isolatedModules": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "../..",
+    "sourceMap": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@corebiz/domain": ["../../packages/domain/src/index"],
+      "@corebiz/domain/*": ["../../packages/domain/src/*/index"],
+      "@corebiz/application": ["../../packages/application/src/index"],
+      "@corebiz/application/ports": ["../../packages/application/src/ports/index"],
+      "@corebiz/contracts": ["../../packages/contracts/src/index"],
+      "@corebiz/db": ["../../packages/db/src/index"],
+      "@corebiz/db/schema": ["../../packages/db/src/schema/index"],
+      "@corebiz/infrastructure": ["../../packages/infrastructure/src/index"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

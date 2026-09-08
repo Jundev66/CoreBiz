@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "turbo run dev --filter=@corebiz/web",
+    "dev:api": "turbo run dev --filter=@corebiz/api",
     "dev:nodb": "cross-env DATA_DRIVER=memory turbo run dev --filter=@corebiz/web",
     "build": "turbo run build",
     "start": "turbo run start --filter=@corebiz/web",

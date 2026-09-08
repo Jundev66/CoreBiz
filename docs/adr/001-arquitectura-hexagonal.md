@@ -43,6 +43,9 @@ La separación no se confía a la disciplina de quien escribe. Se hace cumplir e
   de negocio queda repartida entre componentes y no se puede testear sin base de datos.
 - **NestJS con inyección por decoradores**: aporta el patrón a cambio de un framework pesado
   y de `reflect-metadata`. El composition root manual da lo mismo en unas 40 líneas.
+  → **Superada por [ADR 009](009-api-dedicada-en-nestjs.md)**, que introduce NestJS por un
+  motivo declarado que no es técnico. El argumento de esta viñeta sigue siendo válido; lo
+  que cambió es la razón por la que se paga ese coste.
 
 ## Nota sobre la ceremonia
 

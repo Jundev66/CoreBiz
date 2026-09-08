@@ -50,6 +50,51 @@ jobs:
       - name: Verificar dependencias entre capas
         run: pnpm arch
 
+  api:
+    name: La API compila y arranca
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # El artefacto que corre en Render es este, no el codigo fuente. Los paquetes
+      # del monorepo se consumen como TypeScript crudo y Node no sabe cargarlos:
+      # `tsc` los compila dentro de dist/ y `tsc-alias` reescribe los `require`
+      # para que apunten ahi. Si ese puente se rompe, se rompe AQUI y no en el
+      # primer arranque de produccion.
+      - name: Compilar
+        run: pnpm --filter @corebiz/api build
+
+      # Compilar no basta: la inyeccion de dependencias de Nest se resuelve al
+      # levantar, no al compilar. Un provider mal declarado pasa `tsc` sin una
+      # queja y revienta en el arranque, que es exactamente lo que Render haria
+      # revertir. Se arranca en modo memoria para no necesitar Postgres.
+      - name: Arrancar y consultar el endpoint de salud
+        run: |
+          set -euo pipefail
+          node apps/api/dist/apps/api/src/main.js &
+          api_pid=$!
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3001/health > /tmp/health.json; then
+              echo "Arranco al intento $attempt:"
+              cat /tmp/health.json
+              kill "$api_pid"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::La API no respondio en 30 segundos."
+          kill "$api_pid" || true
+          exit 1
+        env:
+          DATA_DRIVER: memory
+          PORT: '3001'
+
   unit:
     name: Tests unitarios y cobertura
     runs-on: ubuntu-latest
