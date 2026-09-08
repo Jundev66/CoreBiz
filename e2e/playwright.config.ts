@@ -93,6 +93,11 @@ export default defineConfig({
             // comprobar que sus sandboxes estan aislados. Con el limite de
             // produccion —uno por hora y origen— ese test no se puede escribir.
             DEMO_MAX_PER_HOUR: '20',
+            // Y desde que la demostracion exige sesion, cada escenario empieza
+            // entrando. Cincuenta accesos desde la misma IP en un minuto chocan
+            // contra el limite de produccion —ocho— y la suite falla entera por
+            // un bloqueo que en realidad demuestra que el limite funciona.
+            LOGIN_MAX_PER_MINUTE: '500',
           }
         : {}),
     },

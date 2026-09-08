@@ -1,5 +1,5 @@
-import { expect, type Locator, type Page } from '@playwright/test';
-import { Given, When, Then, setDemoCookies } from './fixtures';
+import { expect, type Locator } from '@playwright/test';
+import { Given, When, Then, setDemoCookies, readStock } from './fixtures';
 
 /**
  * Pasos de ventas, inventario y planes.
@@ -38,15 +38,6 @@ Then(
 Then('the stock of {string} did not change', async ({ page, world }, sku: string) => {
   expect(await readStock(page, sku)).toBe(world.stockBefore ?? 0);
 });
-
-/** Lee el saldo desde la PANTALLA de inventario, no desde el estado interno. */
-async function readStock(page: Page, sku: string): Promise<number> {
-  await page.goto('/products');
-  const row = page.getByRole('row').filter({ hasText: sku });
-  const cells = await row.locator('td').allTextContents();
-  const stockCell = cells[cells.length - 1] ?? '';
-  return Number(stockCell.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
-}
 
 When('I start a new delivery note for {string}', async ({ page }, customer: string) => {
   await page.goto('/delivery-notes/new');

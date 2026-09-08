@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { signIn } from '../session';
 
 /**
  * Recorrido de humo.
@@ -8,6 +9,15 @@ import AxeBuilder from '@axe-core/playwright';
  * que la aplicacion carga, que se navega, que es accesible y que no filtra
  * informacion de la plataforma.
  */
+
+/**
+ * Todas las pantallas de dentro exigen sesion: la aplicacion ya no sirve la
+ * demostracion a quien no ha entrado. Se inicia una vez por test y no una vez
+ * por fichero para que cada uno siga siendo independiente del orden.
+ */
+test.beforeEach(async ({ page }) => {
+  await signIn(page);
+});
 
 test.describe('Recorrido basico', () => {
   test('la portada carga y lleva al modulo de clientes', async ({ page }) => {
@@ -69,6 +79,10 @@ test.describe('Accesibilidad', () => {
     '/settings',
     '/settings/team',
     '/purchases',
+    // Los modulos en desarrollo tambien se navegan y tambien se leen con un lector
+    // de pantalla: una pantalla que solo explica algo no esta exenta.
+    '/payments',
+    '/quotes',
     '/login',
   ]) {
     test(`sin violaciones serias en ${path}`, async ({ page }) => {

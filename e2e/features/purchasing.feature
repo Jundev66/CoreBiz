@@ -35,6 +35,14 @@ Feature: Buying goods and putting them into stock
     Then the delivery is recorded successfully
     And the stock of "HRN-001" went up by 15
 
+  # Sin esta pantalla el modulo estaba cojo de una forma poco visible: se podia
+  # registrar una entrada y no volver a verla nunca.
+  Scenario: A recorded delivery can be opened again, with its lines
+    Given the business is on the paid plan
+    When I record a delivery of 5 units of "CAF-001"
+    And I open the recorded delivery
+    Then I should see the received product "Cafe molido 250 g" with its unit cost
+
   Scenario: A delivery cannot be recorded without lines
     Given the business is on the paid plan
     And there is at least one supplier

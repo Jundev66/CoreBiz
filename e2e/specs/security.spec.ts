@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { signIn } from '../session';
 
 /**
  * Cabeceras de seguridad.
@@ -11,6 +12,14 @@ import { test, expect } from '@playwright/test';
  */
 
 const APP_ROUTES = ['/', '/customers', '/login'];
+
+/**
+ * Las pantallas de dentro exigen sesion desde que la aplicacion dejo de servir la
+ * demostracion a quien no ha entrado.
+ */
+test.beforeEach(async ({ page }) => {
+  await signIn(page);
+});
 
 test.describe('Cabeceras de seguridad', () => {
   test('la CSP viaja con un nonce distinto en cada respuesta', async ({ page }) => {
@@ -36,7 +45,7 @@ test.describe('Cabeceras de seguridad', () => {
     expect(secondNonce).not.toBe(nonce);
   });
 
-  test('todo script del HTML del servidor lleva el nonce de su respuesta', async ({ request }) => {
+  test('todo script del HTML del servidor lleva el nonce de su respuesta', async ({ page }) => {
     // Se mira el HTML CRUDO, no el DOM ya hidratado, y la diferencia es el
     // motivo de que este test existiera roto primero: con `strict-dynamic`, un
     // script cargado por otro script ya confiado hereda la confianza y NO lleva
@@ -46,7 +55,11 @@ test.describe('Cabeceras de seguridad', () => {
     // Lo que si tiene que cumplirse —y es lo que de verdad protege— es que todo
     // script que venga en la respuesta del servidor lo lleve: son los unicos que
     // el navegador evalua directamente contra la politica.
-    const response = await request.get('/customers');
+    // `page.request` y no el fixture `request`: comparte las cookies del
+    // navegador, asi que la peticion llega CON sesion. Con el fixture suelto,
+    // `/customers` responderia una redireccion al acceso y este test acabaria
+    // comprobando el nonce de la pantalla de entrada creyendo que mira otra.
+    const response = await page.request.get('/customers');
     const csp = response.headers()['content-security-policy'] ?? '';
     const nonce = /'nonce-([^']+)'/.exec(csp)?.[1];
     const html = await response.text();

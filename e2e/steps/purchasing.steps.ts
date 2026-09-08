@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { Given, When, Then } from './fixtures';
+import { Given, When, Then, readStock } from './fixtures';
 
 /**
  * Pasos del modulo de compras.
@@ -10,14 +10,6 @@ import { Given, When, Then } from './fixtures';
  */
 
 const uniqueCode = () => `PRV-${Date.now().toString().slice(-6)}`;
-
-async function readStock(page: Page, sku: string): Promise<number> {
-  await page.goto('/products');
-  const row = page.getByRole('row').filter({ hasText: sku });
-  const cells = await row.locator('td').allTextContents();
-  const stockCell = cells[cells.length - 1] ?? '';
-  return Number(stockCell.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
-}
 
 /** Selecciona la opcion cuyo texto CONTIENE lo indicado. */
 async function selectByPartialLabel(select: ReturnType<Page['locator']>, needle: string) {
@@ -49,16 +41,18 @@ Then('I should not see any supplier', async ({ page }) => {
 });
 
 When('I register a new supplier', async ({ page, world }) => {
-  world.lastCode = uniqueCode();
+  // El nombre lleva un sufijo unico y el CODIGO ya no se escribe: lo asigna el
+  // sistema. Lo que este paso comprueba pasa a ser que el alta funcione sin que
+  // nadie tenga que inventarse nada.
+  world.lastCode = `Distribuidora ${uniqueCode()}`;
 
   const form = page.getByRole('complementary', { name: /new supplier/i });
-  await form.getByLabel(/code/i).fill(world.lastCode);
-  await form.getByLabel(/name/i).fill('Distribuidora de Prueba');
+  await form.getByLabel(/name/i).fill(world.lastCode);
   await form.getByRole('button', { name: /save/i }).click();
 });
 
 Then('the supplier appears in the list', async ({ page, world }) => {
-  await expect(page.getByRole('cell', { name: world.lastCode ?? '' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: world.lastCode ?? '' }).first()).toBeVisible();
 });
 
 /**
@@ -74,8 +68,7 @@ Given('there is at least one supplier', async ({ page }) => {
   if ((await page.getByRole('table').count()) > 0) return;
 
   const form = page.getByRole('complementary', { name: /new supplier/i });
-  await form.getByLabel(/code/i).fill(uniqueCode());
-  await form.getByLabel(/name/i).fill('Distribuidora de Prueba');
+  await form.getByLabel(/name/i).fill(`Distribuidora ${uniqueCode()}`);
   await form.getByRole('button', { name: /save/i }).click();
 
   await expect(page.getByRole('table')).toBeVisible();
@@ -87,22 +80,34 @@ When(
     world.stockBefore ??= await readStock(page, sku);
 
     await page.goto('/purchases/new');
-    await selectByPartialLabel(page.locator('#supplierId'), 'PRV-');
+    await selectByPartialLabel(page.locator('#supplierId'), 'PRV');
     await selectByPartialLabel(page.locator('select[name="productId"]').first(), sku);
     await page.locator('input[name="quantity"]').first().fill(String(quantity));
     await page.locator('input[name="unitCost"]').first().fill('1.00');
     await page.getByRole('button', { name: /record the delivery/i }).click();
+
+    // Se guarda el numero que devuelve la confirmacion. Sin el, volver a abrir el
+    // documento significaria "el primero de la lista", y con los escenarios
+    // corriendo en paralelo ese puede ser el de otro.
+    const confirmation = page.locator('main').getByRole('status');
+    await expect(confirmation).toBeVisible();
+    const found = /RM-\d+/.exec((await confirmation.textContent()) ?? '');
+    if (found !== null) world.lastNumber = found[0];
   },
 );
 
 When('I record a delivery with no lines', async ({ page }) => {
   await page.goto('/purchases/new');
-  await selectByPartialLabel(page.locator('#supplierId'), 'PRV-');
+  await selectByPartialLabel(page.locator('#supplierId'), 'PRV');
   await page.getByRole('button', { name: /record the delivery/i }).click();
 });
 
 Then('the delivery is recorded successfully', async ({ page }) => {
-  await expect(page.getByRole('status')).toContainText(/recorded/i);
+  // Acotado a `main` por el mismo motivo que los `role="alert"` de mas abajo se
+  // acotan al formulario: el marco de la aplicacion pinta su propio
+  // `role="status"` —el aviso de que la demostracion es temporal— y una busqueda
+  // sin acotar encuentra los dos y falla por ambiguedad.
+  await expect(page.locator('main').getByRole('status')).toContainText(/recorded/i);
 });
 
 Then(
@@ -126,3 +131,24 @@ Then('I should see an error saying the delivery needs at least one product', asy
   await expect(alert).toBeVisible();
   await expect(alert).toContainText(/at least one product/i);
 });
+
+When('I open the recorded delivery', async ({ page, world }) => {
+  const number = world.lastNumber ?? '';
+  expect(number, 'la confirmacion deberia traer el numero del documento').toMatch(/^RM-\d+$/);
+
+  await page.goto('/purchases');
+  await page.getByRole('link', { name: number, exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: number })).toBeVisible();
+});
+
+Then(
+  'I should see the received product {string} with its unit cost',
+  async ({ page }, description: string) => {
+    // Se busca por la DESCRIPCION y no por el SKU: la linea guarda como se llamaba
+    // el producto aquel dia, y que ese texto siga ahi es justo lo que esta pantalla
+    // tiene que poder demostrar.
+    const row = page.getByRole('row').filter({ hasText: description });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('1.00');
+  },
+);

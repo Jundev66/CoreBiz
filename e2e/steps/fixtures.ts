@@ -14,6 +14,13 @@ export interface CustomerWorld {
   lastCode?: string;
   /** Saldo de inventario leido antes de una operacion, para comprobar la variacion. */
   stockBefore?: number;
+  /**
+   * Numero del ultimo documento emitido.
+   *
+   * Hace falta para volver a abrirlo: los escenarios corren en paralelo, asi que
+   * "el primero de la lista" puede ser el documento de otro escenario. Lo fue.
+   */
+  lastNumber?: string;
 }
 
 export const test = base.extend<{ world: CustomerWorld }>({
@@ -62,4 +69,27 @@ export async function setDemoCookies(
   }
 
   await page.context().addCookies(cookies);
+}
+
+// El inicio de sesion vive en `../session`: lo comparten estos pasos y los specs.
+export { signIn } from '../session';
+
+/**
+ * Lee el saldo de inventario de un SKU desde la pantalla de productos.
+ *
+ * Se apunta a la celda por su POSICION en la fila —sku, nombre, precio, saldo— y
+ * no a "la ultima", que es lo que hacia antes. Dejo de funcionar el dia que la
+ * tabla gano una columna de acciones al final: el paso empezo a leer el texto de
+ * un enlace y a devolver cero, y el fallo aparecia en los escenarios de ventas,
+ * que no tenian nada que ver con el cambio.
+ */
+export async function readStock(page: Page, sku: string): Promise<number> {
+  await page.goto('/products');
+  const cells = await page
+    .getByRole('row')
+    .filter({ hasText: sku })
+    .locator('td')
+    .allTextContents();
+  const stock = cells[3] ?? '';
+  return Number(stock.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
 }

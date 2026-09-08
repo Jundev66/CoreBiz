@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { Given, When, Then, setDemoCookies } from './fixtures';
+import { Given, When, Then, setDemoCookies, signIn } from './fixtures';
 
 /**
  * Pasos del modulo de equipo.
@@ -15,6 +15,7 @@ const uniqueEmail = () =>
 
 Given('I am signed in as a salesperson', async ({ page }) => {
   await setDemoCookies(page, { role: 'sales', plan: 'free', locale: 'en' });
+  await signIn(page);
 });
 
 When('I open the team page', async ({ page }) => {

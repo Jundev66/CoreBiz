@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { signIn } from '../session';
 
 /**
  * El documento impreso y la comprobacion de salud.
@@ -8,6 +9,15 @@ import { test, expect } from '@playwright/test';
  * aplicacion, asi que sin estos tests podrian romperse y nadie se enteraria
  * hasta el dia que hagan falta — que es siempre el peor dia.
  */
+
+/**
+ * Todas las pantallas de dentro exigen sesion: la aplicacion ya no sirve la
+ * demostracion a quien no ha entrado. Se inicia una vez por test y no una vez
+ * por fichero para que cada uno siga siendo independiente del orden.
+ */
+test.beforeEach(async ({ page }) => {
+  await signIn(page);
+});
 
 test.describe('Nota de entrega imprimible', () => {
   test('lleva el aviso de documento no fiscal', async ({ page }) => {
