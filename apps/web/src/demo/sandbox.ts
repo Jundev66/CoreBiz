@@ -11,35 +11,19 @@ import 'server-only';
  * encima. Firmar una cookie era la forma de sostener una identidad que no
  * existia; con identidad de verdad, sobra.
  *
- * Los valores por defecto estan elegidos para que todo quepa en el plan gratuito
- * sin vigilarlo a mano.
+ * De la configuracion original solo queda el interruptor. Los limites —TTL, sandboxes
+ * simultaneos, visitantes por hora— se fueron a la API, que es quien aprovisiona.
  */
 export const demoConfig = {
   enabled: () => process.env.DEMO_ENABLED !== 'false',
-  ttlHours: () => positiveInt(process.env.DEMO_TTL_HOURS, 24),
-  /**
-   * Cincuenta sandboxes de ~20 MB son el 6 % de los 500 MB del plan gratuito.
-   * El numero no es redondo por gusto: es lo que cabe dejando margen para que el
-   * disyuntor de espacio actue antes de que este tope llegue a importar.
-   */
-  maxConcurrent: () => positiveInt(process.env.DEMO_MAX_CONCURRENT, 50),
-  /**
-   * Sandboxes por origen y hora. UNO por defecto.
-   *
-   * Cada sandbox es una copia entera de la base de demostracion mas una cuenta
-   * nueva, asi que el limite no es avaricia: es lo que impide que una sola
-   * maquina consuma el presupuesto del dia en un bucle.
-   *
-   * Es configurable porque hay un caso legitimo que lo necesita: la suite E2E
-   * abre varios visitantes desde la MISMA maquina para comprobar que sus
-   * sandboxes estan aislados entre si. Con el limite en uno, ese test no se
-   * puede escribir — y es justamente el test que demuestra que la demostracion
-   * hace lo que promete.
-   */
-  maxPerHour: () => positiveInt(process.env.DEMO_MAX_PER_HOUR, 1),
 } as const;
 
-function positiveInt(raw: string | undefined, fallback: number): number {
-  const value = Number(raw);
-  return Number.isFinite(value) && value > 0 ? Math.trunc(value) : fallback;
-}
+/*
+ * Aqui vivian tambien `ttlHours`, `maxConcurrent` y `maxPerHour`. Se fueron a la API,
+ * que es quien aprovisiona: tener los limites en el lado que NO los aplica es la forma
+ * mas comoda de que un dia digan cosas distintas.
+ *
+ * `enabled` se queda porque la interfaz lo necesita para decidir si pinta la puerta. La
+ * API tiene el suyo y lo comprueba tambien: con la demo apagada, el endpoint no existe
+ * en lugar de existir y negarse.
+ */

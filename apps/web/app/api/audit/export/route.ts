@@ -1,79 +1,64 @@
-import { apiForRequest } from '@/api/session';
+import { accessTokenOrRedirect, apiBaseUrl } from '@/api/client';
+import { ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
+import { cookies } from 'next/headers';
 
 /**
- * Exportacion del registro de auditoria a CSV.
+ * Descarga del registro de auditoría en CSV.
  *
- * Es una ruta y no una Server Action porque devuelve un archivo, no una
- * pantalla. Y el gating del plan se aplica AQUI, en el unico sitio que produce
- * el archivo: si viviera en la visibilidad del enlace, escribir la URL a mano lo
- * descargaria igual. Lo mismo vale para el rol — la politica RLS de `audit_log`
- * ya devuelve cero filas a quien no sea owner o admin, pero se comprueba tambien
- * antes de generar nada.
+ * Es un PROXY. El archivo lo genera la API, y eso no es un detalle de organización: es
+ * donde tiene que estar el límite de plan.
+ *
+ * Antes se generaba aquí, y el gate de `audit_export` se comprobaba aquí. Al exponer el
+ * lado de lectura por HTTP, eso dejó de bastar: cualquiera con una sesión del plan
+ * gratuito podía pedir `GET /v1/administration/audit?limit=5000` y armar el mismo CSV
+ * a mano. Un gate delante de la puerta no sirve si hay otra puerta.
+ *
+ * Sigue siendo una ruta de Next y no un enlace directo a la API por la misma razón que
+ * el resto: el token vive en una cookie `httpOnly` y no sale de aquí. Si el navegador
+ * descargara desde Render, o habría que poner el token en la URL —donde queda escrito
+ * en logs e historiales— o abrir CORS, que es admitir que el navegador habla con la
+ * API. Ninguna de las dos.
  */
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request): Promise<Response> {
-  const { ctx, queries } = await apiForRequest();
+  const incoming = new URL(request.url);
+  const upstream = new URL(`${apiBaseUrl()}/v1/administration/audit/export`);
 
-  if (ctx.actor.role !== 'owner' && ctx.actor.role !== 'admin') {
-    return new Response('Forbidden', { status: 403 });
+  // Se reenvían SOLO los filtros declarados. Copiar la cadena de consulta entera
+  // dejaría pasar cualquier parámetro que alguien añadiera a mano.
+  for (const key of ['action', 'from', 'to']) {
+    const value = incoming.searchParams.get(key);
+    if (value !== null && value !== '') upstream.searchParams.set(key, value);
   }
 
-  const gate = ctx.plan.checkFeature('audit_export');
-  if (!gate.ok) {
-    return Response.json(
-      { error: 'FeatureNotAvailable', requiredPlan: gate.error.requiredPlan },
-      { status: 402 },
-    );
-  }
+  const tenant = (await cookies()).get(ACTIVE_TENANT_COOKIE)?.value;
 
-  const url = new URL(request.url);
-  const action = url.searchParams.get('action');
-  const from = url.searchParams.get('from');
-  const to = url.searchParams.get('to');
-
-  const page = await queries.admin.auditLog({
-    ...(action !== null && action !== '' ? { action } : {}),
-    ...(from !== null && from !== '' ? { from: new Date(from) } : {}),
-    ...(to !== null && to !== '' ? { to: new Date(`${to}T23:59:59.999Z`) } : {}),
-    // Un tope alto pero acotado: sin limite, exportar el historico entero de un
-    // tenant grande lo trae todo a memoria de una funcion serverless.
-    limit: 5_000,
-  });
-
-  const header = ['fecha', 'actor', 'accion', 'entidad', 'identificador', 'detalle'];
-  const rows = page.items.map((entry) => [
-    entry.occurredAt.toISOString(),
-    entry.actorEmail ?? '',
-    entry.action,
-    entry.entityType ?? '',
-    entry.entityId ?? '',
-    entry.summary === null ? '' : JSON.stringify(entry.summary),
-  ]);
-
-  const csv = [header, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\r\n');
-
-  const stamp = new Date().toISOString().slice(0, 10);
-
-  return new Response(csv, {
+  const res = await fetch(upstream, {
     headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="auditoria-${ctx.tenantSlug}-${stamp}.csv"`,
-      // Un export de auditoria no se cachea en ningun sitio: lleva quien hizo
-      // que y cuando, y ademas cambia cada vez.
+      authorization: `Bearer ${await accessTokenOrRedirect()}`,
+      ...(tenant !== undefined ? { 'x-corebiz-tenant': tenant } : {}),
+    },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(45_000),
+  }).catch(() => null);
+
+  if (res === null) {
+    return Response.json({ errorKind: 'ApiUnavailable' }, { status: 503 });
+  }
+
+  // El cuerpo y el estado se devuelven tal cual, incluido el 403 con
+  // `FeatureNotAvailable` dentro: es lo que la pantalla necesita para ofrecer subir de
+  // plan en lugar de decir que algo falló.
+  return new Response(res.body, {
+    status: res.status,
+    headers: {
+      'Content-Type': res.headers.get('content-type') ?? 'text/csv; charset=utf-8',
+      ...(res.headers.get('content-disposition') !== null
+        ? { 'Content-Disposition': res.headers.get('content-disposition') as string }
+        : {}),
       'Cache-Control': 'no-store',
     },
   });
-}
-
-/**
- * Escapa un campo CSV.
- *
- * El prefijo con comilla simple ante `= + - @` no es paranoia: Excel y Calc
- * interpretan un campo que empieza por esos caracteres como una FORMULA, y un
- * `=HYPERLINK(...)` guardado en un campo de auditoria se ejecuta al abrir el
- * archivo. Se llama inyeccion de formulas CSV y es un vector real en cualquier
- * exportacion que incluya texto escrito por usuarios.
- */
-function escapeCsv(value: string): string {
-  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  return `"${guarded.replaceAll('"', '""')}"`;
 }

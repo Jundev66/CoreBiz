@@ -20,7 +20,9 @@ import type {
   SupplierListItem,
   SupplierOption,
 } from '@corebiz/application';
+import { FeatureGuard } from '../../auth/feature.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
+import { RequireFeature } from '../../auth/require-feature.decorator';
 import { RequirePermission } from '../../auth/require-permission.decorator';
 import { unwrapOrThrow } from '../../http/api-error';
 import {
@@ -37,15 +39,22 @@ import type { UseCases } from '../../composition/use-cases.provider';
 /**
  * Compras y proveedores.
  *
- * El modulo entero esta reservado al plan PRO, y ese limite NO esta aqui: lo aplica el
- * caso de uso. El guard de permisos comprueba el ROL, que es otra cosa — un propietario
- * del plan gratuito tiene el permiso y aun asi recibe un 403 con `FeatureNotAvailable`,
- * que es lo que permite a la interfaz ofrecer subir de plan en lugar de decir "no
- * tienes permiso", que seria mentira.
+ * El modulo entero esta reservado al plan PRO. En las ESCRITURAS la autoridad sigue
+ * siendo el caso de uso, que devuelve `FeatureNotAvailable` por su cuenta; el guard
+ * solo se adelanta para no abrir una transaccion. En las LECTURAS no hay caso de uso
+ * por el que pasar, asi que el guard es la autoridad — ver `feature.guard.ts`.
+ *
+ * El guard de permisos comprueba el ROL, que es otra cosa: un propietario del plan
+ * gratuito tiene el permiso y aun asi recibe `FeatureNotAvailable`, que es lo que
+ * permite a la interfaz ofrecer subir de plan en lugar de decir "no tienes permiso",
+ * que seria mentira.
  */
 @ApiTags('compras')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, FeatureGuard)
+// El modulo entero, lecturas incluidas. Los casos de uso ya gatean las escrituras;
+// esto cierra las consultas, que no pasan por ninguno.
+@RequireFeature('purchasing')
 @Controller('v1/purchasing')
 export class PurchasingController {
   constructor(

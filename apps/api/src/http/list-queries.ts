@@ -62,6 +62,15 @@ export const auditQuerySchema = paginationSchema
   })
   .strict();
 
+/** El export no pagina: se lleva todo lo que cabe en el tope. */
+export const auditExportQuerySchema = z
+  .object({
+    action: z.string().trim().max(64).optional(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+  })
+  .strict();
+
 export const usageQuerySchema = z
   .object({
     /** `?resources=customers,products`: una sola llamada para pintar varias cuotas. */

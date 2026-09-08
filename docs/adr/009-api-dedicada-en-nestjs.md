@@ -61,6 +61,20 @@ migración. Si alguno necesita cambiar, la capa de entrega llevaba lógica de ne
   de entorno.
 - **`reflect-metadata` y decoradores**, exactamente el coste que ADR 001 no quería pagar.
 
+**Un agujero que abrió la migración, y que conviene contar.** `reports`, `purchasing` y
+`audit_export` son funcionalidades de pago, y sus límites vivían en el Server Component de
+cada pantalla. Eso bastaba mientras no hubiera otra forma de llegar a esas consultas. Al
+exponer el lado de lectura por HTTP dejó de bastar: un plan gratuito podía pedir
+`GET /v1/reports/sales-summary` y recibir el reporte entero. Se arregló con un
+`FeatureGuard` en la API, y el CSV de auditoría se movió allí también — con la generación
+en la interfaz, bastaba pedir `?limit=5000` para armarlo a mano.
+
+No era una fuga de datos: Row Level Security seguía confinando cada petición a la empresa
+de quien llama. Era una barrera de monetización que se podía saltar, que es un fallo
+distinto y menos grave. Pero es exactamente el tipo de cosa que aparece al mover un límite
+de sitio, y la razón por la que el proyecto insiste en que **un gate delante de la puerta
+no sirve si hay otra puerta**.
+
 **Un detalle de construcción que no es un detalle.** Los paquetes del monorepo se consumen
 como TypeScript en crudo (`exports` → `./src/index.ts`, imports sin extensión). Node no
 sabe ejecutar eso, así que `apps/api` compila a **CommonJS** con `tsc` —que sí implementa

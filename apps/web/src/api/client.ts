@@ -1,5 +1,4 @@
 import 'server-only';
-import { cache } from 'react';
 import { cookies, headers as requestHeadersOf } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { err, ok, type Result } from '@corebiz/domain';
@@ -201,17 +200,35 @@ export async function getOrNull<T>(path: string): Promise<T | null> {
 }
 
 /**
+ * Un fallo de la API, tal como lo consume una Server Action.
+ *
+ * `params` viene ENTERO de la API, que copia todas las propiedades escalares del error
+ * de dominio. Antes cada accion mantenia su propia lista blanca —`'limit' in error`,
+ * `'sku' in error`— y ya habian divergido entre ellas: un campo nuevo en una variante
+ * de error llegaba a la traduccion como un hueco, y solo en algunas pantallas.
+ *
+ * `fieldErrors` viaja aparte porque se pinta aparte: junto a su input, no como aviso
+ * general. Aplastarlo dentro de `params` perdia cual era el campo, que es lo unico que
+ * ese error tiene que decir.
+ */
+export interface ApiFailure {
+  readonly kind: string;
+  readonly params: Readonly<Record<string, string | number>>;
+  readonly fieldErrors?: Readonly<Record<string, string>>;
+}
+
+/**
  * Una escritura.
  *
  * Devuelve un `Result` y no lanza ante un error de negocio, para que las Server
  * Actions sigan escribiendose igual que cuando llamaban al caso de uso: `if
- * (!result.ok) return { status: 'error', errorKind: result.error.kind }`.
+ * (!result.ok) return failure(result.error)`.
  */
 export async function send<T>(
   method: 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
-): Promise<Result<T, { kind: string } & Record<string, string | number>>> {
+): Promise<Result<T, ApiFailure>> {
   const res = await request(path, {
     method,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -223,30 +240,11 @@ export async function send<T>(
     const envelope = (await res.json().catch(() => null)) as ApiErrorBody | null;
     return err({
       kind: envelope?.errorKind ?? 'Unexpected',
-      ...(envelope?.errorParams ?? {}),
-      // Los errores por campo se conservan aparte: la interfaz los pinta junto a su
-      // input, no como aviso general.
-      ...(envelope?.fieldErrors !== undefined ? { fieldErrors: '' } : {}),
+      params: envelope?.errorParams ?? {},
+      ...(envelope?.fieldErrors !== undefined ? { fieldErrors: envelope.fieldErrors } : {}),
     });
   }
 
   if (res.status === 204) return ok(undefined as T);
   return ok((await res.json()) as T);
 }
-
-/** Los errores por campo de una respuesta de validacion, para pintarlos en su input. */
-export async function fieldErrorsOf(res: Response): Promise<Record<string, string>> {
-  const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-  return { ...(body?.fieldErrors ?? {}) };
-}
-
-/**
- * Deduplica dentro de un mismo render.
- *
- * `cache()` de React y NO la deduplicacion de `fetch` de Next, que no aplica con
- * `cache: 'no-store'`. Sin esto, una pagina que llama a `apiForRequest()` en su propio
- * Server Component y otra vez dentro de `<Shell>` pediria la sesion DOS veces por
- * render: dos viajes a Render, y sobre un servicio que puede estar despertando eso se
- * nota en segundos, no en milisegundos.
- */
-export const cached = cache;

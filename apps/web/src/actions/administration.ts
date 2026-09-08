@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { z } from 'zod';
 import { apiForRequest } from '@/api/session';
+import { toFormFailure } from '@/api/failure';
 
 /**
  * Server Actions del modulo de administracion.
@@ -27,14 +28,7 @@ export interface AdminState {
   readonly invitationUrl?: string;
 }
 
-function failure(error: { kind: string } & Record<string, unknown>): AdminState {
-  const params: Record<string, string | number> = {};
-  for (const key of ['limit', 'resource', 'email', 'field', 'raw'] as const) {
-    const value = error[key];
-    if (typeof value === 'string' || typeof value === 'number') params[key] = value;
-  }
-  return { status: 'error', errorKind: error.kind, errorParams: params };
-}
+const failure = toFormFailure;
 
 // ─── Invitaciones ────────────────────────────────────────────────────────────
 

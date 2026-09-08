@@ -62,13 +62,6 @@ export interface SessionInfo {
 /** Cookies con las que la demo permite cambiar de rol y de plan sin reiniciar nada. */
 export { DEMO_ROLE_COOKIE, DEMO_PLAN_COOKIE } from './client';
 
-/**
- * La PLANTILLA de demostracion sobre Postgres, la que se clona.
- *
- * Nadie opera este tenant: cada visitante recibe una COPIA suya con su propia cuenta.
- */
-export const DEMO_TENANT_ID = asId<TenantId>('00000000-0000-4000-8000-000000000001');
-
 export type DataDriver = 'postgres' | 'memory';
 
 /**
@@ -164,5 +157,3 @@ export const apiForRequest = cache(async (_tenantSlug?: string) => {
 
   return { ctx, session, queries: httpReadModels(), ...httpCommands() };
 });
-
-export type Container = Awaited<ReturnType<typeof apiForRequest>>;

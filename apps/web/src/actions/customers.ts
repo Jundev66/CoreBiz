@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseCustomerForm } from '@corebiz/contracts';
 import { apiForRequest } from '@/api/session';
+import { toFormFailure } from '@/api/failure';
 
 /**
  * Server Action: crear un cliente.
@@ -55,16 +56,9 @@ export async function createCustomerAction(
     creditLimit: parsed.data.creditLimit || null,
   });
 
-  if (!result.ok) {
-    // El error del dominio se traduce a una clave; el texto lo pone la capa de
-    // presentacion segun el idioma activo.
-    const error = result.error;
-    const params: Record<string, string | number> = {};
-    if ('limit' in error) params.limit = error.limit;
-    if ('field' in error) params.field = error.field;
-
-    return { status: 'error', errorKind: error.kind, errorParams: params };
-  }
+  // El error del dominio se traduce a una clave; el texto lo pone la capa de
+  // presentacion segun el idioma activo.
+  if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/customers');
   return { status: 'success', createdCode: result.value.code };

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { apiForRequest } from '@/api/session';
+import { toFormFailure } from '@/api/failure';
 
 /**
  * Server Actions de compras.
@@ -22,14 +23,7 @@ export interface PurchasingState {
   readonly createdNumber?: string;
 }
 
-function failure(error: Record<string, unknown> & { kind: string }): PurchasingState {
-  const params: Record<string, string | number> = {};
-  for (const key of ['code', 'limit', 'resource', 'requiredPlan', 'sku', 'field'] as const) {
-    const value = error[key];
-    if (typeof value === 'string' || typeof value === 'number') params[key] = value;
-  }
-  return { status: 'error', errorKind: error.kind, errorParams: params };
-}
+const failure = toFormFailure;
 
 const supplierInput = z.object({
   name: z.string().trim().min(2).max(120),

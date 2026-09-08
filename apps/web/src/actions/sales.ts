@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { apiForRequest } from '@/api/session';
+import { toFormFailure } from '@/api/failure';
 import type { ActionState } from './customers';
 
 /**
@@ -60,21 +61,7 @@ export async function issueDeliveryNoteAction(
   const { issueDeliveryNote } = await apiForRequest();
   const result = await issueDeliveryNote({ customerId, lines, notes: notes || null });
 
-  if (!result.ok) {
-    const error = result.error;
-    const params: Record<string, string | number> = {};
-    // Cada variante lleva los datos que su mensaje necesita. Se copian de forma
-    // explicita para que la traduccion nunca reciba un parametro ausente.
-    if ('sku' in error) params.sku = error.sku;
-    if ('available' in error) params.available = error.available;
-    if ('requested' in error) params.requested = error.requested;
-    if ('limit' in error) params.limit = error.limit;
-    if ('field' in error) params.field = error.field;
-    if ('from' in error) params.from = error.from;
-    if ('to' in error) params.to = error.to;
-
-    return { status: 'error', errorKind: error.kind, errorParams: params };
-  }
+  if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/delivery-notes');
   revalidatePath('/products');
@@ -91,14 +78,7 @@ export async function voidDeliveryNoteAction(
   const { voidDeliveryNote } = await apiForRequest();
   const result = await voidDeliveryNote({ deliveryNoteId, reason });
 
-  if (!result.ok) {
-    const error = result.error;
-    const params: Record<string, string | number> = {};
-    if ('field' in error) params.field = error.field;
-    if ('from' in error) params.from = error.from;
-    if ('to' in error) params.to = error.to;
-    return { status: 'error', errorKind: error.kind, errorParams: params };
-  }
+  if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/delivery-notes');
   revalidatePath('/products');
@@ -125,14 +105,7 @@ export async function createProductAction(
     ...(unit ? { unit } : {}),
   });
 
-  if (!result.ok) {
-    const error = result.error;
-    const params: Record<string, string | number> = {};
-    if ('sku' in error) params.sku = error.sku;
-    if ('limit' in error) params.limit = error.limit;
-    if ('field' in error) params.field = error.field;
-    return { status: 'error', errorKind: error.kind, errorParams: params };
-  }
+  if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/products');
   return { status: 'success', createdCode: result.value.sku };
@@ -162,14 +135,7 @@ export async function adjustStockAction(
     reason: field(formData, 'reason'),
   });
 
-  if (!result.ok) {
-    const error = result.error;
-    const params: Record<string, string | number> = {};
-    if ('sku' in error) params.sku = error.sku;
-    if ('field' in error) params.field = error.field;
-    if ('min' in error) params.min = error.min;
-    return { status: 'error', errorKind: error.kind, errorParams: params };
-  }
+  if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/products');
 

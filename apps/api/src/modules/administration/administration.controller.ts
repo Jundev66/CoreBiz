@@ -8,8 +8,10 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type z } from 'zod';
 import {
@@ -24,23 +26,31 @@ import type {
   Page,
   TeamMemberView,
 } from '@corebiz/application';
+import { FeatureGuard } from '../../auth/feature.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
+import { RequireFeature } from '../../auth/require-feature.decorator';
 import { RequirePermission } from '../../auth/require-permission.decorator';
 import { domainError, unwrapOrThrow } from '../../http/api-error';
-import { auditQuerySchema, withoutUndefined } from '../../http/list-queries';
+import {
+  auditExportQuerySchema,
+  auditQuerySchema,
+  withoutUndefined,
+} from '../../http/list-queries';
 import { ZodValidationPipe } from '../../http/zod-validation.pipe';
-import { RUNTIME, USE_CASES } from '../../tokens';
+import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../../tokens';
+import type { TenantContext } from '@corebiz/application';
 import type { Runtime } from '../../composition/runtime.provider';
 import type { UseCases } from '../../composition/use-cases.provider';
 
 @ApiTags('administracion')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, FeatureGuard)
 @Controller('v1/administration')
 export class AdministrationController {
   constructor(
     @Inject(USE_CASES) private readonly useCases: UseCases,
     @Inject(RUNTIME) private readonly runtime: Runtime,
+    @Inject(TENANT_CONTEXT) private readonly ctx: TenantContext,
   ) {}
 
   @Get('team')
@@ -142,4 +152,72 @@ export class AdministrationController {
   auditActions(): Promise<readonly string[]> {
     return this.runtime.queries.admin.auditActions();
   }
+
+  /**
+   * El registro completo, como CSV.
+   *
+   * El archivo se genera AQUI y no en la interfaz, aunque antes se generase alli. El
+   * motivo es que `audit_export` es una funcionalidad de PLAN, y con la generacion en
+   * la web bastaba con pedir `GET /v1/administration/audit?limit=5000` para tener los
+   * mismos datos y armar el CSV a mano. El gate tiene que estar donde se produce el
+   * archivo, y el archivo se produce donde estan los datos.
+   *
+   * La pantalla paginada sigue abierta al plan gratuito: lo que se vende no es ver el
+   * registro, es llevarselo entero de una vez.
+   */
+  @Get('audit/export')
+  @RequirePermission('audit:export')
+  @RequireFeature('audit_export')
+  @ApiOperation({ summary: 'El registro de auditoria completo, en CSV' })
+  async auditExport(
+    @Query(new ZodValidationPipe(auditExportQuerySchema))
+    query: z.infer<typeof auditExportQuerySchema>,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const page = await this.runtime.queries.admin.auditLog({
+      ...withoutUndefined({ action: query.action, from: query.from, to: query.to }),
+      // Un tope alto pero acotado: sin limite, exportar el historico entero de un
+      // tenant grande lo trae todo a memoria de golpe.
+      limit: 5_000,
+    });
+
+    const rows = page.items.map((entry) => [
+      entry.occurredAt.toISOString(),
+      entry.actorEmail ?? '',
+      entry.action,
+      entry.entityType ?? '',
+      entry.entityId ?? '',
+      entry.summary === null ? '' : JSON.stringify(entry.summary),
+    ]);
+
+    const header = ['fecha', 'actor', 'accion', 'entidad', 'identificador', 'detalle'];
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="auditoria-${this.ctx.tenantSlug}-${stamp}.csv"`,
+    );
+    // Un export de auditoria no se cachea en ningun sitio: lleva quien hizo que y
+    // cuando, y ademas cambia cada vez.
+    res.setHeader('Cache-Control', 'no-store');
+
+    // CRLF y no LF: es lo que espera Excel al abrir un CSV en Windows, que es donde
+    // se va a abrir esto.
+    return [header, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\r\n');
+  }
+}
+
+/**
+ * Escapa un campo CSV.
+ *
+ * El prefijo con comilla simple ante `= + - @` no es paranoia: Excel y Calc interpretan
+ * un campo que empieza por esos caracteres como una FORMULA, y un `=HYPERLINK(...)`
+ * guardado en un campo de auditoria se ejecuta al abrir el archivo. Se llama inyeccion
+ * de formulas CSV y es un vector real en cualquier exportacion que incluya texto
+ * escrito por usuarios.
+ */
+function escapeCsv(value: string): string {
+  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return `"${guarded.replaceAll('"', '""')}"`;
 }

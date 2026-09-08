@@ -2,7 +2,9 @@ import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type z } from 'zod';
 import type { SalesReport } from '@corebiz/application';
+import { FeatureGuard } from '../../auth/feature.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
+import { RequireFeature } from '../../auth/require-feature.decorator';
 import { RequirePermission } from '../../auth/require-permission.decorator';
 import { usageQuerySchema } from '../../http/list-queries';
 import { ZodValidationPipe } from '../../http/zod-validation.pipe';
@@ -17,13 +19,16 @@ import type { Runtime } from '../../composition/runtime.provider';
  */
 @ApiTags('reportes')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, FeatureGuard)
 @Controller('v1')
 export class InsightsController {
   constructor(@Inject(RUNTIME) private readonly runtime: Runtime) {}
 
   @Get('reports/sales-summary')
   @RequirePermission('report:read')
+  // El modulo de reportes es PRO. Antes esto se comprobaba solo en la pagina, y al
+  // exponer la consulta por HTTP el plan gratuito la alcanzaba directamente.
+  @RequireFeature('reports')
   @ApiOperation({ summary: 'Resumen de ventas del periodo' })
   salesSummary(): Promise<SalesReport> {
     return this.runtime.queries.reports.salesSummary();
