@@ -1,0 +1,8 @@
+{
+  // El build emite SOLO src. `tsconfig.json` incluye ademas `test/` porque eslint y el
+  // editor necesitan verlos dentro de un proyecto —si no, cada archivo de test es un
+  // error de parseo— pero compilarlos dentro de dist/ meteria los tests en el
+  // artefacto que corre en Render.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts"]
+}

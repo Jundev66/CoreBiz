@@ -29,6 +29,30 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'api',
+          root: './apps/api',
+          environment: 'node',
+          globals: true,
+          include: ['test/**/*.test.ts'],
+          exclude: ['test/**/*.integration.test.ts'],
+        },
+      },
+      {
+        test: {
+          // Levanta la API de verdad contra Supabase local y le habla por HTTP. Es el
+          // unico sitio donde se comprueba que dos identidades distintas atendidas por
+          // el MISMO proceso no se ven la una a la otra.
+          name: 'api-integration',
+          root: './apps/api',
+          environment: 'node',
+          globals: true,
+          include: ['test/**/*.integration.test.ts'],
+          testTimeout: 30_000,
+          hookTimeout: 60_000,
+        },
+      },
+      {
+        test: {
           name: 'integration',
           root: './packages/infrastructure',
           environment: 'node',

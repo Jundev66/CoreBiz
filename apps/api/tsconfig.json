@@ -26,5 +26,5 @@
       "@corebiz/infrastructure": ["../../packages/infrastructure/src/index"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

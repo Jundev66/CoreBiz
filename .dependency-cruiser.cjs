@@ -65,6 +65,24 @@ module.exports = {
       to: { path: '^packages/(db|infrastructure)/src/(drizzle|schema)/' },
     },
 
+    // ── La API tampoco puede saltarse el composition root ─────────────────
+    {
+      name: 'api-modules-no-composition',
+      comment:
+        'Un controller RECIBE el runtime por inyeccion; no lo construye. Si un modulo de ' +
+        'apps/api pudiera importar el composition root, podria fabricarse un TenantContext ' +
+        'a mano — y con el tenant equivocado dentro, Row Level Security serviria los datos ' +
+        'de otra empresa obedientemente. Los simbolos de inyeccion viven aparte, en ' +
+        'apps/api/src/tokens.ts, precisamente para que pedir una dependencia no obligue a ' +
+        'poder construirla. ' +
+        'Se permiten los imports de SOLO TIPO: describir la forma de un contexto no ' +
+        'permite fabricar uno. Lo que la regla persigue es la importacion en tiempo de ' +
+        'ejecucion, que es la unica que da acceso a las factorias.',
+      severity: 'error',
+      from: { path: '^apps/api/src/modules/' },
+      to: { path: '^apps/api/src/composition/', dependencyTypesNot: ['type-only'] },
+    },
+
     // ── Higiene general ───────────────────────────────────────────────────
     {
       name: 'no-circular',
@@ -91,10 +109,13 @@ module.exports = {
     },
     {
       name: 'no-dev-dep-in-src',
-      comment: 'Una devDependency en codigo de produccion revienta el build de Vercel.',
+      comment:
+        'Una devDependency en codigo de produccion revienta el build de Vercel. Los paquetes ' +
+        '`@types/*` son la excepcion legitima: solo existen en tiempo de compilacion, se ' +
+        'borran del bundle y no hay forma de que falten en produccion.',
       severity: 'error',
       from: { path: '^(packages|apps)/[^/]+/src/', pathNot: '\.(spec|test)\.tsx?$' },
-      to: { dependencyTypes: ['npm-dev'] },
+      to: { dependencyTypes: ['npm-dev'], pathNot: 'node_modules/@types/' },
     },
     {
       name: 'no-deprecated-core',

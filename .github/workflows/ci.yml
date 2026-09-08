@@ -161,8 +161,14 @@ jobs:
       # La matriz recorre TODA tabla con tenant_id descubierta del catalogo y exige
       # cero filas en select, update y delete cruzados. Si alguien anade una tabla
       # nueva sin politica, este job se pone en rojo sin que nadie tenga que acordarse.
-      - name: Matriz de aislamiento y adaptadores Drizzle
+      # Dos suites: la matriz de aislamiento contra los adaptadores Drizzle, y la de
+      # la API, que levanta NestJS de verdad y le habla por HTTP con dos identidades
+      # distintas para comprobar que un proceso de larga vida no mezcla empresas.
+      - name: Matriz de aislamiento, adaptadores Drizzle y API
         run: pnpm test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          SUPABASE_URL: http://127.0.0.1:54321
 
       # Cachear los navegadores aqui tambien: la clave es la misma que en el job e2e,
       # asi que el segundo que corra reutiliza la descarga del primero.
