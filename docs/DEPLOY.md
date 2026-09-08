@@ -123,11 +123,13 @@ vez.
 
 3. Variables de entorno (las marcadas `sync: false` en `render.yaml`):
 
-| Variable              | Valor                                                  |
-| --------------------- | ------------------------------------------------------ |
-| `DATABASE_URL`        | pooler de Supabase, puerto 6543                        |
-| `SUPABASE_URL`        | `https://TU-PROYECTO.supabase.co` (sin `NEXT_PUBLIC_`) |
-| `REQUEST_HASH_SECRET` | `openssl rand -base64 32`                              |
+| Variable       | Valor                                                  |
+| -------------- | ------------------------------------------------------ |
+| `DATABASE_URL` | pooler de Supabase, puerto 6543                        |
+| `SUPABASE_URL` | `https://TU-PROYECTO.supabase.co` (sin `NEXT_PUBLIC_`) |
+
+`REQUEST_HASH_SECRET` **no va aquí**: la IP se hashea en Vercel, que es el único sitio
+donde `x-forwarded-for` es de fiar. A la API solo le llega el hash.
 
 `INTERNAL_API_SECRET` lo genera Render solo. **Cópialo**: hace falta idéntico en Vercel.
 

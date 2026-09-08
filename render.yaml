@@ -57,8 +57,11 @@ services:
         sync: false
       - key: SUPABASE_URL
         sync: false
-      - key: REQUEST_HASH_SECRET
-        sync: false
+
+      # NO va aqui `REQUEST_HASH_SECRET`. La IP se hashea en Vercel, que es el unico
+      # sitio donde `x-forwarded-for` es de fiar; a la API solo le llega el hash. Si se
+      # pusiera aqui, quien siguiera la guia lo daria por configurado y la web caeria a
+      # la sal por defecto del codigo — con la que el hash se puede deshacer.
 
       # Compartido con Vercel para los endpoints internos. Se genera aqui y se copia
       # al panel de Vercel: es el unico secreto que tienen que tener igual los dos.
