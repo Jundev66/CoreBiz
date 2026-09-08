@@ -36,6 +36,7 @@ import {
   auditQuerySchema,
   withoutUndefined,
 } from '../../http/list-queries';
+import { bigintToString } from '../../http/serialize';
 import { ZodValidationPipe } from '../../http/zod-validation.pipe';
 import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../../tokens';
 import type { TenantContext } from '@corebiz/application';
@@ -126,8 +127,27 @@ export class AdministrationController {
   async updateSettings(
     @Body(new ZodValidationPipe(updateTenantSettingsSchema))
     body: z.infer<typeof updateTenantSettingsSchema>,
-  ): Promise<unknown> {
-    return unwrapOrThrow(await this.useCases.updateTenantSettings(withoutUndefined(body)));
+  ): Promise<Record<string, string | number>> {
+    const saved = unwrapOrThrow(await this.useCases.updateTenantSettings(withoutUndefined(body)));
+
+    /*
+     * La tasa vuelve como `bigint`, y `JSON.stringify` LANZA sobre un bigint — no lo
+     * omite, revienta. Devolver el parche tal cual daba un 500 DESPUES de haber
+     * guardado: la pantalla decia que habia fallado una operacion que si se hizo, y el
+     * usuario volvia a intentarlo.
+     *
+     * Es exactamente el fallo que advierte `http/serialize.ts`. Estaba resuelto en la
+     * sesion y suelto aqui, que es el unico otro sitio donde un bigint cruza el cable.
+     */
+    return {
+      ...(saved.name !== undefined ? { name: saved.name } : {}),
+      ...(saved.taxLabel !== undefined ? { taxLabel: saved.taxLabel } : {}),
+      ...(saved.taxRateBp !== undefined ? { taxRateBp: saved.taxRateBp } : {}),
+      ...(saved.baseCurrency !== undefined ? { baseCurrency: saved.baseCurrency } : {}),
+      ...(saved.exchangeRateScaled !== undefined && saved.exchangeRateScaled !== null
+        ? { exchangeRateScaled: bigintToString(saved.exchangeRateScaled) ?? '' }
+        : {}),
+    };
   }
 
   /**

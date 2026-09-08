@@ -64,7 +64,13 @@
     "InvalidStock": "La cantidad de inventario no es válida.",
     "OutOfRange": "El campo {field} está fuera de rango.",
     "FeatureNotAvailable": "Esta función requiere el plan {requiredPlan}.",
-    "StockNotTracked": "Este producto no lleva control de inventario, así que no hay nada que ajustar."
+    "StockNotTracked": "Este producto no lleva control de inventario, así que no hay nada que ajustar.",
+    "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+    "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
+    "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
+    "NotFound": "Eso ya no está.",
+    "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
+    "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
@@ -186,7 +192,10 @@
     "voidExplain": "La nota {number} conserva su número y su historial. El inventario que salió vuelve al almacén, y el documento queda marcado como anulado con el motivo que escribas.",
     "voidReason": "Motivo",
     "voidReasonHint": "Error en la cantidad, devolución del cliente…",
-    "voidSubmit": "Anular la nota"
+    "voidSubmit": "Anular la nota",
+    "needsRateTitle": "Antes de emitir, configura tu tasa de cambio",
+    "needsRateDetail": "Cada nota guarda la tasa del día en que se emite, para que el total en bolívares siga siendo el correcto dentro de seis meses. Por eso no podemos inventarla: dínosla una vez y ya puedes empezar.",
+    "needsRateAction": "Ir a los ajustes"
   },
   "reports": {
     "title": "Reportes",
@@ -257,7 +266,13 @@
       "EmailAlreadyRegistered": "Ya existe una cuenta con ese correo. Prueba a entrar.",
       "SignUpFailed": "No pudimos completar la operación. Inténtalo de nuevo.",
       "InvalidFormat": "Revisa los datos marcados.",
-      "ResetLinkExpired": "El enlace caducó. Pide uno nuevo desde «Olvidé mi contraseña»."
+      "ResetLinkExpired": "El enlace caducó. Pide uno nuevo desde «Olvidé mi contraseña».",
+      "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+      "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
+      "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
+      "NotFound": "Eso ya no está.",
+      "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
+      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
     },
     "fieldErrors": {
       "invalid": "{field} no tiene un formato válido.",
@@ -329,7 +344,13 @@
       "OnlyOwnerGrantsOwnership": "Solo el dueño puede nombrar a otro dueño.",
       "LastOwner": "La empresa necesita al menos un dueño.",
       "CannotRemoveSelf": "No puedes quitarte a ti mismo.",
-      "InvitationNotFound": "Esa invitación ya no está activa."
+      "InvitationNotFound": "Esa invitación ya no está activa.",
+      "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+      "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
+      "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
+      "NotFound": "Eso ya no está.",
+      "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
+      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
     },
     "team": {
       "heading": "Personas",
@@ -421,7 +442,13 @@
       "Required": "El campo {field} es obligatorio.",
       "AlreadyVoided": "Esta entrada ya estaba anulada.",
       "CannotVoidDraft": "Esta entrada todavía no se ha registrado.",
-      "InsufficientStock": "No hay suficiente inventario de {sku}."
+      "InsufficientStock": "No hay suficiente inventario de {sku}.",
+      "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+      "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
+      "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
+      "NotFound": "Eso ya no está.",
+      "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
+      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
     },
     "detail": "Detalle de la recepción",
     "supplierReference": "Documento del proveedor",

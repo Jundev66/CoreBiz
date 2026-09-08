@@ -64,7 +64,13 @@
     "InvalidStock": "The inventory quantity is not valid.",
     "OutOfRange": "The {field} field is out of range.",
     "FeatureNotAvailable": "This feature requires the {requiredPlan} plan.",
-    "StockNotTracked": "This product does not track stock, so there is nothing to adjust."
+    "StockNotTracked": "This product does not track stock, so there is nothing to adjust.",
+    "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+    "InvalidRequest": "We could not read that request. Reload the page and try again.",
+    "Unauthenticated": "Your session expired. Please sign in again.",
+    "NotFound": "That is no longer there.",
+    "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
+    "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
@@ -186,7 +192,10 @@
     "voidExplain": "Note {number} keeps its number and its history. The stock that left returns to the warehouse, and the document stays on record marked as voided with the reason you write.",
     "voidReason": "Reason",
     "voidReasonHint": "Wrong quantity, customer returned the goods…",
-    "voidSubmit": "Void the note"
+    "voidSubmit": "Void the note",
+    "needsRateTitle": "Set your exchange rate before issuing",
+    "needsRateDetail": "Every note stores the rate of the day it was issued, so the bolívar total is still right six months later. That is why we cannot make one up: tell us once and you are ready to go.",
+    "needsRateAction": "Go to settings"
   },
   "reports": {
     "title": "Reports",
@@ -257,7 +266,13 @@
       "EmailAlreadyRegistered": "An account with that email already exists. Try signing in.",
       "SignUpFailed": "We could not complete that. Please try again.",
       "InvalidFormat": "Check the highlighted fields.",
-      "ResetLinkExpired": "The link expired. Request a new one from “I forgot my password”."
+      "ResetLinkExpired": "The link expired. Request a new one from “I forgot my password”.",
+      "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+      "InvalidRequest": "We could not read that request. Reload the page and try again.",
+      "Unauthenticated": "Your session expired. Please sign in again.",
+      "NotFound": "That is no longer there.",
+      "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
+      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
     },
     "fieldErrors": {
       "invalid": "{field} is not in a valid format.",
@@ -329,7 +344,13 @@
       "OnlyOwnerGrantsOwnership": "Only the owner can appoint another owner.",
       "LastOwner": "The business needs at least one owner.",
       "CannotRemoveSelf": "You cannot remove yourself.",
-      "InvitationNotFound": "That invitation is no longer active."
+      "InvitationNotFound": "That invitation is no longer active.",
+      "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+      "InvalidRequest": "We could not read that request. Reload the page and try again.",
+      "Unauthenticated": "Your session expired. Please sign in again.",
+      "NotFound": "That is no longer there.",
+      "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
+      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
     },
     "team": {
       "heading": "People",
@@ -421,7 +442,13 @@
       "Required": "The {field} field is required.",
       "AlreadyVoided": "This delivery was already voided.",
       "CannotVoidDraft": "This delivery has not been recorded yet.",
-      "InsufficientStock": "There is not enough stock of {sku}."
+      "InsufficientStock": "There is not enough stock of {sku}.",
+      "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+      "InvalidRequest": "We could not read that request. Reload the page and try again.",
+      "Unauthenticated": "Your session expired. Please sign in again.",
+      "NotFound": "That is no longer there.",
+      "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
+      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
     },
     "detail": "Goods receipt details",
     "supplierReference": "Supplier document",
