@@ -1,16 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { err, ok } from '@corebiz/domain';
-import { DomainErrorException, unwrapOrThrow } from '../src/http/api-error';
-
-/**
- * Construye un error de dominio con parametros sueltos.
- *
- * Existe por una razon de tipos que conviene no "arreglar" en produccion: la firma de
- * `DomainErrorException` pide `{ kind: string }` y nada mas, asi que un literal con
- * campos de sobra lo rechaza. Ensanchar la firma para que los acepte quitaria la
- * comprobacion justo donde sirve —en los controllers— para ganar comodidad aqui.
- */
-const domainError = (kind: string, params: Record<string, unknown> = {}) => ({ kind, ...params });
+import { DomainErrorException, domainError, unwrapOrThrow } from '../src/http/api-error';
 
 /**
  * El contrato de errores de la API.
@@ -62,9 +52,11 @@ describe('mapeo de errores de dominio a HTTP', () => {
   });
 
   it('conserva la clave y TODOS los parametros escalares del error', () => {
-    const body = new DomainErrorException(
-      domainError('QuotaExceeded', { resource: 'customers', limit: 25, scaled: 3_650_000_000n }),
-    ).getResponse();
+    const body = domainError('QuotaExceeded', {
+      resource: 'customers',
+      limit: 25,
+      scaled: 3_650_000_000n,
+    }).getResponse();
 
     expect(body).toEqual({
       errorKind: 'QuotaExceeded',
@@ -77,12 +69,10 @@ describe('mapeo de errores de dominio a HTTP', () => {
   it('no filtra objetos anidados en los parametros', () => {
     // Solo escalares. Un objeto del dominio dentro de la respuesta seria superficie
     // que nadie ha decidido publicar.
-    const body = new DomainErrorException(
-      domainError('Forbidden', {
-        actor: { userId: 'u1', role: 'viewer' },
-        permission: 'customers:write',
-      }),
-    ).getResponse() as { errorParams: Record<string, unknown> };
+    const body = domainError('Forbidden', {
+      actor: { userId: 'u1', role: 'viewer' },
+      permission: 'customers:write',
+    }).getResponse() as { errorParams: Record<string, unknown> };
 
     expect(body.errorParams).toEqual({ permission: 'customers:write' });
   });

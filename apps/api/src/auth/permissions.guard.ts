@@ -1,5 +1,5 @@
 import {
-  CanActivate,
+  type CanActivate,
   ForbiddenException,
   Inject,
   Injectable,
@@ -33,7 +33,9 @@ import { REQUIRED_PERMISSION } from './require-permission.decorator';
 @Injectable({ scope: Scope.REQUEST })
 export class PermissionsGuard implements CanActivate {
   constructor(
-    private readonly reflector: Reflector,
+    // `@Inject(Reflector)` explicito, aunque el tipo bastaria con `tsc`. Ver la nota
+    // sobre metadatos al final de este archivo.
+    @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(TENANT_CONTEXT) private readonly ctx: TenantContext,
   ) {}
 
@@ -49,3 +51,21 @@ export class PermissionsGuard implements CanActivate {
     throw new ForbiddenException({ errorKind: 'Forbidden', errorParams: { permission: required } });
   }
 }
+
+/*
+ * NOTA SOBRE LOS METADATOS DE DECORADOR, que vale para toda la API.
+ *
+ * Ningun constructor de `apps/api` depende de `emitDecoratorMetadata`: todos declaran
+ * su dependencia con `@Inject(...)`. Es mas verboso y es deliberado.
+ *
+ * El motivo se descubrio con un fallo: `tsc` —que construye el artefacto de
+ * produccion— SI emite `design:paramtypes`, y esbuild —que es lo que usa Vitest para
+ * transpilar— NO lo hace, y lo ignora sin avisar. Con inyeccion por tipo, la API
+ * arrancaba perfectamente compilada y reventaba al montarla desde los tests con
+ * "Nest can't resolve dependencies (?)". Codigo que se comporta distinto segun quien
+ * lo transpile es peor que codigo verboso.
+ *
+ * Por eso `emitDecoratorMetadata` esta en `false` en el tsconfig: no basta con no
+ * usarlo, hay que quitarlo, o el primer constructor que se escriba sin `@Inject`
+ * funcionara en produccion y fallara solo en los tests.
+ */

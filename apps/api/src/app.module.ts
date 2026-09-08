@@ -3,6 +3,12 @@ import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/auth.middleware';
 import { CompositionModule } from './composition/composition.module';
 import { HealthModule } from './health/health.module';
+import { AdministrationModule } from './modules/administration/administration.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { DeliveryNotesModule } from './modules/delivery-notes/delivery-notes.module';
+import { InsightsModule } from './modules/insights/insights.module';
+import { ProductsModule } from './modules/products/products.module';
+import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { SessionModule } from './modules/session/session.module';
 
 /**
@@ -14,7 +20,18 @@ import { SessionModule } from './modules/session/session.module';
  * negocio; para eso estan los casos de uso.
  */
 @Module({
-  imports: [AuthModule, CompositionModule, HealthModule, SessionModule],
+  imports: [
+    AuthModule,
+    CompositionModule,
+    HealthModule,
+    SessionModule,
+    CustomersModule,
+    ProductsModule,
+    DeliveryNotesModule,
+    PurchasingModule,
+    AdministrationModule,
+    InsightsModule,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

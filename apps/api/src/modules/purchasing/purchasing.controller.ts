@@ -1,0 +1,141 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { type z } from 'zod';
+import { createSupplierSchema, receiveGoodsSchema, setStatusSchema } from '@corebiz/contracts';
+import type {
+  GoodsReceiptListItem,
+  GoodsReceiptView,
+  Page,
+  SupplierListItem,
+  SupplierOption,
+} from '@corebiz/application';
+import { PermissionsGuard } from '../../auth/permissions.guard';
+import { RequirePermission } from '../../auth/require-permission.decorator';
+import { unwrapOrThrow } from '../../http/api-error';
+import {
+  optionsQuerySchema,
+  receiptListQuerySchema,
+  supplierListQuerySchema,
+  withoutUndefined,
+} from '../../http/list-queries';
+import { ZodValidationPipe } from '../../http/zod-validation.pipe';
+import { RUNTIME, USE_CASES } from '../../tokens';
+import type { Runtime } from '../../composition/runtime.provider';
+import type { UseCases } from '../../composition/use-cases.provider';
+
+/**
+ * Compras y proveedores.
+ *
+ * El modulo entero esta reservado al plan PRO, y ese limite NO esta aqui: lo aplica el
+ * caso de uso. El guard de permisos comprueba el ROL, que es otra cosa — un propietario
+ * del plan gratuito tiene el permiso y aun asi recibe un 403 con `FeatureNotAvailable`,
+ * que es lo que permite a la interfaz ofrecer subir de plan en lugar de decir "no
+ * tienes permiso", que seria mentira.
+ */
+@ApiTags('compras')
+@ApiBearerAuth()
+@UseGuards(PermissionsGuard)
+@Controller('v1/purchasing')
+export class PurchasingController {
+  constructor(
+    @Inject(USE_CASES) private readonly useCases: UseCases,
+    @Inject(RUNTIME) private readonly runtime: Runtime,
+  ) {}
+
+  @Get('suppliers')
+  @RequirePermission('supplier:read')
+  @ApiOperation({ summary: 'Listado de proveedores' })
+  suppliers(
+    @Query(new ZodValidationPipe(supplierListQuerySchema))
+    query: z.infer<typeof supplierListQuerySchema>,
+  ): Promise<Page<SupplierListItem>> {
+    return this.runtime.queries.purchasing.suppliers(withoutUndefined(query));
+  }
+
+  @Get('suppliers/options')
+  @RequirePermission('supplier:read')
+  @ApiOperation({ summary: 'Lo justo para un desplegable' })
+  supplierOptions(
+    @Query(new ZodValidationPipe(optionsQuerySchema)) query: z.infer<typeof optionsQuerySchema>,
+  ): Promise<readonly SupplierOption[]> {
+    return this.runtime.queries.purchasing.supplierOptions(query.limit);
+  }
+
+  @Post('suppliers')
+  @RequirePermission('supplier:write')
+  @ApiOperation({ summary: 'Dar de alta un proveedor' })
+  async createSupplier(
+    @Body(new ZodValidationPipe(createSupplierSchema)) body: z.infer<typeof createSupplierSchema>,
+  ): Promise<{ id: string; code: string }> {
+    return unwrapOrThrow(
+      await this.useCases.createSupplier({
+        name: body.name,
+        taxId: body.taxId || null,
+        email: body.email || null,
+        phone: body.phone || null,
+        contactName: body.contactName || null,
+        notes: body.notes || null,
+      }),
+    );
+  }
+
+  @Patch('suppliers/:id/status')
+  @RequirePermission('supplier:write')
+  @ApiOperation({ summary: 'Archivar un proveedor, o devolverlo a la lista' })
+  async setSupplierStatus(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(setStatusSchema)) body: z.infer<typeof setStatusSchema>,
+  ): Promise<{ archived: boolean }> {
+    return unwrapOrThrow(
+      await this.useCases.setSupplierStatus({ supplierId: id, archived: body.archived }),
+    );
+  }
+
+  @Get('receipts')
+  @RequirePermission('purchase:read')
+  @ApiOperation({ summary: 'Recepciones de mercancia' })
+  receipts(
+    @Query(new ZodValidationPipe(receiptListQuerySchema))
+    query: z.infer<typeof receiptListQuerySchema>,
+  ): Promise<Page<GoodsReceiptListItem>> {
+    return this.runtime.queries.purchasing.receipts(withoutUndefined(query));
+  }
+
+  @Get('receipts/:id')
+  @RequirePermission('purchase:read')
+  @ApiOperation({ summary: 'Una recepcion con su detalle' })
+  async receiptById(@Param('id') id: string): Promise<GoodsReceiptView> {
+    const receipt = await this.runtime.queries.purchasing.receiptById(id);
+    if (receipt === null) {
+      throw new NotFoundException({ errorKind: 'GoodsReceiptNotFound', errorParams: { id } });
+    }
+    return receipt;
+  }
+
+  @Post('receipts')
+  @RequirePermission('purchase:receive')
+  @ApiOperation({ summary: 'Registrar la entrada de mercancia y actualizar el inventario' })
+  async receiveGoods(
+    @Body(new ZodValidationPipe(receiveGoodsSchema)) body: z.infer<typeof receiveGoodsSchema>,
+  ): Promise<unknown> {
+    return unwrapOrThrow(
+      await this.useCases.receiveGoods({
+        supplierId: body.supplierId,
+        lines: body.lines,
+        supplierReference: body.supplierReference || null,
+        notes: body.notes || null,
+      }),
+    );
+  }
+}

@@ -1,11 +1,18 @@
-import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HealthService, type HealthReport } from './health.service';
 
 @ApiTags('operacion')
 @Controller('health')
 export class HealthController {
-  constructor(private readonly health: HealthService) {}
+  constructor(@Inject(HealthService) private readonly health: HealthService) {}
 
   /**
    * No lleva autenticacion a proposito: lo consultan Render y un monitor externo,

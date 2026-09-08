@@ -4,6 +4,7 @@ import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
+import { AllExceptionsFilter } from './http/all-exceptions.filter';
 
 /**
  * Arranque de la API.
@@ -16,6 +17,11 @@ import { loadEnv } from './config/env';
 async function bootstrap(): Promise<void> {
   const env = loadEnv();
   const app = await NestFactory.create(AppModule, { bodyParser: true });
+
+  // Todo error sale con el mismo sobre `{ errorKind, errorParams }`, y lo inesperado
+  // no cuenta que ha pasado: el mensaje de una excepcion de Postgres lleva dentro
+  // nombres de tabla y a veces el valor que fallo.
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   /*
    * CORS queda DESACTIVADO, y es una decision.

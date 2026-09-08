@@ -5,7 +5,7 @@ import { ACTIVE_CONTEXT, IDENTITY, MEMBERSHIPS } from '../../tokens';
 import type { ResolvedContext } from '../../composition/context.provider';
 import type { VerifiedIdentity } from '../../auth/authenticated-request';
 import { bigintToString, dateToIso } from '../../http/serialize';
-import { SessionDto } from './session.dto';
+import { type SessionDto } from './session.dto';
 
 /**
  * Quien soy, donde estoy y con que limites.

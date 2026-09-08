@@ -1,0 +1,48 @@
+import { z } from 'zod';
+import { decimalStringSchema, recordIdSchema } from './common';
+
+/**
+ * Esquemas de entrada de ventas.
+ *
+ * La nota de entrega es el documento con mas invariantes del sistema, y casi todas se
+ * comprueban en el dominio: que haya stock, que el cliente no exceda su credito, que
+ * la tasa quede congelada. Aqui solo se valida la FORMA — que llegue un cliente, que
+ * haya al menos una linea y que las cantidades parezcan cantidades.
+ */
+
+export const deliveryNoteLineSchema = z
+  .object({
+    productId: recordIdSchema,
+    quantity: decimalStringSchema,
+    /** Ausente, se toma el precio de catalogo del producto. */
+    unitPrice: decimalStringSchema.optional(),
+    /** Descuento en puntos basicos: 1250 es un 12,5 %. Entero, para no perder nada. */
+    discountBp: z.number().int().min(0).max(10_000).optional(),
+  })
+  .strict();
+
+export const issueDeliveryNoteSchema = z
+  .object({
+    customerId: recordIdSchema,
+    // Una nota sin lineas no es una nota vacia: es un documento que no significa nada.
+    // El dominio tambien lo rechaza; aqui se para antes de abrir una transaccion.
+    lines: z.array(deliveryNoteLineSchema).min(1, 'NoLines'),
+    quoteId: recordIdSchema.optional().or(z.literal('')),
+    notes: z.string().trim().max(500).optional().or(z.literal('')),
+  })
+  .strict();
+
+export type IssueDeliveryNoteInput = z.infer<typeof issueDeliveryNoteSchema>;
+
+/**
+ * Anular una nota emitida.
+ *
+ * El motivo es obligatorio y no se puede borrar despues. Una nota anulada sigue
+ * existiendo —se numera de forma continua y devuelve el stock— asi que la unica
+ * explicacion de por que dejo de valer es este texto.
+ */
+export const voidDeliveryNoteSchema = z
+  .object({ reason: z.string().trim().min(3, 'TooShort').max(200, 'TooLong') })
+  .strict();
+
+export type VoidDeliveryNoteInput = z.infer<typeof voidDeliveryNoteSchema>;

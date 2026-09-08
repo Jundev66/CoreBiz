@@ -82,6 +82,22 @@ export class DomainErrorException extends HttpException {
   }
 }
 
+/**
+ * Construye la excepcion a partir de una clave y unos parametros sueltos.
+ *
+ * Existe por una razon de tipos que conviene no "arreglar" ensanchando la firma de
+ * `DomainErrorException`. Esa firma pide `{ kind: string }` y nada mas, asi que un
+ * literal con campos de sobra lo rechaza — que es lo correcto en los controllers,
+ * donde el error viene del dominio y ya trae su forma. Aqui, en cambio, la clave y
+ * los parametros se conocen por separado.
+ */
+export function domainError(
+  kind: string,
+  params: Record<string, unknown> = {},
+): DomainErrorException {
+  return new DomainErrorException({ kind, ...params });
+}
+
 /** La cuenta existe pero todavia no pertenece a ninguna empresa. */
 export class NoActiveTenantException extends ConflictException {
   constructor() {

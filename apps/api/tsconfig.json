@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "isolatedModules": false,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": false,
     "useDefineForClassFields": false,
     "noEmit": false,
     "outDir": "dist",

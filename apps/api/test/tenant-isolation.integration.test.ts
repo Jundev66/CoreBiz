@@ -116,7 +116,12 @@ beforeAll(async () => {
   tokenViewer = viewer.token;
   tokenDemo = await signIn('demo@corebiz.local', 'corebiz-demo');
 
-  app = await NestFactory.create(AppModule, { logger: false });
+  /*
+   * `abortOnError: false` es importante en un test: por defecto, un fallo al montar
+   * el arbol de dependencias llama a `process.abort()`, y eso mata al worker de Vitest
+   * con un volcado nativo que no menciona el provider que no se pudo resolver.
+   */
+  app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
   await app.listen(0, '127.0.0.1');
   baseUrl = await app.getUrl();
 });
