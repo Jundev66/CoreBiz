@@ -1,6 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers as requestHeadersOf } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { err, ok, type Result } from '@corebiz/domain';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
@@ -94,6 +94,24 @@ async function headers(): Promise<Record<string, string>> {
   };
 }
 
+/**
+ * ¿Responde la API AHORA MISMO?
+ *
+ * Se pregunta con un plazo corto porque no se espera a que despierte: se comprueba si
+ * ya lo esta. Lo usa la puerta de la demostracion, que es el unico sitio donde sumar
+ * el arranque en frio a la operacion normal se pasaria del limite de tiempo de una
+ * funcion de Vercel — aprovisionar un visitante clona la base de demostracion entera,
+ * y eso ya es lento con la API caliente.
+ */
+export async function apiIsAwake(): Promise<boolean> {
+  const res = await fetch(`${apiBaseUrl()}/health`, {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(4_000),
+  }).catch(() => null);
+
+  return res !== null && res.ok;
+}
+
 /** El sobre con el que la API responde a cualquier error. */
 export interface ApiErrorBody {
   readonly errorKind: string;
@@ -102,6 +120,22 @@ export interface ApiErrorBody {
 }
 
 export class ApiUnavailableError extends Error {}
+
+/**
+ * Manda a la pantalla de espera, conservando a donde queria ir.
+ *
+ * El plan gratuito de Render DUERME el servicio tras quince minutos sin trafico y
+ * tarda cerca de un minuto en despertar. Es un coste asumido —el proyecto se despliega
+ * gratis a proposito— y lo que no se puede hacer es esconderlo: un error 500 delante
+ * de quien abre el enlace de un curriculum es el peor resultado posible, y un spinner
+ * mudo durante un minuto no es mucho mejor.
+ *
+ * Asi que se le cuenta lo que pasa y cuanto falta, y se le devuelve donde estaba.
+ */
+async function redirectToWakeScreen(): Promise<never> {
+  const path = (await requestHeadersOf()).get('x-corebiz-path') ?? '/';
+  redirect(`/despertando?next=${encodeURIComponent(path)}`);
+}
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
   /*
@@ -136,7 +170,10 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
 
 /** Una lectura. Todo lo que no sea 200 es excepcional y sube. */
 export async function get<T>(path: string): Promise<T> {
-  const res = await request(path);
+  const res = await request(path).catch(async (error: unknown) => {
+    if (error instanceof ApiUnavailableError) await redirectToWakeScreen();
+    throw error;
+  });
 
   if (res.status === 401) redirect('/login');
   if (!res.ok) {
@@ -149,7 +186,10 @@ export async function get<T>(path: string): Promise<T> {
 
 /** Una lectura que puede legitimamente no encontrar nada. */
 export async function getOrNull<T>(path: string): Promise<T | null> {
-  const res = await request(path);
+  const res = await request(path).catch(async (error: unknown) => {
+    if (error instanceof ApiUnavailableError) await redirectToWakeScreen();
+    throw error;
+  });
 
   if (res.status === 401) redirect('/login');
   // 404 aqui NO es un fallo: es "no existe, o no es tuyo", y desde fuera no se

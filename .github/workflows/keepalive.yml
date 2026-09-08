@@ -9,7 +9,15 @@ name: Keepalive
 # la aplicacion no se cae, simplemente deja de existir hasta que alguien la reactive
 # a mano.
 #
-# Este cron toca la base de datos cada dos dias para que eso no ocurra.
+# Este cron toca la base de datos cada dos dias para que eso no ocurra. Y desde que la
+# persistencia vive en la API, `/api/health` de Vercel consulta a `/health` de Render,
+# que consulta a Postgres: una sola llamada recorre la cadena entera y despierta las
+# dos piezas dormibles.
+#
+# Lo que este cron NO pretende es mantener Render despierto. El plan gratuito duerme
+# el servicio a los 15 minutos, y sostenerlo 24/7 consumiria casi las 750 horas-mes
+# que da el plan, dejando cero margen. Se acepta el arranque en frio y se tapa con la
+# pantalla de /despertando; ver docs/adr/009-api-dedicada-en-nestjs.md.
 #
 # ⚠️ AVISO: GitHub deshabilita los workflows programados de un repositorio tras 60
 # dias SIN COMMITS. Este keepalive no basta por si solo. Hay que configurar ademas un
@@ -39,9 +47,11 @@ jobs:
             exit 0
           fi
 
-          # Se reintenta porque una funcion en frio de Vercel puede tardar en responder.
+          # Plazo LARGO y no 30 s: esta llamada puede tener que despertar el servicio de
+          # Render, que tarda cerca de un minuto. Con el plazo antiguo el keepalive
+          # reportaba una caida que no existia justo cuando estaba haciendo su trabajo.
           for attempt in 1 2 3; do
-            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 30 "$URL" || echo "000")
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 90 "$URL" || echo "000")
             if [ "$code" = "200" ]; then
               echo "OK (intento $attempt):"
               cat /tmp/health.json

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
 import { clientFingerprint } from '@/auth/request-identity';
+import { apiIsAwake } from '@/api/client';
 import { startDemoSandbox } from '@/api/demo';
 import { demoConfig } from '@/demo/sandbox';
 
@@ -36,6 +37,21 @@ export async function startDemoAction(_prev: DemoState, _formData: FormData): Pr
   // tambien aqui y no solo al pintar la pagina: una Server Action es un endpoint,
   // y se puede invocar sin haber pasado por su formulario.
   if (!demoConfig.enabled()) redirect('/login');
+
+  /*
+   * Si la API esta dormida, NO se espera aqui.
+   *
+   * Aprovisionar un visitante clona la base de demostracion entera y ya es lento con
+   * la API caliente. Sumarle el minuto que tarda Render en despertar se pasa del
+   * limite de una funcion de Vercel, y entonces quien abre el enlace del curriculum no
+   * ve una espera: ve un 504.
+   *
+   * Asi que se parte en dos: se le manda a la pantalla de espera, que le cuenta lo que
+   * pasa y le trae de vuelta aqui con la API ya caliente. Es el unico sitio donde la
+   * decision de "aceptar el arranque en frio" obliga a cambiar como funciona algo, y
+   * no solo a anadir una pantalla.
+   */
+  if (!(await apiIsAwake())) redirect('/despertando?next=%2Fdemo');
 
   const fingerprint = await clientFingerprint();
 

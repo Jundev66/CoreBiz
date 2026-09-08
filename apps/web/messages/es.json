@@ -487,5 +487,14 @@
     "pointPending": "Qué está pedido y aún no ha llegado, que es la mitad de la pregunta al reponer.",
     "why": "Es un recorte declarado, no un olvido. Para un comercio pequeño lo que mueve el negocio es registrar lo que llegó; pedir formalmente antes es un flujo de empresas con departamento de compras. El ciclo comprar, inventario y vender queda cerrado sin esto.",
     "meanwhile": "Registra la entrada de mercancía cuando llegue, que es lo que actualiza el inventario:"
+  },
+  "waking": {
+    "title": "Despertando el servidor",
+    "lead": "El servicio de datos estaba dormido. El alojamiento gratuito lo apaga tras quince minutos sin visitas, y tarda cerca de un minuto en volver.",
+    "explain": "Esto pasa una vez. A partir de ahora la aplicacion responde al instante mientras la estes usando.",
+    "waiting": "Comprobando...",
+    "ready": "Listo. Entrando...",
+    "stuck": "Esta tardando mas de lo normal. Puedes esperar un poco mas o volver a intentarlo.",
+    "retry": "Reintentar"
   }
 }

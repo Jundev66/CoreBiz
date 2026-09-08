@@ -14,10 +14,10 @@ import { createServerClient } from '@supabase/ssr';
  *   2. Se ponen las cabeceras de seguridad, con una CSP que lleva un nonce
  *      distinto en cada request.
  *
- * Quien decide si alguien puede ver una pantalla NO es este archivo: es
- * `forRequest()` en el composition root, que consulta la pertenencia real en la
- * base de datos. Un guardia en el middleware que se apoyara en "hay cookie de
- * sesion" seria decorativo — la cookie puede estar y no valer nada.
+ * Quien decide si alguien puede ver una pantalla NO es este archivo: es la API, que
+ * consulta la pertenencia real en la base de datos. Un guardia en el middleware que se
+ * apoyara en "hay cookie de sesion" seria decorativo — la cookie puede estar y no
+ * valer nada.
  */
 
 /**
@@ -115,6 +115,16 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);
+
+  /*
+   * La ruta pedida, para poder volver a ella.
+   *
+   * Next no expone el pathname a los Server Components, y hace falta en un caso muy
+   * concreto: cuando la API esta despertando —el plan gratuito de Render la duerme a
+   * los quince minutos— la pantalla de espera necesita saber a donde llevar de vuelta.
+   * Sin esto, quien abriera un enlace profundo acabaria en la portada.
+   */
+  requestHeaders.set('x-corebiz-path', `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
