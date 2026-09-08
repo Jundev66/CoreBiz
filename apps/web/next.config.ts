@@ -8,18 +8,11 @@ const config: NextConfig = {
 
   // Los paquetes del monorepo se consumen como TypeScript en crudo: sin paso de build,
   // sin carpetas dist/ y con recarga en caliente entre paquetes.
-  transpilePackages: [
-    '@corebiz/domain',
-    '@corebiz/application',
-    '@corebiz/contracts',
-    '@corebiz/testing',
-  ],
+  transpilePackages: ['@corebiz/domain', '@corebiz/application', '@corebiz/contracts'],
 
-  // Un error de tipos o de lint tiene que romper el despliegue. Desactivar esto es la
-  // via mas rapida a un fallo en produccion que el CI ya habia detectado.
   // Un error de tipos tiene que romper el despliegue. Desactivarlo es la via mas rapida
   // a un fallo en produccion que el CI ya habia detectado.
-  // (Next 16 retiro la opcion : el lint corre como job propio en CI.)
+  // (Next 16 retiro la opcion de saltarse el lint aqui: corre como job propio en CI.)
   typescript: { ignoreBuildErrors: false },
 
   // No anunciar el framework ni su version reduce la superficie de reconocimiento.

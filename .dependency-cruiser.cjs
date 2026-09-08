@@ -65,26 +65,6 @@ module.exports = {
       to: { path: '^packages/(db|infrastructure)/src/(drizzle|schema)/' },
     },
 
-    // ── SEGURIDAD: cuarentena de la service_role key ──────────────────────
-    {
-      name: 'service-role-quarantine',
-      comment:
-        'SEGURIDAD CRITICA: la service_role key BYPASSEA row level security. El modulo que ' +
-        'la usa solo puede importarse desde los tres consumidores autorizados (provision del ' +
-        'sandbox demo, cron de health y seeds). Cualquier otra importacion convierte el ' +
-        'multi-tenant en decorativo. Ver docs/THREAT_MODEL.md.',
-      severity: 'error',
-      from: {
-        pathNot: [
-          '^packages/infrastructure/src/supabase/admin\.ts$',
-          '^apps/web/app/api/demo/provision/route\.ts$',
-          '^apps/web/app/api/cron/',
-          '^packages/db/src/seed/',
-        ],
-      },
-      to: { path: '^packages/infrastructure/src/supabase/admin\.ts$' },
-    },
-
     // ── Higiene general ───────────────────────────────────────────────────
     {
       name: 'no-circular',

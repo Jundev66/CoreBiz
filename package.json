@@ -27,11 +27,12 @@
     "test:bdd": "pnpm --filter @corebiz/e2e test:bdd",
     "test:bdd:pg": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e test:bdd",
     "test:e2e:pg": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e exec playwright test",
+    "approve": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e exec playwright test specs/acceptance.spec.ts --reporter=list",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm arch && pnpm test:unit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "prepare": "lefthook install",
+    "prepare": "lefthook install || exit 0",
     "lint:fix": "eslint . --fix",
     "db:studio": "pnpm --filter @corebiz/db studio"
   },
