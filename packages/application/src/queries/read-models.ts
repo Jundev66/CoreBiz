@@ -26,6 +26,22 @@ export interface CustomerListItem {
   readonly name: string;
   readonly taxId: string | null;
   readonly creditLimit: string | null;
+  readonly archived: boolean;
+}
+
+/**
+ * La ficha completa. Lo que el listado no muestra porque no cabe.
+ *
+ * No lleva fecha de alta, y no es un olvido: el dominio no la guarda. Se le pasa al
+ * crear y se descarta. Anadirla aqui obligaria a leerla de una columna que solo
+ * existe en Postgres, y la ficha ensenaria una cosa contra la base de datos y otra
+ * en memoria — que es justo la grieta por la que los dos adaptadores dejan de ser
+ * intercambiables.
+ */
+export interface CustomerDetail extends CustomerListItem {
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly address: string | null;
 }
 
 /** Lo justo para un desplegable: identificador y como se muestra. */
@@ -43,6 +59,8 @@ export interface CustomerQueries {
     cursor?: string;
   }): Promise<Page<CustomerListItem>>;
   options(limit?: number): Promise<readonly CustomerOption[]>;
+  /** Null si no existe O si es de otro tenant: desde fuera no se distingue, a proposito. */
+  byId(id: string): Promise<CustomerDetail | null>;
 }
 
 // ─── Catalogo ────────────────────────────────────────────────────────────────
@@ -57,6 +75,30 @@ export interface ProductListItem {
   /** Saldo actual, o null si el producto no lleva inventario (un servicio). */
   readonly onHand: string | null;
   readonly belowMinimum: boolean;
+  readonly archived: boolean;
+}
+
+export interface ProductDetail extends ProductListItem {
+  readonly cost: string | null;
+  readonly minStock: string | null;
+  readonly taxable: boolean;
+}
+
+/**
+ * Una linea del libro de movimientos.
+ *
+ * `balance` es el saldo DESPUES del movimiento, tal y como se guardo. No se
+ * recalcula al leer: el sentido de un libro de movimientos es poder explicar como
+ * se llego al saldo de hoy, y recalcularlo desde el final destruiria justamente la
+ * prueba de que cuadra.
+ */
+export interface StockMovementItem {
+  readonly at: Date;
+  readonly kind: string;
+  readonly quantity: string;
+  readonly balance: string;
+  readonly reason: string | null;
+  readonly reference: string | null;
 }
 
 export interface ProductOption {
@@ -69,8 +111,15 @@ export interface ProductOption {
 }
 
 export interface ProductQueries {
-  list(filter: { search?: string; limit?: number }): Promise<Page<ProductListItem>>;
+  list(filter: {
+    search?: string;
+    includeArchived?: boolean;
+    limit?: number;
+  }): Promise<Page<ProductListItem>>;
   options(limit?: number): Promise<readonly ProductOption[]>;
+  byId(id: string): Promise<ProductDetail | null>;
+  /** Los ultimos movimientos del producto, del mas reciente al mas antiguo. */
+  movements(productId: string, limit?: number): Promise<readonly StockMovementItem[]>;
 }
 
 // ─── Notas de entrega ────────────────────────────────────────────────────────
@@ -220,6 +269,7 @@ export interface SupplierListItem {
   readonly taxId: string | null;
   readonly contactName: string | null;
   readonly phone: string | null;
+  readonly archived: boolean;
 }
 
 export interface SupplierOption {
@@ -238,14 +288,42 @@ export interface GoodsReceiptListItem {
   readonly receivedAt: Date | null;
 }
 
+/**
+ * Una linea de una recepcion.
+ *
+ * La descripcion y la unidad van CONGELADAS, igual que en una nota de entrega: el
+ * papel tiene que decir lo que llego aquel dia, no lo que el producto se llame hoy.
+ * Si manana se renombra "Harina 1 kg" a "Harina de trigo 1 kg", la recepcion de
+ * marzo sigue explicando lo que se recibio en marzo.
+ */
+export interface GoodsReceiptLineView {
+  readonly lineNo: number;
+  readonly description: string;
+  readonly unit: string;
+  readonly quantity: string;
+  readonly unitCost: string;
+  readonly lineTotal: string;
+}
+
+export interface GoodsReceiptView extends GoodsReceiptListItem {
+  readonly supplierCode: string;
+  readonly supplierReference: string | null;
+  readonly notes: string | null;
+  readonly voidReason: string | null;
+  readonly lines: readonly GoodsReceiptLineView[];
+}
+
 export interface PurchasingQueries {
   suppliers(filter: {
     search?: string;
+    includeArchived?: boolean;
     limit?: number;
     cursor?: string;
   }): Promise<Page<SupplierListItem>>;
   supplierOptions(limit?: number): Promise<readonly SupplierOption[]>;
   receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>>;
+  /** Null si no existe o si es de otro tenant: desde fuera no se distingue. */
+  receiptById(id: string): Promise<GoodsReceiptView | null>;
 }
 
 /** Todo el lado de lectura disponible para un request. */

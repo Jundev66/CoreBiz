@@ -115,13 +115,20 @@ export const documentSequences = pgTable(
   'document_sequences',
   {
     tenantId: uuid('tenant_id').notNull(),
-    /** quote | delivery_note | purchase_order | payment */
+    /** Documentos: quote | delivery_note | purchase_order | payment | goods_receipt.
+     *  Registros maestros: customer | product | supplier. */
     docType: text('doc_type').notNull(),
+    /**
+     * Agrupa el contador. Vacio en los documentos, que llevan uno continuo; el
+     * ano en dos digitos para los registros maestros, cuyo codigo lo incluye
+     * (`CLT26000001`) y por tanto tiene que reiniciarse cada enero.
+     */
+    period: text('period').notNull().default(''),
     prefix: text('prefix').notNull().default(''),
     nextNumber: bigint('next_number', { mode: 'number' }).notNull().default(1),
     padding: integer('padding').notNull().default(6),
   },
-  (t) => [primaryKey({ columns: [t.tenantId, t.docType] })],
+  (t) => [primaryKey({ columns: [t.tenantId, t.docType, t.period] })],
 );
 
 /**

@@ -13,6 +13,7 @@ import {
 import type { Clock } from '../../ports/clock';
 import type { IdGenerator } from '../../ports/id-generator';
 import type { TenantContext, UnitOfWork } from '../../ports/repositories';
+import { periodOf } from '../period';
 
 /**
  * Caso de uso: dar de alta un cliente.
@@ -21,13 +22,19 @@ import type { TenantContext, UnitOfWork } from '../../ports/repositories';
  *
  *   1. Autorizacion   — antes de tocar nada.
  *   2. Cuota          — antes de validar, para que un plan agotado responda rapido.
- *   3. Unicidad       — dentro de la transaccion, donde el resultado es fiable.
+ *   3. Codigo         — lo genera el sistema, dentro de la transaccion.
  *   4. Invariantes    — las decide el dominio, no este archivo.
  *   5. Persistencia   — junto con contador y auditoria, de forma atomica.
+ *
+ * EL CODIGO NO LO ESCRIBE NADIE. Antes se pedia en el formulario, y era pedirle al
+ * comercio que resolviera un problema del sistema: inventar un formato el primer
+ * dia, recordarlo cada vez, y encontrarse con un rechazo por duplicado cuando dos
+ * personas dan de alta a la vez. Ahora sale del mismo correlativo que numera las
+ * notas de entrega, que es la unica mecanica del sistema que aguanta concurrencia
+ * sin dejar huecos ni repetir.
  */
 
 export interface CreateCustomerInput {
-  readonly code: string;
   readonly name: string;
   readonly taxId?: string | null;
   readonly email?: string | null;
@@ -36,11 +43,7 @@ export interface CreateCustomerInput {
 }
 
 export type CreateCustomerError =
-  | { kind: 'Forbidden' }
-  | { kind: 'DuplicateCode'; code: string }
-  | { kind: 'InvalidCreditLimit'; raw: string }
-  | QuotaError
-  | CustomerError;
+  { kind: 'Forbidden' } | { kind: 'InvalidCreditLimit'; raw: string } | QuotaError | CustomerError;
 
 export interface CreateCustomerOutput {
   readonly id: string;
@@ -70,14 +73,10 @@ export function makeCreateCustomer(deps: CreateCustomerDeps) {
       const quota = deps.ctx.plan.checkQuota('customers', used);
       if (!quota.ok) return quota;
 
-      // 3. Unicidad dentro de la transaccion. Comprobarla fuera daria una respuesta que
-      //    puede quedar obsoleta antes de escribir; la base de datos tiene ademas un
-      //    indice unico como red de seguridad ante escrituras concurrentes.
-      const normalizedCode = input.code.trim().toUpperCase();
-      const existing = await repos.customers.findByCode(normalizedCode);
-      if (existing) {
-        return err({ kind: 'DuplicateCode', code: normalizedCode });
-      }
+      // 3. El codigo, dentro de la transaccion. El correlativo se consume con
+      //    bloqueo, asi que dos altas simultaneas no pueden recibir el mismo — y si
+      //    algo falla despues, la transaccion se deshace y el numero no se gasta.
+      const code = await repos.sequences.next('customer', periodOf(deps.clock.now()));
 
       let creditLimit: Money | null = null;
       if (input.creditLimit != null && input.creditLimit.trim() !== '') {
@@ -92,7 +91,7 @@ export function makeCreateCustomer(deps: CreateCustomerDeps) {
       const created = Customer.create({
         id: asId<CustomerId>(deps.ids.next()),
         tenantId: deps.ctx.tenantId,
-        code: input.code,
+        code,
         name: input.name,
         taxId: input.taxId ?? null,
         email: input.email ?? null,

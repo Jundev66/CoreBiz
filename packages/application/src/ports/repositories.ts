@@ -155,18 +155,37 @@ export interface DeliveryNoteRepository {
 }
 
 /**
- * Secuencias de numeracion por tipo de documento.
+ * Correlativos, tanto de documentos como de registros.
  *
- * `next()` DEBE consumir el correlativo con bloqueo dentro de la transaccion en curso
- * (SELECT ... FOR UPDATE). Sin ese bloqueo, dos ventas simultaneas obtienen el mismo
- * numero, y dos documentos con el mismo correlativo es un problema que solo se descubre
- * al cerrar el mes.
+ * `next()` DEBE consumir el numero con bloqueo dentro de la transaccion en curso.
+ * Sin ese bloqueo, dos altas simultaneas obtienen el mismo, y dos registros con el
+ * mismo codigo es un problema que solo se descubre al cerrar el mes.
  */
 export type DocumentType =
-  'delivery_note' | 'quote' | 'purchase_order' | 'payment' | 'goods_receipt';
+  | 'delivery_note'
+  | 'quote'
+  | 'purchase_order'
+  | 'payment'
+  | 'goods_receipt'
+  | 'customer'
+  | 'product'
+  | 'supplier';
 
 export interface DocumentSequences {
-  next(docType: DocumentType): Promise<string>;
+  /**
+   * Consume el siguiente correlativo.
+   *
+   * `period` agrupa el contador y ademas cambia el formato:
+   *
+   *   sin periodo  → `NE-000008`      (documentos: un contador continuo)
+   *   con periodo  → `CLT26000001`    (registros: prefijo, ano y contador del ano)
+   *
+   * Los documentos van sin periodo a proposito. Su numeracion ya esta impresa en
+   * papeles que estan en manos de clientes; reiniciarla cada enero romperia la
+   * correspondencia entre lo que dice el sistema y lo que tiene alguien delante.
+   * Un registro maestro no se imprime, asi que ahi el ano informa mas que estorba.
+   */
+  next(docType: DocumentType, period?: string): Promise<string>;
 }
 
 export interface PaymentQueries {

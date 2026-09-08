@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { forRequest } from '@/composition/container';
 import type { ActionState } from './customers';
 
@@ -135,4 +136,65 @@ export async function createProductAction(
 
   revalidatePath('/products');
   return { status: 'success', createdCode: result.value.sku };
+}
+
+/**
+ * Server Action: cuadrar el inventario tras un conteo fisico.
+ *
+ * Se envia el SALDO NUEVO, no la diferencia. Quien esta delante del estante ha
+ * contado doce; pedirle que calcule "menos tres" es pedirle que haga una resta
+ * con la que se puede equivocar, y el error entraria como si fuera un conteo.
+ * La diferencia la calcula el dominio, que ya sabe cuanto habia.
+ *
+ * El motivo es obligatorio y lo exige el dominio, no este formulario: un ajuste
+ * sin explicacion es indistinguible de un descuadre, y dentro de tres meses nadie
+ * sabra si fue merma, robo o un error de captura.
+ */
+export async function adjustStockAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { adjustStock } = await forRequest();
+
+  const result = await adjustStock({
+    productId: field(formData, 'productId'),
+    newBalance: field(formData, 'newBalance'),
+    reason: field(formData, 'reason'),
+  });
+
+  if (!result.ok) {
+    const error = result.error;
+    const params: Record<string, string | number> = {};
+    if ('sku' in error) params.sku = error.sku;
+    if ('field' in error) params.field = error.field;
+    if ('min' in error) params.min = error.min;
+    return { status: 'error', errorKind: error.kind, errorParams: params };
+  }
+
+  revalidatePath('/products');
+
+  // Se devuelve el saldo resultante y no un "listo" a secas: lo que la persona
+  // necesita confirmar es que el numero de la pantalla coincide con el del
+  // estante que acaba de contar.
+  return { status: 'success', createdCode: result.value.current };
+}
+
+/**
+ * Sacar un producto del catalogo, o devolverlo.
+ *
+ * El inventario que tuviera NO se toca. Es lo correcto: si quedaban tres bolsas en
+ * el estante, siguen ahi. Poner el saldo a cero inventaria una salida de mercancia
+ * que nunca ocurrio, y el libro de movimientos dejaria de explicar el saldo.
+ */
+export async function setProductStatusAction(formData: FormData): Promise<void> {
+  const productId = formData.get('productId');
+  const archived = formData.get('archived') === 'true';
+  if (typeof productId !== 'string' || productId === '') redirect('/products');
+
+  const { setProductStatus } = await forRequest();
+  await setProductStatus({ productId, archived });
+
+  revalidatePath('/products');
+  revalidatePath(`/products/${productId}`);
+  redirect(`/products/${productId}`);
 }

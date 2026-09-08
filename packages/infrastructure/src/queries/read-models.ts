@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, ilike, isNull, ne, or, sql } from 'drizzle-orm';
 import { schema, type Database } from '@corebiz/db';
-import { Money, type Currency } from '@corebiz/domain';
+import type { Currency } from '@corebiz/domain';
 import type {
   BestSeller,
   Clock,
+  CustomerDetail,
   CustomerListItem,
   CustomerOption,
   CustomerQueries,
@@ -11,9 +12,11 @@ import type {
   DeliveryNoteQueries,
   DeliveryNoteView,
   Page,
+  ProductDetail,
   ProductListItem,
   ProductOption,
   ProductQueries,
+  StockMovementItem,
   ReadModels,
   ReportQueries,
   SalesReport,
@@ -24,9 +27,11 @@ import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../drizzle/p
 import { drizzleAdminQueries } from './administration';
 import { drizzlePurchasingQueries } from './purchasing';
 import { readOnly } from '../drizzle/session';
+import { money, quantity, toMinor } from './format';
 import { usagePeriod } from '../drizzle/usage';
 
-const { customers, products, deliveryNotes, deliveryNoteLines, tenantUsage } = schema;
+const { customers, products, stockMovements, deliveryNotes, deliveryNoteLines, tenantUsage } =
+  schema;
 
 /**
  * Lado de lectura sobre Postgres.
@@ -39,25 +44,6 @@ const { customers, products, deliveryNotes, deliveryNoteLines, tenantUsage } = s
  * Toda lectura va dentro de una transaccion de solo lectura con el contexto del
  * tenant puesto. Fuera de una transaccion las variables de RLS no sobreviven.
  */
-
-/** Una suma de Postgres llega como cadena; convertirla a Number perderia centimos. */
-function toMinor(value: string | null): bigint {
-  return value === null || value === '' ? 0n : BigInt(value);
-}
-
-function money(minor: bigint, currency: Currency): string {
-  return Money.fromMinor(minor, currency).toString();
-}
-
-/** Las cantidades se guardan en escala 3; se muestran sin ceros sobrantes. */
-function quantity(scaled: bigint): string {
-  const negative = scaled < 0n;
-  const abs = negative ? -scaled : scaled;
-  const whole = abs / 1000n;
-  const fraction = (abs % 1000n).toString().padStart(3, '0').replace(/0+$/, '');
-  const sign = negative ? '-' : '';
-  return fraction === '' ? `${sign}${whole}` : `${sign}${whole}.${fraction}`;
-}
 
 class DrizzleCustomerQueries implements CustomerQueries {
   constructor(
@@ -100,6 +86,7 @@ class DrizzleCustomerQueries implements CustomerQueries {
           taxId: customers.taxId,
           creditLimitMinor: customers.creditLimitMinor,
           creditLimitCurrency: customers.creditLimitCurrency,
+          archivedAt: customers.archivedAt,
         })
         .from(customers)
         .where(and(...conditions))
@@ -120,6 +107,7 @@ class DrizzleCustomerQueries implements CustomerQueries {
             row.creditLimitMinor === null || row.creditLimitCurrency === null
               ? null
               : money(row.creditLimitMinor, row.creditLimitCurrency as Currency),
+          archived: row.archivedAt !== null,
         })),
         nextCursor: hasMore && last !== undefined ? encodeCursor(last.name, last.id) : null,
       };
@@ -138,6 +126,57 @@ class DrizzleCustomerQueries implements CustomerQueries {
       return rows;
     });
   }
+
+  /**
+   * La ficha de un cliente.
+   *
+   * Va acotada por `tenant_id` ademas de por identificador, y eso no sobra aunque
+   * RLS ya lo garantice: un id ajeno tiene que responder "no existe", no "no
+   * puedes". La diferencia importa — un 403 confirma que el recurso existe, y eso
+   * ya es informacion sobre la empresa de otro.
+   */
+  byId(id: string): Promise<CustomerDetail | null> {
+    return readOnly(this.db, this.ctx, async (tx) => {
+      const rows = await tx
+        .select()
+        .from(customers)
+        .where(and(eq(customers.tenantId, this.ctx.tenantId), eq(customers.id, id)))
+        .limit(1);
+
+      const row = rows[0];
+      if (row === undefined) return null;
+
+      return {
+        id: row.id,
+        code: row.code,
+        name: row.name,
+        taxId: row.taxId,
+        creditLimit:
+          row.creditLimitMinor === null || row.creditLimitCurrency === null
+            ? null
+            : money(row.creditLimitMinor, row.creditLimitCurrency as Currency),
+        archived: row.archivedAt !== null,
+        email: row.email,
+        phone: row.phone,
+        address: formatAddress(row.address),
+      };
+    });
+  }
+}
+
+/**
+ * La direccion, en una linea.
+ *
+ * Se compone igual que en el adaptador de memoria, y tiene que seguir siendolo: si
+ * cada uno la formatea a su manera, la misma ficha se lee distinta segun el driver.
+ */
+function formatAddress(raw: unknown): string | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const address = raw as Record<string, unknown>;
+  const parts = [address.line1, address.city, address.state, address.notes].filter(
+    (part): part is string => typeof part === 'string' && part.trim() !== '',
+  );
+  return parts.length === 0 ? null : parts.join(', ');
 }
 
 /** Traduccion del getter `isBelowMinimum` del dominio a SQL. */
@@ -149,11 +188,16 @@ class DrizzleProductQueries implements ProductQueries {
     private readonly ctx: TenantContext,
   ) {}
 
-  list(filter: { search?: string; limit?: number }): Promise<Page<ProductListItem>> {
+  list(filter: {
+    search?: string;
+    includeArchived?: boolean;
+    limit?: number;
+  }): Promise<Page<ProductListItem>> {
     const limit = pageLimit(filter.limit);
 
     return readOnly(this.db, this.ctx, async (tx) => {
-      const conditions = [eq(products.tenantId, this.ctx.tenantId), isNull(products.archivedAt)];
+      const conditions = [eq(products.tenantId, this.ctx.tenantId)];
+      if (filter.includeArchived !== true) conditions.push(isNull(products.archivedAt));
 
       if (filter.search !== undefined && filter.search.trim() !== '') {
         const pattern = likePattern(filter.search);
@@ -172,6 +216,7 @@ class DrizzleProductQueries implements ProductQueries {
           trackStock: products.trackStock,
           onHand: products.onHand,
           belowMinimum: BELOW_MINIMUM,
+          archivedAt: products.archivedAt,
         })
         .from(products)
         .where(and(...conditions))
@@ -188,9 +233,74 @@ class DrizzleProductQueries implements ProductQueries {
           trackStock: row.trackStock,
           onHand: row.trackStock ? quantity(row.onHand) : null,
           belowMinimum: row.belowMinimum,
+          archived: row.archivedAt !== null,
         })),
         nextCursor: null,
       };
+    });
+  }
+
+  byId(id: string): Promise<ProductDetail | null> {
+    return readOnly(this.db, this.ctx, async (tx) => {
+      const rows = await tx
+        .select({ product: products, belowMinimum: BELOW_MINIMUM })
+        .from(products)
+        .where(and(eq(products.tenantId, this.ctx.tenantId), eq(products.id, id)))
+        .limit(1);
+
+      const row = rows[0];
+      if (row === undefined) return null;
+
+      const p = row.product;
+      return {
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        unit: p.unit,
+        price: money(p.priceMinor, p.priceCurrency as Currency),
+        trackStock: p.trackStock,
+        onHand: p.trackStock ? quantity(p.onHand) : null,
+        belowMinimum: row.belowMinimum,
+        archived: p.archivedAt !== null,
+        cost: p.costMinor === null ? null : money(p.costMinor, p.priceCurrency as Currency),
+        minStock: p.minStock === null ? null : quantity(p.minStock),
+        taxable: p.taxable,
+      };
+    });
+  }
+
+  /**
+   * El libro de movimientos del producto.
+   *
+   * Del mas reciente al mas antiguo, que es el orden en que se mira: quien abre esto
+   * casi siempre viene de "¿por que el saldo dice ocho?", y la respuesta esta arriba.
+   *
+   * El saldo se lee de la columna, NO se recalcula sumando. Recalcularlo haria que la
+   * pantalla cuadrase siempre, incluso si el saldo guardado estuviera mal — y esta
+   * pantalla existe precisamente para poder detectar eso.
+   */
+  movements(productId: string, limit = 50): Promise<readonly StockMovementItem[]> {
+    return readOnly(this.db, this.ctx, async (tx) => {
+      const rows = await tx
+        .select()
+        .from(stockMovements)
+        .where(
+          and(
+            eq(stockMovements.tenantId, this.ctx.tenantId),
+            eq(stockMovements.productId, productId),
+          ),
+        )
+        .orderBy(desc(stockMovements.occurredAt))
+        .limit(pageLimit(limit));
+
+      return rows.map((row): StockMovementItem => ({
+        at: row.occurredAt,
+        kind: row.kind,
+        quantity: quantity(row.quantity),
+        balance: quantity(row.balanceAfter),
+        reason: row.note,
+        reference: row.refType === null ? null : `${row.refType}:${row.refId ?? ''}`,
+      }));
     });
   }
 

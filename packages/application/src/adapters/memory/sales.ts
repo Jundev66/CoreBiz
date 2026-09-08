@@ -28,6 +28,7 @@ export class InMemoryProductRepository implements ProductRepository {
   constructor(
     private readonly store: Map<string, Product>,
     private readonly tenantId: TenantId,
+    private readonly movements: StoredMovement[] = [],
   ) {}
 
   private scoped(): Product[] {
@@ -71,8 +72,19 @@ export class InMemoryProductRepository implements ProductRepository {
   }
 
   save(product: Product): Promise<void> {
-    // Igual que el adaptador real: al guardar se consumen los movimientos pendientes.
-    product.pullStockMovements();
+    // Igual que el adaptador real: al guardar se consumen los movimientos
+    // pendientes y se escriben en el libro, en la misma operacion que el producto.
+    for (const movement of product.pullStockMovements()) {
+      this.movements.push({
+        productId: product.id,
+        kind: movement.kind,
+        quantity: movement.quantity.toCompactString(),
+        balance: movement.balanceAfter.toCompactString(),
+        reason: movement.note,
+        reference: movement.refType === null ? null : `${movement.refType}:${movement.refId ?? ''}`,
+        at: movement.occurredAt,
+      });
+    }
     this.store.set(product.id, product);
     return Promise.resolve();
   }
@@ -140,14 +152,22 @@ export class InMemoryDocumentSequences implements DocumentSequences {
     purchase_order: 'OC',
     payment: 'REC',
     goods_receipt: 'RM',
+    customer: 'CLT',
+    product: 'PRD',
+    supplier: 'PRV',
   };
 
-  next(docType: DocumentType): Promise<string> {
-    const key = `${this.tenantId}:${docType}`;
+  next(docType: DocumentType, period = ''): Promise<string> {
+    const key = `${this.tenantId}:${docType}:${period}`;
     const next = (this.counters.get(key) ?? 0) + 1;
     this.counters.set(key, next);
     const prefix = InMemoryDocumentSequences.PREFIXES[docType] ?? 'DOC';
-    return Promise.resolve(`${prefix}-${next.toString().padStart(6, '0')}`);
+    const number = next.toString().padStart(6, '0');
+
+    // Con periodo el codigo va pegado —`CLT26000001`— y sin el lleva guion
+    // —`NE-000008`—. Es la misma distincion que hace el adaptador de Postgres, y
+    // tiene que ser identica: los mismos escenarios BDD corren sobre los dos.
+    return Promise.resolve(period === '' ? `${prefix}-${number}` : `${prefix}${period}${number}`);
   }
 }
 
@@ -165,6 +185,15 @@ export interface SalesStores {
   readonly deliveryNotes: Map<string, DeliveryNote>;
   readonly usage: Map<string, number>;
   readonly sequences: Map<string, number>;
+  /**
+   * Libro de movimientos de inventario.
+   *
+   * Un ARRAY porque es append-only y el orden de llegada es el dato. Existe para
+   * que la ficha de un producto ensene lo MISMO en memoria que sobre Postgres: sin
+   * el, `pnpm dev:nodb` mostraria un historial vacio y daria a entender que los
+   * movimientos no se guardan.
+   */
+  readonly stockMovements: StoredMovement[];
   // Administracion. Van en el MISMO conjunto de almacenes y no en otro aparte
   // porque el rollback de la unidad de trabajo los tiene que revertir igual:
   // invitar consume una plaza del plan, y si la escritura se deshace, la plaza
@@ -179,6 +208,17 @@ export interface SalesStores {
   readonly goodsReceipts: Map<string, unknown>;
 }
 
+/** Un movimiento ya consumido del agregado, listo para leer. */
+export interface StoredMovement {
+  readonly productId: string;
+  readonly kind: string;
+  readonly quantity: string;
+  readonly balance: string;
+  readonly reason: string | null;
+  readonly reference: string | null;
+  readonly at: Date;
+}
+
 export function createSalesStores(): SalesStores {
   return {
     customers: new Map(),
@@ -186,6 +226,7 @@ export function createSalesStores(): SalesStores {
     deliveryNotes: new Map(),
     usage: new Map(),
     sequences: new Map(),
+    stockMovements: [],
     auditEntries: [],
     invitations: new Map(),
     members: new Map(),

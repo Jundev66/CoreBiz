@@ -1,12 +1,19 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { forRequest } from '@/composition/container';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archivados?: string }>;
+}) {
   const t = await getTranslations();
+  const { archivados } = await searchParams;
   const { ctx, session, queries } = await forRequest();
 
-  const page = await queries.products.list({ limit: 50 });
+  const includeArchived = archivados === '1';
+  const page = await queries.products.list({ limit: 50, includeArchived });
   const quota = ctx.plan.quota('products', await queries.usage.current('products'));
 
   const belowMinimum = page.items.filter((p) => p.belowMinimum);
@@ -44,6 +51,17 @@ export default async function ProductsPage() {
         </p>
       )}
 
+      {/* Los archivados no se esconden del todo: se ven pidiendolo. Ocultarlos sin
+          forma de llegar a ellos convierte "archivar" en "perder". */}
+      <p className="mb-4 text-sm">
+        <Link
+          href={includeArchived ? '/products' : '/products?archivados=1'}
+          className="underline underline-offset-4 text-[var(--color-muted)]"
+        >
+          {includeArchived ? t('common.back') : t('products.showArchived')}
+        </Link>
+      </p>
+
       {page.items.length === 0 ? (
         <Empty>{t('products.empty')}</Empty>
       ) : (
@@ -62,11 +80,21 @@ export default async function ProductsPage() {
               <th scope="col" className="px-4 py-3 text-right font-medium">
                 {t('products.stock')}
               </th>
+              <th scope="col" className="px-4 py-3 text-right font-medium">
+                <span className="sr-only">{t('common.view')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {page.items.map((product) => (
-              <tr key={product.id} className="border-b border-[var(--color-line)] last:border-0">
+              <tr
+                key={product.id}
+                className={
+                  product.archived
+                    ? 'border-b border-[var(--color-line)] opacity-60 last:border-0'
+                    : 'border-b border-[var(--color-line)] last:border-0'
+                }
+              >
                 <td className="px-4 py-3 font-mono text-xs">{product.sku}</td>
                 <td className="px-4 py-3 font-medium">{product.name}</td>
                 <td className="px-4 py-3 text-right tabular-nums">$ {product.price}</td>
@@ -83,6 +111,14 @@ export default async function ProductsPage() {
                   ) : (
                     <span className="text-[var(--color-muted)]">{t('products.notTracked')}</span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/products/${product.id}`}
+                    className="text-sm underline underline-offset-4"
+                  >
+                    {t('common.view')}
+                  </Link>
                 </td>
               </tr>
             ))}

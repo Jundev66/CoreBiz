@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { forRequest } from '@/composition/container';
 
@@ -31,7 +32,6 @@ function failure(error: Record<string, unknown> & { kind: string }): PurchasingS
 }
 
 const supplierInput = z.object({
-  code: z.string().trim().min(1).max(24),
   name: z.string().trim().min(2).max(120),
   taxId: z.string().trim().optional(),
   email: z.string().trim().optional(),
@@ -44,7 +44,6 @@ export async function createSupplierAction(
   formData: FormData,
 ): Promise<PurchasingState> {
   const parsed = supplierInput.safeParse({
-    code: formData.get('code'),
     name: formData.get('name'),
     taxId: formData.get('taxId') ?? undefined,
     email: formData.get('email') ?? undefined,
@@ -55,7 +54,6 @@ export async function createSupplierAction(
 
   const { createSupplier } = await forRequest();
   const result = await createSupplier({
-    code: parsed.data.code,
     name: parsed.data.name,
     taxId: parsed.data.taxId || null,
     email: parsed.data.email || null,
@@ -126,4 +124,23 @@ export async function receiveGoodsAction(
   revalidatePath('/products');
 
   return { status: 'success', createdNumber: result.value.number };
+}
+
+/**
+ * Archivar un proveedor, o devolverlo a la lista.
+ *
+ * El gate PRO lo aplica el caso de uso, no esta funcion: una Server Action se puede
+ * invocar directamente, asi que un modulo protegido solo por el enlace del menu no
+ * esta protegido.
+ */
+export async function setSupplierStatusAction(formData: FormData): Promise<void> {
+  const supplierId = formData.get('supplierId');
+  const archived = formData.get('archived') === 'true';
+  if (typeof supplierId !== 'string' || supplierId === '') redirect('/purchases/suppliers');
+
+  const { setSupplierStatus } = await forRequest();
+  await setSupplierStatus({ supplierId, archived });
+
+  revalidatePath('/purchases/suppliers');
+  redirect('/purchases/suppliers');
 }

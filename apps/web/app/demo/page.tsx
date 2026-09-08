@@ -2,11 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { RATE_LIMITS } from '@corebiz/application';
-import { demoSandboxIsAlive, provisionDemoSandbox } from '@corebiz/infrastructure';
-import { activeDriver, DEMO_TENANT_ID } from '@/composition/container';
-import { clientFingerprint, rateLimiter } from '@/auth/request-identity';
-import { demoConfig, readSandboxCookie, writeSandboxCookie } from '@/demo/sandbox';
+import { activeDriver } from '@/composition/container';
+import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
+import { demoConfig } from '@/demo/sandbox';
+import { DemoStart } from '@/ui/demo-start';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -14,100 +13,47 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * La puerta de la demostracion.
+ * La pagina que hay detras del enlace del curriculum.
  *
- * Crear el sandbox va por POST y NUNCA por el simple hecho de abrir la pagina.
- * Es la decision que mas protege el presupuesto: un GET que provisiona lo
- * dispara cualquier rastreador, cualquier previsualizacion de enlace de un chat
- * y cualquier antivirus de correo. Publicar el enlace en una red social crearia
- * decenas de sandboxes antes de que lo abriese una persona.
- *
- * Si ya hay un sandbox vivo en la cookie, se entra directamente: reutilizar es
- * lo que evita que recargar la pagina cueste una copia entera de la base.
+ * Solo PINTA. Crear el visitante ocurre en `startDemoAction`, por POST, y esa
+ * separacion es la que impide que un rastreador o la previsualizacion de un
+ * enlace en un chat cree una cuenta y una copia de la base cada vez que alguien
+ * comparte la direccion.
  */
-export default async function DemoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ motivo?: string }>;
-}) {
+export default async function DemoPage() {
   const t = await getTranslations();
-  const { motivo } = await searchParams;
 
   if (!demoConfig.enabled()) redirect('/login');
 
-  // En modo memoria no hay nada que clonar y la aplicacion ya es la demo.
+  // En modo memoria no hay nada que clonar ni sesion que crear: la aplicacion
+  // entera YA es la demostracion.
   if (activeDriver() === 'memory') redirect('/customers');
 
-  const existing = await readSandboxCookie();
-  if (existing !== null && (await demoSandboxIsAlive(databaseUrl(), existing))) {
-    redirect('/customers');
-  }
-
-  async function start(): Promise<void> {
-    'use server';
-
-    const fingerprint = await clientFingerprint();
-
-    // Un sandbox por origen y hora. El limite no es por avaricia: cada sandbox
-    // es una copia entera de la base de demostracion.
-    const decision = await rateLimiter().hit(
-      `demoSandbox:${fingerprint}`,
-      demoConfig.maxPerHour(),
-      RATE_LIMITS.demoSandbox.windowSeconds,
-    );
-    if (!decision.allowed) redirect('/demo?motivo=limite');
-
-    const result = await provisionDemoSandbox(databaseUrl(), {
-      templateTenantId: DEMO_TENANT_ID,
-      ipHash: fingerprint,
-      ttlHours: demoConfig.ttlHours(),
-      maxConcurrent: demoConfig.maxConcurrent(),
-    });
-
-    if (!result.ok) {
-      // Modo degradado: se sirve la plantilla compartida en solo lectura. El
-      // visitante ve el sistema funcionando, que es lo unico que importa — un
-      // error de cuota en el enlace del CV es el peor resultado posible.
-      redirect('/customers');
-    }
-
-    await writeSandboxCookie(result.tenantId);
-    redirect('/customers');
-  }
+  // Quien ya entro no vuelve a ver el boton: ofrecerle crear un segundo
+  // visitante a quien ya tiene uno vivo acabaria en el limite por hora, que es
+  // la peor forma posible de decirle "ya estas dentro".
+  //
+  // Se pasa como dato a `DemoStart` y NO se redirige aqui. Redirigir parece mas
+  // limpio y rompe la pantalla: tras una Server Action, Next vuelve a renderizar
+  // la ruta actual, y para entonces la accion YA ha iniciado la sesion. El
+  // redirect se dispararia en ese segundo render y se llevaria por delante las
+  // credenciales antes de que nadie pudiera leerlas.
+  const alreadyInside = supabaseIsConfigured() && (await currentUser()) !== null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
       <h1 className="text-3xl font-semibold tracking-tight">{t('demo.title')}</h1>
       <p className="mt-3 text-[var(--color-muted)]">{t('demo.intro')}</p>
 
-      {/*
-        Se explica el bloqueo en lugar de dejar la pantalla igual tras pulsar. Un
-        boton que no hace nada visible es peor que un "no": la persona lo pulsa
-        otras tres veces antes de irse.
-      */}
-      {motivo === 'limite' && (
-        <p
-          role="status"
-          className="mt-6 rounded-md border border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-4 py-3 text-sm"
-        >
-          {t('demo.rateLimited')}
-        </p>
+      {!alreadyInside && (
+        <ul className="mt-6 space-y-2 text-sm text-[var(--color-muted)]">
+          <li>· {t('demo.pointOwnCopy')}</li>
+          <li>· {t('demo.pointCredentials')}</li>
+          <li>· {t('demo.pointExpires')}</li>
+        </ul>
       )}
 
-      <ul className="mt-6 space-y-2 text-sm text-[var(--color-muted)]">
-        <li>· {t('demo.pointOwnCopy')}</li>
-        <li>· {t('demo.pointNoSignup')}</li>
-        <li>· {t('demo.pointExpires')}</li>
-      </ul>
-
-      <form action={start} className="mt-8">
-        <button
-          type="submit"
-          className="w-full rounded-md bg-[var(--color-brand)] px-5 py-3 text-base font-medium text-[var(--color-brand-ink)]"
-        >
-          {t('demo.start')}
-        </button>
-      </form>
+      <DemoStart alreadyInside={alreadyInside} />
 
       <p className="mt-6 text-sm text-[var(--color-muted)]">
         {t('demo.orSignUp')}{' '}
@@ -119,8 +65,4 @@ export default async function DemoPage({
       <p className="mt-10 text-xs text-[var(--color-muted)]">{t('legal.notice')}</p>
     </main>
   );
-}
-
-function databaseUrl(): string {
-  return process.env.DATABASE_URL ?? '';
 }

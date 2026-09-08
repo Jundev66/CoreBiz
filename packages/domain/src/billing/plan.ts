@@ -18,19 +18,19 @@ export const RESOURCES = [
   'suppliers',
   'documents_month',
   'users',
-  'storage_mb',
 ] as const;
 export type Resource = (typeof RESOURCES)[number];
 
-/** Modulos que se activan o bloquean segun el plan. */
-export const FEATURES = [
-  'reports',
-  'dashboard',
-  'export_csv',
-  'audit_export',
-  'purchasing',
-  'multi_warehouse',
-] as const;
+/**
+ * Modulos que se activan o bloquean segun el plan.
+ *
+ * Solo estan los que el sistema SABE hacer. Aqui hubo tres mas —`dashboard`,
+ * `export_csv`, `multi_warehouse`— reservados "para mas adelante", y se fueron: una
+ * bandera que nadie comprueba no reserva nada, solo hace creer que la funcion existe
+ * a quien lee esta lista para saber que ofrece el producto. Los modulos pendientes
+ * se anuncian donde se ven, en su propia pantalla, no en una constante.
+ */
+export const FEATURES = ['reports', 'audit_export', 'purchasing'] as const;
 export type Feature = (typeof FEATURES)[number];
 
 export type QuotaError = {
@@ -64,7 +64,6 @@ const PLAN_DEFINITIONS: Readonly<Record<PlanCode, PlanDefinition>> = {
       suppliers: 25,
       documents_month: 100,
       users: 2,
-      storage_mb: 20,
     },
     features: [],
   },
@@ -75,9 +74,8 @@ const PLAN_DEFINITIONS: Readonly<Record<PlanCode, PlanDefinition>> = {
       suppliers: 1_000,
       documents_month: 2_000,
       users: 15,
-      storage_mb: 500,
     },
-    features: ['reports', 'dashboard', 'export_csv', 'audit_export', 'purchasing'],
+    features: ['reports', 'audit_export', 'purchasing'],
   },
 };
 

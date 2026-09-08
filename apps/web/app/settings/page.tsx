@@ -17,10 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * hace quien entra aqui —"como esta configurado esto" y "cuanto me queda"— y
  * separarlas obligaria a recordar cual estaba en cual.
  *
- * Los recursos que se muestran son los que el sistema cuenta de verdad hoy.
- * `suppliers` y `storage_mb` existen en el plan pero todavia no los consume
- * nada: ensenar "0 de 25 proveedores" en una pantalla de consumo no informa,
- * confunde.
+ * Los recursos que se muestran son los cuatro que le importan a diario a quien
+ * lleva el negocio. `suppliers` tambien se cuenta —lo consume el alta de
+ * proveedores— pero vive detras del plan PRO, y ensenarlo aqui a quien esta en el
+ * gratuito seria pintar una barra que no puede mover.
  */
 const TRACKED = ['customers', 'products', 'users', 'documents_month'] as const;
 

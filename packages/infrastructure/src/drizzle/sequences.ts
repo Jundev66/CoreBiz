@@ -20,6 +20,9 @@ const INITIAL_PREFIXES: Readonly<Record<DocType, string>> = {
   purchase_order: 'OC',
   payment: 'REC',
   goods_receipt: 'RM',
+  customer: 'CLT',
+  product: 'PRD',
+  supplier: 'PRV',
 };
 
 export class DrizzleDocumentSequences implements DocumentSequences {
@@ -42,19 +45,20 @@ export class DrizzleDocumentSequences implements DocumentSequences {
    * cada emision fallida dejaria un hueco en la numeracion, y una numeracion con
    * huecos no se puede explicar.
    */
-  async next(docType: DocType): Promise<string> {
+  async next(docType: DocType, period = ''): Promise<string> {
     const rows = await this.tx
       .insert(documentSequences)
       .values({
         tenantId: this.tenantId,
         docType,
+        period,
         prefix: INITIAL_PREFIXES[docType],
         // Se inserta ya consumido el numero 1: esta llamada devuelve el 1 y la
         // siguiente encontrara el 2 esperando.
         nextNumber: 2,
       })
       .onConflictDoUpdate({
-        target: [documentSequences.tenantId, documentSequences.docType],
+        target: [documentSequences.tenantId, documentSequences.docType, documentSequences.period],
         set: { nextNumber: sql`${documentSequences.nextNumber} + 1` },
       })
       .returning({
@@ -73,7 +77,11 @@ export class DrizzleDocumentSequences implements DocumentSequences {
 
     const consumed = row.nextNumber - 1;
     const prefix = row.prefix === '' ? INITIAL_PREFIXES[docType] : row.prefix;
+    const number = String(consumed).padStart(row.padding, '0');
 
-    return `${prefix}-${String(consumed).padStart(row.padding, '0')}`;
+    // Con periodo el codigo va pegado —`CLT26000001`— y sin el lleva guion
+    // —`NE-000008`—. El guion sobra cuando ya hay un ano separando el prefijo del
+    // numero, y estorba al escribirlo o dictarlo por telefono.
+    return period === '' ? `${prefix}-${number}` : `${prefix}${period}${number}`;
   }
 }

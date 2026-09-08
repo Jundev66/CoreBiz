@@ -72,9 +72,19 @@ export default async function HomePage() {
           <h2 className="text-base font-medium">{t('home.ownAccount')}</h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">{t('home.ownAccountHint')}</p>
           <div className="mt-4 flex flex-wrap gap-3">
+            {/* Probar va PRIMERO y con el color de marca. Los modulos de arriba
+                llevan al acceso mientras no haya sesion, asi que sin esta puerta
+                quien llega desde un enlace solo encuentra un formulario que
+                todavia no tiene motivos para rellenar. */}
+            <Link
+              href="/demo"
+              className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
+            >
+              {t('demo.start')}
+            </Link>
             <Link
               href="/signup"
-              className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
+              className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
             >
               {t('auth.signup.submit')}
             </Link>

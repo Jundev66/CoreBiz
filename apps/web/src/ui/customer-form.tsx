@@ -23,15 +23,11 @@ export function CustomerForm() {
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
+      {/* No se pide el codigo. Lo genera el sistema al guardar —`CLT26000001`— y
+          se muestra en la confirmacion. Pedirlo era pedirle al comercio que
+          resolviera un problema del sistema: inventar un formato el primer dia y
+          recordarlo cada vez. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          name="code"
-          label={t('customers.code')}
-          required
-          error={fieldError('code')}
-          t={t}
-          autoComplete="off"
-        />
         <Field
           name="name"
           label={t('customers.name')}
@@ -77,7 +73,7 @@ export function CustomerForm() {
 
       {state.status === 'success' && (
         <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
-          {t('customers.created')}
+          {t('customers.created', { code: state.createdCode ?? '' })}
         </p>
       )}
 

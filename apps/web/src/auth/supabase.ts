@@ -96,7 +96,7 @@ export async function currentUser(): Promise<AuthenticatedUser | null> {
   if (!supabaseIsConfigured()) return null;
 
   const supabase = await supabaseServer();
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await verifyUser(supabase);
 
   if (error !== null || data.user === null) return null;
 
@@ -107,4 +107,40 @@ export async function currentUser(): Promise<AuthenticatedUser | null> {
     displayName: typeof metadata.name === 'string' ? metadata.name : null,
     businessName: typeof metadata.business_name === 'string' ? metadata.business_name : null,
   };
+}
+
+/**
+ * `getUser()` con reintento ante fallos que NO son de autenticacion.
+ *
+ * La diferencia importa mas de lo que parece. Un 401 significa "este token no
+ * vale" y la respuesta correcta es mandar al acceso. Un error de red, un 500 o
+ * un tiempo de espera agotado significan "no se ha podido preguntar", y tratar
+ * eso como "no hay sesion" saca de la aplicacion a quien SI habia entrado — con
+ * el formulario de acceso delante y sin ninguna explicacion, justo cuando el
+ * servicio de autenticacion esta teniendo un mal momento.
+ *
+ * Salio de la suite E2E, que arranca cinco navegadores a la vez contra un
+ * Supabase recien reiniciado: fallaba el primer escenario de cada fichero y
+ * ninguno mas. En produccion es el mismo caso con otra escala.
+ *
+ * Dos reintentos cortos y se rinde. No se insiste mas porque esto corre en cada
+ * peticion de cada pantalla: un bucle largo aqui convierte una indisponibilidad
+ * breve en una pagina que no carga nunca.
+ */
+async function verifyUser(supabase: SupabaseClient) {
+  let last = await supabase.auth.getUser();
+
+  for (const wait of [150, 400]) {
+    if (last.error === null) return last;
+
+    // 401 y 403 son respuestas VALIDAS: el token no sirve. Reintentar solo
+    // gastaria tiempo y llegaria a la misma conclusion.
+    const status = last.error.status ?? 0;
+    if (status === 401 || status === 403) return last;
+
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    last = await supabase.auth.getUser();
+  }
+
+  return last;
 }

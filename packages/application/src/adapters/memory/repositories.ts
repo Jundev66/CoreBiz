@@ -210,7 +210,11 @@ export class InMemoryUnitOfWork implements UnitOfWork {
     try {
       return await fn({
         customers: new InMemoryCustomerRepository(this.stores.customers, this.tenantId),
-        products: new InMemoryProductRepository(this.stores.products, this.tenantId),
+        products: new InMemoryProductRepository(
+          this.stores.products,
+          this.tenantId,
+          this.stores.stockMovements,
+        ),
         deliveryNotes: new InMemoryDeliveryNoteRepository(this.stores.deliveryNotes, this.tenantId),
         sequences: new InMemoryDocumentSequences(this.stores.sequences, this.tenantId),
         payments: new InMemoryPaymentQueries(),

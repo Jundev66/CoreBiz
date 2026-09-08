@@ -14,16 +14,26 @@ import {
 import type { Clock } from '../../ports/clock';
 import type { IdGenerator } from '../../ports/id-generator';
 import type { TenantContext, UnitOfWork } from '../../ports/repositories';
+import { periodOf } from '../period';
 
 /**
  * Caso de uso: dar de alta un producto.
  *
- * Sigue el mismo orden que el resto: autorizacion, cuota, unicidad, invariantes del
+ * Sigue el mismo orden que el resto: autorizacion, cuota, codigo, invariantes del
  * dominio y escritura atomica.
+ *
+ * EL SKU ES LA UNICA EXCEPCION a que el sistema genere los codigos. Si no se
+ * escribe, lo genera —`PRD26000001`— y nadie tiene que inventarse nada. Si se
+ * escribe, se respeta, y esa puerta se deja abierta a proposito: el codigo de un
+ * producto suele existir ANTES que el sistema. Esta impreso en la etiqueta del
+ * estante, o es el codigo de barras del fabricante. Cerrarla obligaria a mantener
+ * dos codigos para la misma bolsa de harina, y el que gana esa pelea siempre es el
+ * que ya esta pegado al producto.
  */
 
 export interface CreateProductInput {
-  readonly sku: string;
+  /** Opcional. Vacio o ausente, lo genera el sistema. */
+  readonly sku?: string | null;
   readonly name: string;
   readonly price: string;
   readonly unit?: string;
@@ -63,9 +73,16 @@ export function makeCreateProduct(deps: CreateProductDeps) {
       const quota = deps.ctx.plan.checkQuota('products', used);
       if (!quota.ok) return quota;
 
-      const normalizedSku = input.sku.trim().toUpperCase();
-      const existing = await repos.products.findBySku(normalizedSku);
-      if (existing) return err({ kind: 'DuplicateSku', sku: normalizedSku });
+      // El SKU escrito se comprueba; el generado no puede chocar, porque sale de
+      // un correlativo consumido con bloqueo dentro de esta misma transaccion.
+      const typed = (input.sku ?? '').trim().toUpperCase();
+      if (typed !== '') {
+        const existing = await repos.products.findBySku(typed);
+        if (existing) return err({ kind: 'DuplicateSku', sku: typed });
+      }
+
+      const sku =
+        typed === '' ? await repos.sequences.next('product', periodOf(deps.clock.now())) : typed;
 
       const price = Money.of(input.price, deps.ctx.settings.baseCurrency);
       if (!price.ok) return err({ kind: 'InvalidPrice', raw: input.price });
@@ -94,7 +111,7 @@ export function makeCreateProduct(deps: CreateProductDeps) {
       const created = Product.create({
         id: asId<ProductId>(deps.ids.next()),
         tenantId: deps.ctx.tenantId,
-        sku: input.sku,
+        sku,
         name: input.name,
         price: price.value,
         cost,

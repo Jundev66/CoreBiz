@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { parseCustomerForm } from '@corebiz/contracts';
 import { forRequest } from '@/composition/container';
 
@@ -47,7 +48,6 @@ export async function createCustomerAction(
   const { createCustomer } = await forRequest();
 
   const result = await createCustomer({
-    code: parsed.data.code,
     name: parsed.data.name,
     taxId: parsed.data.taxId || null,
     email: parsed.data.email || null,
@@ -60,7 +60,6 @@ export async function createCustomerAction(
     // presentacion segun el idioma activo.
     const error = result.error;
     const params: Record<string, string | number> = {};
-    if ('code' in error) params.code = error.code;
     if ('limit' in error) params.limit = error.limit;
     if ('field' in error) params.field = error.field;
 
@@ -69,4 +68,28 @@ export async function createCustomerAction(
 
   revalidatePath('/customers');
   return { status: 'success', createdCode: result.value.code };
+}
+
+/**
+ * Archivar un cliente, o devolverlo a la lista.
+ *
+ * Es un formulario normal que hace POST y recarga: sin `useActionState`, sin
+ * componente de cliente y sin una linea de JavaScript en el navegador. Un boton
+ * que cambia un estado y refresca la pantalla no necesita mas, y lo que no se
+ * envia al navegador no se puede romper en un movil viejo con mala conexion.
+ *
+ * No devuelve estado porque no hay nada que decir: el resultado se VE — la ficha
+ * pasa a mostrar "archivado" y el boton cambia de texto.
+ */
+export async function setCustomerStatusAction(formData: FormData): Promise<void> {
+  const customerId = formData.get('customerId');
+  const archived = formData.get('archived') === 'true';
+  if (typeof customerId !== 'string' || customerId === '') redirect('/customers');
+
+  const { setCustomerStatus } = await forRequest();
+  await setCustomerStatus({ customerId, archived });
+
+  revalidatePath('/customers');
+  revalidatePath(`/customers/${customerId}`);
+  redirect(`/customers/${customerId}`);
 }

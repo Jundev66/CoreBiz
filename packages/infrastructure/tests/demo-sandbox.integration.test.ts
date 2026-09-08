@@ -9,13 +9,18 @@ import {
 import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database';
 
 /**
- * El sandbox efimero.
+ * El sandbox efimero y la cuenta que lo opera.
  *
  * Lo que se comprueba aqui no es que el clonado "funcione" —eso lo diria
  * cualquier conteo de filas— sino que la copia sea COHERENTE. Un sandbox con
  * productos pero sin sus movimientos, o con notas apuntando a clientes que no se
  * copiaron, es peor que ninguno: el visitante ve un sistema roto y piensa que
  * asi es como funciona.
+ *
+ * Y, desde que cada visitante tiene credenciales propias, que la cuenta nazca
+ * utilizable y muera con su sandbox. Las dos mitades importan: una cuenta que no
+ * puede entrar deja la demostracion inservible, y una que no se borra se acumula
+ * en silencio hasta que llega el cobro.
  */
 
 const db = testDb();
@@ -23,8 +28,21 @@ const TEMPLATE = '00000000-0000-4000-8000-000000000001';
 
 afterAll(closeTestDatabase);
 
+/**
+ * Deja la base como estaba.
+ *
+ * Borra tambien las CUENTAS de demostracion, y no solo sus tenants: las de los
+ * visitantes degradados cuelgan de la plantilla, que no se borra nunca, asi que
+ * limpiar solo tenants las dejaria acumulandose entre tests hasta que uno
+ * empezase a fallar por un motivo que no tiene nada que ver con lo que prueba.
+ */
 async function dropSandboxes(): Promise<void> {
   await db.execute(sql`delete from public.tenants where is_demo and id <> ${TEMPLATE}::uuid`);
+  await db.execute(sql`
+    delete from auth.users
+     where coalesce((raw_app_meta_data ->> 'is_demo')::boolean, false)
+  `);
+  await db.execute(sql`delete from public.demo_sessions`);
 }
 
 describe('Sandbox de demostracion', () => {
@@ -43,6 +61,7 @@ describe('Sandbox de demostracion', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    expect(result.readonly).toBe(false);
 
     // Se compara el clon contra SU PLANTILLA, no contra numeros escritos a mano.
     // Fijar "8 clientes" haria que este test dependiera de que nadie haya tocado
@@ -97,6 +116,61 @@ describe('Sandbox de demostracion', () => {
     expect(cruzadas).toHaveLength(0);
   });
 
+  it('la cuenta que entrega nace utilizable', async () => {
+    const result = await clone();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const rows = await db.execute(sql`
+      select
+        u.encrypted_password = extensions.crypt(${result.password}, u.encrypted_password) as clave_ok,
+        u.email_confirmed_at is not null as confirmado,
+        -- Las cuatro columnas de token en NULL hacen que GoTrue rechace el
+        -- acceso entero con un error de esquema que no menciona la causa. Se
+        -- comprueban aqui porque es un fallo que solo se ve intentando entrar.
+        u.confirmation_token is not null
+          and u.recovery_token is not null
+          and u.email_change is not null
+          and u.email_change_token_new is not null as tokens_no_nulos,
+        (u.raw_app_meta_data ->> 'is_demo')::boolean as marcado,
+        exists (select 1 from auth.identities i where i.user_id = u.id) as tiene_identidad
+      from auth.users u
+     where u.id = ${result.userId}::uuid
+    `);
+
+    expect(rows[0]).toMatchObject({
+      clave_ok: true,
+      confirmado: true,
+      tokens_no_nulos: true,
+      marcado: true,
+      tiene_identidad: true,
+    });
+  });
+
+  it('el visitante es dueno de su sandbox y de nada mas', async () => {
+    const uno = await clone();
+    const otro = await clone();
+    expect(uno.ok && otro.ok).toBe(true);
+    if (!uno.ok || !otro.ok) return;
+
+    // Cada cuenta pertenece a UN tenant: el suyo. Si el clonado hubiera dejado
+    // ademas la pertenencia copiada de la plantilla, una sola cuenta podria
+    // recorrer todas las demostraciones abiertas.
+    const rows = await db.execute(sql`
+      select m.user_id::text as usuario, m.tenant_id::text as tenant, m.role
+        from public.memberships m
+       where m.user_id in (${uno.userId}::uuid, ${otro.userId}::uuid)
+    `);
+
+    expect(rows).toHaveLength(2);
+    expect(rows).toContainEqual(
+      expect.objectContaining({ usuario: uno.userId, tenant: uno.tenantId, role: 'owner' }),
+    );
+    expect(rows).toContainEqual(
+      expect.objectContaining({ usuario: otro.userId, tenant: otro.tenantId, role: 'owner' }),
+    );
+  });
+
   it('no copia el registro de auditoria', async () => {
     const result = await clone();
     expect(result.ok).toBe(true);
@@ -136,20 +210,44 @@ describe('Sandbox de demostracion', () => {
     // real y la serviria a un visitante anonimo.
     const result = await clone({ template: '00000000-0000-4000-8000-000000000999' });
     expect(result).toMatchObject({ ok: false, reason: 'failed' });
+
+    // Y no deja la cuenta a medias: la identidad y los datos se crean en la
+    // misma transaccion, asi que si el clonado falla no queda un usuario suelto.
+    const huerfanos = await db.execute(sql`
+      select 1 from auth.users
+       where coalesce((raw_app_meta_data ->> 'is_demo')::boolean, false)
+    `);
+    expect(huerfanos).toHaveLength(0);
   });
 
-  it('deja de crear sandboxes al llegar al tope de concurrentes', async () => {
+  it('al llegar al tope entrega acceso de solo lectura en vez de un error', async () => {
     expect((await clone({ maxConcurrent: 1 })).ok).toBe(true);
 
-    // Degrada en lugar de fallar: quien llega ve la plantilla compartida, no un
-    // error de cuota. Un error en el enlace del CV es el peor resultado posible.
-    expect(await clone({ maxConcurrent: 1 })).toMatchObject({
-      ok: false,
-      reason: 'at_capacity',
-    });
+    // No se rechaza al visitante: se le degrada. Un "vuelve mas tarde" en el
+    // enlace de un CV es el peor resultado posible, porque el momento en que
+    // alguien lo abre no se repite.
+    const degradado = await clone({ maxConcurrent: 1 });
+    expect(degradado.ok).toBe(true);
+    if (!degradado.ok) return;
+
+    expect(degradado.readonly).toBe(true);
+
+    // Entra en la PLANTILLA compartida y como `viewer`: sin eso, un visitante
+    // degradado podria escribir en el tenant que todos los demas van a clonar, y
+    // su alta aparecería en todas las copias posteriores.
+    expect(degradado.tenantId).toBe(TEMPLATE);
+
+    const rows = await db.execute(sql`
+      select role from public.memberships where user_id = ${degradado.userId}::uuid
+    `);
+    expect(rows).toEqual([{ role: 'viewer' }]);
+
+    // Y no ha costado una copia de la base: sigue habiendo un solo sandbox.
+    const capacidad = await demoCapacity(TEST_DATABASE_URL);
+    expect(capacidad.activeSandboxes).toBe(1);
   });
 
-  it('un sandbox caducado deja de estar vivo y la purga se lo lleva', async () => {
+  it('un sandbox caducado deja de estar vivo y la purga se lo lleva con su cuenta', async () => {
     const result = await clone();
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -160,16 +258,55 @@ describe('Sandbox de demostracion', () => {
       update public.tenants set expires_at = now() - interval '1 minute'
        where id = ${result.tenantId}::uuid
     `);
+    await db.execute(sql`
+      update public.demo_sessions set expires_at = now() - interval '1 minute'
+       where tenant_id = ${result.tenantId}::uuid
+    `);
 
     // Caducado deja de ser accesible EN EL ACTO, sin esperar al cron. La purga
     // es higiene de espacio; la caducidad es la medida de seguridad.
     expect(await demoSandboxIsAlive(TEST_DATABASE_URL, result.tenantId)).toBe(false);
     expect(await purgeExpiredDemos(TEST_DATABASE_URL)).toBeGreaterThanOrEqual(1);
 
-    const rows = await db.execute(sql`
+    const tenant = await db.execute(sql`
       select 1 from public.tenants where id = ${result.tenantId}::uuid
     `);
-    expect(rows).toHaveLength(0);
+    expect(tenant).toHaveLength(0);
+
+    // Y la cuenta se va con el. Una cuenta huerfana no rompe nada visible, y por
+    // eso mismo se acumularia durante meses sin que nadie lo notase.
+    const usuario = await db.execute(sql`
+      select 1 from auth.users where id = ${result.userId}::uuid
+    `);
+    expect(usuario).toHaveLength(0);
+  });
+
+  it('la purga tambien se lleva a los visitantes de solo lectura', async () => {
+    // Cuelgan de la plantilla, que no caduca nunca. Si la purga solo mirase
+    // tenants, estas cuentas se quedarian para siempre — y son justo las que
+    // menos se notan.
+    expect((await clone({ maxConcurrent: 1 })).ok).toBe(true);
+    const degradado = await clone({ maxConcurrent: 1 });
+    expect(degradado.ok).toBe(true);
+    if (!degradado.ok) return;
+
+    await db.execute(sql`
+      update public.demo_sessions set expires_at = now() - interval '1 minute'
+       where user_id = ${degradado.userId}::uuid
+    `);
+
+    await purgeExpiredDemos(TEST_DATABASE_URL);
+
+    const usuario = await db.execute(sql`
+      select 1 from auth.users where id = ${degradado.userId}::uuid
+    `);
+    expect(usuario).toHaveLength(0);
+
+    // Y sin llevarse por delante la pertenencia de nadie mas en la plantilla.
+    const plantilla = await db.execute(sql`
+      select 1 from public.memberships where tenant_id = ${TEMPLATE}::uuid
+    `);
+    expect(plantilla.length).toBeGreaterThan(0);
   });
 
   it('la purga nunca se lleva la plantilla', async () => {

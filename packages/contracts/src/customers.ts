@@ -15,7 +15,6 @@ import { decimalStringSchema } from './common';
 
 export const createCustomerSchema = z
   .object({
-    code: z.string().trim().min(1, 'Required').max(24, 'TooLong'),
     name: z.string().trim().min(2, 'TooShort').max(120, 'TooLong'),
     taxId: z.string().trim().max(24).optional().or(z.literal('')),
     // El email se valida por forma minima, igual que en el dominio: las regex
@@ -34,7 +33,7 @@ export const createCustomerSchema = z
 export type CreateCustomerFormInput = z.infer<typeof createCustomerSchema>;
 
 /** Campos que este comando acepta. Cualquier otro se ignora por completo. */
-const CREATE_CUSTOMER_FIELDS = ['code', 'name', 'taxId', 'email', 'phone', 'creditLimit'] as const;
+const CREATE_CUSTOMER_FIELDS = ['name', 'taxId', 'email', 'phone', 'creditLimit'] as const;
 
 /**
  * Convierte un formulario HTML al schema.

@@ -6,10 +6,12 @@ import {
   Money,
   Product,
   Quantity,
+  Supplier,
   asId,
   type CustomerId,
   type DeliveryNoteId,
   type ProductId,
+  type SupplierId,
   type Currency,
   type TenantId,
   type UserId,
@@ -61,14 +63,21 @@ const pad = (n: number) => n.toString().padStart(3, '0');
 
 /** Datos con aspecto de comercio real, no "Cliente 1, Cliente 2". */
 const CUSTOMERS: readonly (readonly [string, string, string, string | null])[] = [
-  ['CLI-001', 'Bodega La Esquina', 'J-30456789-1', '1500.00'],
-  ['CLI-002', 'Panaderia Santa Rosa', 'J-31122334-5', '800.00'],
-  ['CLI-003', 'Ferreteria El Tornillo', 'J-29887766-0', '3000.00'],
-  ['CLI-004', 'Farmacia San Jose', 'J-30111222-3', null],
-  ['CLI-005', 'Licoreria El Brindis', 'J-31998877-6', '2200.00'],
-  ['CLI-006', 'Charcuteria Los Andes', 'J-30554433-2', '950.00'],
-  ['CLI-007', 'Supermercado Mi Barrio', 'J-29334455-7', '5000.00'],
-  ['CLI-008', 'Restaurante Dona Carmen', 'J-31667788-4', '1200.00'],
+  ['CLT26000001', 'Bodega La Esquina', 'J-30456789-1', '1500.00'],
+  ['CLT26000002', 'Panaderia Santa Rosa', 'J-31122334-5', '800.00'],
+  ['CLT26000003', 'Ferreteria El Tornillo', 'J-29887766-0', '3000.00'],
+  ['CLT26000004', 'Farmacia San Jose', 'J-30111222-3', null],
+  ['CLT26000005', 'Licoreria El Brindis', 'J-31998877-6', '2200.00'],
+  ['CLT26000006', 'Charcuteria Los Andes', 'J-30554433-2', '950.00'],
+  ['CLT26000007', 'Supermercado Mi Barrio', 'J-29334455-7', '5000.00'],
+  ['CLT26000008', 'Restaurante Dona Carmen', 'J-31667788-4', '1200.00'],
+];
+
+/** [codigo, nombre, RIF, contacto, telefono] — los mismos que `supabase/seed.sql`. */
+const SUPPLIERS: readonly (readonly [string, string, string, string, string])[] = [
+  ['PRV26000001', 'Distribuidora Central, C.A.', 'J-30778899-1', 'Luis Marcano', '0212-5551020'],
+  ['PRV26000002', 'Alimentos del Valle', 'J-31445566-8', 'Rosa Bermudez', '0414-3339977'],
+  ['PRV26000003', 'Importadora La Guaira', 'J-29556677-4', 'Pedro Alcala', '0424-8812345'],
 ];
 
 /** [sku, nombre, unidad, precio, stock, minimo] */
@@ -92,7 +101,7 @@ const PRODUCTS: readonly (readonly [string, string, string, string, string, stri
 const NOTES: readonly (readonly [string, string, readonly (readonly [string, string])[]])[] = [
   [
     'NE-000001',
-    'CLI-001',
+    'CLT26000001',
     [
       ['HRN-001', '20'],
       ['AZC-001', '15'],
@@ -101,7 +110,7 @@ const NOTES: readonly (readonly [string, string, readonly (readonly [string, str
   ],
   [
     'NE-000002',
-    'CLI-003',
+    'CLT26000003',
     [
       ['DTG-001', '12'],
       ['PPL-001', '10'],
@@ -109,7 +118,7 @@ const NOTES: readonly (readonly [string, string, readonly (readonly [string, str
   ],
   [
     'NE-000003',
-    'CLI-007',
+    'CLT26000007',
     [
       ['REF-001', '48'],
       ['PST-001', '25'],
@@ -118,7 +127,7 @@ const NOTES: readonly (readonly [string, string, readonly (readonly [string, str
   ],
   [
     'NE-000004',
-    'CLI-002',
+    'CLT26000002',
     [
       ['HRN-001', '40'],
       ['LCH-001', '8'],
@@ -126,7 +135,7 @@ const NOTES: readonly (readonly [string, string, readonly (readonly [string, str
   ],
   [
     'NE-000005',
-    'CLI-008',
+    'CLT26000008',
     [
       ['QSO-001', '3.500'],
       ['JMN-001', '2.250'],
@@ -220,6 +229,28 @@ function seed(target: MemoryStore): void {
   // Los movimientos de la siembra ya estan reflejados en el saldo.
   for (const product of target.products.values()) product.pullStockMovements();
 
+  // Los proveedores, los mismos que `seed.sql`. Sin ellos el modulo de compras se
+  // abre vacio y no se puede registrar una entrada: el desplegable no tiene a quien
+  // elegir, y un modulo que existe y no se puede usar se lee como un modulo roto.
+  SUPPLIERS.forEach(([code, name, taxId, contact, phone], index) => {
+    const created = Supplier.create({
+      id: asId<SupplierId>(`00000000-0000-0000-0000-0000000s${pad(index + 1)}`),
+      tenantId: MEMORY_TENANT,
+      code,
+      name,
+      taxId,
+      contactName: contact,
+      phone,
+      email: null,
+      notes: null,
+      createdAt: SEEDED_AT,
+    });
+    if (created.ok) {
+      created.value.pullDomainEvents();
+      target.suppliers.set(created.value.id, created.value);
+    }
+  });
+
   // El equipo: una sola persona, la duena. Es lo mismo que siembra `seed.sql`, y
   // deja el plan gratuito con una plaza libre — justo la que hace falta para que
   // se pueda probar invitar a alguien y chocar despues con el limite.
@@ -234,9 +265,20 @@ function seed(target: MemoryStore): void {
 
   target.usage.set(`${MEMORY_TENANT}:customers`, target.customers.size);
   target.usage.set(`${MEMORY_TENANT}:products`, target.products.size);
+  target.usage.set(`${MEMORY_TENANT}:suppliers`, target.suppliers.size);
   target.usage.set(`${MEMORY_TENANT}:documents_month`, target.deliveryNotes.size);
   target.usage.set(`${MEMORY_TENANT}:users`, target.members.size);
-  target.sequences.set(`${MEMORY_TENANT}:delivery_note`, NOTES.length);
+  // La clave lleva el PERIODO al final, vacio para los documentos. Se le olvido el
+  // sufijo la primera vez y el contador sembrado dejo de contar: las notas nuevas
+  // volvian a empezar en NE-000001 y chocaban con las de la semilla. Lo encontro un
+  // escenario BDD, no una revision.
+  target.sequences.set(`${MEMORY_TENANT}:delivery_note:`, NOTES.length);
+
+  // Los correlativos de los registros maestros, con el ano como periodo. Apuntan al
+  // siguiente libre: sin esto, el primer alta chocaria contra un codigo ya usado.
+  const year = String(SEEDED_AT.getFullYear()).slice(-2);
+  target.sequences.set(`${MEMORY_TENANT}:customer:${year}`, target.customers.size);
+  target.sequences.set(`${MEMORY_TENANT}:supplier:${year}`, target.suppliers.size);
 }
 
 export function getMemoryUnitOfWork(tenantId: TenantId): InMemoryUnitOfWork {

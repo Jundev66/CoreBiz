@@ -13,6 +13,7 @@ import {
 import type { Clock } from '../../ports/clock';
 import type { IdGenerator } from '../../ports/id-generator';
 import type { TenantContext, UnitOfWork } from '../../ports/repositories';
+import { periodOf } from '../period';
 
 /**
  * Caso de uso: dar de alta un proveedor.
@@ -28,7 +29,6 @@ import type { TenantContext, UnitOfWork } from '../../ports/repositories';
  */
 
 export interface CreateSupplierInput {
-  readonly code: string;
   readonly name: string;
   readonly taxId?: string | null;
   readonly email?: string | null;
@@ -37,12 +37,7 @@ export interface CreateSupplierInput {
   readonly notes?: string | null;
 }
 
-export type CreateSupplierError =
-  | { kind: 'Forbidden' }
-  | { kind: 'DuplicateCode'; code: string }
-  | FeatureError
-  | QuotaError
-  | SupplierError;
+export type CreateSupplierError = { kind: 'Forbidden' } | FeatureError | QuotaError | SupplierError;
 
 export interface CreateSupplierOutput {
   readonly id: string;
@@ -72,14 +67,15 @@ export function makeCreateSupplier(deps: CreateSupplierDeps) {
       const quota = deps.ctx.plan.checkQuota('suppliers', used);
       if (!quota.ok) return quota;
 
-      const code = input.code.trim().toUpperCase();
-      const existing = await repos.suppliers.findByCode(code);
-      if (existing) return err({ kind: 'DuplicateCode', code });
+      // El codigo lo genera el sistema, igual que el de los clientes. El
+      // correlativo se consume con bloqueo dentro de esta transaccion, asi que dos
+      // altas simultaneas no pueden recibir el mismo.
+      const code = await repos.sequences.next('supplier', periodOf(deps.clock.now()));
 
       const created = Supplier.create({
         id: asId<SupplierId>(deps.ids.next()),
         tenantId: deps.ctx.tenantId,
-        code: input.code,
+        code,
         name: input.name,
         taxId: input.taxId ?? null,
         email: input.email ?? null,

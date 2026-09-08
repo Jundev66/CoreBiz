@@ -43,12 +43,28 @@ describe('createProduct', () => {
     stores = createSalesStores();
   });
 
-  it('crea el producto normalizando el SKU', async () => {
+  it('crea el producto normalizando el SKU que se escribe', async () => {
     const result = await build()({ sku: ' hrn-001 ', name: 'Harina 1kg', price: '2.50' });
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.sku).toBe('HRN-001');
     expect(stores.products.size).toBe(1);
+  });
+
+  it('genera el SKU cuando no se escribe ninguno', async () => {
+    const createProduct = build();
+
+    // El SKU es el UNICO codigo que se puede escribir, porque el de un producto
+    // suele existir antes que el sistema: esta en la etiqueta del estante o es el
+    // codigo de barras. Pero no escribirlo tiene que bastar.
+    const sinSku = await createProduct({ name: 'Harina 1kg', price: '2.50' });
+    const vacio = await createProduct({ sku: '   ', name: 'Azucar 1kg', price: '1.80' });
+
+    expect(sinSku.ok && vacio.ok).toBe(true);
+    if (!sinSku.ok || !vacio.ok) return;
+
+    expect(sinSku.value.sku).toBe('PRD26000001');
+    expect(vacio.value.sku).toBe('PRD26000002');
   });
 
   it('acepta importes con coma decimal', async () => {

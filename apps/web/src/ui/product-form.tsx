@@ -14,7 +14,17 @@ export function ProductForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input name="sku" label={t('products.sku')} required autoComplete="off" />
+        {/* El unico codigo que se puede escribir, y a proposito: el de un producto
+            suele existir ANTES que el sistema —esta en la etiqueta del estante o es
+            el codigo de barras del fabricante— y obligar a llevar dos codigos para
+            la misma bolsa de harina es una pelea que gana siempre el que ya esta
+            pegado al producto. En blanco, lo genera el sistema. */}
+        <Input
+          name="sku"
+          label={t('products.sku')}
+          hint={t('products.skuHint')}
+          autoComplete="off"
+        />
         <Input name="name" label={t('products.name')} required />
         <Input
           name="price"
@@ -37,7 +47,7 @@ export function ProductForm() {
 
       {state.status === 'success' && (
         <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
-          {t('products.created')}
+          {t('products.created', { sku: state.createdCode ?? '' })}
         </p>
       )}
 
@@ -56,15 +66,20 @@ function Input({
   name,
   label,
   required,
+  hint,
   ...rest
 }: {
   name: string;
   label: string;
   required?: boolean;
+  /** Se enlaza por `aria-describedby`: un lector de pantalla lo lee con el campo. */
+  hint?: string;
   inputMode?: 'decimal' | 'text';
   placeholder?: string;
   autoComplete?: string;
 }) {
+  const hintId = `${name}-hint`;
+
   return (
     <div>
       <label htmlFor={name} className="block text-sm font-medium">
@@ -79,9 +94,15 @@ function Input({
         id={name}
         name={name}
         required={required}
+        {...(hint ? { 'aria-describedby': hintId } : {})}
         className="mt-1 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
         {...rest}
       />
+      {hint && (
+        <p id={hintId} className="mt-1 text-xs text-[var(--color-muted)]">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

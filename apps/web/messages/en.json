@@ -4,13 +4,15 @@
     "tagline": "Mini ERP for small businesses"
   },
   "nav": {
-    "dashboard": "Dashboard",
     "customers": "Customers",
     "products": "Products",
     "deliveryNotes": "Delivery notes",
     "purchases": "Purchases",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "payments": "Payments",
+    "quotes": "Quotes",
+    "purchaseOrders": "Purchase orders"
   },
   "customers": {
     "title": "Customers",
@@ -24,8 +26,13 @@
     "creditLimit": "Credit limit",
     "noCreditLimit": "No limit",
     "empty": "No customers registered yet.",
-    "search": "Search by name, code or tax ID",
-    "created": "Customer created successfully."
+    "created": "Customer created. Its code is {code}.",
+    "detail": "Customer details",
+    "address": "Address",
+    "archive": "Archive",
+    "restore": "Bring back to the list",
+    "archivedNotice": "This customer is archived: it does not show in the list and cannot be picked when issuing a note. Its earlier documents are untouched.",
+    "showArchived": "Also show archived"
   },
   "quota": {
     "usage": "{current} of {limit} {resource}",
@@ -35,7 +42,6 @@
   },
   "errors": {
     "Forbidden": "You do not have permission to do this.",
-    "DuplicateCode": "A customer with code {code} already exists.",
     "QuotaExceeded": "You have reached the limit of {limit} on your current plan.",
     "Required": "The {field} field is required.",
     "TooShort": "The {field} field is too short.",
@@ -57,7 +63,8 @@
     "InvalidCost": "The cost is not valid.",
     "InvalidStock": "The inventory quantity is not valid.",
     "OutOfRange": "The {field} field is out of range.",
-    "FeatureNotAvailable": "This feature requires the {requiredPlan} plan."
+    "FeatureNotAvailable": "This feature requires the {requiredPlan} plan.",
+    "StockNotTracked": "This product does not track stock, so there is nothing to adjust."
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
@@ -70,23 +77,36 @@
     "title": "Try CoreBiz",
     "intro": "We give you your own copy of the system, with data from a sample shop. You can touch everything.",
     "pointOwnCopy": "It is your copy: nobody else sees what you do.",
-    "pointNoSignup": "No sign-up, no email needed.",
-    "pointExpires": "It deletes itself after 24 hours.",
+    "pointExpires": "The account and everything you record are deleted after 24 hours.",
     "start": "Open the demo",
     "orSignUp": "Would you rather start with your real business?",
-    "rateLimited": "You created a demo recently. Try again in a while, or use the one you already have."
+    "rateLimited": "You created a demo recently. Try again in a while, or use the one you already have.",
+    "pointCredentials": "We give you a username and a password: you sign in like an employee would.",
+    "starting": "Preparing your copy...",
+    "credentialsTitle": "Your account is ready",
+    "credentialsHint": "Write them down if you want to come back later. There is no way to recover them.",
+    "expiresIn": "This account and everything you record are deleted in {hours} hours.",
+    "readonlyNotice": "A lot of demos are open right now, so you are in read-only mode: you can see everything, but not save changes. Come back later for your own copy.",
+    "enter": "Enter the system",
+    "unavailable": "The demo could not be prepared. Please try again in a moment.",
+    "sessionNotice": "You are trying CoreBiz. This account and its data are deleted in {hours} hours.",
+    "sessionNoticeSoon": "You are trying CoreBiz. This account and its data are deleted in less than an hour.",
+    "createAccount": "Create my account",
+    "templateNotice": "You are in the sample shop. It is the copy cloned for every visitor, so whatever you record here will be seen by the next ones."
   },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
-    "language": "Language",
     "back": "Back",
     "add": "Add",
     "remove": "Remove",
     "issue": "Issue",
     "print": "Print",
     "change": "Switch",
-    "optional": "(optional)"
+    "optional": "(optional)",
+    "saving": "Saving…",
+    "view": "View",
+    "notSet": "—"
   },
   "products": {
     "title": "Products",
@@ -104,7 +124,34 @@
     "lowStock": "Below minimum",
     "belowMinimum": "{count, plural, one {# product is below its minimum} other {# products are below their minimum}}.",
     "empty": "No products in the catalogue yet.",
-    "created": "Product created successfully."
+    "created": "Product created. Its code is {sku}.",
+    "adjust": "Adjust",
+    "adjustTitle": "Adjust stock",
+    "currentStock": "currently {onHand} {unit}",
+    "countedBalance": "How many there actually are",
+    "adjustReason": "Reason",
+    "adjustReasonHint": "Monday count, spoilage, breakage…",
+    "adjustSubmit": "Save the adjustment",
+    "adjusted": "Done. Stock is now {onHand} {unit}.",
+    "skuHint": "Leave it blank and we generate one. Or type the shelf label or barcode.",
+    "detail": "Product details",
+    "archive": "Remove from catalogue",
+    "restore": "Bring back to catalogue",
+    "archivedNotice": "This product is out of the catalogue: it does not show in the list and cannot be sold. Whatever stock it had is still there.",
+    "showArchived": "Also show the ones out of the catalogue",
+    "movements": "Stock movements",
+    "noMovements": "No movements for this product yet.",
+    "movementDate": "When",
+    "movementKind": "What happened",
+    "movementQuantity": "Quantity",
+    "movementBalance": "Left at",
+    "movementReason": "Reason or document",
+    "movementKinds": {
+      "in": "Received",
+      "out": "Dispatched",
+      "adjust": "Adjustment",
+      "void_compensation": "Returned by void"
+    }
   },
   "deliveryNotes": {
     "title": "Delivery notes",
@@ -156,7 +203,6 @@
     "newPassword": "New password",
     "businessName": "Your business name",
     "passwordHint": "At least 8 characters. Longer is better.",
-    "account": "My account",
     "signOut": "Sign out",
     "switchBusiness": "Switch business",
     "login": {
@@ -356,7 +402,6 @@
       "Forbidden": "You do not have permission to do this.",
       "FeatureNotAvailable": "Purchases requires the {requiredPlan} plan.",
       "InvalidFormat": "Check the details.",
-      "DuplicateCode": "A supplier with code {code} already exists.",
       "QuotaExceeded": "You reached the limit of {limit} on your current plan.",
       "SupplierNotFound": "That supplier does not exist.",
       "ProductNotFound": "One of the products does not exist.",
@@ -372,7 +417,15 @@
       "AlreadyVoided": "This delivery was already voided.",
       "CannotVoidDraft": "This delivery has not been recorded yet.",
       "InsufficientStock": "There is not enough stock of {sku}."
-    }
+    },
+    "detail": "Goods receipt details",
+    "supplierReference": "Supplier document",
+    "notes": "Notes",
+    "voidedNotice": "This receipt is voided. Reason: {reason}. Whatever had entered stock was returned with a compensating movement; nothing was deleted.",
+    "lineDescription": "Product",
+    "lineQuantity": "Quantity",
+    "lineUnitCost": "Unit cost",
+    "lineTotal": "Line total"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -385,10 +438,54 @@
     "email": "Email",
     "taxId": "Tax ID",
     "empty": "You have not registered any suppliers yet.",
-    "created": "Supplier {code} created."
+    "created": "Supplier created. Its code is {code}.",
+    "archive": "Archive",
+    "restore": "Bring back to the list",
+    "showArchived": "Also show archived",
+    "state": "State"
   },
   "plans": {
     "lockedHeading": "{feature} is on the PRO plan",
     "lockedBody": "Your current plan does not include this module. You can see it here to know what it does, and turn it on when you need it."
+  },
+  "status": {
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "development": {
+    "badge": "In development",
+    "whyHeading": "Why it is not here yet",
+    "meanwhileHeading": "In the meantime"
+  },
+  "payments": {
+    "title": "Payments",
+    "subtitle": "What you are owed and what has been paid",
+    "summary": "Record the payments you receive and know, at any moment, how much each customer owes you.",
+    "pointRecord": "Record a payment against one or several delivery notes, in cash, transfer or foreign currency.",
+    "pointBalance": "Outstanding balance per customer, derived from documents and payments, never typed in.",
+    "pointCreditLimit": "Switch on the credit limit, which is already implemented and never fires today.",
+    "pointAging": "Debt ageing: what has been outstanding for more than 30, 60 and 90 days.",
+    "why": "It is the next module, and the one whose absence shows most. The credit limit is already written and tested in the business rules, but the outstanding-balance query always returns zero because there are no payments to subtract: the rule exists and never fires. It was left out to get a complete buy-sell-report cycle first.",
+    "meanwhile": "Each customer credit limit can already be recorded on their record, ready for when the module lands:"
+  },
+  "quotes": {
+    "title": "Quotes",
+    "subtitle": "What you offer before dispatching",
+    "summary": "Send a customer a quote and turn it into a delivery note when they accept, without typing it again.",
+    "pointDraft": "Same lines and same totals as a delivery note, with its exchange rate frozen.",
+    "pointNoStock": "It moves no stock: a quote dispatches nothing, it only commits a price.",
+    "pointConvert": "An expiry date, and one-click conversion into a delivery note when the customer says yes.",
+    "why": "The numbering already covers them and the document looks a lot like a delivery note. Two things differ — it moves no stock and it expires — and those are exactly what prevents reusing the rules as they are. Finishing the document that does move goods came first.",
+    "meanwhile": "To put a price in writing you can issue the delivery note once the sale closes:"
+  },
+  "purchaseOrders": {
+    "title": "Purchase orders",
+    "subtitle": "What you ordered before it arrives",
+    "summary": "Put in writing what you asked a supplier for, and see what is still to arrive.",
+    "pointOrder": "The order with its lines and agreed cost, before anything enters stock.",
+    "pointPartial": "Partial receipts against the same order: ten of twenty arrive and get recorded.",
+    "pointPending": "What is ordered and has not arrived, which is half the question when restocking.",
+    "why": "It is a declared cut, not an oversight. For a small shop what moves the business is recording what arrived; ordering formally beforehand is a flow for companies with a purchasing department. The buy, stock and sell cycle is closed without it.",
+    "meanwhile": "Record the goods receipt when it arrives, which is what updates stock:"
   }
 }

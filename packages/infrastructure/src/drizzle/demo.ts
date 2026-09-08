@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { getDatabase } from '@corebiz/db';
 
@@ -54,8 +55,26 @@ export async function demoCapacity(url: string, budgetBytes = 500_000_000): Prom
   };
 }
 
+/** Las credenciales desechables con las que el visitante entra a su sandbox. */
+export interface DemoCredentials {
+  readonly tenantId: string;
+  readonly userId: string;
+  readonly email: string;
+  readonly password: string;
+  readonly expiresAt: Date;
+  /**
+   * True cuando no cabia otra copia y se entrego acceso de SOLO LECTURA sobre la
+   * plantilla compartida.
+   *
+   * La pantalla lo dice en voz alta en lugar de dejar que el visitante descubra
+   * por su cuenta que los botones no hacen nada. Un sistema que parece roto es
+   * peor que uno que explica su limite.
+   */
+  readonly readonly: boolean;
+}
+
 export type ProvisionDemoResult =
-  { ok: true; tenantId: string } | { ok: false; reason: 'degraded' | 'at_capacity' | 'failed' };
+  ({ ok: true } & DemoCredentials) | { ok: false; reason: 'failed' };
 
 export interface ProvisionDemoOptions {
   readonly templateTenantId: string;
@@ -66,12 +85,44 @@ export interface ProvisionDemoOptions {
 }
 
 /**
- * Crea un sandbox para un visitante nuevo.
+ * Correo del visitante.
  *
- * Devuelve un motivo en lugar de lanzar cuando no se puede: la diferencia entre
- * "no cabe" y "fallo algo" decide lo que ve el visitante, y son dos pantallas
- * distintas. En el primer caso se le sirve la plantilla en solo lectura y no se
- * entera de nada; en el segundo hay que decirle que lo intente luego.
+ * `corebiz.demo` NO es un dominio real, y eso es deliberado: no existe buzon al
+ * que mandar nada, asi que por mucho que se abuse del enlace este sistema no
+ * puede convertirse en un emisor de correo hacia terceros. El precio es que la
+ * cuenta hay que darla por confirmada al crearla, y por eso la funcion SQL
+ * rellena `email_confirmed_at`.
+ */
+function demoEmail(): string {
+  return `demo-${randomBytes(6).toString('hex')}@corebiz.demo`;
+}
+
+/**
+ * Contrasena del visitante.
+ *
+ * `randomBytes` y no `Math.random`: la contrasena da acceso a un sandbox que
+ * vive 24 horas, pero una generada con un PRNG predecible se puede adivinar
+ * desde otra sesion, y entonces el aislamiento entre visitantes —lo unico que
+ * esta pantalla promete— deja de existir.
+ *
+ * En base32 sin vocales para que se pueda copiar a mano de la pantalla al
+ * gestor de contrasenas sin confundir un cero con una O.
+ */
+function demoPassword(): string {
+  const alphabet = '23456789BCDFGHJKLMNPQRSTVWXZ';
+  const bytes = randomBytes(16);
+  let out = '';
+  for (const byte of bytes) out += alphabet[byte % alphabet.length];
+  return out;
+}
+
+/**
+ * Crea un visitante nuevo con su cuenta, su copia de la plantilla y sus
+ * credenciales, todo en una transaccion.
+ *
+ * Solo hay dos desenlaces: entra —con su propio sandbox o, si no cabia, en solo
+ * lectura— o algo fallo de verdad. Devuelve un resultado en lugar de lanzar
+ * porque "no cabe" no es un error del sistema y no debe pintarse como tal.
  */
 export async function provisionDemoSandbox(
   url: string,
@@ -82,20 +133,36 @@ export async function provisionDemoSandbox(
   // Dos frenos independientes, y los dos hacen falta. El de espacio protege el
   // limite duro de la base; el de sandboxes vivos protege de que mil visitas en
   // una hora consuman en minutos lo que el de espacio tardaria en notar.
-  if (capacity.mode !== 'normal') return { ok: false, reason: 'degraded' };
-  if (capacity.activeSandboxes >= options.maxConcurrent) {
-    return { ok: false, reason: 'at_capacity' };
-  }
+  //
+  // Ninguno de los dos RECHAZA al visitante: lo degradan a solo lectura sobre la
+  // plantilla compartida, que cuesta una fila. Devolver "vuelve mas tarde" en el
+  // enlace de un CV es el peor resultado posible del proyecto entero, porque el
+  // momento en que se abre es justo el que no se repite.
+  const readonly = capacity.mode !== 'normal' || capacity.activeSandboxes >= options.maxConcurrent;
+
+  const email = demoEmail();
+  const password = demoPassword();
 
   try {
     const rows = await getDatabase(url).execute(sql`
-      select app.clone_demo_tenant(
-        ${options.templateTenantId}::uuid, ${options.ipHash}, ${options.ttlHours}
-      ) as tenant_id
+      select out_tenant as tenant_id, out_user as user_id from app.provision_demo_session(
+        ${options.templateTenantId}::uuid, ${email}, ${password},
+        ${options.ipHash}, ${options.ttlHours}, ${readonly}
+      )
     `);
 
-    const tenantId = (rows[0] as { tenant_id: string } | undefined)?.tenant_id;
-    return tenantId === undefined ? { ok: false, reason: 'failed' } : { ok: true, tenantId };
+    const row = rows[0] as { tenant_id: string; user_id: string } | undefined;
+    if (row === undefined) return { ok: false, reason: 'failed' };
+
+    return {
+      ok: true,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      email,
+      password,
+      expiresAt: new Date(Date.now() + options.ttlHours * 60 * 60 * 1000),
+      readonly,
+    };
   } catch {
     return { ok: false, reason: 'failed' };
   }
@@ -104,9 +171,9 @@ export async function provisionDemoSandbox(
 /**
  * Comprueba que un sandbox sigue vivo.
  *
- * Se llama en cada request que trae la cookie del sandbox. Un tenant caducado ya
- * es inaccesible por `app.is_member()`, pero saberlo AQUI permite ofrecer uno
- * nuevo en lugar de mostrar una aplicacion vacia sin explicacion.
+ * La caducidad ya la aplica `app.is_member()`, asi que un tenant vencido es
+ * inaccesible EN EL ACTO sin esperar a la purga. Esta funcion existe para poder
+ * afirmarlo en un test: que la medida de seguridad es la caducidad y no el cron.
  */
 export async function demoSandboxIsAlive(url: string, tenantId: string): Promise<boolean> {
   const rows = await getDatabase(url).execute(sql`

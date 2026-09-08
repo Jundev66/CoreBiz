@@ -63,10 +63,10 @@ describe('Plan — gating de modulos', () => {
     }
   });
 
-  it('el plan PRO desbloquea reportes, panel y compras', () => {
+  it('el plan PRO desbloquea reportes, compras y la exportacion de auditoria', () => {
     expect(pro.has('reports')).toBe(true);
-    expect(pro.has('dashboard')).toBe(true);
     expect(pro.has('purchasing')).toBe(true);
+    expect(pro.has('audit_export')).toBe(true);
   });
 
   it('al bloquear indica que plan hace falta, para poder ofrecer el upgrade', () => {
@@ -78,11 +78,13 @@ describe('Plan — gating de modulos', () => {
     }
   });
 
-  it('multi_warehouse esta declarado pero aun no lo ofrece ningun plan', () => {
-    // Queda reservado para mas adelante; el gating ya funciona y no rompe nada.
-    expect(pro.has('multi_warehouse')).toBe(false);
-    const result = pro.checkFeature('multi_warehouse');
-    expect(result.ok).toBe(false);
+  it('cada modulo declarado lo ofrece algun plan', () => {
+    // Es la guarda contra volver a acumular banderas decorativas. Hubo tres
+    // reservadas "para mas adelante" que nadie comprobaba nunca, y una bandera que
+    // no bloquea nada no reserva nada: solo hace creer que la funcion existe.
+    for (const feature of FEATURES) {
+      expect(pro.has(feature), feature).toBe(true);
+    }
   });
 });
 

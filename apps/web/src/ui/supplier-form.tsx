@@ -19,7 +19,7 @@ export function SupplierForm() {
 
   return (
     <form action={formAction} className="space-y-4">
-      <Field name="code" label={t('suppliers.code')} required autoComplete="off" />
+      {/* El codigo lo genera el sistema al guardar (`PRV26000001`). */}
       <Field name="name" label={t('suppliers.name')} required autoComplete="organization" />
       <Field name="contactName" label={t('suppliers.contact')} />
       <Field name="phone" label={t('suppliers.phone')} type="tel" />

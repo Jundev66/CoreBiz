@@ -28,10 +28,20 @@ interface ShellProps {
 export async function Shell({ ctx, session, title, subtitle, action, children }: ShellProps) {
   const t = await getTranslations();
 
+  /*
+   * Los modulos que faltan aparecen en el menu, marcados.
+   *
+   * Esconderlos haria el menu mas corto y el sistema mas dificil de juzgar: quien
+   * lo evalua busca "cobros" el primer minuto, y no encontrar ni la pantalla ni una
+   * explicacion se lee como que el sistema es incompleto Y ademas confuso. Con la
+   * marca delante, un hueco pasa a ser un alcance declarado.
+   */
   const nav = [
     { href: '/customers', label: t('nav.customers') },
     { href: '/products', label: t('nav.products') },
     { href: '/delivery-notes', label: t('nav.deliveryNotes') },
+    { href: '/quotes', label: t('nav.quotes'), dev: true },
+    { href: '/payments', label: t('nav.payments'), dev: true },
     { href: '/purchases', label: t('nav.purchases'), pro: 'purchasing' as const },
     { href: '/reports', label: t('nav.reports'), pro: 'reports' as const },
     { href: '/settings', label: t('nav.settings') },
@@ -39,6 +49,8 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
 
   return (
     <div className="min-h-screen">
+      {session?.isDemo === true && <DemoNotice session={session} />}
+
       <header className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3">
           <Link href="/" className="text-lg font-semibold tracking-tight">
@@ -58,6 +70,13 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
                 {item.pro !== undefined && !ctx.plan.has(item.pro) && (
                   <span aria-label="PRO" className="ml-1.5 text-xs opacity-60">
                     🔒
+                  </span>
+                )}
+                {/* Texto y no un punto de color: un color no dice nada a quien no
+                    distingue el verde del gris, ni a quien no sabe cual es cual. */}
+                {item.dev === true && (
+                  <span className="ml-1.5 text-[0.65rem] uppercase tracking-wide text-[var(--color-warn-ink)]">
+                    {t('development.badge')}
                   </span>
                 )}
               </Link>
@@ -101,9 +120,10 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
  * dejaria de funcionar exactamente cuando mas falta hace — con la conexion mala,
  * en un movil viejo, en el mostrador de una tienda.
  *
- * Sin sesion NO se ofrece "cerrar sesion", que no cerraria nada y solo confunde:
- * se ofrece crear una cuenta, que es lo que le falta a quien esta mirando la
- * demostracion.
+ * Todo el mundo llega aqui con sesion —tambien quien esta en la demostracion, que
+ * recibe credenciales propias en `/demo`— asi que "cerrar sesion" siempre cierra
+ * algo de verdad. La unica excepcion es el modo memoria, donde no hay
+ * autenticacion en absoluto.
  */
 async function AccountArea({
   session,
@@ -114,19 +134,21 @@ async function AccountArea({
 }) {
   const t = await getTranslations();
 
-  if (session.isPublicDemo) {
-    return (
-      <Link
-        href="/signup"
-        className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
-      >
-        {t('auth.signup.submit')}
-      </Link>
-    );
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-3">
+      {/* En una demostracion, "crear mi cuenta" va JUNTO a "salir", no en su
+          lugar. Quien esta probando el sistema tiene una sesion de verdad que
+          puede querer cerrar, y a la vez es la unica persona a la que tiene
+          sentido ofrecerle empezar con su propio negocio. */}
+      {session.isDemo && (
+        <Link
+          href="/signup"
+          className="rounded-md border border-[var(--color-brand)] px-3 py-1.5 text-sm font-medium transition hover:bg-[var(--color-brand)]/10"
+        >
+          {t('demo.createAccount')}
+        </Link>
+      )}
+
       {session.memberships.length > 1 && (
         <form action={switchTenantAction}>
           <label htmlFor="tenantId" className="sr-only">
@@ -154,14 +176,69 @@ async function AccountArea({
         <span className="hidden text-sm text-[var(--color-muted)] sm:inline">{session.email}</span>
       )}
 
-      <form action={signOutAction}>
-        <button
-          type="submit"
-          className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
-        >
-          {t('auth.signOut')}
-        </button>
-      </form>
+      {/* Sin correo no hay sesion que cerrar: es el modo memoria, donde la
+          aplicacion arranca sin base de datos y no hay autenticacion. Ofrecer
+          "salir" ahi seria un boton que no hace nada. */}
+      {session.email !== null && (
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
+          >
+            {t('auth.signOut')}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * El aviso de que esto es temporal.
+ *
+ * Va en TODAS las pantallas y no solo en la puerta de entrada. Quien lleva media
+ * hora dando de alta productos ya no se acuerda de lo que leyo antes de entrar, y
+ * enterarse de que se borra todo DESPUES de haberlo perdido es la peor forma
+ * posible de contarlo.
+ *
+ * Dice las horas que quedan y no la fecha exacta a proposito: el servidor corre
+ * en UTC y el visitante no, asi que una hora absoluta seria una hora equivocada
+ * para casi todo el mundo. "Quedan 19 horas" es cierto en cualquier huso.
+ */
+async function DemoNotice({ session }: { session: SessionInfo }) {
+  const t = await getTranslations();
+
+  if (session.memoryDriver) {
+    // Sin base de datos: es una demostracion y no caduca porque no hay nada
+    // persistido que pueda caducar.
+    return (
+      <Banner>
+        <strong className="font-medium">{t('demo.banner')}</strong> {t('demo.memoryDriver')}
+      </Banner>
+    );
+  }
+
+  if (session.expiresAt === null) {
+    // El comercio de ejemplo sobre Postgres. Tampoco caduca —es la plantilla que se
+    // clona— pero decir aqui "corriendo sin base de datos" seria falso, y era lo que
+    // decia hasta que un test lo enseno en su captura de pantalla.
+    return <Banner>{t('demo.templateNotice')}</Banner>;
+  }
+
+  const hours = Math.ceil((session.expiresAt.getTime() - Date.now()) / 3_600_000);
+
+  return (
+    <Banner>{hours <= 1 ? t('demo.sessionNoticeSoon') : t('demo.sessionNotice', { hours })}</Banner>
+  );
+}
+
+function Banner({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      role="status"
+      className="border-b border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-6 py-2 text-center text-sm text-[var(--color-warn-ink)]"
+    >
+      {children}
     </div>
   );
 }

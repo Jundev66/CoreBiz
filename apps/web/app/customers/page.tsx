@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { forRequest } from '@/composition/container';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
@@ -10,11 +11,17 @@ import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
  * pasa por los casos de uso ni rehidrata agregados — consulta directamente y devuelve
  * datos planos (CQRS ligero). Escribir si pasa siempre por un caso de uso.
  */
-export default async function CustomersPage() {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archivados?: string }>;
+}) {
   const t = await getTranslations();
+  const { archivados } = await searchParams;
   const { ctx, session, queries } = await forRequest();
 
-  const page = await queries.customers.list({ limit: 25 });
+  const includeArchived = archivados === '1';
+  const page = await queries.customers.list({ limit: 25, includeArchived });
   const quota = ctx.plan.quota('customers', await queries.usage.current('customers'));
 
   return (
@@ -41,6 +48,17 @@ export default async function CustomersPage() {
         </div>
       }
     >
+      {/* Los archivados no se esconden del todo: se ven pidiendolo. Ocultarlos sin
+          forma de llegar a ellos convierte "archivar" en "perder". */}
+      <p className="mb-4 text-sm">
+        <Link
+          href={includeArchived ? '/customers' : '/customers?archivados=1'}
+          className="underline underline-offset-4 text-[var(--color-muted)]"
+        >
+          {includeArchived ? t('common.back') : t('customers.showArchived')}
+        </Link>
+      </p>
+
       {page.items.length === 0 ? (
         <Empty>{t('customers.empty')}</Empty>
       ) : (
@@ -59,11 +77,21 @@ export default async function CustomersPage() {
               <th scope="col" className="px-4 py-3 text-right font-medium">
                 {t('customers.creditLimit')}
               </th>
+              <th scope="col" className="px-4 py-3 text-right font-medium">
+                <span className="sr-only">{t('common.view')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {page.items.map((customer) => (
-              <tr key={customer.id} className="border-b border-[var(--color-line)] last:border-0">
+              <tr
+                key={customer.id}
+                className={
+                  customer.archived
+                    ? 'border-b border-[var(--color-line)] opacity-60 last:border-0'
+                    : 'border-b border-[var(--color-line)] last:border-0'
+                }
+              >
                 <td className="px-4 py-3 font-mono text-xs">{customer.code}</td>
                 <td className="px-4 py-3 font-medium">{customer.name}</td>
                 <td className="px-4 py-3 text-[var(--color-muted)]">{customer.taxId ?? '—'}</td>
@@ -75,6 +103,14 @@ export default async function CustomersPage() {
                       {t('customers.noCreditLimit')}
                     </span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/customers/${customer.id}`}
+                    className="text-sm underline underline-offset-4"
+                  >
+                    {t('common.view')}
+                  </Link>
                 </td>
               </tr>
             ))}

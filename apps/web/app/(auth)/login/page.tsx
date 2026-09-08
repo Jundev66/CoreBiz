@@ -60,7 +60,7 @@ export default async function LoginPage() {
           registro es la forma mas eficaz de que no la abra nadie. */}
       <p className="mt-6 border-t border-[var(--color-line)] pt-6 text-sm text-[var(--color-muted)]">
         {t('auth.login.demoHint')}{' '}
-        <Link href="/customers" className="underline underline-offset-4">
+        <Link href="/demo" className="underline underline-offset-4">
           {t('auth.login.demoLink')}
         </Link>
       </p>

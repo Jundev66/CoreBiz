@@ -239,8 +239,11 @@ begin
   -- El correlativo tiene que continuar donde lo dejo la plantilla: si empezara
   -- en uno, la primera nota que emitiera el visitante chocaria contra el indice
   -- unico (tenant_id, number) de las que se acaban de copiar.
-  insert into public.document_sequences (tenant_id, doc_type, prefix, next_number, padding)
-  select v_new, d.doc_type, d.prefix, d.next_number, d.padding
+  -- `period` viaja con el resto. Olvidarlo colapsaria los correlativos por ano de
+  -- los registros maestros en uno solo, y el clon empezaria a repetir codigos que
+  -- la plantilla ya habia usado.
+  insert into public.document_sequences (tenant_id, doc_type, period, prefix, next_number, padding)
+  select v_new, d.doc_type, d.period, d.prefix, d.next_number, d.padding
     from public.document_sequences d
    where d.tenant_id = p_template;
 

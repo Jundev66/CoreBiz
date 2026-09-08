@@ -56,4 +56,5 @@ export {
   type DemoCapacity,
   type ProvisionDemoResult,
   type ProvisionDemoOptions,
+  type DemoCredentials,
 } from './drizzle/demo';

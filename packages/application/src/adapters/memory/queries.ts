@@ -1,7 +1,9 @@
 import {
   Money,
+  type CustomerAddress,
   type Currency,
   type GoodsReceipt,
+  type Product,
   type Supplier,
   type TenantId,
 } from '@corebiz/domain';
@@ -11,16 +13,21 @@ import type {
   AuditEntryView,
   AuditFilter,
   BestSeller,
+  GoodsReceiptLineView,
   GoodsReceiptListItem,
+  GoodsReceiptView,
+  CustomerDetail,
   CustomerListItem,
   CustomerOption,
   CustomerQueries,
   DeliveryNoteListItem,
   DeliveryNoteQueries,
   DeliveryNoteView,
+  ProductDetail,
   ProductListItem,
   ProductOption,
   ProductQueries,
+  StockMovementItem,
   ReadModels,
   PendingInvitationView,
   PurchasingQueries,
@@ -79,6 +86,7 @@ class InMemoryCustomerQueries implements CustomerQueries {
         name: c.name,
         taxId: c.taxId,
         creditLimit: c.creditLimit?.toString() ?? null,
+        archived: c.isArchived,
       }));
 
     return Promise.resolve(page(items, filter.limit ?? 25));
@@ -92,6 +100,27 @@ class InMemoryCustomerQueries implements CustomerQueries {
 
     return Promise.resolve(items);
   }
+
+  byId(id: string): Promise<CustomerDetail | null> {
+    // Se busca dentro del tenant y no por identificador global: pedir la ficha de
+    // otro comercio tiene que responder "no existe", no "no puedes".
+    const found = this.scoped().find((c) => c.id === id);
+    if (found === undefined) return Promise.resolve(null);
+
+    const snapshot = found.snapshot();
+    return Promise.resolve({
+      id: found.id,
+      code: found.code,
+      name: found.name,
+      taxId: found.taxId,
+      creditLimit: found.creditLimit?.toString() ?? null,
+      archived: found.isArchived,
+      email: snapshot.email,
+      phone: snapshot.phone,
+      // La direccion viaja como una linea legible: la ficha la pinta, no la edita.
+      address: formatAddress(snapshot.address),
+    });
+  }
 }
 
 class InMemoryProductQueries implements ProductQueries {
@@ -102,29 +131,74 @@ class InMemoryProductQueries implements ProductQueries {
 
   private scoped() {
     return [...this.stores.products.values()]
-      .filter((p) => p.tenantId === this.tenantId && !p.isArchived)
+      .filter((p) => p.tenantId === this.tenantId)
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }
 
-  list(filter: { search?: string; limit?: number }): Promise<Page<ProductListItem>> {
+  list(filter: {
+    search?: string;
+    includeArchived?: boolean;
+    limit?: number;
+  }): Promise<Page<ProductListItem>> {
     const items = this.scoped()
+      .filter((p) => filter.includeArchived === true || !p.isArchived)
       .filter((p) => matches([p.name, p.sku], filter.search ?? ''))
-      .map((p): ProductListItem => ({
-        id: p.id,
-        sku: p.sku,
-        name: p.name,
-        unit: p.unit,
-        price: p.price.toString(),
-        trackStock: p.trackStock,
-        onHand: p.trackStock ? p.onHand.toCompactString() : null,
-        belowMinimum: p.isBelowMinimum,
-      }));
+      .map((p): ProductListItem => this.toListItem(p));
 
     return Promise.resolve(page(items, filter.limit ?? 25));
   }
 
+  private toListItem(p: Product): ProductListItem {
+    return {
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      unit: p.unit,
+      price: p.price.toString(),
+      trackStock: p.trackStock,
+      onHand: p.trackStock ? p.onHand.toCompactString() : null,
+      belowMinimum: p.isBelowMinimum,
+      archived: p.isArchived,
+    };
+  }
+
+  byId(id: string): Promise<ProductDetail | null> {
+    const found = this.scoped().find((p) => p.id === id);
+    if (found === undefined) return Promise.resolve(null);
+
+    const snapshot = found.snapshot();
+    return Promise.resolve({
+      ...this.toListItem(found),
+      cost: snapshot.cost?.toString() ?? null,
+      minStock: snapshot.minStock?.toCompactString() ?? null,
+      taxable: snapshot.taxable,
+    });
+  }
+
+  movements(productId: string, limit = 50): Promise<readonly StockMovementItem[]> {
+    const mine = new Set<string>(this.scoped().map((p) => p.id));
+    if (!mine.has(productId)) return Promise.resolve([]);
+
+    const items = this.stores.stockMovements
+      .filter((m) => m.productId === productId)
+      .slice()
+      .reverse()
+      .slice(0, limit)
+      .map((m): StockMovementItem => ({
+        at: m.at,
+        kind: m.kind,
+        quantity: m.quantity,
+        balance: m.balance,
+        reason: m.reason,
+        reference: m.reference,
+      }));
+
+    return Promise.resolve(items);
+  }
+
   options(limit = 500): Promise<readonly ProductOption[]> {
     const items = this.scoped()
+      .filter((p) => !p.isArchived)
       .slice(0, limit)
       .map((p): ProductOption => ({
         id: p.id,
@@ -425,7 +499,7 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
 
   private scopedSuppliers(): Supplier[] {
     return ([...this.stores.suppliers.values()] as Supplier[]).filter(
-      (s) => s.tenantId === this.tenantId && !s.isArchived,
+      (s) => s.tenantId === this.tenantId,
     );
   }
 
@@ -457,6 +531,7 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
         taxId: s.taxId,
         contactName: s.contactName,
         phone: s.phone,
+        archived: s.isArchived,
       })),
       nextCursor: start + limit < items.length ? String(start + limit) : null,
     });
@@ -491,4 +566,51 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
       nextCursor: null,
     });
   }
+
+  receiptById(id: string): Promise<GoodsReceiptView | null> {
+    const found = ([...this.stores.goodsReceipts.values()] as GoodsReceipt[]).find(
+      (r) => r.id === id && r.tenantId === this.tenantId,
+    );
+    if (found === undefined) return Promise.resolve(null);
+
+    const supplier = this.scopedSuppliers().find((s) => s.id === found.supplierId);
+    const props = found.snapshot;
+
+    return Promise.resolve({
+      id: found.id,
+      number: found.number,
+      status: found.status,
+      supplierName: supplier?.name ?? '—',
+      supplierCode: supplier?.code ?? '—',
+      total: found.total.toString(),
+      lineCount: found.lines.length,
+      receivedAt: found.receivedAt,
+      supplierReference: props.supplierReference,
+      notes: props.notes,
+      voidReason: found.voidReason,
+      lines: found.lines.map((line): GoodsReceiptLineView => ({
+        lineNo: line.lineNo,
+        description: line.descriptionSnapshot,
+        unit: line.unitSnapshot,
+        quantity: line.quantity.toCompactString(),
+        unitCost: line.unitCost.toString(),
+        lineTotal: line.lineTotal.toString(),
+      })),
+    });
+  }
+}
+
+/**
+ * La direccion, en una linea.
+ *
+ * Se compone aqui y no en el componente porque el adaptador de Postgres tiene que
+ * componerla exactamente igual: si cada uno la formatea a su manera, la misma ficha
+ * se lee distinta segun el driver.
+ */
+function formatAddress(address: CustomerAddress | null): string | null {
+  if (address === null) return null;
+  const parts = [address.line1, address.city, address.state, address.notes].filter(
+    (part): part is string => typeof part === 'string' && part.trim() !== '',
+  );
+  return parts.length === 0 ? null : parts.join(', ');
 }

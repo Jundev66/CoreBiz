@@ -2,8 +2,12 @@
  * Roles y permisos como DATOS, no como codigo disperso en condicionales.
  *
  * La matriz de abajo es la unica fuente de verdad sobre quien puede hacer que. Se consulta
- * desde tres sitios —el caso de uso, la interfaz y las politicas RLS de Postgres— y hay un
- * test de integracion que compara la matriz con las politicas SQL para que no diverjan.
+ * desde tres sitios: el caso de uso, la interfaz y las politicas RLS de Postgres.
+ *
+ * Lo que un test de integracion compara contra el SQL son las LISTAS de roles —`ROLES`
+ * contra la restriccion de `memberships`, y `WRITE_ROLES` contra `app.can_write()`— no la
+ * matriz de permisos entera. Conviene saber donde llega la red: anadir un rol nuevo aqui y
+ * olvidarlo en Postgres rompe el build; cambiarle un permiso a uno que ya existe, no.
  *
  * Cuando la autorizacion vive repartida en `if (user.role === 'admin')` por toda la
  * aplicacion, tarde o temprano uno de esos condicionales se olvida. Aqui hay un solo sitio

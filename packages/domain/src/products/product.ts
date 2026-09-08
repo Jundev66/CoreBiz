@@ -356,6 +356,13 @@ export class Product extends AggregateRoot<ProductId> {
     return ok(undefined);
   }
 
+  /**
+   * Saca el producto del catalogo sin borrarlo.
+   *
+   * Un producto que aparece en notas de entrega emitidas no se puede eliminar sin dejar
+   * documentos apuntando al vacio. Archivar lo quita de los desplegables y conserva el
+   * historico intacto.
+   */
   archive(at: Date): void {
     if (this.isArchived) return;
     this.props = { ...this.props, archivedAt: at };
@@ -365,6 +372,11 @@ export class Product extends AggregateRoot<ProductId> {
       tenantId: this.props.tenantId,
       payload: { productId: this.id, sku: this.props.sku },
     });
+  }
+
+  /** Lo devuelve al catalogo. El inventario que tuviera sigue donde estaba. */
+  restore(): void {
+    this.props = { ...this.props, archivedAt: null };
   }
 
   snapshot(): ProductProps & { id: ProductId } {

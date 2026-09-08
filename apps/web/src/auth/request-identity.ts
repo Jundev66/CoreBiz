@@ -20,7 +20,7 @@ import { activeDriver } from '@/composition/container';
  */
 function dailySalt(): string {
   const day = new Date().toISOString().slice(0, 10);
-  return `${process.env.DEMO_COOKIE_SECRET ?? 'corebiz-sal-local'}:${day}`;
+  return `${process.env.REQUEST_HASH_SECRET ?? 'corebiz-sal-local'}:${day}`;
 }
 
 export async function clientFingerprint(): Promise<string> {

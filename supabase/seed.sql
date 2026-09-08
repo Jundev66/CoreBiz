@@ -139,7 +139,7 @@ begin
   -- Clientes
   --
   -- El codigo es unico DENTRO del tenant, no globalmente: otra empresa puede
-  -- tener tambien su CLI-001.
+  -- tener tambien su CLT26000001.
   -- ─────────────────────────────────────────────────────────────────────────
   insert into public.customers (
     id, tenant_id, code, name, tax_id, email,
@@ -153,14 +153,14 @@ begin
     case when c.credit_limit is null then null else 'USD' end,
     now() - interval '110 days'
   from (values
-    (1, 'CLI-001', 'Bodega La Esquina',       'J-30456789-1', 150000::bigint),
-    (2, 'CLI-002', 'Panaderia Santa Rosa',    'J-31122334-5',  80000),
-    (3, 'CLI-003', 'Ferreteria El Tornillo',  'J-29887766-0', 300000),
-    (4, 'CLI-004', 'Farmacia San Jose',       'J-30111222-3',    null),
-    (5, 'CLI-005', 'Licoreria El Brindis',    'J-31998877-6', 220000),
-    (6, 'CLI-006', 'Charcuteria Los Andes',   'J-30554433-2',  95000),
-    (7, 'CLI-007', 'Supermercado Mi Barrio',  'J-29334455-7', 500000),
-    (8, 'CLI-008', 'Restaurante Dona Carmen', 'J-31667788-4', 120000)
+    (1, 'CLT26000001', 'Bodega La Esquina',       'J-30456789-1', 150000::bigint),
+    (2, 'CLT26000002', 'Panaderia Santa Rosa',    'J-31122334-5',  80000),
+    (3, 'CLT26000003', 'Ferreteria El Tornillo',  'J-29887766-0', 300000),
+    (4, 'CLT26000004', 'Farmacia San Jose',       'J-30111222-3',    null),
+    (5, 'CLT26000005', 'Licoreria El Brindis',    'J-31998877-6', 220000),
+    (6, 'CLT26000006', 'Charcuteria Los Andes',   'J-30554433-2',  95000),
+    (7, 'CLT26000007', 'Supermercado Mi Barrio',  'J-29334455-7', 500000),
+    (8, 'CLT26000008', 'Restaurante Dona Carmen', 'J-31667788-4', 120000)
   ) as c(n, code, name, tax_id, credit_limit);
 
   -- ─────────────────────────────────────────────────────────────────────────
@@ -247,11 +247,11 @@ begin
   ) on commit drop;
 
   insert into seed_notes (no, customer, days_ago) values
-    (1, 'CLI-001', 24),
-    (2, 'CLI-003', 18),
-    (3, 'CLI-007', 12),
-    (4, 'CLI-002',  6),
-    (5, 'CLI-008',  2);
+    (1, 'CLT26000001', 24),
+    (2, 'CLT26000003', 18),
+    (3, 'CLT26000007', 12),
+    (4, 'CLT26000002',  6),
+    (5, 'CLT26000008',  2);
 
   create temporary table seed_lines (
     note_no integer not null,
@@ -362,14 +362,51 @@ begin
   end loop;
 
   -- ─────────────────────────────────────────────────────────────────────────
+  -- Proveedores
+  --
+  -- Sin ellos, el modulo de compras se abre vacio y no se puede registrar una
+  -- entrada de mercancia: el desplegable no tiene a quien elegir. Un modulo que
+  -- existe y no se puede usar se lee como un modulo roto.
+  -- ─────────────────────────────────────────────────────────────────────────
+  insert into public.suppliers (
+    id, tenant_id, code, name, tax_id, contact_name, phone, created_at
+  )
+  select
+    ('30000000-0000-4000-8000-' || lpad(p.n::text, 12, '0'))::uuid,
+    v_tenant, p.code, p.name, p.tax_id, p.contact, p.phone,
+    now() - interval '100 days'
+  from (values
+    (1, 'PRV26000001', 'Distribuidora Central, C.A.', 'J-30778899-1', 'Luis Marcano',  '0212-5551020'),
+    (2, 'PRV26000002', 'Alimentos del Valle',         'J-31445566-8', 'Rosa Bermudez', '0414-3339977'),
+    (3, 'PRV26000003', 'Importadora La Guaira',       'J-29556677-4', 'Pedro Alcala',  '0424-8812345')
+  ) as p(n, code, name, tax_id, contact, phone);
+
+  -- ─────────────────────────────────────────────────────────────────────────
   -- Correlativo
   --
   -- Apunta al siguiente numero libre. Si quedara desfasado, la primera nota que
   -- emitiera la aplicacion chocaria contra el indice unico (tenant_id, number),
   -- y fallaria en la accion mas visible que tiene el producto.
   -- ─────────────────────────────────────────────────────────────────────────
-  insert into public.document_sequences (tenant_id, doc_type, prefix, next_number, padding)
-  values (v_tenant, 'delivery_note', 'NE', (select max(no) + 1 from seed_notes), 6);
+  insert into public.document_sequences (tenant_id, doc_type, period, prefix, next_number, padding)
+  values (v_tenant, 'delivery_note', '', 'NE', (select max(no) + 1 from seed_notes), 6);
+
+  -- Correlativos de los registros maestros, con el ano como periodo.
+  --
+  -- El de clientes apunta al noveno porque la semilla trae ocho: sin esta fila, el
+  -- primer cliente que diera de alta el visitante recibiria `CLT26000001`, que ya
+  -- esta puesto, y chocaria contra el indice unico (tenant_id, code) — en el alta,
+  -- que es lo primero que alguien prueba.
+  --
+  -- El de productos arranca en uno porque los SKU sembrados (`HRN-001`) no salen del
+  -- correlativo: son codigos con significado, de los que un comercio ya tiene
+  -- impresos en la etiqueta del estante, y el sistema los respeta.
+  insert into public.document_sequences (tenant_id, doc_type, period, prefix, next_number, padding)
+  values
+    (v_tenant, 'customer', to_char(now(), 'YY'), 'CLT', (select count(*) + 1 from public.customers where tenant_id = v_tenant), 6),
+    (v_tenant, 'product',  to_char(now(), 'YY'), 'PRD', 1, 6),
+    (v_tenant, 'supplier', to_char(now(), 'YY'), 'PRV',
+      (select count(*) + 1 from public.suppliers where tenant_id = v_tenant), 6);
 
   -- ─────────────────────────────────────────────────────────────────────────
   -- Contadores de consumo
@@ -392,6 +429,8 @@ begin
       (select count(*) from public.customers   where tenant_id = v_tenant)),
     (v_tenant, 'products',  'total',
       (select count(*) from public.products    where tenant_id = v_tenant)),
+    (v_tenant, 'suppliers', 'total',
+      (select count(*) from public.suppliers   where tenant_id = v_tenant)),
     (v_tenant, 'users',     'total',
       (select count(*) from public.memberships where tenant_id = v_tenant)),
     (v_tenant, 'documents_month', to_char(now() at time zone 'UTC', 'YYYY-MM'), v_docs_mes);

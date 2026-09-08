@@ -70,7 +70,7 @@ describe('Recepcion de mercancia', () => {
       ids: testIds,
     });
 
-    const result = await createSupplier({ code, name: `Proveedor ${code}` });
+    const result = await createSupplier({ name: `Proveedor ${code}` });
     if (!result.ok)
       throw new Error(`no se pudo crear el proveedor: ${JSON.stringify(result.error)}`);
     return result.value.id;
@@ -194,7 +194,7 @@ describe('Recepcion de mercancia', () => {
       clock: systemClock,
       ids: testIds,
     });
-    const supplier = await createSupplier({ code: 'PRV-AJENO', name: 'Proveedor ajeno' });
+    const supplier = await createSupplier({ name: 'Proveedor ajeno' });
     expect(supplier.ok).toBe(true);
     if (!supplier.ok) return;
 

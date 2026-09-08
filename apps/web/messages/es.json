@@ -4,13 +4,15 @@
     "tagline": "Mini ERP para pequeños comercios"
   },
   "nav": {
-    "dashboard": "Panel",
     "customers": "Clientes",
     "products": "Productos",
     "deliveryNotes": "Notas de entrega",
     "purchases": "Compras",
     "reports": "Reportes",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "payments": "Cobros",
+    "quotes": "Presupuestos",
+    "purchaseOrders": "Órdenes de compra"
   },
   "customers": {
     "title": "Clientes",
@@ -24,8 +26,13 @@
     "creditLimit": "Límite de crédito",
     "noCreditLimit": "Sin límite",
     "empty": "Aún no hay clientes registrados.",
-    "search": "Buscar por nombre, código o RIF",
-    "created": "Cliente creado correctamente."
+    "created": "Cliente creado. Su código es {code}.",
+    "detail": "Ficha del cliente",
+    "address": "Dirección",
+    "archive": "Archivar",
+    "restore": "Devolver a la lista",
+    "archivedNotice": "Este cliente está archivado: no aparece en la lista ni se puede elegir al emitir una nota. Sus documentos anteriores siguen intactos.",
+    "showArchived": "Ver también los archivados"
   },
   "quota": {
     "usage": "{current} de {limit} {resource}",
@@ -35,7 +42,6 @@
   },
   "errors": {
     "Forbidden": "No tienes permiso para hacer esto.",
-    "DuplicateCode": "Ya existe un cliente con el código {code}.",
     "QuotaExceeded": "Alcanzaste el límite de {limit} en tu plan actual.",
     "Required": "El campo {field} es obligatorio.",
     "TooShort": "El campo {field} es demasiado corto.",
@@ -57,7 +63,8 @@
     "InvalidCost": "El costo no es válido.",
     "InvalidStock": "La cantidad de inventario no es válida.",
     "OutOfRange": "El campo {field} está fuera de rango.",
-    "FeatureNotAvailable": "Esta función requiere el plan {requiredPlan}."
+    "FeatureNotAvailable": "Esta función requiere el plan {requiredPlan}.",
+    "StockNotTracked": "Este producto no lleva control de inventario, así que no hay nada que ajustar."
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
@@ -70,23 +77,36 @@
     "title": "Prueba CoreBiz",
     "intro": "Te damos una copia propia del sistema, con datos de un comercio de ejemplo. Puedes tocarlo todo.",
     "pointOwnCopy": "Es tu copia: nadie más ve lo que hagas.",
-    "pointNoSignup": "No hace falta registrarse ni dar un correo.",
-    "pointExpires": "Se borra sola a las 24 horas.",
+    "pointExpires": "La cuenta y todo lo que registres se borran a las 24 horas.",
     "start": "Entrar a la demostración",
     "orSignUp": "¿Prefieres empezar con tu negocio de verdad?",
-    "rateLimited": "Ya creaste una demostración hace poco. Vuelve a intentarlo dentro de un rato, o entra con la que ya tienes."
+    "rateLimited": "Ya creaste una demostración hace poco. Vuelve a intentarlo dentro de un rato, o entra con la que ya tienes.",
+    "pointCredentials": "Te damos un usuario y una contraseña: entras como entraría un empleado.",
+    "starting": "Preparando tu copia…",
+    "credentialsTitle": "Ya tienes cuenta",
+    "credentialsHint": "Apúntalas si quieres volver a entrar más tarde. No hay forma de recuperarlas.",
+    "expiresIn": "Esta cuenta y todo lo que registres se borran en {hours} horas.",
+    "readonlyNotice": "Ahora mismo hay muchas demostraciones abiertas, así que entras en modo solo lectura: puedes verlo todo, pero no guardar cambios. Vuelve más tarde para tener tu propia copia.",
+    "enter": "Entrar al sistema",
+    "unavailable": "No se pudo preparar la demostración. Inténtalo otra vez en un momento.",
+    "sessionNotice": "Estás probando CoreBiz. Esta cuenta y sus datos se borran en {hours} horas.",
+    "sessionNoticeSoon": "Estás probando CoreBiz. Esta cuenta y sus datos se borran en menos de una hora.",
+    "createAccount": "Crear mi cuenta",
+    "templateNotice": "Estás en el comercio de ejemplo. Es la copia que se clona para cada visitante, así que lo que registres aquí lo verán los siguientes."
   },
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
-    "language": "Idioma",
     "back": "Volver",
     "add": "Agregar",
     "remove": "Quitar",
     "issue": "Emitir",
     "print": "Imprimir",
     "change": "Cambiar",
-    "optional": "(opcional)"
+    "optional": "(opcional)",
+    "saving": "Guardando…",
+    "view": "Ver",
+    "notSet": "—"
   },
   "products": {
     "title": "Productos",
@@ -104,7 +124,34 @@
     "lowStock": "Bajo mínimo",
     "belowMinimum": "{count, plural, one {# producto esta bajo su minimo} other {# productos estan bajo su minimo}}.",
     "empty": "Aún no hay productos en el catálogo.",
-    "created": "Producto creado correctamente."
+    "created": "Producto creado. Su código es {sku}.",
+    "adjust": "Ajustar",
+    "adjustTitle": "Ajustar inventario",
+    "currentStock": "ahora hay {onHand} {unit}",
+    "countedBalance": "Cuántas hay de verdad",
+    "adjustReason": "Motivo",
+    "adjustReasonHint": "Conteo del lunes, merma, rotura…",
+    "adjustSubmit": "Guardar el ajuste",
+    "adjusted": "Listo. El inventario queda en {onHand} {unit}.",
+    "skuHint": "Déjalo en blanco y lo generamos. O escribe el de la etiqueta o el código de barras.",
+    "detail": "Ficha del producto",
+    "archive": "Sacar del catálogo",
+    "restore": "Devolver al catálogo",
+    "archivedNotice": "Este producto está fuera del catálogo: no aparece en la lista ni se puede vender. El inventario que tenía sigue donde estaba.",
+    "showArchived": "Ver también los que están fuera del catálogo",
+    "movements": "Movimientos de inventario",
+    "noMovements": "Todavía no hay movimientos de este producto.",
+    "movementDate": "Cuándo",
+    "movementKind": "Qué pasó",
+    "movementQuantity": "Cantidad",
+    "movementBalance": "Quedó en",
+    "movementReason": "Motivo o documento",
+    "movementKinds": {
+      "in": "Entrada",
+      "out": "Salida",
+      "adjust": "Ajuste",
+      "void_compensation": "Devolución por anulación"
+    }
   },
   "deliveryNotes": {
     "title": "Notas de entrega",
@@ -156,7 +203,6 @@
     "newPassword": "Nueva contraseña",
     "businessName": "Nombre de tu negocio",
     "passwordHint": "Mínimo 8 caracteres. Cuanto más larga, mejor.",
-    "account": "Mi cuenta",
     "signOut": "Cerrar sesión",
     "switchBusiness": "Cambiar de empresa",
     "login": {
@@ -356,7 +402,6 @@
       "Forbidden": "No tienes permiso para hacer esto.",
       "FeatureNotAvailable": "Compras requiere el plan {requiredPlan}.",
       "InvalidFormat": "Revisa los datos.",
-      "DuplicateCode": "Ya existe un proveedor con el código {code}.",
       "QuotaExceeded": "Alcanzaste el límite de {limit} en tu plan actual.",
       "SupplierNotFound": "El proveedor no existe.",
       "ProductNotFound": "Uno de los productos no existe.",
@@ -372,7 +417,15 @@
       "AlreadyVoided": "Esta entrada ya estaba anulada.",
       "CannotVoidDraft": "Esta entrada todavía no se ha registrado.",
       "InsufficientStock": "No hay suficiente inventario de {sku}."
-    }
+    },
+    "detail": "Detalle de la recepción",
+    "supplierReference": "Documento del proveedor",
+    "notes": "Notas",
+    "voidedNotice": "Esta recepción está anulada. Motivo: {reason}. Lo que había entrado al inventario se devolvió con un movimiento compensatorio; nada se borró.",
+    "lineDescription": "Producto",
+    "lineQuantity": "Cantidad",
+    "lineUnitCost": "Coste unitario",
+    "lineTotal": "Total de la línea"
   },
   "suppliers": {
     "title": "Proveedores",
@@ -385,10 +438,54 @@
     "email": "Correo",
     "taxId": "RIF",
     "empty": "Todavía no has registrado proveedores.",
-    "created": "Proveedor {code} creado."
+    "created": "Proveedor creado. Su código es {code}.",
+    "archive": "Archivar",
+    "restore": "Devolver a la lista",
+    "showArchived": "Ver también los archivados",
+    "state": "Estado"
   },
   "plans": {
     "lockedHeading": "{feature} está en el plan PRO",
     "lockedBody": "Tu plan actual no incluye este módulo. Puedes verlo aquí para saber qué hace, y activarlo cuando lo necesites."
+  },
+  "status": {
+    "active": "Activo",
+    "archived": "Archivado"
+  },
+  "development": {
+    "badge": "En desarrollo",
+    "whyHeading": "Por qué todavía no está",
+    "meanwhileHeading": "Mientras tanto"
+  },
+  "payments": {
+    "title": "Cobros",
+    "subtitle": "Lo que te deben y lo que ya te pagaron",
+    "summary": "Registrar los pagos que recibes y saber, en cualquier momento, cuánto te debe cada cliente.",
+    "pointRecord": "Registrar un pago contra una o varias notas de entrega, en efectivo, transferencia o divisa.",
+    "pointBalance": "Saldo pendiente por cliente, calculado de los documentos y los pagos, nunca escrito a mano.",
+    "pointCreditLimit": "Activar el límite de crédito, que ya está implementado y hoy no llega a dispararse.",
+    "pointAging": "Antigüedad de la deuda: qué lleva más de 30, 60 y 90 días sin cobrarse.",
+    "why": "Es el siguiente módulo, y el que más se nota que falta. El límite de crédito ya está escrito y probado en las reglas de negocio, pero la consulta de saldo pendiente devuelve siempre cero porque no hay cobros que restar: la regla existe y nunca se dispara. Se dejó fuera para tener antes un ciclo completo de comprar, vender y reportar.",
+    "meanwhile": "El límite de crédito de cada cliente ya se puede registrar en su ficha, listo para cuando el módulo entre:"
+  },
+  "quotes": {
+    "title": "Presupuestos",
+    "subtitle": "Lo que ofreces antes de despachar",
+    "summary": "Pasar un presupuesto a un cliente y convertirlo en nota de entrega cuando lo acepte, sin volver a escribirlo.",
+    "pointDraft": "Mismas líneas y mismos totales que una nota de entrega, con su tasa de cambio congelada.",
+    "pointNoStock": "No mueve inventario: un presupuesto no despacha nada, solo compromete un precio.",
+    "pointConvert": "Caducidad, y conversión a nota de entrega en un clic cuando el cliente dice que sí.",
+    "why": "El correlativo ya los contempla y el documento se parece mucho a una nota de entrega. Lo que cambia son dos cosas —que no mueve inventario y que caduca— y son justo las que impiden reutilizar las reglas tal cual. Se prefirió terminar el documento que sí mueve mercancía.",
+    "meanwhile": "Para dejar un precio por escrito puedes emitir la nota de entrega cuando se cierre la venta:"
+  },
+  "purchaseOrders": {
+    "title": "Órdenes de compra",
+    "subtitle": "Lo que pides antes de que llegue",
+    "summary": "Dejar por escrito lo que le pediste a un proveedor y ver qué falta por llegar.",
+    "pointOrder": "La orden con sus líneas y su coste acordado, antes de que entre nada al inventario.",
+    "pointPartial": "Recepciones parciales contra la misma orden: llegan diez de veinte y se anota.",
+    "pointPending": "Qué está pedido y aún no ha llegado, que es la mitad de la pregunta al reponer.",
+    "why": "Es un recorte declarado, no un olvido. Para un comercio pequeño lo que mueve el negocio es registrar lo que llegó; pedir formalmente antes es un flujo de empresas con departamento de compras. El ciclo comprar, inventario y vender queda cerrado sin esto.",
+    "meanwhile": "Registra la entrada de mercancía cuando llegue, que es lo que actualiza el inventario:"
   }
 }

@@ -64,6 +64,24 @@ function fieldErrorsOf(error: z.ZodError): Record<string, string> {
 }
 
 /**
+ * Intentos de acceso permitidos por minuto y origen.
+ *
+ * Es configurable por una razon concreta y legitima: la suite E2E entra decenas
+ * de veces desde la MISMA maquina en menos de un minuto, y con el limite de
+ * produccion —ocho— la mitad de los tests fallan por un bloqueo que en realidad
+ * demuestra que el limite funciona. Un limite que no se puede relajar para
+ * probarlo acaba probandose en produccion.
+ *
+ * El valor por defecto es el de produccion, asi que no configurar nada deja el
+ * sistema protegido. La constante vive en `@corebiz/application` y no lee
+ * variables de entorno a proposito: los casos de uso no conocen el despliegue.
+ */
+function loginLimit(fallback: number): number {
+  const raw = Number(process.env.LOGIN_MAX_PER_MINUTE);
+  return Number.isFinite(raw) && raw > 0 ? Math.trunc(raw) : fallback;
+}
+
+/**
  * Consume un intento y devuelve el estado de bloqueo, si lo hay.
  *
  * La clave lleva el hash de la IP y NO el correo. Es deliberado: contar por
@@ -75,7 +93,7 @@ async function consumeAttempt(policy: keyof typeof RATE_LIMITS): Promise<AuthSta
   const { limit, windowSeconds } = RATE_LIMITS[policy];
   const decision = await rateLimiter().hit(
     `${policy}:${await clientFingerprint()}`,
-    limit,
+    policy === 'login' ? loginLimit(limit) : limit,
     windowSeconds,
   );
 
@@ -264,7 +282,20 @@ export async function updatePasswordAction(
 
 export async function signOutAction(): Promise<void> {
   const supabase = await supabaseServer();
-  await supabase.auth.signOut();
+
+  // `scope: 'local'` cierra ESTA sesion y solo esta. Por defecto, Supabase cierra
+  // TODAS las del usuario en todos sus dispositivos, y eso no es lo que espera
+  // quien pulsa "cerrar sesion" en el ordenador del mostrador: le cerraria
+  // tambien la del movil, sin avisar y sin forma de deshacerlo.
+  //
+  // Cerrar en todas partes es una funcion legitima —cuando se pierde un
+  // dispositivo— pero es OTRO boton, con su propia advertencia.
+  //
+  // Se descubrio porque rompia la suite E2E: varios navegadores entraban con la
+  // misma cuenta y el primero que salia dejaba a los demas con un token que
+  // apuntaba a una sesion borrada. GoTrue respondia "session_not_found" y la
+  // aplicacion concluia, razonablemente, que no habia nadie dentro.
+  await supabase.auth.signOut({ scope: 'local' });
 
   const store = await cookies();
   store.delete(ACTIVE_TENANT_COOKIE);

@@ -5,8 +5,10 @@ import { redirect } from 'next/navigation';
 import { Plan, asId, isRole, type Role, type TenantId, type UserId } from '@corebiz/domain';
 import {
   makeCreateCustomer,
+  makeSetCustomerStatus,
   makeCreateProduct,
   makeAdjustStock,
+  makeSetProductStatus,
   makeIssueDeliveryNote,
   makeVoidDeliveryNote,
   makeInviteUser,
@@ -15,6 +17,7 @@ import {
   makeRevokeInvitation,
   makeUpdateTenantSettings,
   makeCreateSupplier,
+  makeSetSupplierStatus,
   makeReceiveGoods,
   systemClock,
   type ReadModels,
@@ -23,14 +26,12 @@ import {
 } from '@corebiz/application';
 import {
   cryptoTokenFactory,
-  demoSandboxIsAlive,
   listMemberships,
   loadTenantProfile,
   postgresRuntime,
 } from '@corebiz/infrastructure';
 import type { Membership } from '@corebiz/infrastructure';
 import { currentUser, supabaseIsConfigured, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
-import { readSandboxCookie } from '@/demo/sandbox';
 import { getMemoryUnitOfWork, memoryReadModels, MEMORY_TENANT } from './memory-driver';
 
 /**
@@ -60,15 +61,15 @@ export const DEMO_ROLE_COOKIE = 'corebiz_demo_role';
 export const DEMO_PLAN_COOKIE = 'corebiz_demo_plan';
 
 /**
- * Tenant y usuario del entorno PUBLICO de demostracion sobre Postgres.
+ * La PLANTILLA de demostracion sobre Postgres, la que se clona.
  *
- * Son fijos y los siembra `supabase/seed.sql`. Con sesion iniciada no se usan
- * para nada: el identificador sale de la sesion verificada y el tenant, de la
- * pertenencia. Solo entran en juego para quien llega sin cuenta, y aun asi la
- * fila tiene que estar marcada `is_demo` — ver `resolveContext()`.
+ * Es fija y la siembra `supabase/seed.sql`. Nadie opera este tenant: cada
+ * visitante recibe una COPIA suya con su propia cuenta. Solo se usa como origen
+ * en `/demo`, y `app.clone_demo_tenant()` se niega a copiarlo si la fila no
+ * esta marcada `is_demo` — sin esa guarda, un identificador mal puesto serviria
+ * la empresa de un cliente real a un desconocido.
  */
 export const DEMO_TENANT_ID = asId<TenantId>('00000000-0000-4000-8000-000000000001');
-export const DEMO_USER_ID = asId<UserId>('00000000-0000-4000-8000-000000000002');
 
 /** El equivalente en modo memoria, donde el identificador no tiene que ser un uuid. */
 const MEMORY_USER_ID = asId<UserId>('00000000-0000-0000-0000-000000000001');
@@ -107,10 +108,27 @@ export interface SessionInfo {
   readonly email: string | null;
   readonly memberships: readonly Membership[];
   /**
-   * True cuando se opera el tenant publico de demostracion SIN sesion. La
-   * interfaz lo usa para ofrecer "crear mi cuenta" en lugar de "salir".
+   * True mientras se opera un tenant de demostracion. La interfaz lo usa para
+   * pintar el aviso de caducidad y ofrecer "crear mi cuenta" junto a "salir":
+   * quien esta probando el sistema necesita las dos cosas.
    */
-  readonly isPublicDemo: boolean;
+  readonly isDemo: boolean;
+  /**
+   * Cuando desaparece el sandbox, o null si el tenant no caduca.
+   *
+   * Viaja hasta la interfaz porque el aviso tiene que dar la HORA CONCRETA y no
+   * "en 24 horas": quien entra a las once de la noche merece saber que es
+   * manana a las once, no calcularlo.
+   */
+  readonly expiresAt: Date | null;
+  /**
+   * True solo con `DATA_DRIVER=memory`.
+   *
+   * Hace falta porque "no caduca" NO significa "es el modo memoria": la plantilla de
+   * demostracion sobre Postgres tampoco caduca, y durante un rato el aviso le decia
+   * a quien estaba operando contra la base de datos que estaba corriendo sin ella.
+   */
+  readonly memoryDriver: boolean;
 }
 
 interface ResolvedContext {
@@ -118,24 +136,26 @@ interface ResolvedContext {
   readonly session: SessionInfo;
 }
 
-const ANONYMOUS: SessionInfo = { email: null, memberships: [], isPublicDemo: true };
-
-/** El acceso publico a la demostracion se puede apagar con una variable. */
-function demoIsOpen(): boolean {
-  return process.env.DEMO_ENABLED !== 'false';
-}
+/** Sesion del modo memoria, donde no hay identidad que verificar. */
+const MEMORY_SESSION: SessionInfo = {
+  email: null,
+  memberships: [],
+  isDemo: true,
+  expiresAt: null,
+  memoryDriver: true,
+};
 
 /** Un plan desconocido en la fila degrada a `free`; nunca escala a `pro`. */
 function planFrom(code: string): 'free' | 'pro' {
   return code === 'pro' ? 'pro' : 'free';
 }
 
-/** Contexto del tenant de demostracion, antes de leer su fila. */
-function demoContext(role: Role, planOverride: 'pro' | null, memory: boolean): TenantContext {
+/** Contexto del modo memoria, donde no hay fila que leer ni sesion que verificar. */
+function memoryContext(role: Role, planOverride: 'pro' | null): TenantContext {
   return {
-    tenantId: memory ? MEMORY_TENANT : DEMO_TENANT_ID,
+    tenantId: MEMORY_TENANT,
     tenantSlug: 'comercial-demo',
-    actor: { userId: memory ? MEMORY_USER_ID : DEMO_USER_ID, role },
+    actor: { userId: MEMORY_USER_ID, role },
     plan: Plan.of(planOverride ?? 'free'),
     settings: DEMO_SETTINGS,
     isDemo: true,
@@ -145,125 +165,107 @@ function demoContext(role: Role, planOverride: 'pro' | null, memory: boolean): T
 /**
  * Resuelve quien actua y con que limites.
  *
- * El orden importa:
+ * SIEMPRE a partir de una sesion verificada. No hay rama anonima, y su ausencia
+ * es lo mejor de este archivo.
  *
- *   1. Si hay SESION VERIFICADA, manda ella. El rol y el plan salen de la
- *      pertenencia y de la fila del tenant, nunca de una cookie. Las cookies de
- *      demostracion siguen existiendo, pero solo se obedecen dentro de un tenant
- *      marcado `is_demo`, donde no hay nada que proteger y si mucho que ensenar.
+ * La habia: quien llegaba sin cuenta operaba el tenant publico de demostracion,
+ * y una cookie firmada decia cual era su sandbox. Funcionaba y estaba defendida
+ * —se comprobaba `is_demo` en la fila, no solo el identificador— pero era una
+ * rama que decidia a que empresa entra alguien SIN haber verificado quien es.
+ * Ese tipo de codigo no falla de forma visible: falla sirviendo datos ajenos.
  *
- *   2. Sin sesion se cae al tenant PUBLICO de demostracion. Es lo que permite
- *      que el enlace del CV se abra y funcione sin registrarse, y es la unica
- *      razon de que ese tenant exista.
- *
- * La condicion de la segunda rama merece leerse dos veces: se exige que la fila
- * tenga `is_demo = true`. No basta con que el identificador coincida con la
- * constante. Si alguien apuntara `DEMO_TENANT_ID` a una empresa real —por una
- * variable mal puesta, por una semilla equivocada— la aplicacion NO la sirve sin
- * sesion: manda a la pantalla de acceso. Sin esa comprobacion, un error de
- * configuracion se convertiria en una empresa entera abierta al publico.
+ * Ahora el visitante de la demostracion recibe credenciales propias en `/demo` y
+ * entra por la misma puerta que todo el mundo. El rol sale de la pertenencia y
+ * el plan de la fila del tenant, nunca de una cookie. Las cookies de
+ * demostracion siguen existiendo para cambiar de rol y de plan en vivo, y solo
+ * se obedecen dentro de un tenant marcado `is_demo`, donde no hay nada que
+ * proteger y si mucho que ensenar.
  */
 async function resolveContext(): Promise<ResolvedContext> {
   const store = await cookies();
 
-  const rawRole = store.get(DEMO_ROLE_COOKIE)?.value ?? 'owner';
-  const cookieRole: Role = isRole(rawRole) ? rawRole : 'owner';
+  const rawRole = store.get(DEMO_ROLE_COOKIE)?.value;
+  const roleOverride: Role | null = rawRole !== undefined && isRole(rawRole) ? rawRole : null;
   const planOverride = store.get(DEMO_PLAN_COOKIE)?.value === 'pro' ? 'pro' : null;
 
   // Modo memoria: no hay sesiones que verificar y no hay nada que aislar.
   if (activeDriver() === 'memory') {
-    return { ctx: demoContext(cookieRole, planOverride, true), session: ANONYMOUS };
+    return { ctx: memoryContext(roleOverride ?? 'owner', planOverride), session: MEMORY_SESSION };
   }
 
   const url = databaseUrl();
   const user = supabaseIsConfigured() ? await currentUser() : null;
 
-  // ── Sesion verificada ──────────────────────────────────────────────────────
-  if (user !== null) {
-    const memberships = await listMemberships(url, user.id);
+  // Sin sesion no se sirve nada. Quien quiera ver el sistema sin registrarse
+  // tiene `/demo`, que le da una cuenta de verdad; lo que no hay es una forma de
+  // entrar sin ser nadie.
+  if (user === null) redirect('/login');
 
-    // Cuenta creada pero sin empresa: pasa cuando el alta exige confirmar el
-    // correo y la primera sesion llega despues. Se pregunta el nombre del
-    // negocio una sola vez y se entra.
-    if (memberships.length === 0) redirect('/onboarding');
+  const memberships = await listMemberships(url, user.id);
 
-    // El tenant activo sale de la cookie SOLO si esta entre los suyos. Ese
-    // filtro es lo que rechaza el acceso cruzado por URL o por cookie: la lista
-    // viene de `app.my_memberships()`, que resuelve la identidad con
-    // `auth.uid()` y no acepta un identificador de usuario como parametro.
-    const requested = store.get(ACTIVE_TENANT_COOKIE)?.value;
-    const active = memberships.find((m) => m.tenantId === requested) ?? memberships[0];
-    if (active === undefined) redirect('/onboarding');
+  // Cuenta creada pero sin empresa: pasa cuando el alta exige confirmar el
+  // correo y la primera sesion llega despues. Se pregunta el nombre del
+  // negocio una sola vez y se entra.
+  if (memberships.length === 0) redirect('/onboarding');
 
-    const role: Role = isRole(active.role) ? active.role : 'viewer';
+  // El tenant activo sale de la cookie SOLO si esta entre los suyos. Ese
+  // filtro es lo que rechaza el acceso cruzado por URL o por cookie: la lista
+  // viene de `app.my_memberships()`, que resuelve la identidad con
+  // `auth.uid()` y no acepta un identificador de usuario como parametro.
+  const requested = store.get(ACTIVE_TENANT_COOKIE)?.value;
+  const active = memberships.find((m) => m.tenantId === requested) ?? memberships[0];
+  if (active === undefined) redirect('/onboarding');
 
-    const base: TenantContext = {
-      tenantId: asId<TenantId>(active.tenantId),
-      tenantSlug: active.slug,
-      actor: { userId: asId<UserId>(user.id), role },
-      // Dentro de un tenant de demostracion la cookie puede subir el plan para
-      // que se vea el otro lado de las cuotas. En una empresa real, jamas.
-      plan: Plan.of(
-        active.isDemo && planOverride !== null ? planOverride : planFrom(active.planCode),
-      ),
-      settings: DEMO_SETTINGS,
-      isDemo: active.isDemo,
-    };
-
-    const session: SessionInfo = { email: user.email, memberships, isPublicDemo: false };
-    const profile = await loadTenantProfile(url, base);
-    if (profile === null) return { ctx: base, session };
-
-    return {
-      ctx: {
-        ...base,
-        settings: {
-          taxLabel: profile.taxLabel,
-          taxRateBp: profile.taxRateBp,
-          baseCurrency: profile.baseCurrency === 'VES' ? 'VES' : 'USD',
-          exchangeRateScaled: profile.exchangeRateScaled,
-          exchangeRateAt: profile.exchangeRateAt,
-        },
-      },
-      session,
-    };
-  }
-
-  // ── Sin sesion: solo la demostracion publica, y solo si de verdad lo es ─────
-  if (!demoIsOpen()) redirect('/login');
+  const membershipRole: Role = isRole(active.role) ? active.role : 'viewer';
 
   /*
-   * El sandbox propio de este visitante, si lo tiene.
+   * El rol sale de la PERTENENCIA. La cookie de demostracion solo puede
+   * cambiarlo bajo dos condiciones a la vez, y las dos hacen falta:
    *
-   * La cookie va FIRMADA, asi que escribir a mano el identificador de otro
-   * sandbox no lleva a ninguna parte. Y se comprueba que siga VIVO: un tenant
-   * caducado ya es inaccesible por `app.is_member()`, pero enterarse aqui
-   * permite servir la plantilla compartida en lugar de una aplicacion vacia
-   * sin explicacion.
+   *   1. El tenant esta marcado `is_demo`. En una empresa real, jamas.
+   *   2. La pertenencia es de PROPIETARIO — el rol mas alto que hay.
    *
-   * Sin sandbox —o con uno caducado— se cae a la plantilla. Es el modo
-   * degradado: el visitante sigue viendo el sistema funcionando, que es lo
-   * unico que de verdad importa de esta pantalla.
+   * La segunda es la que impide que esto sea una escalada de privilegios. En
+   * modo degradado, cuando ya no cabe otra copia de la base, el visitante entra
+   * como `viewer` sobre la plantilla COMPARTIDA: sin esa condicion le bastaria
+   * escribir una cookie para pasar a propietario y escribir en el tenant que
+   * todos los demas van a clonar. Siendo ya propietario no hay nada por encima a
+   * lo que subir, asi que la cookie solo puede quitar permisos — que es
+   * exactamente para lo que existe: ensenar el RBAC actuando en vivo.
    */
-  const sandbox = await readSandboxCookie();
-  const tenantId =
-    sandbox !== null && (await demoSandboxIsAlive(url, sandbox))
-      ? asId<TenantId>(sandbox)
-      : DEMO_TENANT_ID;
+  const role: Role =
+    active.isDemo && membershipRole === 'owner' && roleOverride !== null
+      ? roleOverride
+      : membershipRole;
 
-  const demo: TenantContext = {
-    ...demoContext(cookieRole, planOverride, false),
-    tenantId,
+  const base: TenantContext = {
+    tenantId: asId<TenantId>(active.tenantId),
+    tenantSlug: active.slug,
+    actor: { userId: asId<UserId>(user.id), role },
+    // Dentro de un tenant de demostracion la cookie puede subir el plan para
+    // que se vea el otro lado de las cuotas. En una empresa real, jamas.
+    plan: Plan.of(
+      active.isDemo && planOverride !== null ? planOverride : planFrom(active.planCode),
+    ),
+    settings: DEMO_SETTINGS,
+    isDemo: active.isDemo,
   };
-  const profile = await loadTenantProfile(url, demo);
 
-  if (profile === null || !profile.isDemo) redirect('/login');
+  const profile = await loadTenantProfile(url, base);
+
+  const session: SessionInfo = {
+    email: user.email,
+    memberships,
+    isDemo: active.isDemo,
+    expiresAt: profile?.expiresAt ?? null,
+    memoryDriver: false,
+  };
+
+  if (profile === null) return { ctx: base, session };
 
   return {
     ctx: {
-      ...demo,
-      tenantSlug: profile.slug,
-      plan: Plan.of(planOverride ?? planFrom(profile.planCode)),
+      ...base,
       settings: {
         taxLabel: profile.taxLabel,
         taxRateBp: profile.taxRateBp,
@@ -272,7 +274,7 @@ async function resolveContext(): Promise<ResolvedContext> {
         exchangeRateAt: profile.exchangeRateAt,
       },
     },
-    session: ANONYMOUS,
+    session,
   };
 }
 
@@ -324,8 +326,10 @@ export async function forRequest(_tenantSlug?: string) {
     session,
     queries: runtime.queries,
     createCustomer: makeCreateCustomer(shared),
+    setCustomerStatus: makeSetCustomerStatus(shared),
     createProduct: makeCreateProduct(shared),
     adjustStock: makeAdjustStock(shared),
+    setProductStatus: makeSetProductStatus(shared),
     issueDeliveryNote: makeIssueDeliveryNote(shared),
     voidDeliveryNote: makeVoidDeliveryNote(shared),
 
@@ -339,6 +343,7 @@ export async function forRequest(_tenantSlug?: string) {
     // Compras. Modulo entero gated a PRO: el gate vive en el caso de uso, no en
     // la ruta ni en el enlace del menu.
     createSupplier: makeCreateSupplier(shared),
+    setSupplierStatus: makeSetSupplierStatus(shared),
     receiveGoods: makeReceiveGoods(shared),
   };
 }

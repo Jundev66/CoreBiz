@@ -140,4 +140,9 @@ export class Supplier extends AggregateRoot<SupplierId> {
     if (this.props.archivedAt !== null) return;
     this.props = { ...this.props, archivedAt: at };
   }
+
+  /** Lo devuelve a la lista. Las recepciones que registro siguen donde estaban. */
+  restore(): void {
+    this.props = { ...this.props, archivedAt: null };
+  }
 }

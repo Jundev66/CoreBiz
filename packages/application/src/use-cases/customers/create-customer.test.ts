@@ -34,30 +34,58 @@ describe('createCustomer', () => {
     usage = new Map();
   });
 
-  it('da de alta un cliente y devuelve su codigo normalizado', async () => {
-    const result = await build()({ code: ' cli-001 ', name: 'Bodega La Esquina' });
+  it('genera el codigo con el prefijo, el ano y el correlativo', async () => {
+    const createCustomer = build();
 
+    // Nadie escribe el codigo. Es la diferencia que justifica el cambio: dar de
+    // alta un cliente ya no obliga a inventarse un formato ni a recordarlo.
+    const primero = await createCustomer({ name: 'Bodega La Esquina' });
+    const segundo = await createCustomer({ name: 'Ferreteria El Tornillo' });
+
+    expect(primero.ok && segundo.ok).toBe(true);
+    if (!primero.ok || !segundo.ok) return;
+
+    // El ano sale del reloj INYECTADO, asi que esto se puede comprobar sin
+    // esperar a enero.
+    expect(primero.value.code).toBe('CLT26000001');
+    expect(segundo.value.code).toBe('CLT26000002');
+    expect(customers.size).toBe(2);
+  });
+
+  it('el correlativo se reinicia al cambiar de ano', async () => {
+    const enDosMilVeintiseis = build();
+    expect((await enDosMilVeintiseis({ name: 'Cliente de 2026' })).ok).toBe(true);
+
+    const enDosMilVeintisiete = makeCreateCustomer({
+      uow,
+      ctx: makeTestContext(),
+      clock: fixedClock(new Date('2027-01-02T09:00:00.000Z')),
+      ids: sequentialIdGenerator('cus27'),
+    });
+
+    // Vuelve al uno. Sin esto, el ano del codigo seria decorativo: `CLT27000002`
+    // daria a entender que es el segundo cliente de 2027 cuando seria el primero.
+    const result = await enDosMilVeintisiete({ name: 'Cliente de 2027' });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value.code).toBe('CLI-001');
-    expect(customers.size).toBe(1);
+    if (result.ok) expect(result.value.code).toBe('CLT27000001');
   });
 
   it('incrementa el contador de uso, que es lo que alimenta la cuota', async () => {
     const createCustomer = build();
-    await createCustomer({ code: 'A', name: 'Cliente A' });
-    await createCustomer({ code: 'B', name: 'Cliente B' });
+    await createCustomer({ name: 'Cliente A' });
+    await createCustomer({ name: 'Cliente B' });
 
     expect(usage.get(`${TENANT}:customers`)).toBe(2);
   });
 
   it('deja rastro en la auditoria', async () => {
-    await build()({ code: 'CLI-001', name: 'Bodega La Esquina' });
+    await build()({ name: 'Bodega La Esquina' });
 
     expect(audit.entries).toHaveLength(1);
     expect(audit.entries[0]).toMatchObject({
       action: 'customer.created',
       entityType: 'customer',
-      summary: { code: 'CLI-001', name: 'Bodega La Esquina' },
+      summary: { name: 'Bodega La Esquina' },
     });
   });
 });
@@ -75,7 +103,7 @@ describe('createCustomer — autorizacion', () => {
       ids: sequentialIdGenerator(),
     });
 
-    const result = await createCustomer({ code: 'X', name: 'Cliente X' });
+    const result = await createCustomer({ name: 'Cliente X' });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.kind).toBe('Forbidden');
@@ -92,7 +120,7 @@ describe('createCustomer — autorizacion', () => {
       ids: sequentialIdGenerator(),
     });
 
-    expect((await createCustomer({ code: 'X', name: 'Cliente X' })).ok).toBe(false);
+    expect((await createCustomer({ name: 'Cliente X' })).ok).toBe(false);
   });
 
   it('un vendedor si puede', async () => {
@@ -104,7 +132,7 @@ describe('createCustomer — autorizacion', () => {
       ids: sequentialIdGenerator(),
     });
 
-    expect((await createCustomer({ code: 'X', name: 'Cliente X' })).ok).toBe(true);
+    expect((await createCustomer({ name: 'Cliente X' })).ok).toBe(true);
   });
 });
 
@@ -119,7 +147,7 @@ describe('createCustomer — cuota del plan', () => {
       ids: sequentialIdGenerator(),
     });
 
-    const result = await createCustomer({ code: 'X', name: 'Cliente X' });
+    const result = await createCustomer({ name: 'Cliente X' });
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -141,27 +169,37 @@ describe('createCustomer — cuota del plan', () => {
       ids: sequentialIdGenerator(),
     });
 
-    expect((await createCustomer({ code: 'X', name: 'Cliente X' })).ok).toBe(true);
+    expect((await createCustomer({ name: 'Cliente X' })).ok).toBe(true);
   });
 });
 
 describe('createCustomer — reglas de negocio', () => {
-  it('rechaza un codigo duplicado, comparando ya normalizado', async () => {
+  it('dos clientes de tenants distintos pueden llevar el mismo codigo', async () => {
+    // El correlativo es por tenant. Que dos comercios tengan cada uno su
+    // `CLT26000001` es correcto y ademas inevitable: sus numeraciones no se
+    // conocen entre si, igual que no se conocen sus datos.
     const customers = new Map<string, Customer>();
-    const createCustomer = makeCreateCustomer({
+    const otro = asId<TenantId>('tenant-otro');
+
+    const enA = makeCreateCustomer({
       uow: new InMemoryUnitOfWork(customers, new Map(), TENANT),
       ctx: makeTestContext(),
       clock: fixedClock(NOW),
-      ids: sequentialIdGenerator(),
+      ids: sequentialIdGenerator('a'),
+    });
+    const enB = makeCreateCustomer({
+      uow: new InMemoryUnitOfWork(customers, new Map(), otro),
+      ctx: makeTestContext({ tenantId: otro }),
+      clock: fixedClock(NOW),
+      ids: sequentialIdGenerator('b'),
     });
 
-    await createCustomer({ code: 'CLI-001', name: 'Primero' });
-    // Distinta caja y con espacios: sigue siendo el mismo codigo.
-    const duplicate = await createCustomer({ code: ' cli-001 ', name: 'Segundo' });
+    const deA = await enA({ name: 'Cliente de A' });
+    const deB = await enB({ name: 'Cliente de B' });
 
-    expect(duplicate.ok).toBe(false);
-    if (!duplicate.ok) expect(duplicate.error.kind).toBe('DuplicateCode');
-    expect(customers.size).toBe(1);
+    expect(deA.ok && deB.ok).toBe(true);
+    if (deA.ok && deB.ok) expect(deA.value.code).toBe(deB.value.code);
+    expect(customers.size).toBe(2);
   });
 
   it('propaga los errores de validacion del dominio sin reinterpretarlos', async () => {
@@ -172,7 +210,7 @@ describe('createCustomer — reglas de negocio', () => {
       ids: sequentialIdGenerator(),
     });
 
-    const result = await createCustomer({ code: 'X', name: 'A' });
+    const result = await createCustomer({ name: 'A' });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.kind).toBe('TooShort');
   });
@@ -185,7 +223,7 @@ describe('createCustomer — reglas de negocio', () => {
       ids: sequentialIdGenerator(),
     });
 
-    const result = await createCustomer({ code: 'X', name: 'Cliente', creditLimit: 'mucho' });
+    const result = await createCustomer({ name: 'Cliente', creditLimit: 'mucho' });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.kind).toBe('InvalidCreditLimit');
   });
@@ -199,7 +237,7 @@ describe('createCustomer — reglas de negocio', () => {
       ids: sequentialIdGenerator(),
     });
 
-    const result = await createCustomer({ code: 'X', name: 'Cliente', creditLimit: '1500,50' });
+    const result = await createCustomer({ name: 'Cliente', creditLimit: '1500,50' });
     expect(result.ok).toBe(true);
     expect([...customers.values()][0]?.creditLimit?.toString()).toBe('1500.50');
   });
@@ -213,7 +251,7 @@ describe('createCustomer — reglas de negocio', () => {
       ids: sequentialIdGenerator(),
     });
 
-    await createCustomer({ code: 'X', name: 'Cliente', creditLimit: '   ' });
+    await createCustomer({ name: 'Cliente', creditLimit: '   ' });
     expect([...customers.values()][0]?.creditLimit).toBeNull();
   });
 });
@@ -237,8 +275,8 @@ describe('createCustomer — aislamiento entre tenants', () => {
       ids: sequentialIdGenerator('b'),
     });
 
-    expect((await forTenantA({ code: 'CLI-001', name: 'Cliente de A' })).ok).toBe(true);
-    expect((await forTenantB({ code: 'CLI-001', name: 'Cliente de B' })).ok).toBe(true);
+    expect((await forTenantA({ name: 'Cliente de A' })).ok).toBe(true);
+    expect((await forTenantB({ name: 'Cliente de B' })).ok).toBe(true);
     expect(customers.size).toBe(2);
   });
 });

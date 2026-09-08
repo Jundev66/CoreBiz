@@ -47,6 +47,8 @@ export interface TenantProfile {
   readonly planCode: string;
   readonly role: string;
   readonly isDemo: boolean;
+  /** Cuando desaparece el tenant, o null si no caduca. Solo los sandboxes caducan. */
+  readonly expiresAt: Date | null;
   readonly taxLabel: string;
   readonly taxRateBp: number;
   readonly baseCurrency: string;
@@ -90,6 +92,7 @@ export async function loadTenantProfile(
       planCode: row.tenant.planCode,
       role: row.role,
       isDemo: row.tenant.isDemo,
+      expiresAt: row.tenant.expiresAt,
       taxLabel: row.tenant.taxLabel ?? 'Impuesto informativo',
       taxRateBp: row.tenant.taxRateBp,
       baseCurrency: row.tenant.baseCurrency,
