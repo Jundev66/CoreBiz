@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations, getFormatter } from 'next-intl/server';
+import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
+import { VoidNoteForm } from '@/ui/void-note-form';
 
 /**
  * Detalle de una nota de entrega.
@@ -162,6 +164,14 @@ export default async function DeliveryNoteDetailPage({
       <p className="mt-8 border-t border-[var(--color-line)] pt-4 text-center text-sm font-medium">
         {t('legal.nonFiscal')}
       </p>
+
+      {/* Anular solo tiene sentido una vez, y solo con permiso para hacerlo. Ocultar el
+          formulario NO es la medida de seguridad —el caso de uso comprueba lo mismo— pero
+          ofrecer un boton que va a fallar es una forma tonta de gastarle el tiempo a
+          alguien. */}
+      {note.status !== 'voided' && can(ctx.actor, 'delivery_note:void') && (
+        <VoidNoteForm deliveryNoteId={id} number={note.number} />
+      )}
     </Shell>
   );
 }

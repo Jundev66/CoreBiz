@@ -181,7 +181,12 @@
     "printHint": "En el diálogo, elige «Guardar como PDF» para tener el archivo.",
     "deliveredBy": "Entregado por",
     "receivedBy": "Recibido por",
-    "print": "Imprimir o guardar en PDF"
+    "print": "Imprimir o guardar en PDF",
+    "voidTitle": "Anular esta nota",
+    "voidExplain": "La nota {number} conserva su número y su historial. El inventario que salió vuelve al almacén, y el documento queda marcado como anulado con el motivo que escribas.",
+    "voidReason": "Motivo",
+    "voidReasonHint": "Error en la cantidad, devolución del cliente…",
+    "voidSubmit": "Anular la nota"
   },
   "reports": {
     "title": "Reportes",

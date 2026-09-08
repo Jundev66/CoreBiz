@@ -181,7 +181,12 @@
     "printHint": "In the dialog, choose “Save as PDF” to get the file.",
     "deliveredBy": "Delivered by",
     "receivedBy": "Received by",
-    "print": "Print or save as PDF"
+    "print": "Print or save as PDF",
+    "voidTitle": "Void this note",
+    "voidExplain": "Note {number} keeps its number and its history. The stock that left returns to the warehouse, and the document stays on record marked as voided with the reason you write.",
+    "voidReason": "Reason",
+    "voidReasonHint": "Wrong quantity, customer returned the goods…",
+    "voidSubmit": "Void the note"
   },
   "reports": {
     "title": "Reports",

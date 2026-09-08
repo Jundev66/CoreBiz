@@ -82,6 +82,9 @@ export async function voidDeliveryNoteAction(
 
   revalidatePath('/delivery-notes');
   revalidatePath('/products');
+  // Y la ficha desde la que se anula, que es la unica pantalla que el usuario esta
+  // mirando en ese momento. Sin esto se queda enseñando la nota como si siguiera viva.
+  revalidatePath(`/delivery-notes/${deliveryNoteId}`);
   return { status: 'success' };
 }
 
