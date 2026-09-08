@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 /**
@@ -18,7 +18,7 @@ export default async function CustomersPage({
 }) {
   const t = await getTranslations();
   const { archivados } = await searchParams;
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const includeArchived = archivados === '1';
   const page = await queries.customers.list({ limit: 25, includeArchived });

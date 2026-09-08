@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { acceptInvitation, previewInvitation } from '@corebiz/infrastructure';
+import { accessTokenOrRedirect } from '@/api/client';
+import { acceptInvitationViaApi, previewInvitationViaApi } from '@/api/onboarding';
 import { currentUser, supabaseIsConfigured, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
-import { activeDriver } from '@/composition/container';
+import { activeDriver } from '@/api/session';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -79,8 +80,7 @@ export default async function AcceptInvitationPage({
     );
   }
 
-  const url = process.env.DATABASE_URL ?? '';
-  const preview = await previewInvitation(url, user.id, token);
+  const preview = await previewInvitationViaApi(await accessTokenOrRedirect(), token);
 
   if (preview === null) return <Invalid />;
 
@@ -90,10 +90,7 @@ export default async function AcceptInvitationPage({
     const raw = formData.get('token');
     if (typeof raw !== 'string') redirect('/');
 
-    const session = await currentUser();
-    if (session === null) redirect('/login');
-
-    const result = await acceptInvitation(process.env.DATABASE_URL ?? '', session.id, raw);
+    const result = await acceptInvitationViaApi(await accessTokenOrRedirect(), raw);
     if (!result.ok) redirect('/invitations/accept');
 
     // Se entra directamente a la empresa recien aceptada, sin obligar a buscarla

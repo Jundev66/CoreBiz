@@ -65,6 +65,29 @@ module.exports = {
       to: { path: '^packages/(db|infrastructure)/src/(drizzle|schema)/' },
     },
 
+    // ── La web es SOLO entrega ────────────────────────────────────────────
+    {
+      name: 'web-no-infrastructure',
+      comment:
+        'apps/web habla con la API por HTTP; no abre transacciones ni conoce el esquema. ' +
+        'Si vuelve a importar @corebiz/infrastructure o @corebiz/db, la persistencia se ha ' +
+        'colado otra vez en el front y la separacion pasa a ser decorativa. Que esas dos ' +
+        'importaciones no existan es el criterio de aceptacion de la migracion entera. ' +
+        'La PRIMERA defensa no es esta regla: es pnpm con `hoist=false`. Al no declarar ' +
+        'esos paquetes en apps/web/package.json, el import ni siquiera resuelve y `tsc` ' +
+        'rompe. Esta regla existe para el dia en que alguien "arregle" ese error anadiendo ' +
+        'la dependencia de vuelta — que es exactamente como se deshace una separacion.',
+      severity: 'error',
+      from: { path: '^apps/web/' },
+      /*
+       * Dos alternativas en el patron, y las dos hacen falta. La primera atrapa el
+       * import cuando el paquete SI esta declarado y resuelve a su ruta. La segunda
+       * atrapa el especificador en crudo cuando no resuelve: sin ella, la regla no
+       * podria fallar nunca en el estado actual del repositorio, y una regla que no
+       * puede fallar es peor que ninguna porque se lee como una garantia.
+       */
+      to: { path: '^(packages/(db|infrastructure)/src/|@corebiz/(db|infrastructure))' },
+    },
     // ── La API tampoco puede saltarse el composition root ─────────────────
     {
       name: 'api-modules-no-composition',

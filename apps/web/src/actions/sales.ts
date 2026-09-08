@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import type { ActionState } from './customers';
 
 /**
@@ -57,7 +57,7 @@ export async function issueDeliveryNoteAction(
     return { status: 'error', errorKind: 'NoLines' };
   }
 
-  const { issueDeliveryNote } = await forRequest();
+  const { issueDeliveryNote } = await apiForRequest();
   const result = await issueDeliveryNote({ customerId, lines, notes: notes || null });
 
   if (!result.ok) {
@@ -88,7 +88,7 @@ export async function voidDeliveryNoteAction(
   const deliveryNoteId = field(formData, 'deliveryNoteId');
   const reason = field(formData, 'reason');
 
-  const { voidDeliveryNote } = await forRequest();
+  const { voidDeliveryNote } = await apiForRequest();
   const result = await voidDeliveryNote({ deliveryNoteId, reason });
 
   if (!result.ok) {
@@ -109,7 +109,7 @@ export async function createProductAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { createProduct } = await forRequest();
+  const { createProduct } = await apiForRequest();
 
   // `exactOptionalPropertyTypes` distingue "ausente" de "presente pero undefined".
   // Un campo opcional vacio se OMITE, en lugar de enviarse como undefined.
@@ -154,7 +154,7 @@ export async function adjustStockAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { adjustStock } = await forRequest();
+  const { adjustStock } = await apiForRequest();
 
   const result = await adjustStock({
     productId: field(formData, 'productId'),
@@ -191,7 +191,7 @@ export async function setProductStatusAction(formData: FormData): Promise<void> 
   const archived = formData.get('archived') === 'true';
   if (typeof productId !== 'string' || productId === '') redirect('/products');
 
-  const { setProductStatus } = await forRequest();
+  const { setProductStatus } = await apiForRequest();
   await setProductStatus({ productId, archived });
 
   revalidatePath('/products');

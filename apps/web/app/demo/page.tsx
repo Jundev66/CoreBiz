@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { activeDriver } from '@/composition/container';
+import { activeDriver } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
 import { demoConfig } from '@/demo/sandbox';
 import { DemoStart } from '@/ui/demo-start';

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
@@ -14,7 +14,7 @@ const STATUS_STYLES: Record<string, string> = {
 export default async function DeliveryNotesPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const page = await queries.deliveryNotes.list({ limit: 50 });
   const quota = ctx.plan.quota('documents_month', await queries.usage.current('documents_month'));

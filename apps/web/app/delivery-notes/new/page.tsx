@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { DeliveryNoteForm } from '@/ui/delivery-note-form';
 
 export default async function NewDeliveryNotePage() {
   const t = await getTranslations();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const [customers, products] = await Promise.all([
     queries.customers.options(),

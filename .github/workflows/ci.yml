@@ -182,8 +182,11 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @corebiz/e2e exec playwright install chromium --with-deps
 
-      - name: Construir la aplicacion contra Postgres
-        run: pnpm --filter @corebiz/web exec next build
+      # Las dos aplicaciones, porque desde la migracion a NestJS la suite arranca dos
+      # servidores. Construir solo la web dejaria a Playwright esperando a una API que
+      # no existe, con un timeout que no menciona la causa.
+      - name: Construir la API y la aplicacion contra Postgres
+        run: pnpm --filter @corebiz/api build && pnpm --filter @corebiz/web exec next build
         env:
           DATA_DRIVER: postgres
 
@@ -200,6 +203,7 @@ jobs:
         run: pnpm test:e2e:pg
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          SUPABASE_URL: http://127.0.0.1:54321
 
       - name: Publicar el reporte
         if: always()
@@ -237,10 +241,12 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @corebiz/e2e exec playwright install chromium --with-deps
 
-      # La aplicacion corre en modo memoria: sin Postgres y sin Docker, con datos
-      # sembrados de forma determinista. La suite no depende de ningun servicio.
-      - name: Construir la aplicacion
-        run: pnpm --filter @corebiz/web exec next build
+      # Las dos aplicaciones corren en modo memoria: sin Postgres y sin Docker, con
+      # datos sembrados de forma determinista. La suite no depende de ningun servicio,
+      # y que eso siga siendo cierto DESPUES de partir el sistema en dos procesos es la
+      # comprobacion de que el hexagono aguanta el cambio de adaptador primario.
+      - name: Construir la API y la aplicacion
+        run: pnpm --filter @corebiz/api build && pnpm --filter @corebiz/web exec next build
         env:
           DATA_DRIVER: memory
 

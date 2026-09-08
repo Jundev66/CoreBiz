@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
 import { SettingsNav } from '@/ui/settings-nav';
 
@@ -29,7 +29,7 @@ export default async function AuditPage({
 }) {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const params = await searchParams;
   const canRead = ctx.actor.role === 'owner' || ctx.actor.role === 'admin';

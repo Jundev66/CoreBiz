@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { UpgradeNotice } from '@/ui/upgrade-notice';
 
@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PurchasesPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   if (!ctx.plan.has('purchasing')) {
     return (

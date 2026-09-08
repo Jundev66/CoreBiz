@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { purgeExpiredDemos } from '@corebiz/infrastructure';
+import { callInternal, InternalCallFailed } from '@/api/internal';
 
 /**
  * Purga de sandboxes caducados — la TERCERA red, no la primera.
@@ -13,6 +13,11 @@ import { purgeExpiredDemos } from '@corebiz/infrastructure';
  * proyecto —no lo esta en el Supabase local— el espacio se seguiria liberando,
  * aunque mas tarde. Tres redes para lo mismo suena excesivo hasta que la unica
  * que habia falla un fin de semana.
+ *
+ * Desde que la persistencia vive en la API, esto es un PROXY: comprueba el secreto que
+ * manda Vercel Cron y reenvia la orden a `/internal/cron/purge` con el secreto
+ * compartido entre los dos despliegues. Son dos secretos distintos a proposito — el de
+ * Vercel lo conoce la plataforma y el interno solo los dos servicios.
  */
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +39,24 @@ export async function GET(request: Request): Promise<Response> {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const deleted = await purgeExpiredDemos(process.env.DATABASE_URL ?? '');
+  let deleted: number;
+  try {
+    ({ purged: deleted } = await callInternal<{ purged: number }>('/cron/purge'));
+  } catch (error) {
+    if (error instanceof InternalCallFailed) {
+      // Se rinde y lo dice, en lugar de fingir que purgo. La purga de verdad corre
+      // dentro de Postgres cada diez minutos y no depende de esta llamada.
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          event: 'demo.purge_unreachable',
+          at: new Date().toISOString(),
+        }),
+      );
+      return Response.json({ deleted: 0, upstream: 'unreachable' }, { status: 503 });
+    }
+    throw error;
+  }
 
   // `console.warn` y no `console.info`: la regla de lint del proyecto solo
   // admite `warn` y `error`, y tiene razon — en serverless, un `info` por

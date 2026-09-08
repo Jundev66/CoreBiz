@@ -52,6 +52,45 @@ export default tseslint.config(
     },
   },
 
+  // ── La web conoce FORMAS, no VALORES ──────────────────────────────────────
+  //
+  // apps/web ya no monta casos de uso: los invoca la API por HTTP. Pero sigue
+  // necesitando los TIPOS de `@corebiz/application` —la forma de los modelos de
+  // lectura, del contexto de tenant, de las entradas de cada comando— y eso es
+  // legitimo: un tipo no arrastra nada a produccion y es lo que hace que el cliente
+  // HTTP este comprobado contra el mismo puerto que cumple el adaptador Drizzle.
+  //
+  // La linea se traza donde importa: `allowTypeImports` deja pasar los tipos y prohibe
+  // los VALORES. Ahi es donde estan las factorias `makeX` y los adaptadores en memoria,
+  // que son las dos formas de volver a ejecutar logica de negocio dentro del front.
+  //
+  // Va en eslint y no en dependency-cruiser porque el barril del paquete exporta a la
+  // vez tipos y valores: en el grafo de dependencias son la MISMA arista, y una regla
+  // que no puede distinguirlas se leeria como una garantia sin poder fallar nunca.
+  //
+  // Lo que si se puede importar como valor es `@corebiz/application/ports`, otro
+  // especificador: un puerto es un contrato, y ahi viven las politicas de limitacion.
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@corebiz/application',
+              allowTypeImports: true,
+              message:
+                'apps/web no ejecuta logica de negocio: la invoca por HTTP. Importa el tipo ' +
+                'con `import type`, o el valor desde `@corebiz/application/ports` si es un ' +
+                'contrato.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ── Limites internos de cada paquete ──────────────────────────────────────
   {
     files: ['packages/**/src/**/*.ts'],

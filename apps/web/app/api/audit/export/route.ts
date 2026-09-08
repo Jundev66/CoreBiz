@@ -1,4 +1,4 @@
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 
 /**
  * Exportacion del registro de auditoria a CSV.
@@ -11,7 +11,7 @@ import { forRequest } from '@/composition/container';
  * antes de generar nada.
  */
 export async function GET(request: Request): Promise<Response> {
-  const { ctx, queries } = await forRequest();
+  const { ctx, queries } = await apiForRequest();
 
   if (ctx.actor.role !== 'owner' && ctx.actor.role !== 'admin') {
     return new Response('Forbidden', { status: 403 });

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { setCustomerStatusAction } from '@/actions/customers';
 import { Shell } from '@/ui/shell';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations();
   const { id } = await params;
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const customer = await queries.customers.byId(id);
   if (customer === null) notFound();

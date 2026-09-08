@@ -8,7 +8,7 @@ import {
 } from '@corebiz/application';
 import { postgresRuntime } from '@corebiz/infrastructure';
 import { RUNTIME, TENANT_CONTEXT } from '../tokens';
-import { activeDriver, databaseUrl } from './driver';
+import { activeDriver, databaseUrl } from '../config/driver';
 import { getMemoryUnitOfWork, memoryReadModels } from './memory-driver';
 
 export interface Runtime {

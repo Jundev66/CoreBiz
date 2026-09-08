@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 export default async function ProductsPage({
@@ -10,7 +10,7 @@ export default async function ProductsPage({
 }) {
   const t = await getTranslations();
   const { archivados } = await searchParams;
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const includeArchived = archivados === '1';
   const page = await queries.products.list({ limit: 50, includeArchived });

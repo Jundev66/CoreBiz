@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
-import type { SessionInfo } from '@/composition/container';
+import type { SessionInfo } from '@/api/session';
 
 /**
  * Marco comun de las pantallas de la aplicacion.

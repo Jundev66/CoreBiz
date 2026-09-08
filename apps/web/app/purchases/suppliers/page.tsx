@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, QuotaBar, TableFrame, Empty } from '@/ui/shell';
 import { UpgradeNotice } from '@/ui/upgrade-notice';
 import { SupplierForm } from '@/ui/supplier-form';
@@ -27,7 +27,7 @@ export default async function SuppliersPage({
 }) {
   const t = await getTranslations();
   const { archivados } = await searchParams;
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   if (!ctx.plan.has('purchasing')) {
     return (

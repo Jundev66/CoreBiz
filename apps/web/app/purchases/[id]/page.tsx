@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
 import { UpgradeNotice } from '@/ui/upgrade-notice';
 import { DetailList } from '@/ui/detail';
@@ -32,7 +32,7 @@ export default async function GoodsReceiptDetailPage({
   const t = await getTranslations();
   const format = await getFormatter();
   const { id } = await params;
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   if (!ctx.plan.has('purchasing')) {
     return (

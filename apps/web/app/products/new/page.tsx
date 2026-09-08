@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { ProductForm } from '@/ui/product-form';
 
 export default async function NewProductPage() {
   const t = await getTranslations();
-  const { ctx, session } = await forRequest();
+  const { ctx, session } = await apiForRequest();
 
   return (
     <Shell

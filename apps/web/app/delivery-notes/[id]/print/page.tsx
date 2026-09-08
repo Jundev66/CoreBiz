@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { PrintButton } from '@/ui/print-button';
 
 export async function generateMetadata({
@@ -44,7 +44,7 @@ export default async function PrintDeliveryNotePage({
   const { id } = await params;
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await forRequest();
+  const { ctx, queries } = await apiForRequest();
 
   const note = await queries.deliveryNotes.findById(id);
 

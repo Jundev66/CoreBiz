@@ -24,9 +24,17 @@ export const deliveryNoteLineSchema = z
 export const issueDeliveryNoteSchema = z
   .object({
     customerId: recordIdSchema,
-    // Una nota sin lineas no es una nota vacia: es un documento que no significa nada.
-    // El dominio tambien lo rechaza; aqui se para antes de abrir una transaccion.
-    lines: z.array(deliveryNoteLineSchema).min(1, 'NoLines'),
+    /*
+     * SIN `.min(1)`, y es deliberado.
+     *
+     * Que una nota necesite al menos una linea es una regla de NEGOCIO, y el dominio ya
+     * la aplica devolviendo `NoLines`. Comprobarla tambien aqui parecia defensa en
+     * profundidad y era otra cosa: el esquema respondia 400 con la clave dentro de
+     * `fieldErrors` en lugar de 422 con `errorKind: 'NoLines'`, y la pantalla dejaba de
+     * encontrar el mensaje que llevaba enseñando desde siempre. Lo detecto un escenario
+     * BDD que no habia que tocar — que es exactamente para lo que estan.
+     */
+    lines: z.array(deliveryNoteLineSchema),
     quoteId: recordIdSchema.optional().or(z.literal('')),
     notes: z.string().trim().max(500).optional().or(z.literal('')),
   })

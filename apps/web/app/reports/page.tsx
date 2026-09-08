@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { forRequest, DEMO_PLAN_COOKIE } from '@/composition/container';
+import { apiForRequest, DEMO_PLAN_COOKIE } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
 import { PlanToggle } from '@/ui/plan-toggle';
 
@@ -12,7 +12,7 @@ import { PlanToggle } from '@/ui/plan-toggle';
  */
 export default async function ReportsPage() {
   const t = await getTranslations();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   if (!ctx.plan.has('reports')) {
     return (

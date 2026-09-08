@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { InDevelopment } from '@/ui/in-development';
 
@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function QuotesPage() {
   const t = await getTranslations();
-  const { ctx, session } = await forRequest();
+  const { ctx, session } = await apiForRequest();
 
   return (
     <Shell ctx={ctx} session={session} title={t('quotes.title')} subtitle={t('quotes.subtitle')}>

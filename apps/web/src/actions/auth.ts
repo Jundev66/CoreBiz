@@ -3,10 +3,10 @@
 import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { z } from 'zod';
-import { RATE_LIMITS } from '@corebiz/application';
-import { provisionTenant } from '@corebiz/infrastructure';
+import { RATE_LIMITS } from '@corebiz/application/ports';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
-import { clientFingerprint, rateLimiter } from '@/auth/request-identity';
+import { clientFingerprint, hitRateLimit } from '@/auth/request-identity';
+import { provisionTenantViaApi } from '@/api/onboarding';
 
 /**
  * Server Actions de autenticacion.
@@ -91,15 +91,21 @@ function loginLimit(fallback: number): number {
  */
 async function consumeAttempt(policy: keyof typeof RATE_LIMITS): Promise<AuthState | null> {
   const { limit, windowSeconds } = RATE_LIMITS[policy];
-  const decision = await rateLimiter().hit(
+  const decision = await hitRateLimit(
     `${policy}:${await clientFingerprint()}`,
     policy === 'login' ? loginLimit(limit) : limit,
     windowSeconds,
   );
 
-  return decision.allowed
-    ? null
-    : { status: 'error', errorKind: 'TooManyAttempts', retryAfter: decision.retryAfterSeconds };
+  if (decision.allowed) return null;
+
+  return {
+    status: 'error',
+    errorKind: 'TooManyAttempts',
+    // `exactOptionalPropertyTypes` prohibe pasar `undefined` explicito: la clave
+    // simplemente no se define cuando el limitador no sabe cuanto falta.
+    ...(decision.retryAfterSeconds !== undefined ? { retryAfter: decision.retryAfterSeconds } : {}),
+  };
 }
 
 // ─── Acceso ──────────────────────────────────────────────────────────────────
@@ -179,9 +185,12 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   // Sin sesion inmediata significa que Supabase mando un correo de confirmacion.
   if (data.session === null) return { status: 'sent' };
 
-  const provisioned = await provisionTenant(process.env.DATABASE_URL ?? '', data.user?.id ?? '', {
-    name: parsed.data.businessName,
-  });
+  // El token que acaba de devolver Supabase, no el de la cookie: la cookie todavia
+  // esta en la respuesta y no en la peticion, asi que leerla aqui seria una carrera.
+  const provisioned = await provisionTenantViaApi(
+    data.session.access_token,
+    parsed.data.businessName,
+  );
 
   // `ALREADY_OWNER` no es un fallo: es el doble envio del formulario. Se sigue
   // hacia dentro como si nada, que es lo que la persona esperaba que pasara.
@@ -216,12 +225,13 @@ export async function createBusinessAction(
   }
 
   const supabase = await supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  if (data.user === null) redirect('/login');
+  const { data } = await supabase.auth.getSession();
+  if (data.session === null) redirect('/login');
 
-  const provisioned = await provisionTenant(process.env.DATABASE_URL ?? '', data.user.id, {
-    name: parsed.data.businessName,
-  });
+  const provisioned = await provisionTenantViaApi(
+    data.session.access_token,
+    parsed.data.businessName,
+  );
 
   if (!provisioned.ok && provisioned.error !== 'ALREADY_OWNER') {
     return { status: 'error', errorKind: 'SignUpFailed' };

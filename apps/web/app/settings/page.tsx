@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, QuotaBar } from '@/ui/shell';
 import { SettingsNav } from '@/ui/settings-nav';
 import { TenantSettingsForm } from '@/ui/tenant-settings-form';
@@ -26,7 +26,7 @@ const TRACKED = ['customers', 'products', 'users', 'documents_month'] as const;
 
 export default async function SettingsPage() {
   const t = await getTranslations();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const usage = await Promise.all(
     TRACKED.map(async (resource) => ({

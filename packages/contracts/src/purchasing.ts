@@ -44,7 +44,8 @@ export const goodsReceiptLineSchema = z
 export const receiveGoodsSchema = z
   .object({
     supplierId: recordIdSchema,
-    lines: z.array(goodsReceiptLineSchema).min(1, 'NoLines'),
+    /* Sin `.min(1)`: la regla es del dominio. Ver la nota en `sales.ts`. */
+    lines: z.array(goodsReceiptLineSchema),
     /** El numero de factura o guia del proveedor, para poder cuadrar despues. */
     supplierReference: z.string().trim().max(64).optional().or(z.literal('')),
     notes: z.string().trim().max(500).optional().or(z.literal('')),

@@ -1,5 +1,15 @@
-import { loadEnv } from '../config/env';
+import { loadEnv } from './env';
 
+/*
+ * Vive en `config/` y no en `composition/`, y no es un detalle de organizacion.
+ *
+ * Aqui no se construye nada: se lee que modo esta activo y cual es la cadena de
+ * conexion. La regla `api-modules-no-composition` impide que un controller alcance el
+ * composition root —porque ahi podria fabricarse un `TenantContext` con el tenant
+ * equivocado— y saltaba con este archivo dentro. Tenia razon sobre el sitio: los
+ * modulos que operan ANTES de que exista un tenant (el alta, la demostracion, los
+ * internos) necesitan saber el modo, y no por eso deben poder montar un contexto.
+ */
 export type DataDriver = 'postgres' | 'memory';
 
 /**

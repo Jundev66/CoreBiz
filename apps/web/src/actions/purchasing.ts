@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 
 /**
  * Server Actions de compras.
@@ -52,7 +52,7 @@ export async function createSupplierAction(
   });
   if (!parsed.success) return { status: 'error', errorKind: 'InvalidFormat' };
 
-  const { createSupplier } = await forRequest();
+  const { createSupplier } = await apiForRequest();
   const result = await createSupplier({
     name: parsed.data.name,
     taxId: parsed.data.taxId || null,
@@ -109,7 +109,7 @@ export async function receiveGoodsAction(
 
   const reference = formData.get('supplierReference');
 
-  const { receiveGoods } = await forRequest();
+  const { receiveGoods } = await apiForRequest();
   const result = await receiveGoods({
     supplierId,
     lines: parseLines(formData),
@@ -138,7 +138,7 @@ export async function setSupplierStatusAction(formData: FormData): Promise<void>
   const archived = formData.get('archived') === 'true';
   if (typeof supplierId !== 'string' || supplierId === '') redirect('/purchases/suppliers');
 
-  const { setSupplierStatus } = await forRequest();
+  const { setSupplierStatus } = await apiForRequest();
   await setSupplierStatus({ supplierId, archived });
 
   revalidatePath('/purchases/suppliers');

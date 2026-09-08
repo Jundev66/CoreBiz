@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { activeDriver } from '@/composition/container';
+import { activeDriver } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
 
 /**
@@ -12,7 +12,7 @@ import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
  * todos los dias no se esconde detras de un texto de bienvenida— y la invitacion
  * a crear cuenta va debajo, donde solo la lee quien todavia no tiene una.
  *
- * No llama a `forRequest()` a proposito: eso montaria el contenedor de datos y,
+ * No llama a `apiForRequest()` a proposito: eso montaria el contenedor de datos y,
  * sin sesion ni demostracion disponible, redirigiria a la pantalla de acceso. La
  * portada tiene que poder verse siempre.
  */

@@ -2,11 +2,9 @@
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { RATE_LIMITS } from '@corebiz/application';
-import { provisionDemoSandbox } from '@corebiz/infrastructure';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
-import { clientFingerprint, rateLimiter } from '@/auth/request-identity';
-import { DEMO_TENANT_ID } from '@/composition/container';
+import { clientFingerprint } from '@/auth/request-identity';
+import { startDemoSandbox } from '@/api/demo';
 import { demoConfig } from '@/demo/sandbox';
 
 /**
@@ -41,29 +39,27 @@ export async function startDemoAction(_prev: DemoState, _formData: FormData): Pr
 
   const fingerprint = await clientFingerprint();
 
-  // Un visitante por origen y hora. El limite no es avaricia: cada uno cuesta una
-  // cuenta nueva y una copia entera de la base de demostracion.
-  const decision = await rateLimiter().hit(
-    `demoSandbox:${fingerprint}`,
-    demoConfig.maxPerHour(),
-    RATE_LIMITS.demoSandbox.windowSeconds,
-  );
-  if (!decision.allowed) {
-    return {
-      status: 'error',
-      errorKind: 'TooManyAttempts',
-      retryAfter: decision.retryAfterSeconds,
-    };
+  /*
+   * El limite por origen y el aprovisionamiento viajan JUNTOS en una sola llamada.
+   *
+   * Podrian ir separados —pedir permiso y luego crear— y seria peor: entre las dos
+   * llamadas cabe una tercera peticion, y el limite dejaria de contar lo que
+   * pretende. Que la API haga las dos cosas seguidas es lo que lo mantiene honesto.
+   *
+   * El hash del origen SI se calcula aqui, que es el unico sitio donde
+   * `x-forwarded-for` es de fiar. La IP no cruza el cable.
+   */
+  const result = await startDemoSandbox(fingerprint);
+
+  if (!result.ok) {
+    return result.errorKind === 'TooManyAttempts'
+      ? {
+          status: 'error',
+          errorKind: 'TooManyAttempts',
+          ...(result.retryAfter !== undefined ? { retryAfter: result.retryAfter } : {}),
+        }
+      : { status: 'error', errorKind: 'Unavailable' };
   }
-
-  const result = await provisionDemoSandbox(process.env.DATABASE_URL ?? '', {
-    templateTenantId: DEMO_TENANT_ID,
-    ipHash: fingerprint,
-    ttlHours: demoConfig.ttlHours(),
-    maxConcurrent: demoConfig.maxConcurrent(),
-  });
-
-  if (!result.ok) return { status: 'error', errorKind: 'Unavailable' };
 
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signInWithPassword({
@@ -87,7 +83,7 @@ export async function startDemoAction(_prev: DemoState, _formData: FormData): Pr
     status: 'ready',
     email: result.email,
     password: result.password,
-    hoursLeft: demoConfig.ttlHours(),
+    hoursLeft: result.hoursLeft,
     readonly: result.readonly,
   };
 }

@@ -5,6 +5,9 @@ import { CompositionModule } from './composition/composition.module';
 import { HealthModule } from './health/health.module';
 import { AdministrationModule } from './modules/administration/administration.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { DemoModule } from './modules/demo/demo.module';
+import { InternalModule } from './modules/internal/internal.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { DeliveryNotesModule } from './modules/delivery-notes/delivery-notes.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { ProductsModule } from './modules/products/products.module';
@@ -31,6 +34,9 @@ import { SessionModule } from './modules/session/session.module';
     PurchasingModule,
     AdministrationModule,
     InsightsModule,
+    OnboardingModule,
+    DemoModule,
+    InternalModule,
   ],
 })
 export class AppModule implements NestModule {
@@ -47,7 +53,20 @@ export class AppModule implements NestModule {
      */
     consumer
       .apply(AuthMiddleware)
-      .exclude('health', 'health/(.*)', 'docs', 'docs/(.*)', 'docs-json')
+      .exclude(
+        'health',
+        'health/(.*)',
+        'docs',
+        'docs/(.*)',
+        'docs-json',
+        // La demostracion entrega credenciales a quien no tiene ninguna: exigir
+        // sesion aqui haria imposible obtenerla. La protege el limitador por origen.
+        'v1/demo/(.*)',
+        // Los internos no llevan sesion de usuario porque se invocan ANTES de que
+        // exista una: el limitador protege el propio acceso. Los guarda un secreto
+        // compartido entre los dos despliegues.
+        'internal/(.*)',
+      )
       .forRoutes('*');
   }
 }

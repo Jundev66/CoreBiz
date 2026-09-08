@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
 import { SettingsNav } from '@/ui/settings-nav';
 import { InviteForm } from '@/ui/invite-form';
@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function TeamPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const [team, invitations, used] = await Promise.all([
     queries.admin.team(),

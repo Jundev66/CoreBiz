@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
 
 /**
@@ -18,7 +18,7 @@ export default async function DeliveryNoteDetailPage({
   const { id } = await params;
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const note = await queries.deliveryNotes.findById(id);
 

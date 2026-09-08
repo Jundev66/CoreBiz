@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { z } from 'zod';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 
 /**
  * Server Actions del modulo de administracion.
@@ -50,7 +50,7 @@ export async function inviteUserAction(_prev: AdminState, formData: FormData): P
   });
   if (!parsed.success) return { status: 'error', errorKind: 'InvalidFormat' };
 
-  const { inviteUser } = await forRequest();
+  const { inviteUser } = await apiForRequest();
   const result = await inviteUser(parsed.data);
 
   if (!result.ok) return failure(result.error);
@@ -73,7 +73,7 @@ export async function revokeInvitationAction(formData: FormData): Promise<void> 
   const id = formData.get('invitationId');
   if (typeof id !== 'string') return;
 
-  const { revokeInvitation } = await forRequest();
+  const { revokeInvitation } = await apiForRequest();
   await revokeInvitation(id);
 
   revalidatePath('/settings/team');
@@ -91,7 +91,7 @@ export async function changeMemberRoleAction(
     return { status: 'error', errorKind: 'InvalidFormat' };
   }
 
-  const { changeMemberRole } = await forRequest();
+  const { changeMemberRole } = await apiForRequest();
   const result = await changeMemberRole({ userId, role });
 
   if (!result.ok) return failure(result.error);
@@ -107,7 +107,7 @@ export async function removeMemberAction(
   const userId = formData.get('userId');
   if (typeof userId !== 'string') return { status: 'error', errorKind: 'InvalidFormat' };
 
-  const { removeMember } = await forRequest();
+  const { removeMember } = await apiForRequest();
   const result = await removeMember(userId);
 
   if (!result.ok) return failure(result.error);
@@ -153,7 +153,7 @@ export async function updateTenantSettingsAction(
     taxRateBp = Math.round(percent * 100);
   }
 
-  const { updateTenantSettings } = await forRequest();
+  const { updateTenantSettings } = await apiForRequest();
   const result = await updateTenantSettings({
     ...(parsed.data.name !== undefined && parsed.data.name !== ''
       ? { name: parsed.data.name }

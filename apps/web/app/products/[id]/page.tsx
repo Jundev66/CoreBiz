@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 import { setProductStatusAction } from '@/actions/sales';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
@@ -30,7 +30,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const t = await getTranslations();
   const format = await getFormatter();
   const { id } = await params;
-  const { ctx, session, queries } = await forRequest();
+  const { ctx, session, queries } = await apiForRequest();
 
   const product = await queries.products.byId(id);
   if (product === null) notFound();

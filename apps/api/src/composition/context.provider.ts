@@ -5,7 +5,7 @@ import type { TenantContext } from '@corebiz/application';
 import { listMemberships, loadTenantProfile, type Membership } from '@corebiz/infrastructure';
 import type { AuthenticatedRequest, VerifiedIdentity } from '../auth/authenticated-request';
 import { ACTIVE_CONTEXT, IDENTITY, MEMBERSHIPS, SESSION_INFO, TENANT_CONTEXT } from '../tokens';
-import { activeDriver, databaseUrl } from './driver';
+import { activeDriver, databaseUrl } from '../config/driver';
 import { MEMORY_TENANT } from './memory-driver';
 import { DEMO_SETTINGS, planFrom, settingsFrom } from './settings';
 import { NoActiveTenantException } from '../http/api-error';

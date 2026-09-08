@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JWT_VERIFIER } from '../tokens';
 import { SupabaseJwtVerifier } from './supabase-jwt.verifier';
-import { activeDriver } from '../composition/driver';
+import { activeDriver } from '../config/driver';
 
 /**
  * El verificador de tokens se construye PEREZOSAMENTE.

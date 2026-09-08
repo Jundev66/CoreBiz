@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { parseCustomerForm } from '@corebiz/contracts';
-import { forRequest } from '@/composition/container';
+import { apiForRequest } from '@/api/session';
 
 /**
  * Server Action: crear un cliente.
@@ -45,7 +45,7 @@ export async function createCustomerAction(
     return { status: 'error', errorKind: 'InvalidFormat', fieldErrors };
   }
 
-  const { createCustomer } = await forRequest();
+  const { createCustomer } = await apiForRequest();
 
   const result = await createCustomer({
     name: parsed.data.name,
@@ -86,7 +86,7 @@ export async function setCustomerStatusAction(formData: FormData): Promise<void>
   const archived = formData.get('archived') === 'true';
   if (typeof customerId !== 'string' || customerId === '') redirect('/customers');
 
-  const { setCustomerStatus } = await forRequest();
+  const { setCustomerStatus } = await apiForRequest();
   await setCustomerStatus({ customerId, archived });
 
   revalidatePath('/customers');

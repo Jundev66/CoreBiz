@@ -57,11 +57,22 @@ describe('validacion de entrada', () => {
     );
   });
 
-  it('una nota de entrega sin lineas no pasa', () => {
+  it('una nota sin lineas SI pasa la validacion de forma', () => {
+    // Y tiene que pasarla. Que una nota necesite al menos una linea es una regla de
+    // NEGOCIO, y la aplica el dominio devolviendo `NoLines`. Comprobarla tambien aqui
+    // parecia defensa en profundidad y era otra cosa: cambiaba un 422 con
+    // `errorKind: 'NoLines'` por un 400 con la clave escondida en `fieldErrors`, y la
+    // pantalla dejaba de encontrar el mensaje que llevaba enseñando desde siempre.
+    // Lo detecto un escenario BDD que no habia que tocar.
     const notes = new ZodValidationPipe(issueDeliveryNoteSchema);
-    expect(fieldErrors(() => notes.transform({ customerId: 'c1', lines: [] }))).toEqual({
-      lines: 'NoLines',
-    });
+    expect(notes.transform({ customerId: 'c1', lines: [] })).toMatchObject({ lines: [] });
+  });
+
+  it('pero una linea con la forma equivocada no', () => {
+    const notes = new ZodValidationPipe(issueDeliveryNoteSchema);
+    expect(() => notes.transform({ customerId: 'c1', lines: [{ productId: 'p1' }] })).toThrow(
+      BadRequestException,
+    );
   });
 
   it('acepta identificadores que NO son uuid', () => {

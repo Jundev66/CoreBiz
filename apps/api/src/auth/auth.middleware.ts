@@ -1,6 +1,6 @@
 import { Inject, Injectable, UnauthorizedException, type NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Response } from 'express';
-import { activeDriver } from '../composition/driver';
+import { activeDriver } from '../config/driver';
 import { JWT_VERIFIER } from '../tokens';
 import type { SupabaseJwtVerifier } from './supabase-jwt.verifier';
 import type { AuthenticatedRequest, VerifiedIdentity } from './authenticated-request';

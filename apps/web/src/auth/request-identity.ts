@@ -1,9 +1,7 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { headers } from 'next/headers';
-import { inMemoryRateLimiter, type RateLimiter } from '@corebiz/application';
-import { postgresRateLimiter } from '@corebiz/infrastructure';
-import { activeDriver } from '@/composition/container';
+import { callInternal, InternalCallFailed } from '@/api/internal';
 
 /**
  * De quien viene esta peticion, sin llegar a saberlo.
@@ -17,6 +15,11 @@ import { activeDriver } from '@/composition/container';
  * La sal incluye un secreto de despliegue ademas de la fecha: sin el, cualquiera
  * con la tabla delante podria recorrer el espacio de IPv4 y deshacer los hashes,
  * que es corto de sobra para un ataque de diccionario.
+ *
+ * El hash SE CALCULA AQUI y no en la API, aunque el contador viva alla. Es el unico
+ * sitio donde `x-forwarded-for` es de fiar: en Vercel la pone la plataforma y no es
+ * falsificable desde fuera. Calculado al otro lado del cable, la cabecera vendria de
+ * nuestro propio servidor y contaria lo que le dijeramos.
  */
 function dailySalt(): string {
   const day = new Date().toISOString().slice(0, 10);
@@ -35,19 +38,37 @@ export async function clientFingerprint(): Promise<string> {
   return createHash('sha256').update(`${dailySalt()}:${ip}`).digest('hex').slice(0, 32);
 }
 
-/**
- * Limitador activo.
- *
- * En memoria cuando no hay base de datos, para que `pnpm dev:nodb` y los tests
- * sigan funcionando. En Postgres en cuanto la hay, porque un contador por proceso
- * no limita nada en serverless: cada instancia de funcion tendria el suyo.
- */
-let memoryLimiter: RateLimiter | undefined;
+export interface RateLimitDecision {
+  readonly allowed: boolean;
+  readonly retryAfterSeconds?: number;
+}
 
-export function rateLimiter(): RateLimiter {
-  if (activeDriver() === 'memory' || (process.env.DATABASE_URL ?? '') === '') {
-    memoryLimiter ??= inMemoryRateLimiter();
-    return memoryLimiter;
+/**
+ * Registra un intento y dice si se admite.
+ *
+ * El contador vive en la API porque necesita Postgres: una ventana por proceso no
+ * limita nada cuando hay varias instancias sirviendo, y en Vercel cada invocacion
+ * puede ser un proceso nuevo.
+ *
+ * SI LA API NO CONTESTA, se admite el intento. Es una decision incomoda y es la
+ * correcta: fallar cerrado dejaria el formulario de acceso inutilizable durante el
+ * arranque en frio de Render —un minuto en el que nadie podria entrar— para evitar
+ * unos pocos intentos de mas en esa misma ventana. El limite protege de la fuerza
+ * bruta, no de una avalancha, y una fuerza bruta que necesita que la API este caida
+ * para pasar tiene un minuto al dia para intentarlo.
+ */
+export async function hitRateLimit(
+  bucket: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<RateLimitDecision> {
+  try {
+    return await callInternal<RateLimitDecision>('/rate-limits', { bucket, limit, windowSeconds });
+  } catch (error) {
+    if (error instanceof InternalCallFailed) {
+      console.warn('[rate-limit] la API no respondio; se admite el intento:', error.message);
+      return { allowed: true };
+    }
+    throw error;
   }
-  return postgresRateLimiter(process.env.DATABASE_URL ?? '');
 }
