@@ -34,10 +34,12 @@ Esquema compartido con `tenant_id` y **cuatro capas independientes** de contenci
   salta sus propias políticas.
 - **`SECURITY DEFINER` siempre con `set search_path = ''`.** Sin eso, la función es un vector
   de escalada de privilegios.
-- **La clave `service_role` bypassea RLS por completo.** Vive en cuarentena en un único
-  módulo, con una regla de dependency-cruiser que falla el build ante cualquier importación
-  no autorizada, una guarda en runtime que lanza si se evalúa en el navegador, y `gitleaks`
-  en CI.
+- **No se usa la clave `service_role` en ninguna parte.** Bypassea RLS por completo, y la
+  tentación de tenerla "por si acaso" es exactamente cómo se acaba filtrando. Todo lo que la
+  necesitaría entra por funciones `SECURITY DEFINER` acotadas, revocadas de `public`, que
+  hacen una sola cosa cada una: provisionar una empresa, aceptar una invitación, clonar la
+  demostración. Una función que hace una cosa se puede auditar leyéndola; una llave maestra,
+  no.
 
 ## Por qué la matriz de tests importa
 

@@ -34,10 +34,17 @@ secreto vive en él (ver `.env.example`).
 3. En **Settings → Database**, copia las dos cadenas de conexión:
    - **Transaction pooler**, puerto `6543` → `DATABASE_URL`
    - **Direct connection**, puerto `5432` → `DIRECT_URL`
-4. En **Settings → API**, copia `URL`, `anon key` y `service_role key`.
+4. En **Settings → API**, copia `URL` y `anon key`.
 
-> ⚠️ La `service_role key` **bypasea Row Level Security por completo**. Nunca la pongas
-> en una variable con prefijo `NEXT_PUBLIC_`, ni la compartas en una captura de pantalla.
+> La `service_role key` **no se usa en este proyecto y no hay que copiarla**. Bypasea Row
+> Level Security por completo, y todo lo que necesitaría —crear una empresa, aceptar una
+> invitación, provisionar una demostración— entra por funciones `SECURITY DEFINER`
+> acotadas. Una clave capaz de saltarse el aislamiento entre empresas es la última que
+> conviene tener dando vueltas por variables de entorno.
+
+5. En **Authentication → URL Configuration**, pon el dominio de Vercel en **Site URL** y
+   añádelo también a **Redirect URLs**. Sin esto, los enlaces de recuperación de
+   contraseña y de invitación llegan apuntando a `localhost`.
 
 Aplica el esquema:
 
@@ -54,24 +61,58 @@ En el editor SQL de Supabase:
 -- Purga de sandboxes cada 10 minutos, DENTRO de Postgres.
 -- Vercel Hobby solo admite crons diarios, así que esta tarea no puede vivir allí.
 create extension if not exists pg_cron;
-create extension if not exists "uuid-ossp";
+
+-- `with schema extensions` no es opcional. Todas las funciones del proyecto llevan
+-- `set search_path = ''` y las invocan por su nombre completo —`extensions.crypt(...)`,
+-- `extensions.uuid_generate_v5(...)`— así que una copia instalada en `public` no
+-- serviría de nada: la llamada seguiría buscándolas donde no están.
+create extension if not exists "uuid-ossp" with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
 ```
+
+Si se te olvida alguna, `supabase db push` te lo dirá: hay una migración que lo comprueba
+y falla con el nombre de la que falta. Está ahí porque sin ella el despliegue termina en
+verde y el sistema revienta la primera vez que alguien se registra.
+
+## 3.b Sembrar los datos de demostración
+
+`supabase db push` aplica las migraciones pero **no ejecuta `supabase/seed.sql`**. Sin esa
+semilla no existe el tenant plantilla, y `/demo` falla con `NOT_A_DEMO_TEMPLATE` — es
+decir, la demostración entera, que es la razón de ser del enlace del currículum.
+
+Pega el contenido de `supabase/seed.sql` en el **editor SQL** de Supabase y ejecútalo una
+vez.
+
+> ⚠️ **Nunca `supabase db reset --linked`.** Eso borra la base de producción entera.
 
 ## 4. Vercel
 
 1. **Add New → Project** e importa el repositorio. Vercel detecta pnpm y Next solo.
-2. **Root Directory**: déjalo en la raíz; el monorepo se resuelve por workspaces.
+2. **Root Directory**: ponlo en **`apps/web`**, y deja marcada la opción de incluir
+   archivos de fuera del directorio raíz. En la raíz del repositorio no hay ninguna
+   dependencia de `next` —está en `apps/web/package.json`— así que Vercel no detecta el
+   framework y despliega un sitio estático vacío. Ahí es también donde vive
+   `vercel.json`, con el cron de respaldo de la purga.
 3. Variables de entorno (**Settings → Environment Variables**):
 
-| Variable                        | Valor                     | Marcar como sensible |
-| ------------------------------- | ------------------------- | -------------------- |
-| `DATABASE_URL`                  | pooler, puerto 6543       | ✅                   |
-| `DIRECT_URL`                    | directa, puerto 5432      | ✅                   |
-| `NEXT_PUBLIC_SUPABASE_URL`      | URL del proyecto          | —                    |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key                  | —                    |
-| `SUPABASE_SERVICE_ROLE_KEY`     | service_role key          | ✅                   |
-| `DEMO_COOKIE_SECRET`            | `openssl rand -base64 32` | ✅                   |
-| `CRON_SECRET`                   | `openssl rand -base64 32` | ✅                   |
+| Variable                        | Valor                       | Marcar como sensible |
+| ------------------------------- | --------------------------- | -------------------- |
+| `DATABASE_URL`                  | pooler, puerto 6543         | ✅                   |
+| `DIRECT_URL`                    | directa, puerto 5432        | ✅                   |
+| `NEXT_PUBLIC_SUPABASE_URL`      | URL del proyecto            | —                    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key                    | —                    |
+| `NEXT_PUBLIC_SITE_URL`          | `https://tu-app.vercel.app` | —                    |
+| `REQUEST_HASH_SECRET`           | `openssl rand -base64 32`   | ✅                   |
+| `CRON_SECRET`                   | `openssl rand -base64 32`   | ✅                   |
+
+`REQUEST_HASH_SECRET` es la sal con la que se hashea la IP en el limitador de intentos. Sin
+ella el hash se puede deshacer: el espacio de IPv4 se recorre entero en minutos, y la tabla
+pasaría de guardar un rastro anónimo a guardar direcciones.
+
+`CRON_SECRET` protege `/api/cron/purge`, que borra datos. Si se deja vacío, el endpoint
+responde 404 en lugar de abrirse: uno que borra y se abre cuando falta configuración es la
+peor de las dos opciones. Vercel manda ese secreto en la cabecera `Authorization` de sus
+crons automáticamente.
 
 4. **Region**: en **Settings → Functions**, elige la misma región que Supabase. Sin esto
    cada consulta cruza medio mundo y el tiempo de respuesta se dispara entre 150 y 300 ms.

@@ -13,13 +13,13 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 
 ## Qué demuestra este proyecto
 
-|                   |                                                                                                                                                                                                      |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                           |
-| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                   |
-| **Testing**       | **395 tests**: 264 unitarios (Vitest + property-based con fast-check), 65 de integración contra Postgres real, 22 escenarios BDD en Gherkin y 44 E2E con Playwright, incluida accesibilidad con axe. |
-| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, cuarentena de la clave privilegiada. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                         |
-| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                     |
+|                   |                                                                                                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                                                                        |
+| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                                                                |
+| **Testing**       | **417 tests**: 266 unitarios (Vitest + property-based con fast-check), 68 de integración contra Postgres real, 25 escenarios BDD en Gherkin y 58 E2E con Playwright, incluidas accesibilidad con axe y una pasada de aprobación por las 29 rutas. |
+| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, y **ninguna clave capaz de saltarse RLS en el despliegue**. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                                               |
+| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                                                                  |
 
 ## Stack
 
@@ -78,12 +78,13 @@ packages/
   domain/          Reglas de negocio puras. CERO dependencias — mira su package.json.
   application/     Casos de uso y puertos (interfaces). Solo depende de domain.
   contracts/       Esquemas Zod compartidos entre servidor y cliente.
-  db/              Esquema Drizzle, migraciones y seed.
-  infrastructure/  Adaptadores: Postgres, Supabase, memoria, PDF.
+  db/              Esquema Drizzle y cliente de conexión con su pool.
+  infrastructure/  Adaptadores de Postgres: repositorios Drizzle, modelos de lectura,
+                   Unit of Work, limitador de peticiones y sandbox de demostración.
 apps/
   web/             Next.js. Server Actions y RSC como adaptadores primarios.
 e2e/               Features en Gherkin y specs de Playwright.
-supabase/          Migraciones SQL: RLS, funciones, triggers, pg_cron.
+supabase/          Migraciones SQL, semilla y RLS: políticas, funciones, triggers, pg_cron.
 ```
 
 La dirección de las dependencias apunta **siempre hacia adentro**: nada de lo que rodea al
@@ -114,25 +115,99 @@ lo único que no se puede hacer desde el repositorio, porque necesita una cuenta
 y una de Vercel. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
 orden y por qué ese orden, incluyendo el estado honesto de cada capa.
 
-### La demostración se abre sin cuenta, a propósito
+### La aprobación recorre las veintinueve rutas
 
-`/demo` entrega a cada visitante **su propia copia** del comercio de ejemplo: puede tocarlo
-todo, nadie más ve lo que hace, y se borra sola a las 24 horas. Sin registro y sin dar un
-correo.
+`pnpm approve` abre **todas** las pantallas de la aplicación con una sesión real y comprueba en
+cada una cuatro cosas: que responde 200, que no redirige a otro sitio, que trae su encabezado, y
+que no deja ni un error de consola, ni una excepción sin capturar, ni una violación de la
+política de seguridad de contenido.
 
-Tres cosas que la sostienen y que no se ven:
+Existe porque son dos fallos distintos y la suite solo cazaba uno. Una regla mal implementada la
+encuentra un escenario BDD; **una pantalla que revienta al abrirse** —porque una consulta cambió
+de firma, o porque falta una traducción— no la encuentra nadie hasta que alguien hace clic. Y en
+un ERP hay muchas pantallas a las que se hace clic una vez al mes.
 
+Los identificadores de las fichas y los documentos no van escritos: se descubren navegando desde
+sus listados. Si un enlace dejara de existir, la aprobación falla por el motivo correcto.
+
+### Lo que falta se dice, no se esconde
+
+Cobros, presupuestos y órdenes de compra **tienen su entrada en el menú, marcada como en
+desarrollo**, y cada una abre una pantalla que explica tres cosas: qué hará, por qué no está
+todavía, y qué usar mientras tanto.
+
+Esconderlas dejaría el menú más corto y el sistema más difícil de juzgar. Quien evalúa un ERP
+busca "cobros" en el primer minuto, y no encontrar ni la pantalla ni una explicación se lee como
+que el sistema es incompleto **y además** confuso. Con la marca delante, un hueco pasa a ser un
+alcance declarado.
+
+El caso de cobros es el que más se nota: **el límite de crédito ya está implementado y probado
+en el dominio**, pero la consulta de saldo pendiente devuelve siempre cero porque no hay cobros
+que restar. La regla existe y nunca llega a dispararse. Está dicho en la propia pantalla.
+
+Por el mismo motivo desaparecieron tres indicadores de plan —`dashboard`, `export_csv`,
+`multi_warehouse`— que estaban declarados "para más adelante" y que ningún código comprobaba.
+Una bandera que no bloquea nada no reserva nada: solo hace creer que la función existe a quien
+lee esa lista para saber qué ofrece el producto. Hay un test que impide que vuelvan a acumularse.
+
+### Nadie escribe un código
+
+Dar de alta un cliente pide solo su nombre. El código lo asigna el sistema —`CLT26000001`:
+prefijo, año y correlativo— y se muestra en la confirmación.
+
+Pedirlo era pedirle al comercio que resolviera un problema del sistema: inventar un formato el
+primer día, recordarlo cada vez, y encontrarse con un rechazo por duplicado cuando dos personas
+dan de alta a la vez. El correlativo sale de la misma mecánica que numera las notas de entrega —
+un UPSERT que bloquea la fila— que es lo único del sistema que aguanta concurrencia sin dejar
+huecos ni repetir.
+
+**El SKU de un producto es la única excepción, y se deja abierta a propósito.** El código de un
+producto suele existir antes que el sistema: está impreso en la etiqueta del estante o es el
+código de barras del fabricante. Si se escribe, se respeta; si se deja en blanco, se genera.
+Cerrarlo obligaría a llevar dos códigos para la misma bolsa de harina, y esa pelea la gana
+siempre el que ya está pegado al producto.
+
+### Se archiva, no se borra
+
+Ni clientes, ni productos, ni proveedores tienen botón de eliminar. Un cliente con notas de
+entrega emitidas no se puede borrar sin dejar documentos apuntando al vacío, y dentro de ocho
+meses alguien va a necesitar saber a quién se le vendió aquello.
+
+Archivar hace lo que la gente quiere cuando dice "bórralo" —dejar de verlo— y además se deshace
+en un clic. Los archivados no desaparecen: hay un enlace para verlos. Ocultarlos sin forma de
+llegar a ellos convertiría "archivar" en "perder".
+
+Al sacar un producto del catálogo **el inventario que tuviera no se toca**. Si quedaban tres
+bolsas en el estante, siguen ahí. Poner el saldo a cero inventaría una salida de mercancía que
+nunca ocurrió, y el libro de movimientos dejaría de explicar el saldo — que es lo único que hace
+fiable un inventario.
+
+### La demostración entrega credenciales, no una puerta abierta
+
+`/demo` crea una cuenta desechable —correo y contraseña generados— y mete a quien llega en
+**su propia copia** del comercio de ejemplo, con la sesión ya iniciada. Puede tocarlo todo,
+nadie más ve lo que hace, y la cuenta entera se borra sola a las 24 horas. Sin registro y
+sin dar un correo.
+
+Cuatro cosas que la sostienen y que no se ven:
+
+- **La cuenta nace en la misma transacción que su sandbox**, con la misma caducidad, y se la
+  lleva la misma purga. Un usuario huérfano no rompe nada visible, y por eso mismo se
+  acumularía durante meses sin que nadie lo notase — que es como se llega a un cobro
+  inesperado.
 - **La provisión va por POST, nunca por GET.** Un GET que provisiona lo dispara cualquier
   rastreador o previsualización de enlace de un chat: publicar el enlace crearía decenas de
-  copias de la base antes de que lo abriese una persona.
+  cuentas y de copias de la base antes de que lo abriese una persona.
 - **Un disyuntor sobre el tamaño de la base.** Por encima del 70 % del presupuesto se deja
-  de crear copias y se sirve la plantilla compartida; por encima del 85 % se purga sin
-  esperar al TTL. El visitante **siempre ve algo funcionando** — un error de cuota en el
-  enlace del CV es el peor resultado posible del proyecto entero.
-- **Sin sesión, solo se sirve un tenant marcado `is_demo`.** La protección no es que una
-  constante apunte al sitio correcto: es que se comprueba la marca en la fila. Apuntarla a
-  una empresa real no la expone, redirige a la pantalla de acceso. `DEMO_ENABLED=false`
-  cierra la puerta entera.
+  de clonar y se entrega una cuenta de solo lectura sobre la plantilla compartida, que cuesta
+  una fila en vez de sesenta; por encima del 85 % se purga sin esperar al TTL. El visitante
+  **siempre entra** — un "vuelve más tarde" en el enlace del CV es el peor resultado posible
+  del proyecto entero, porque el momento en que alguien lo abre no se repite.
+- **Nunca sale un correo.** El dominio `@corebiz.demo` no existe, así que por mucho que se
+  abuse del enlace este sistema no puede convertirse en un emisor de correo hacia terceros.
+
+`DEMO_ENABLED=false` cierra la puerta entera y deja un SaaS normal: el resto del sistema ya
+exige sesión siempre.
 
 ## Tres detalles que resumen el enfoque
 
@@ -140,7 +215,7 @@ Tres cosas que la sostienen y que no se ven:
 comprobó inyectando a propósito un `import { z } from 'zod'` en el dominio, y `pnpm arch`
 lo detectó. Además, `pnpm` con `hoist=false` hace que ese import ni siquiera resuelva.
 
-**Los mismos escenarios corren sobre los dos adaptadores.** Los 14 escenarios Gherkin
+**Los mismos escenarios corren sobre los dos adaptadores.** Los 24 escenarios Gherkin
 pasan en memoria y contra Postgres con RLS activo, sin cambiar una línea. Esa es la
 comprobación ejecutable de que la arquitectura hexagonal es real: si el dominio supiera que
 existe una base de datos, `pnpm test:bdd:pg` no podría existir.

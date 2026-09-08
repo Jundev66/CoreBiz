@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/purge",
+      "schedule": "0 4 * * *"
+    }
+  ],
+  "functions": {
+    "app/demo/page.tsx": {
+      "maxDuration": 60
+    },
+    "app/api/cron/purge/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

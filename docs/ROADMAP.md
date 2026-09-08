@@ -17,29 +17,31 @@ El criterio de "terminado" es concreto y verificable:
 
 Lo verificado, no lo aspiracional.
 
-| Capa                          | Estado                                                                |
-| ----------------------------- | --------------------------------------------------------------------- |
-| Dominio (`packages/domain`)   | ✅ Ventas, inventario, RBAC, planes, dinero dual. 220 tests unitarios |
-| Casos de uso                  | ✅ 5, con puertos definidos y auditoría                               |
-| Adaptadores en memoria        | ✅ Con rollback real. Sostienen `pnpm dev:nodb` y toda la suite       |
-| Interfaz (`apps/web`)         | ✅ 9 páginas, Server Actions, i18n ES/EN, gating PRO                  |
-| Tests E2E + BDD               | ✅ 14 escenarios Gherkin, 23 tests, independientes del orden          |
-| Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla        |
-| Persistencia real             | ✅ Adaptadores Drizzle de cada puerto, UoW sobre transacción real     |
-| Tablas de negocio             | ✅ 11 tablas, migraciones aplicadas y semilla que cuadra sola         |
-| Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 27 tests de integración   |
-| Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación     |
-| Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy     |
-| Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`        |
-| Compras y proveedores         | ✅ `Supplier` y `GoodsReceipt`, gated a PRO. Orden de compra, fuera   |
-| Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes        |
-| Demo efímero                  | ❌ Sin función de clonado, sin TTL, sin purga                         |
-| Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                             |
+| Capa                          | Estado                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| Dominio (`packages/domain`)   | ✅ Ventas, inventario, RBAC, planes, dinero dual. 266 tests unitarios   |
+| Casos de uso                  | ✅ 15, con puertos definidos y auditoría                                |
+| Adaptadores en memoria        | ✅ Con rollback real. Sostienen `pnpm dev:nodb` y toda la suite         |
+| Interfaz (`apps/web`)         | ✅ 29 páginas, Server Actions, i18n ES/EN, gating PRO                   |
+| Tests E2E + BDD               | ✅ 25 escenarios Gherkin, 58 specs, independientes del orden            |
+| Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla          |
+| Persistencia real             | ✅ Adaptadores Drizzle de cada puerto, UoW sobre transacción real       |
+| Tablas de negocio             | ✅ 16 tablas, 14 con `tenant_id`; migraciones y semilla que cuadra sola |
+| Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 68 tests de integración     |
+| Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación       |
+| Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy       |
+| Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`          |
+| Compras y proveedores         | ✅ `Supplier` y `GoodsReceipt` con su detalle, gated a PRO              |
+| Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes          |
+| Demo efímero                  | ✅ Credenciales propias por visitante, TTL 24 h, purga y disyuntor      |
+| Cobros, presupuestos, órdenes | 🚧 Anunciados en el menú, con su pantalla y su explicación              |
+| Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                               |
 
 **La lectura honesta:** el sistema corre sobre Postgres con las políticas RLS ejecutándose en CI,
-tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 14 escenarios
-BDD pasan contra los dos adaptadores sin cambiar una línea. Lo que queda ya no es fundacional: es
-el módulo de compras, la administración de usuarios, el sandbox efímero y el despliegue.
+tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 25 escenarios
+BDD pasan contra los dos adaptadores sin cambiar una línea. Lo único que queda es el despliegue, y
+es lo único que no se puede hacer desde el repositorio: necesita una cuenta de Supabase y otra de
+Vercel.
 
 Dicho sin adornos: **el sistema está terminado como sistema y sin desplegar como producto.**
 
@@ -92,8 +94,8 @@ necesitan una variante por adaptador y el criterio de abajo deja de poder cumpli
 **Qué construir**
 
 - [x] Esquema Drizzle de los módulos de negocio en `packages/db/src/schema/`: `customers`,
-      `products`, `product_stock`, `stock_movements`, `delivery_notes`, `delivery_note_lines`,
-      `payments`. Los nombres ya están comprometidos en la lista de la migración de políticas.
+      `products`, `stock_movements`, `delivery_notes`, `delivery_note_lines`, `document_sequences`
+      y `tenant_usage`. Los nombres ya están comprometidos en la lista de la migración de políticas.
 - [x] Migraciones `create table` correspondientes. **Sin ellas, la migración de RLS salta las tablas
       en silencio** (`if to_regclass(...) is null then continue`) y el sistema queda sin políticas
       pareciendo que las tiene. Este es el fallo más peligroso del estado actual.
@@ -111,8 +113,14 @@ necesitan una variante por adaptador y el criterio de abajo deja de poder cumpli
 - [x] Cliente `postgres.js` con `prepare: false` y `max: 1` como singleton de módulo. Sin esto
       funciona en local y revienta en producción, que es la peor forma de descubrirlo.
 
+Dos tablas que sí estaban en el plan y **no existen**: `product_stock` y `payments`. El saldo
+vive en `products.on_hand`, derivado de los movimientos, así que una tabla aparte solo habría
+añadido un sitio más donde el inventario puede descuadrar. Y `payments` no se creó porque el
+módulo de cobros quedó fuera del alcance: el límite de crédito está implementado en el dominio
+y hoy no llega a dispararse.
+
 **Hecho cuando:** `DATA_DRIVER=postgres pnpm dev` levanta la aplicación contra Supabase local y los
-14 escenarios BDD pasan **sin tocarse una línea**. Ese es el punto: si los tests no distinguen el
+25 escenarios BDD pasan **sin tocarse una línea**. Ese es el punto: si los tests no distinguen el
 adaptador, la arquitectura hexagonal era real.
 
 ---
@@ -148,7 +156,7 @@ aislamiento que nunca ha fallado no ha demostrado nada.
 - [x] Job `integration` en CI con `supabase start` sobre `ubuntu-latest`.
 
 **Hecho:** el job `integration` levanta Supabase en CI, corre la matriz y después ejecuta los
-mismos 14 escenarios BDD contra Postgres. `pnpm test:integration` ya no lleva _(pendiente)_
+mismos 25 escenarios BDD contra Postgres. `pnpm test:integration` ya no lleva _(pendiente)_
 en la tabla del README. Esta es la fase que responde la pregunta de entrevista _"¿cómo sabes que tu
 multi-tenant no filtra datos?"_ con un comando en vez de con una explicación.
 
@@ -198,7 +206,9 @@ identificador de usuario como parámetro**. Editar la cookie a mano no lleva a n
 
 Cierra el bucle de la multi-tenancy: sin esto un tenant no puede crecer más allá de su fundador.
 
-- [x] Invitaciones por correo con token de un solo uso y caducidad.
+- [x] Invitaciones **por enlace** con token de un solo uso y caducidad. No por correo: no hay
+      SMTP configurado, así que el enlace se muestra UNA vez y quien invita lo hace llegar por
+      donde quiera. Menos cómodo y más honesto que un correo que nunca sale.
 - [x] Gestión de roles, respetando el trigger `enforce_last_owner` que ya impide quedarse sin dueño.
 - [x] Visor del `audit_log` con filtros por actor, acción y fecha; exportación **gated a PRO**.
 - [x] Ajustes del tenant: etiqueta y tasa del impuesto informativo, moneda base, tasa de cambio.
@@ -229,7 +239,7 @@ viviera en el botón. El formulario se deja enviable a propósito con las plazas
 
 ## H5 · Compras y proveedores — ✅ HECHA (con un recorte declarado)
 
-El único módulo del alcance acordado que no se ha empezado. Cierra el ciclo **comprar → stock → vender**.
+Cierra el ciclo **comprar → stock → vender**.
 
 - [x] Agregados `Supplier` y `GoodsReceipt` en `packages/domain/src/purchasing/`.
 - [ ] **`PurchaseOrder` NO se implementó.** Es el único punto del plan que queda sin cumplir, y
@@ -268,14 +278,15 @@ Es la fase que convierte el proyecto en un link del CV en vez de un repo más.
 - [x] Función SQL `clone_demo_tenant()`: `insert ... select` desde el tenant plantilla, remapeando
       las claves con `uuid_generate_v5(nuevo_tenant, id_viejo::text)`. Determinista, sin tabla de
       mapeo, sin orden de dependencias, una transacción.
-- [x] Ruta `/demo`: cookie firmada que **reutiliza** el sandbox existente en vez de crear otro.
+- [x] Ruta `/demo`: entrega **credenciales propias** —correo y contraseña generados— y deja la
+      sesión iniciada. Quien ya entró no vuelve a ver el botón: se le ofrece pasar a su copia.
 - [x] Semilla compacta (~600–900 filas, ≈1,5 MB) que aparente un negocio con historia.
 - [x] Purga con `pg_cron` cada 10 minutos, TTL de 24 h. Va dentro de Postgres porque el cron de
       Vercel Hobby es diario. Respaldos: purga perezosa dentro de la propia provisión, y el cron
       diario de Vercel como tercera red.
 - [x] Circuit breaker sobre `pg_database_size()`: por encima del **70 %** de los 500 MB se deja de
-      crear sandboxes y se sirve un demo compartido de solo lectura; por encima del **85 %**, purga
-      agresiva sin esperar al TTL.
+      clonar y se entrega una cuenta de solo lectura sobre la plantilla compartida —una fila en vez
+      de sesenta—; por encima del **85 %**, purga agresiva sin esperar al TTL.
 - [x] Anti-abuso: 1 sandbox por IP y hora, tope global de 50 concurrentes (≈20 MB, 6 % del presupuesto).
 
 **Por qué el modo degradado importa más que el límite:** un reclutador tiene que ver algo funcionando
@@ -286,7 +297,15 @@ el sandbox de uno y comprueba que **no aparece** en el del otro. Y un test de in
 el umbral del disyuntor con un presupuesto absurdamente pequeño y verifica que cae a modo degradado
 en lugar de fallar.
 
-**Dos decisiones que merecen leerse:**
+**Tres decisiones que merecen leerse:**
+
+- **Cada visitante recibe una cuenta de verdad, no una cookie.** Antes se entraba SIN sesión y una
+  cookie firmada decía qué sandbox tocaba. Funcionaba y estaba defendida, pero obligaba a mantener
+  viva una rama del composition root que decidía a qué empresa entra alguien **sin haber verificado
+  quién es**. Ese código no falla de forma visible: falla sirviendo datos ajenos. Con credenciales
+  propias esa rama desapareció, y de paso la demostración enseña el acceso funcionando, que es la
+  mitad de lo que un ERP tiene que demostrar. La cuenta nace en la misma transacción que su
+  sandbox, lleva la misma caducidad y se la lleva la misma purga.
 
 - **La provisión va por POST, nunca por GET.** Es lo que más protege el presupuesto: un GET que
   provisiona lo dispara cualquier rastreador, cualquier previsualización de enlace de un chat y
@@ -339,7 +358,7 @@ El recorrido está escrito en [`DEPLOY.md`](DEPLOY.md). Lo que hay que recordar:
 - [ ] Repositorio público en GitHub.
 - [ ] Proyecto Supabase; migraciones por **conexión directa (5432)**, aplicación por **pooler (6543)**.
 - [ ] Extensiones `pg_cron` y `uuid-ossp`.
-- [ ] Vercel: variables de entorno, con `SUPABASE_SERVICE_ROLE_KEY` y `CRON_SECRET` marcadas como
+- [ ] Vercel: variables de entorno, con `CRON_SECRET` y `REQUEST_HASH_SECRET` marcadas como
       sensibles y comparadas en tiempo constante.
 - [ ] **Keepalive funcionando y comprobado.** Supabase pausa el proyecto tras 7 días sin tráfico y el
       link del CV muere solo. GitHub Actions cada 2 días, **más un monitor externo**

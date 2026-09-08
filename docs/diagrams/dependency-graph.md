@@ -55,14 +55,18 @@ aplicación completa sin Docker.
 
 ## Las reglas que lo sostienen
 
-| Regla                     | Qué impide                                                                              |
-| ------------------------- | --------------------------------------------------------------------------------------- |
-| `domain-is-pure`          | Que el dominio importe cualquier cosa que no sea el dominio.                            |
-| `application-no-infra`    | Que un caso de uso conozca Drizzle, Supabase o el esquema.                              |
-| `ui-no-direct-db`         | Que una pantalla hable con tablas en lugar de con casos de uso y modelos de lectura.    |
-| `service-role-quarantine` | Que la clave que **saltea RLS** se importe fuera de sus tres consumidores autorizados.  |
-| `no-circular`             | Ciclos entre módulos. Encontró uno real entre los puertos de repositorios y de compras. |
+| Regla                  | Qué impide                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `domain-is-pure`       | Que el dominio importe cualquier cosa que no sea el dominio.                            |
+| `application-no-infra` | Que un caso de uso conozca Drizzle, Supabase o el esquema.                              |
+| `ui-no-direct-db`      | Que una pantalla hable con tablas en lugar de con casos de uso y modelos de lectura.    |
+| `no-circular`          | Ciclos entre módulos. Encontró uno real entre los puertos de repositorios y de compras. |
 
-Las tres primeras son la arquitectura hexagonal expresada como algo que se ejecuta. La
-cuarta es seguridad: una importación descuidada de esa clave convierte todo el
-aislamiento multi-tenant en decorativo.
+Las tres primeras son la arquitectura hexagonal expresada como algo que se ejecuta: no una
+convención que se recuerda en la revisión, sino una regla que rompe el build.
+
+Aquí hubo una cuarta, `service-role-quarantine`, que vigilaba las importaciones de la clave
+capaz de saltarse RLS. Se borró al descubrir que apuntaba a un archivo **que no existe**:
+llevaba meses en verde sin poder dispararse nunca. La arquitectura real resultó ser mejor
+que la documentada —esa clave no se usa en ninguna parte— pero una regla que no puede
+fallar es peor que ninguna, porque se lee como una garantía.
