@@ -23,10 +23,15 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 
 ## Stack
 
-**Next.js 16** (App Router) · **TypeScript** · **Supabase** (Postgres, Auth, Storage) ·
+**NestJS 11** · **Next.js 16** (App Router) · **TypeScript** · **Supabase** (Postgres, Auth) ·
 **Drizzle ORM** · **Zod** · **Tailwind CSS** · **Vitest** · **Playwright** + `playwright-bdd`
 
-Desplegado en Vercel y Supabase, ambos en plan gratuito. Coste de operación: **$0**.
+Dos procesos: una API REST en NestJS que aplica las reglas y habla con Postgres, y una
+interfaz en Next.js que la consume **desde el servidor** —el token nunca llega al
+navegador—. El núcleo (dominio y casos de uso) no sabe que existe ninguno de los dos, y
+esa es la parte que merece mirarse: cambiar el adaptador primario no obligó a tocarlo.
+
+Desplegado en Vercel, Render y Supabase, los tres en plan gratuito. Coste: **$0**.
 
 ---
 
@@ -43,8 +48,10 @@ pnpm install
 pnpm dev:nodb
 ```
 
-Arranca la aplicación **completa** con adaptadores en memoria precargados con datos de
-ejemplo. No necesita Postgres, ni Docker, ni credenciales. Que esto sea posible no es un
+Arranca **las dos aplicaciones** con adaptadores en memoria precargados con datos de
+ejemplo. No necesita Postgres, ni Docker, ni credenciales. Que esto siga siendo posible
+después de partir el sistema en dos procesos es la mejor prueba que hay de que la
+arquitectura aguanta: el interruptor sigue siendo uno. Que esto sea posible no es un
 truco de demo: es la consecuencia directa de que el dominio no sepa que existe una base
 de datos. Si la arquitectura hexagonal fuese decorativa, este comando no podría existir.
 
@@ -52,8 +59,12 @@ de datos. Si la arquitectura hexagonal fuese decorativa, este comando no podría
 
 ```bash
 pnpm db:start              # Supabase local en Docker + migraciones + seed
-pnpm dev
+pnpm dev                   # levanta la API y la interfaz a la vez
 ```
+
+La interfaz sirve en `:3000` y la API en `:3001`, con su OpenAPI navegable en
+[`/docs`](http://localhost:3001/docs) — que **no se publica en producción**, porque un
+mapa completo de la superficie de escritura de un ERP es reconocimiento gratis.
 
 ### Comandos
 
@@ -65,7 +76,8 @@ pnpm dev
 | `pnpm test:bdd`         | Escenarios Gherkin sobre la aplicación real, en memoria.                      |
 | `pnpm test:bdd:pg`      | **Los mismos escenarios**, sin tocar una línea, contra Postgres con RLS.      |
 | `pnpm test:e2e:pg`      | La suite E2E entera contra Postgres, incluidos sesión y demo aislada.         |
-| `pnpm test:e2e`         | Playwright con trazas y vídeo en los fallos.                                  |
+| `pnpm test:e2e`         | Playwright con trazas y vídeo en los fallos. Arranca las dos aplicaciones.    |
+| `pnpm dev:api`          | Solo la API. `pnpm dev:web`, solo la interfaz.                                |
 | `pnpm arch`             | Verifica los límites entre capas. **Falla el build si el dominio se acopla.** |
 | `pnpm arch:graph`       | Regenera el grafo exhaustivo de dependencias (~900 nodos, ignorado por git).  |
 
@@ -82,7 +94,10 @@ packages/
   infrastructure/  Adaptadores de Postgres: repositorios Drizzle, modelos de lectura,
                    Unit of Work, limitador de peticiones y sandbox de demostración.
 apps/
-  web/             Next.js. Server Actions y RSC como adaptadores primarios.
+  api/             NestJS. Controllers, guards y DTOs como adaptadores primarios.
+                   Es quien monta los casos de uso y abre las transacciones.
+  web/             Next.js. Server Components y Server Actions, que desde la migración
+                   a la API son SOLO transporte: no queda una regla de negocio dentro.
 e2e/               Features en Gherkin y specs de Playwright.
 supabase/          Migraciones SQL, semilla y RLS: políticas, funciones, triggers, pg_cron.
 ```
@@ -103,6 +118,9 @@ Las decisiones con su contexto y sus alternativas descartadas están en [`docs/a
 6. [Autenticación enteramente en el servidor](docs/adr/006-autenticacion-solo-en-el-servidor.md)
 7. [El token de invitación no se guarda](docs/adr/007-invitaciones-con-token-hasheado.md)
 8. [La nota se imprime en el navegador, no se genera como PDF](docs/adr/008-imprimir-en-el-navegador.md)
+9. [Una API dedicada en NestJS, y Next.js como cliente](docs/adr/009-api-dedicada-en-nestjs.md)
+   — supersede el rechazo de NestJS que hacía la 001, y **dice el motivo real** en lugar
+   de disfrazarlo de necesidad técnica.
 
 El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
@@ -110,10 +128,21 @@ El análisis STRIDE completo, con los riesgos aceptados de forma consciente, est
 ## Qué falta
 
 El ciclo de venta funciona sobre Postgres real, con las políticas RLS ejecutándose en cada
-push y con autenticación de verdad. Lo que queda ya no es fundacional: el **despliegue**: es
-lo único que no se puede hacer desde el repositorio, porque necesita una cuenta de Supabase
-y una de Vercel. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
+push y con autenticación de verdad. Lo que queda ya no es fundacional: el **despliegue**, que
+es lo único que no se puede hacer desde el repositorio porque necesita cuentas de Supabase,
+Vercel y Render. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
 orden y por qué ese orden, incluyendo el estado honesto de cada capa.
+
+### La migración a NestJS no cambió ni un test
+
+Partir el sistema en dos procesos tocó la capa de entrega entera: 36 rutas nuevas, un
+cliente HTTP, el composition root movido de sitio. Los **6 ficheros Gherkin y los 6 specs
+de Playwright no cambiaron una línea**, y siguen pasando en memoria y contra Postgres.
+
+Eso no es una anécdota: era el criterio de aceptación. Si un solo escenario hubiera
+necesitado cambiar, la capa de entrega llevaba lógica de negocio dentro y el hexágono era
+un dibujo. Es el mismo argumento con el que el proyecto sostiene que memoria y Postgres
+son intercambiables, aplicado a algo más grande.
 
 ### La aprobación recorre las veintinueve rutas
 

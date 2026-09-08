@@ -48,3 +48,36 @@ tendría que ser legible por JavaScript por definición.
 
 **JWT propio con sesiones en base de datos.** Más control y más superficie que mantener:
 rotación, revocación, expiración. Supabase Auth ya lo hace y está auditado.
+
+---
+
+## Addendum (2026-09-08) — el token cruza una frontera de servicio
+
+Con la migración a una API dedicada ([ADR 009](009-api-dedicada-en-nestjs.md)) el token
+deja de consumirse donde se guarda. Lo que **no** cambia, que es lo que esta ADR
+protegía: sigue viviendo en una cookie `httpOnly` y **al navegador no llega nunca**. Lo
+reenvía `apps/web` desde el servidor, en una llamada servidor a servidor.
+
+Dos consecuencias que conviene tener escritas, porque las dos se van a "arreglar" en la
+dirección equivocada si no lo están:
+
+**1. En `apps/web` se usa `getSession()`, y es correcto.** Esta ADR prohíbe
+`getSession()` para _decidir_ accesos, porque decodifica sin comprobar la firma. Al
+sacar el token para reenviarlo no se decide nada — y `getUser()` ni siquiera devuelve el
+access token, así que no habría alternativa. La regla que sigue viva: **en `apps/web`
+nada se decide a partir de esa llamada.**
+
+**2. La API verifica la firma localmente, contra el JWKS del proyecto.** Es verificación
+criptográfica real, que es lo que esta ADR exigía; lo que no hace es preguntárselo a
+Supabase en cada petición. Se ahorra un viaje de red por request, sobre un salto de red
+que ya existe y que además puede estar despertando.
+
+**Lo que se paga, dicho sin adornos:** revocar una _cuenta_ deja de ser inmediato y pasa
+a tardar lo que le quede de vida al token. Por eso el TTL baja a **10 minutos**, y ese
+ajuste es parte de la decisión y no un extra — está en `docs/DEPLOY.md` como paso
+obligatorio. Revocar un _acceso a una empresa_ sigue siendo inmediato: el contexto
+consulta las pertenencias en cada petición, y sin fila no hay acceso.
+
+**Lo que NO se abre:** CORS. Nada en el navegador llama a la API. El día que hiciera
+falta abrirlo, la pregunta correcta no sería qué origen permitir, sino por qué el token
+ha llegado al navegador.

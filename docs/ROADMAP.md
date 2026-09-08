@@ -22,7 +22,8 @@ Lo verificado, no lo aspiracional.
 | Dominio (`packages/domain`)   | ✅ Ventas, inventario, RBAC, planes, dinero dual. 266 tests unitarios   |
 | Casos de uso                  | ✅ 15, con puertos definidos y auditoría                                |
 | Adaptadores en memoria        | ✅ Con rollback real. Sostienen `pnpm dev:nodb` y toda la suite         |
-| Interfaz (`apps/web`)         | ✅ 29 páginas, Server Actions, i18n ES/EN, gating PRO                   |
+| API (`apps/api`)              | ✅ NestJS, 36 rutas, guards de RBAC, OpenAPI. Es la capa de entrega     |
+| Interfaz (`apps/web`)         | ✅ 29 páginas, consumiendo la API desde el servidor, i18n ES/EN         |
 | Tests E2E + BDD               | ✅ 25 escenarios Gherkin, 58 specs, independientes del orden            |
 | Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla          |
 | Persistencia real             | ✅ Adaptadores Drizzle de cada puerto, UoW sobre transacción real       |
@@ -35,13 +36,19 @@ Lo verificado, no lo aspiracional.
 | Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes          |
 | Demo efímero                  | ✅ Credenciales propias por visitante, TTL 24 h, purga y disyuntor      |
 | Cobros, presupuestos, órdenes | 🚧 Anunciados en el menú, con su pantalla y su explicación              |
-| Despliegue                    | ❌ Nunca ha corrido fuera de esta máquina                               |
+| Despliegue                    | 🚧 `render.yaml` y la guía completa; falta ejecutarla en cuentas reales |
 
 **La lectura honesta:** el sistema corre sobre Postgres con las políticas RLS ejecutándose en CI,
 tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 25 escenarios
-BDD pasan contra los dos adaptadores sin cambiar una línea. Lo único que queda es el despliegue, y
-es lo único que no se puede hacer desde el repositorio: necesita una cuenta de Supabase y otra de
-Vercel.
+BDD pasan contra los dos adaptadores sin cambiar una línea.
+
+Desde 2026-09-08 la capa de entrega es una API en NestJS y `apps/web` la consume por HTTP
+([ADR 009](adr/009-api-dedicada-en-nestjs.md)). La migración **no cambió un solo test**, que era
+su criterio de aceptación: 73 pruebas E2E en verde en memoria y 83 contra Postgres, con los
+mismos ficheros de siempre.
+
+Lo único que queda es ejecutar el despliegue, y es lo único que no se puede hacer desde el
+repositorio: necesita cuentas de Supabase, Vercel y Render.
 
 Dicho sin adornos: **el sistema está terminado como sistema y sin desplegar como producto.**
 
@@ -358,8 +365,18 @@ El recorrido está escrito en [`DEPLOY.md`](DEPLOY.md). Lo que hay que recordar:
 - [ ] Repositorio público en GitHub.
 - [ ] Proyecto Supabase; migraciones por **conexión directa (5432)**, aplicación por **pooler (6543)**.
 - [ ] Extensiones `pg_cron` y `uuid-ossp`.
+- [ ] **TTL del access token a 10 minutos** en Supabase. No es cosmético: la API verifica la
+      firma localmente contra el JWKS, así que revocar una cuenta tarda lo que le quede de
+      vida al token. Requiere claves de firma asimétricas.
+- [ ] Render: la API por blueprint (`render.yaml`), en la **misma región** que Supabase.
 - [ ] Vercel: variables de entorno, con `CRON_SECRET` y `REQUEST_HASH_SECRET` marcadas como
       sensibles y comparadas en tiempo constante.
+- [ ] `INTERNAL_API_SECRET` **idéntico** en Render y en Vercel. Es el único que comparten.
+- [ ] `DATABASE_URL` **NO** en Vercel. Que la interfaz no tenga acceso a la base es la prueba
+      observable de la separación; ponerla "por si acaso" la borra.
+- [ ] Comprobar que `/docs` responde **404** en producción.
+- [ ] Comprobar el arranque en frío: con la API dormida, `/demo` lleva a la pantalla de espera
+      y **vuelve sola**. No a un error, y no a la portada.
 - [ ] **Keepalive funcionando y comprobado.** Supabase pausa el proyecto tras 7 días sin tráfico y el
       link del CV muere solo. GitHub Actions cada 2 días, **más un monitor externo**
       (cron-job.org o UptimeRobot) porque GitHub desactiva los workflows programados tras 60 días sin

@@ -29,7 +29,15 @@ no cuando ocurre un incidente.
       ╚════════┬═══════════════════════════════════════════╝
                │
       ╔════════▼═══════════════════════════════════════════╗
-      ║ Función Node — Server Actions y RSC                 ║
+      ║ Vercel · Función Node — Next.js                     ║
+      ║   SOLO transporte. No decide nada, no toca la base. ║
+      ║   Reenvía el token; nunca se lo da al navegador.    ║
+      ╚════════┬═══════════════════════════════════════════╝
+               │  HTTPS servidor a servidor, Bearer + hash de IP
+               │  ── FRONTERA DE CONFIANZA NUEVA ──
+      ╔════════▼═══════════════════════════════════════════╗
+      ║ Render · NestJS — la API                            ║
+      ║   Verifica la firma  →  resuelve el tenant          ║
       ║   Zod valida  →  caso de uso decide  →  dominio     ║
       ╚════════┬═══════════════════════════════════════════╝
                │  transacción con app.tenant_id fijado
@@ -44,12 +52,13 @@ no cuando ocurre un incidente.
 
 ### S — Suplantación de identidad
 
-| Amenaza                            | Mitigación                                                                                                                                                                                                                                                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Robo de sesión                     | Cookies `httpOnly`, `Secure`, `SameSite=Lax`. El JWT nunca toca `localStorage`.                                                                                                                                                                                                                         |
-| Token falsificado                  | En el servidor se usa `getUser()`, que **verifica el token contra el servidor de autenticación**; nunca `getSession()`, que solo decodifica la cookie y aceptaría una fabricada a mano.                                                                                                                 |
-| Enumeración de correos en el login | Un único mensaje para "no existe" y "contraseña incorrecta", en acceso y en recuperación. La recuperación responde "enviado" siempre, incluso con una dirección sin cuenta.                                                                                                                             |
-| Fuerza bruta                       | Límite por **hash de IP**, no por correo: contar por correo permitiría dejar fuera a una persona concreta gastándole los intentos, y convertiría la respuesta en un oráculo sobre qué direcciones existen. UPSERT atómico en Postgres — un contador en memoria de proceso no limita nada en serverless. |
+| Amenaza                              | Mitigación                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Robo de sesión                       | Cookies `httpOnly`, `Secure`, `SameSite=Lax`. El JWT nunca toca `localStorage`.                                                                                                                                                                                                                                                                                                       |
+| Token falsificado                    | La API **verifica la firma criptográficamente** contra el JWKS del proyecto (ES256). Nunca se decodifica sin verificar. En `apps/web` se usa `getSession()` para SACAR el token y reenviarlo —no para decidir nada— y esa distinción está escrita en el archivo y en ADR 006, porque el siguiente lector la va a "arreglar" en una dirección o en la otra.                            |
+| Suplantación entre los dos servicios | La API no se fía de nada que le llegue por cabecera: el rol sale de la pertenencia leída de la base y las cabeceras de demostración solo se obedecen dentro de un tenant `is_demo` **y** siendo ya propietario, así que solo pueden quitar permisos. Los endpoints internos van tras un secreto compartido comparado en tiempo constante, y responden **404** si no está configurado. |
+| Enumeración de correos en el login   | Un único mensaje para "no existe" y "contraseña incorrecta", en acceso y en recuperación. La recuperación responde "enviado" siempre, incluso con una dirección sin cuenta.                                                                                                                                                                                                           |
+| Fuerza bruta                         | Límite por **hash de IP**, no por correo: contar por correo permitiría dejar fuera a una persona concreta gastándole los intentos, y convertiría la respuesta en un oráculo sobre qué direcciones existen. UPSERT atómico en Postgres — un contador en memoria de proceso no limita nada en serverless.                                                                               |
 
 ### T — Manipulación de datos
 
@@ -122,7 +131,7 @@ Decisiones conscientes, no descuidos:
 
 ## 5. Qué hacer si algo pasa
 
-1. **Rotar claves** — `CRON_SECRET` y `REQUEST_HASH_SECRET` en las variables de Vercel, y la contraseña de base de datos desde el panel de Supabase. No hay `service_role key` que rotar: este despliegue no usa ninguna.
+1. **Rotar claves** — `CRON_SECRET` en Vercel, `REQUEST_HASH_SECRET` en Vercel, `INTERNAL_API_SECRET` **en las dos a la vez** (es el único compartido), y la contraseña de base de datos desde el panel de Supabase. No hay `service_role key` que rotar: este despliegue no usa ninguna.
 2. **Cortar escritura** — poner `system_flags.mode` en `readonly`; la aplicación se sigue navegando pero no acepta cambios.
 3. **Cerrar la demo** — `DEMO_ENABLED=false` detiene la provisión de sandboxes sin tocar el resto.
 4. **Revisar el rastro** — `audit_log` filtrado por tenant y ventana temporal.
@@ -132,18 +141,21 @@ Decisiones conscientes, no descuidos:
 
 ## 6. Verificación continua
 
-| Comprobación                                            | Dónde                                                                                           |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Aislamiento entre tenants, tabla por tabla              | Test de integración parametrizado. Añadir una tabla sin política **rompe el build**.            |
-| Variable de tenant no persiste entre transacciones      | Test de integración sobre la misma conexión con dos tenants distintos.                          |
-| La `service_role` no se importa fuera de su cuarentena  | `pnpm arch` en CI                                                                               |
-| Secretos commiteados                                    | `gitleaks` en CI                                                                                |
-| Cabeceras de seguridad, nonce por petición y caché      | Test E2E, incluida la comprobación de que **no se dispara ninguna violación de CSP** al navegar |
-| El `WITH CHECK` impide mover una fila a otro tenant     | Test de integración                                                                             |
-| `audit_log` no admite `UPDATE` ni `DELETE`              | Test de integración                                                                             |
-| La conexión opera con un rol **sin** `BYPASSRLS`        | Test de integración: sin esto, toda la matriz seguiría verde con el aislamiento apagado         |
-| Los roles de `app.can_write()` coinciden con el dominio | Test de integración contra `pg_get_functiondef`                                                 |
-| El limitador no pierde intentos concurrentes            | Test de integración con 20 peticiones simultáneas                                               |
-| Una cuenta nueva no ve los datos de otra empresa        | Test E2E de punta a punta, con sesión y políticas reales                                        |
-| Accesibilidad                                           | `axe-core` en E2E                                                                               |
-| Vocabulario tributario en el producto                   | `scripts/check-non-fiscal.sh` en CI                                                             |
+| Comprobación                                             | Dónde                                                                                           |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Aislamiento entre tenants, tabla por tabla               | Test de integración parametrizado. Añadir una tabla sin política **rompe el build**.            |
+| Variable de tenant no persiste entre transacciones       | Test de integración sobre la misma conexión con dos tenants distintos.                          |
+| La interfaz no vuelve a importar la persistencia         | `pnpm arch` en CI, con la regla escrita para atrapar también el import **sin resolver**         |
+| La interfaz no importa valores de `@corebiz/application` | `pnpm lint` en CI: puede conocer las formas, no ejecutar la lógica                              |
+| Un controller no puede fabricarse un contexto de tenant  | `pnpm arch` en CI                                                                               |
+| Dos identidades en el MISMO proceso no se mezclan        | Test de integración que levanta la API y le habla por HTTP con peticiones **alternadas**        |
+| Secretos commiteados                                     | `gitleaks` en CI                                                                                |
+| Cabeceras de seguridad, nonce por petición y caché       | Test E2E, incluida la comprobación de que **no se dispara ninguna violación de CSP** al navegar |
+| El `WITH CHECK` impide mover una fila a otro tenant      | Test de integración                                                                             |
+| `audit_log` no admite `UPDATE` ni `DELETE`               | Test de integración                                                                             |
+| La conexión opera con un rol **sin** `BYPASSRLS`         | Test de integración: sin esto, toda la matriz seguiría verde con el aislamiento apagado         |
+| Los roles de `app.can_write()` coinciden con el dominio  | Test de integración contra `pg_get_functiondef`                                                 |
+| El limitador no pierde intentos concurrentes             | Test de integración con 20 peticiones simultáneas                                               |
+| Una cuenta nueva no ve los datos de otra empresa         | Test E2E de punta a punta, con sesión y políticas reales                                        |
+| Accesibilidad                                            | `axe-core` en E2E                                                                               |
+| Vocabulario tributario en el producto                    | `scripts/check-non-fiscal.sh` en CI                                                             |
