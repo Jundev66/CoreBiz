@@ -524,8 +524,8 @@
     "title": "Waking the server",
     "lead": "The data service was asleep. Free hosting shuts it down after fifteen minutes without visitors, and it takes about a minute to come back.",
     "explain": "This happens once. From now on the app responds instantly while you are using it.",
-    "waiting": "Checking...",
-    "ready": "Ready. Taking you in...",
+    "waiting": "Checking…",
+    "ready": "Ready. Taking you in…",
     "stuck": "This is taking longer than usual. You can wait a bit more or try again.",
     "retry": "Try again"
   }

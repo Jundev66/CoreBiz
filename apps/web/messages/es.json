@@ -523,10 +523,10 @@
   "waking": {
     "title": "Despertando el servidor",
     "lead": "El servicio de datos estaba dormido. El alojamiento gratuito lo apaga tras quince minutos sin visitas, y tarda cerca de un minuto en volver.",
-    "explain": "Esto pasa una vez. A partir de ahora la aplicacion responde al instante mientras la estes usando.",
-    "waiting": "Comprobando...",
-    "ready": "Listo. Entrando...",
-    "stuck": "Esta tardando mas de lo normal. Puedes esperar un poco mas o volver a intentarlo.",
+    "explain": "Esto pasa una vez. A partir de ahora la aplicación responde al instante mientras la estés usando.",
+    "waiting": "Comprobando…",
+    "ready": "Listo. Entrando…",
+    "stuck": "Está tardando más de lo normal. Puedes esperar un poco más o volver a intentarlo.",
     "retry": "Reintentar"
   }
 }
