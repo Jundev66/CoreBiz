@@ -22,3 +22,4 @@ export * from './use-cases/administration/update-tenant-settings';
 export * from './use-cases/purchasing/create-supplier';
 export * from './use-cases/purchasing/set-supplier-status';
 export * from './use-cases/purchasing/receive-goods';
+export * from './use-cases/purchasing/void-goods-receipt';

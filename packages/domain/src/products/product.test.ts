@@ -203,4 +203,58 @@ describe('Product — alertas y modificacion', () => {
     const p = unwrap(make({ trackStock: false }));
     expect(p.compensateStock(qty('5'), AT, { type: 'x', id: 'y' }).ok).toBe(true);
   });
+
+  // ── Revertir una entrada: anular una recepcion de compra ────────────────────
+
+  it('revertir una entrada resta del saldo y lo registra como compensacion', () => {
+    const p = unwrap(make({ initialStock: qty('100') }));
+    p.pullStockMovements();
+
+    const revertido = p.reverseStockEntry(qty('30'), AT, { type: 'goods_receipt', id: 'r-1' });
+
+    expect(revertido.ok).toBe(true);
+    expect(p.onHand.toCompactString()).toBe('70');
+
+    const [movimiento] = p.pullStockMovements();
+    // El tipo importa: registrado como `out` pareceria un despacho, y deshacer una
+    // compra no es vender.
+    expect(movimiento?.kind).toBe('void_compensation');
+    expect(movimiento?.quantity.toCompactString()).toBe('-30');
+    expect(movimiento?.balanceAfter.toCompactString()).toBe('70');
+  });
+
+  it('NO deja revertir una entrada cuya mercancia ya se vendio', () => {
+    const p = unwrap(make({ initialStock: qty('10') }));
+
+    // Se recibieron 10 y se despacharon 8: quedan 2. Anular la recepcion pediria
+    // quitar 10, y no se puede fingir que nunca llego algo que ya salio.
+    expect(unwrap2(p.removeStock(qty('8'), AT))).toBe(undefined);
+
+    const revertido = p.reverseStockEntry(qty('10'), AT, { type: 'goods_receipt', id: 'r-1' });
+
+    expect(revertido.ok).toBe(false);
+    if (!revertido.ok) expect(revertido.error.kind).toBe('InsufficientStock');
+    // Y el saldo no se toca: o la operacion entera, o nada.
+    expect(p.onHand.toCompactString()).toBe('2');
+  });
+
+  it('con la politica permisiva si deja el saldo en negativo', () => {
+    const p = unwrap(make({ initialStock: qty('5'), stockPolicy: 'allow_negative' }));
+
+    const revertido = p.reverseStockEntry(qty('8'), AT, { type: 'goods_receipt', id: 'r-1' });
+
+    expect(revertido.ok).toBe(true);
+    expect(p.onHand.toCompactString()).toBe('-3');
+  });
+
+  it('revertir sobre un producto sin stock controlado no hace nada y no falla', () => {
+    const p = unwrap(make({ trackStock: false }));
+    expect(p.reverseStockEntry(qty('5'), AT, { type: 'x', id: 'y' }).ok).toBe(true);
+  });
 });
+
+/** `unwrap` para un Result<void, E>: devuelve undefined y lanza si vino en error. */
+function unwrap2(r: { ok: boolean }): undefined {
+  if (!r.ok) throw new Error('se esperaba ok');
+  return undefined;
+}

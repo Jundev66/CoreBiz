@@ -315,6 +315,53 @@ export class Product extends AggregateRoot<ProductId> {
     return ok(undefined);
   }
 
+  /**
+   * Revierte una ENTRADA de inventario cuyo documento se anula.
+   *
+   * Es el simetrico de `compensateStock`, y hacen falta los dos porque los documentos
+   * mueven el stock en direcciones opuestas: anular una nota de entrega DEVUELVE lo que
+   * salio, y anular una recepcion QUITA lo que entro.
+   *
+   * Se registra con el mismo tipo de movimiento —`void_compensation`— y no como una
+   * salida: en el libro mayor, una anulacion tiene que poder distinguirse de un despacho.
+   * Si se registrara como `out`, deshacer una compra pareceria una venta.
+   *
+   * Y puede FALLAR, que es lo importante: si la mercancia recibida ya se vendio, el saldo
+   * no da para deshacer la entrada. No se puede fingir que nunca llego algo que ya salio,
+   * asi que se rechaza en lugar de dejar el inventario en negativo — salvo que el tenant
+   * haya pedido expresamente lo contrario, igual que en una salida normal.
+   */
+  reverseStockEntry(
+    quantity: Quantity,
+    at: Date,
+    ref: { type: string; id: string },
+  ): Result<void, ProductError> {
+    if (!this.props.trackStock) return ok(undefined);
+    if (!quantity.isPositive) {
+      return err({ kind: 'OutOfRange', field: 'quantity', min: 0 });
+    }
+
+    const balanceAfter = this.props.onHand.subtract(quantity);
+    if (balanceAfter.isNegative && this.props.stockPolicy === 'deny_negative') {
+      return err({
+        kind: 'InsufficientStock',
+        sku: this.props.sku,
+        requested: quantity.toCompactString(),
+        available: this.props.onHand.toCompactString(),
+      });
+    }
+
+    this.applyMovement(
+      'void_compensation',
+      quantity.negate(),
+      balanceAfter,
+      at,
+      ref,
+      'Anulacion de documento',
+    );
+    return ok(undefined);
+  }
+
   private applyMovement(
     kind: StockMovement['kind'],
     delta: Quantity,

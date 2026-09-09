@@ -44,6 +44,7 @@ export const PERMISSIONS = [
   'purchase:read',
   'purchase:write',
   'purchase:receive',
+  'purchase:void',
   'report:read',
   'report:export',
   'user:read',
@@ -62,6 +63,10 @@ export type Permission = (typeof PERMISSIONS)[number];
  * Criterio de diseno: un vendedor puede EMITIR una nota de entrega pero no ANULARLA.
  * Anular revierte stock y altera el historico, asi que exige un rol con mas responsabilidad.
  * De la misma forma, quien trabaja en almacen ajusta inventario pero no toca precios.
+ *
+ * `purchase:void` sigue el mismo criterio y por el mismo motivo: almacen RECIBE mercancia
+ * pero no deshace una recepcion, porque deshacerla resta del inventario y reescribe lo que
+ * el historico dice que entro aquel dia.
  */
 const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = {
   owner: ['*'],
@@ -89,6 +94,7 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
     'purchase:read',
     'purchase:write',
     'purchase:receive',
+    'purchase:void',
     'report:read',
     'report:export',
     'user:read',
