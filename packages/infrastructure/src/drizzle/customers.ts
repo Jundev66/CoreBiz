@@ -3,7 +3,7 @@ import { schema } from '@corebiz/db';
 import type { Customer, CustomerId, TenantId } from '@corebiz/domain';
 import type { CustomerRepository, ListCustomersFilter, Page } from '@corebiz/application';
 import { fromCustomer, toCustomer } from './mappers';
-import { decodeCursor, encodeCursor, likePattern, pageLimit } from './pagination';
+import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../prisma/pagination';
 import type { Tx } from './tx';
 
 const { customers, deliveryNotes } = schema;

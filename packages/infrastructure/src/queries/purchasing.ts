@@ -1,5 +1,4 @@
-import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
-import { schema, type Database } from '@corebiz/db';
+import type { PrismaClient } from '@corebiz/prisma-client';
 import { Money } from '@corebiz/domain';
 import type {
   GoodsReceiptLineView,
@@ -11,24 +10,21 @@ import type {
   SupplierOption,
   TenantContext,
 } from '@corebiz/application';
-import { readOnly } from '../drizzle/session';
+import { readOnly } from '../prisma/session';
 import { quantity } from './format';
-import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../drizzle/pagination';
-
-const { suppliers, goodsReceipts, goodsReceiptLines } = schema;
+import { decodeCursor, encodeCursor, pageLimit } from '../prisma/pagination';
 
 /**
  * Lado de LECTURA de compras.
  *
- * El nombre del proveedor se resuelve con un join en lugar de guardarse en el
- * documento, y esa asimetria con las lineas es deliberada: el nombre del
- * PRODUCTO se congela en la linea porque describe lo que llego aquel dia, pero
- * el proveedor es una referencia viva — si cambia de razon social, lo util es
- * ver la actual.
+ * El nombre del proveedor se resuelve con un join en lugar de guardarse en el documento, y
+ * esa asimetria con las lineas es deliberada: el nombre del PRODUCTO se congela en la
+ * linea porque describe lo que llego aquel dia, pero el proveedor es una referencia viva
+ * — si cambia de razon social, lo util es ver la actual.
  */
-class DrizzlePurchasingQueries implements PurchasingQueries {
+class PrismaPurchasingQueries implements PurchasingQueries {
   constructor(
-    private readonly db: Database,
+    private readonly prisma: PrismaClient,
     private readonly ctx: TenantContext,
   ) {}
 
@@ -40,39 +36,47 @@ class DrizzlePurchasingQueries implements PurchasingQueries {
   }): Promise<Page<SupplierListItem>> {
     const limit = pageLimit(filter.limit);
 
-    return readOnly(this.db, this.ctx, async (tx) => {
-      const conditions = [eq(suppliers.tenantId, this.ctx.tenantId)];
-      if (filter.includeArchived !== true) conditions.push(isNull(suppliers.archivedAt));
-
-      if (filter.search !== undefined && filter.search.trim() !== '') {
-        const pattern = likePattern(filter.search);
-        const match = or(
-          ilike(suppliers.name, pattern),
-          ilike(suppliers.code, pattern),
-          ilike(suppliers.taxId, pattern),
-        );
-        if (match !== undefined) conditions.push(match);
-      }
-
+    return readOnly(this.prisma, this.ctx, async (tx) => {
       const cursor = decodeCursor(filter.cursor);
-      if (cursor !== null) {
-        conditions.push(sql`(${suppliers.name}, ${suppliers.id}) > (${cursor.sort}, ${cursor.id})`);
-      }
+      const search = filter.search?.trim() ?? '';
 
-      const rows = await tx
-        .select({
-          id: suppliers.id,
-          code: suppliers.code,
-          name: suppliers.name,
-          taxId: suppliers.taxId,
-          contactName: suppliers.contactName,
-          phone: suppliers.phone,
-          archivedAt: suppliers.archivedAt,
-        })
-        .from(suppliers)
-        .where(and(...conditions))
-        .orderBy(asc(suppliers.name), asc(suppliers.id))
-        .limit(limit + 1);
+      const rows = await tx.suppliers.findMany({
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          tax_id: true,
+          contact_name: true,
+          phone: true,
+          archived_at: true,
+        },
+        where: {
+          tenant_id: this.ctx.tenantId,
+          ...(filter.includeArchived !== true ? { archived_at: null } : {}),
+          ...(search !== ''
+            ? {
+                // `contains` escapa los comodines por su cuenta, asi que aqui NO se
+                // aplica `likePattern`: hacerlo escaparia dos veces y buscar "100%"
+                // dejaria de encontrar "100%".
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' } },
+                  { code: { contains: search, mode: 'insensitive' } },
+                  { tax_id: { contains: search, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+          ...(cursor !== null
+            ? {
+                // El equivalente de `(name, id) > (sort, id)`. Prisma no expresa
+                // comparacion de tuplas; esta forma con OR pide exactamente lo mismo y
+                // sigue apoyandose en el indice (name, id).
+                OR: [{ name: { gt: cursor.sort } }, { name: cursor.sort, id: { gt: cursor.id } }],
+              }
+            : {}),
+        },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        take: limit + 1,
+      });
 
       const hasMore = rows.length > limit;
       const visible = hasMore ? rows.slice(0, limit) : rows;
@@ -83,10 +87,10 @@ class DrizzlePurchasingQueries implements PurchasingQueries {
           id: row.id,
           code: row.code,
           name: row.name,
-          taxId: row.taxId,
-          contactName: row.contactName,
+          taxId: row.tax_id,
+          contactName: row.contact_name,
           phone: row.phone,
-          archived: row.archivedAt !== null,
+          archived: row.archived_at !== null,
         })),
         nextCursor: hasMore && last !== undefined ? encodeCursor(last.name, last.id) : null,
       };
@@ -94,13 +98,13 @@ class DrizzlePurchasingQueries implements PurchasingQueries {
   }
 
   supplierOptions(limit = 500): Promise<readonly SupplierOption[]> {
-    return readOnly(this.db, this.ctx, async (tx) =>
-      tx
-        .select({ id: suppliers.id, code: suppliers.code, name: suppliers.name })
-        .from(suppliers)
-        .where(and(eq(suppliers.tenantId, this.ctx.tenantId), isNull(suppliers.archivedAt)))
-        .orderBy(asc(suppliers.name))
-        .limit(pageLimit(limit)),
+    return readOnly(this.prisma, this.ctx, (tx) =>
+      tx.suppliers.findMany({
+        select: { id: true, code: true, name: true },
+        where: { tenant_id: this.ctx.tenantId, archived_at: null },
+        orderBy: { name: 'asc' },
+        take: pageLimit(limit),
+      }),
     );
   }
 
@@ -108,38 +112,34 @@ class DrizzlePurchasingQueries implements PurchasingQueries {
     const limit = pageLimit(filter.limit);
     const currency = this.ctx.settings.baseCurrency;
 
-    return readOnly(this.db, this.ctx, async (tx) => {
-      // El conteo de lineas se calcula en la base de datos con un subselect en
-      // lugar de traer las lineas y contarlas aqui. Para un listado de veinte
-      // recepciones eso son veinte documentos completos que nadie va a mirar.
-      const rows = await tx
-        .select({
-          id: goodsReceipts.id,
-          number: goodsReceipts.number,
-          status: goodsReceipts.status,
-          supplierName: suppliers.name,
-          totalMinor: goodsReceipts.totalMinor,
-          receivedAt: goodsReceipts.receivedAt,
-          lineCount: sql<number>`(
-            select count(*)::int from ${goodsReceiptLines}
-             where ${goodsReceiptLines.goodsReceiptId} = ${goodsReceipts.id}
-          )`,
-        })
-        .from(goodsReceipts)
-        .innerJoin(suppliers, eq(suppliers.id, goodsReceipts.supplierId))
-        .where(eq(goodsReceipts.tenantId, this.ctx.tenantId))
-        .orderBy(desc(goodsReceipts.receivedAt))
-        .limit(limit);
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      // El conteo de lineas lo hace la base de datos, no se traen las lineas para
+      // contarlas aqui. Para un listado de veinte recepciones eso serian veinte
+      // documentos completos que nadie va a mirar.
+      const rows = await tx.goods_receipts.findMany({
+        select: {
+          id: true,
+          number: true,
+          status: true,
+          total_minor: true,
+          received_at: true,
+          suppliers: { select: { name: true } },
+          _count: { select: { goods_receipt_lines: true } },
+        },
+        where: { tenant_id: this.ctx.tenantId },
+        orderBy: { received_at: 'desc' },
+        take: limit,
+      });
 
       return {
         items: rows.map((row): GoodsReceiptListItem => ({
           id: row.id,
           number: row.number,
           status: row.status,
-          supplierName: row.supplierName,
-          total: Money.fromMinor(row.totalMinor, currency).toString(),
-          lineCount: Number(row.lineCount),
-          receivedAt: row.receivedAt,
+          supplierName: row.suppliers.name,
+          total: Money.fromMinor(row.total_minor, currency).toString(),
+          lineCount: row._count.goods_receipt_lines,
+          receivedAt: row.received_at,
         })),
         nextCursor: null,
       };
@@ -149,65 +149,54 @@ class DrizzlePurchasingQueries implements PurchasingQueries {
   /**
    * Una recepcion con sus lineas.
    *
-   * Dos consultas y no un join: con un join, cada linea repetiria la cabecera
-   * entera y habria que deduplicarla aqui. Para un documento de cinco lineas eso es
-   * codigo de agrupacion a cambio de ahorrar un viaje que dura microsegundos.
+   * Dos consultas y no un join: con un join, cada linea repetiria la cabecera entera y
+   * habria que deduplicarla aqui. Para un documento de cinco lineas eso es codigo de
+   * agrupacion a cambio de ahorrar un viaje que dura microsegundos.
    */
   receiptById(id: string): Promise<GoodsReceiptView | null> {
     const currency = this.ctx.settings.baseCurrency;
 
-    return readOnly(this.db, this.ctx, async (tx) => {
-      const rows = await tx
-        .select({
-          receipt: goodsReceipts,
-          supplierName: suppliers.name,
-          supplierCode: suppliers.code,
-        })
-        .from(goodsReceipts)
-        .innerJoin(suppliers, eq(suppliers.id, goodsReceipts.supplierId))
-        .where(and(eq(goodsReceipts.tenantId, this.ctx.tenantId), eq(goodsReceipts.id, id)))
-        .limit(1);
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      const receipt = await tx.goods_receipts.findFirst({
+        where: { tenant_id: this.ctx.tenantId, id },
+        include: { suppliers: { select: { name: true, code: true } } },
+      });
 
-      const row = rows[0];
-      if (row === undefined) return null;
+      if (receipt === null) return null;
 
-      const lines = await tx
-        .select()
-        .from(goodsReceiptLines)
-        .where(
-          and(
-            eq(goodsReceiptLines.tenantId, this.ctx.tenantId),
-            eq(goodsReceiptLines.goodsReceiptId, id),
-          ),
-        )
-        .orderBy(asc(goodsReceiptLines.lineNo));
+      const lines = await tx.goods_receipt_lines.findMany({
+        where: { tenant_id: this.ctx.tenantId, goods_receipt_id: id },
+        orderBy: { line_no: 'asc' },
+      });
 
-      const r = row.receipt;
       return {
-        id: r.id,
-        number: r.number,
-        status: r.status,
-        supplierName: row.supplierName,
-        supplierCode: row.supplierCode,
-        total: Money.fromMinor(r.totalMinor, currency).toString(),
+        id: receipt.id,
+        number: receipt.number,
+        status: receipt.status,
+        supplierName: receipt.suppliers.name,
+        supplierCode: receipt.suppliers.code,
+        total: Money.fromMinor(receipt.total_minor, currency).toString(),
         lineCount: lines.length,
-        receivedAt: r.receivedAt,
-        supplierReference: r.supplierReference,
-        notes: r.notes,
-        voidReason: r.voidReason,
+        receivedAt: receipt.received_at,
+        supplierReference: receipt.supplier_reference,
+        notes: receipt.notes,
+        voidReason: receipt.void_reason,
         lines: lines.map((line): GoodsReceiptLineView => ({
-          lineNo: line.lineNo,
-          description: line.descriptionSnapshot,
-          unit: line.unitSnapshot,
+          lineNo: line.line_no,
+          description: line.description_snapshot,
+          unit: line.unit_snapshot,
           quantity: quantity(line.quantity),
-          unitCost: Money.fromMinor(line.unitCostMinor, currency).toString(),
-          lineTotal: Money.fromMinor(line.lineTotalMinor, currency).toString(),
+          unitCost: Money.fromMinor(line.unit_cost_minor, currency).toString(),
+          lineTotal: Money.fromMinor(line.line_total_minor, currency).toString(),
         })),
       };
     });
   }
 }
 
-export function drizzlePurchasingQueries(db: Database, ctx: TenantContext): PurchasingQueries {
-  return new DrizzlePurchasingQueries(db, ctx);
+export function prismaPurchasingQueries(
+  prisma: PrismaClient,
+  ctx: TenantContext,
+): PurchasingQueries {
+  return new PrismaPurchasingQueries(prisma, ctx);
 }

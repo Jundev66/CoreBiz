@@ -3,7 +3,7 @@ import { schema } from '@corebiz/db';
 import type { DeliveryNote, DeliveryNoteId, TenantId } from '@corebiz/domain';
 import type { DeliveryNoteRepository, Page } from '@corebiz/application';
 import { fromDeliveryNote, fromDeliveryNoteLines, toDeliveryNote } from './mappers';
-import { pageLimit } from './pagination';
+import { pageLimit } from '../prisma/pagination';
 import type { Tx } from './tx';
 
 const { deliveryNotes, deliveryNoteLines } = schema;

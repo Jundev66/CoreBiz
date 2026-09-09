@@ -3,7 +3,7 @@ import { schema } from '@corebiz/db';
 import type { Product, ProductId, TenantId } from '@corebiz/domain';
 import type { IdGenerator, Page, ProductRepository } from '@corebiz/application';
 import { fromProduct, toProduct, type StockMovementInsert } from './mappers';
-import { likePattern, pageLimit } from './pagination';
+import { likePattern, pageLimit } from '../prisma/pagination';
 import type { Tx } from './tx';
 
 const { products, stockMovements } = schema;

@@ -36,7 +36,7 @@ export {
   DrizzleMembershipRepository,
   DrizzleTenantSettingsRepository,
 } from './drizzle/administration';
-export { drizzleAdminQueries } from './queries/administration';
+export { prismaAdminQueries } from './queries/administration';
 export { cryptoTokenFactory, hashInvitationToken } from './crypto/tokens';
 export {
   previewInvitation,
@@ -45,7 +45,7 @@ export {
   type AcceptInvitationResult,
 } from './prisma/invitations-flow';
 export { DrizzleSupplierRepository, DrizzleGoodsReceiptRepository } from './drizzle/purchasing';
-export { drizzlePurchasingQueries } from './queries/purchasing';
+export { prismaPurchasingQueries } from './queries/purchasing';
 export { databaseIsReachable } from './prisma/health';
 export {
   demoCapacity,

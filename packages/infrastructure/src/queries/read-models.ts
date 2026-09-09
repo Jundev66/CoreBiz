@@ -23,9 +23,10 @@ import type {
   TenantContext,
   UsageQueries,
 } from '@corebiz/application';
-import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../drizzle/pagination';
-import { drizzleAdminQueries } from './administration';
-import { drizzlePurchasingQueries } from './purchasing';
+import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../prisma/pagination';
+import type { PrismaClient } from '@corebiz/prisma-client';
+import { prismaAdminQueries } from './administration';
+import { prismaPurchasingQueries } from './purchasing';
 import { readOnly } from '../drizzle/session';
 import { money, quantity, toMinor } from './format';
 import { usagePeriod } from '../drizzle/usage';
@@ -553,14 +554,31 @@ class DrizzleReportQueries implements ReportQueries {
   }
 }
 
-export function drizzleReadModels(db: Database, ctx: TenantContext, clock: Clock): ReadModels {
+/**
+ * Los modelos de lectura, durante la migracion a Prisma.
+ *
+ * Recibe los DOS clientes a proposito y de forma temporal: cada modelo de lectura abre su
+ * propia transaccion de solo lectura, asi que los dos adaptadores conviven sin estorbarse
+ * y las clases se pueden mover de una en una. Cuando no quede ninguna en Drizzle, el
+ * parametro `db` desaparece.
+ *
+ * Lo que NO se puede hacer asi son los repositorios: alli todo comparte una unica
+ * transaccion, y dos clientes son dos conexiones, luego dos transacciones, luego el
+ * contexto de empresa no viaja. Por eso ese paso va entero de una vez.
+ */
+export function drizzleReadModels(
+  db: Database,
+  prisma: PrismaClient,
+  ctx: TenantContext,
+  clock: Clock,
+): ReadModels {
   return {
     customers: new DrizzleCustomerQueries(db, ctx),
     products: new DrizzleProductQueries(db, ctx),
     deliveryNotes: new DrizzleDeliveryNoteQueries(db, ctx),
     usage: new DrizzleUsageQueries(db, ctx, clock),
     reports: new DrizzleReportQueries(db, ctx),
-    admin: drizzleAdminQueries(db, ctx),
-    purchasing: drizzlePurchasingQueries(db, ctx),
+    admin: prismaAdminQueries(prisma, ctx),
+    purchasing: prismaPurchasingQueries(prisma, ctx),
   };
 }

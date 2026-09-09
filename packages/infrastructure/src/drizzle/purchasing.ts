@@ -14,7 +14,7 @@ import {
 } from '@corebiz/domain';
 import type { GoodsReceiptRepository, Page, SupplierRepository } from '@corebiz/application';
 import type { Tx } from './tx';
-import { decodeCursor, encodeCursor, likePattern, pageLimit } from './pagination';
+import { decodeCursor, encodeCursor, likePattern, pageLimit } from '../prisma/pagination';
 
 const { suppliers, goodsReceipts, goodsReceiptLines } = schema;
 

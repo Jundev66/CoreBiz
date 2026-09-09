@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { getDatabase, schema } from '@corebiz/db';
+import { getDatabase, getPrisma, schema } from '@corebiz/db';
 import type {
   Clock,
   IdGenerator,
@@ -35,10 +35,13 @@ export interface PostgresRuntime {
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
   const db = getDatabase(deps.url);
+  // Los dos clientes conviven mientras dura la migracion. Cada uno cachea su pool por
+  // URL, asi que esto no abre conexiones de mas: abre un pool por cliente y por base.
+  const prisma = getPrisma(deps.url);
 
   return {
     uow: new DrizzleUnitOfWork({ db, ctx: deps.ctx, ids: deps.ids, clock: deps.clock }),
-    queries: drizzleReadModels(db, deps.ctx, deps.clock),
+    queries: drizzleReadModels(db, prisma, deps.ctx, deps.clock),
   };
 }
 
