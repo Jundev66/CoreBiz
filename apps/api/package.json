@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "node dist/apps/api/src/main.js",
-    "dev": "concurrently -n tsc,alias,node -c blue,magenta,green \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"tsc-alias -p tsconfig.build.json --watch\" \"node --watch dist/apps/api/src/main.js\"",
+    "dev": "node scripts/dev.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

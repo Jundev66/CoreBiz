@@ -195,10 +195,19 @@ export default tseslint.config(
     },
   },
 
-  // Archivos de configuracion en JS plano.
+  // Archivos de configuracion y scripts en JS plano. Corren en Node, asi que sus
+  // globales tienen que estar declarados: sin esto, un script de herramientas no puede
+  // ni escribir por consola sin que lint lo marque como variable inexistente.
   {
     files: ['**/*.mjs', '*.config.ts'],
     ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      // Hay que reponer lo que trae `disableTypeChecked`: declarar `languageOptions`
+      // aqui SUSTITUYE al suyo en lugar de fusionarse, y sin esto el analizador
+      // intenta resolver estos ficheros contra un tsconfig que no los incluye.
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: { process: 'readonly', console: 'readonly' },
+    },
   },
 
   // Config de dependency-cruiser: CommonJS, y sus strings son patrones de expresion
