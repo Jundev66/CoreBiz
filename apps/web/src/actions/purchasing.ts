@@ -25,6 +25,18 @@ export interface PurchasingState {
 
 const failure = toFormFailure;
 
+/**
+ * Extrae un campo de texto del formulario.
+ *
+ * `FormData.get` devuelve `File | string | null`: un `String(...)` directo sobre un
+ * archivo produciria "[object File]" y lo colaria como si fuese un dato valido. Aqui
+ * cualquier cosa que no sea texto se trata como ausente.
+ */
+function campo(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === 'string' ? value : '';
+}
+
 const supplierInput = z.object({
   name: z.string().trim().min(2).max(120),
   taxId: z.string().trim().optional(),
@@ -137,4 +149,32 @@ export async function setSupplierStatusAction(formData: FormData): Promise<void>
 
   revalidatePath('/purchases/suppliers');
   redirect('/purchases/suppliers');
+}
+
+/**
+ * Anular una recepcion ya registrada.
+ *
+ * Puede fallar por un motivo que no tiene equivalente en ventas: si la mercancia recibida
+ * ya se vendio, el saldo no da para deshacer la entrada. Ese error viaja como cualquier
+ * otro y la pantalla lo traduce; no se traga aqui.
+ */
+export async function voidGoodsReceiptAction(
+  _prev: PurchasingState,
+  formData: FormData,
+): Promise<PurchasingState> {
+  const goodsReceiptId = campo(formData, 'goodsReceiptId');
+  const reason = campo(formData, 'reason');
+
+  const { voidGoodsReceipt } = await apiForRequest();
+  const result = await voidGoodsReceipt({ goodsReceiptId, reason });
+
+  if (!result.ok) return failure(result.error);
+
+  revalidatePath('/purchases');
+  revalidatePath('/products');
+  // Y la ficha desde la que se anula, que es la unica pantalla que el usuario esta
+  // mirando en ese momento. Sin esto se queda ensenando la recepcion como si siguiera
+  // viva.
+  revalidatePath(`/purchases/${goodsReceiptId}`);
+  return { status: 'success' };
 }

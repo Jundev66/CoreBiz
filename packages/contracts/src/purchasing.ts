@@ -53,3 +53,20 @@ export const receiveGoodsSchema = z
   .strict();
 
 export type ReceiveGoodsInput = z.infer<typeof receiveGoodsSchema>;
+
+/**
+ * Anular una recepcion.
+ *
+ * El motivo es obligatorio y por el mismo motivo que en ventas: dentro de un mes, la
+ * unica explicacion de por que aquella entrada dejo de contar es este texto.
+ *
+ * Y hay una diferencia con anular una venta que conviene tener presente al leer el
+ * error: esta operacion PUEDE fallar aunque el documento sea anulable. Si la mercancia
+ * recibida ya se vendio, el saldo no da para deshacer la entrada, y el sistema lo dice en
+ * lugar de dejar el inventario en negativo.
+ */
+export const voidGoodsReceiptSchema = z
+  .object({ reason: z.string().trim().min(3, 'TooShort').max(200, 'TooLong') })
+  .strict();
+
+export type VoidGoodsReceiptInput = z.infer<typeof voidGoodsReceiptSchema>;

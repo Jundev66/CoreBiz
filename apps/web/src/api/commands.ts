@@ -13,6 +13,7 @@ import type {
   SetSupplierStatusInput,
   UpdateTenantSettingsInput,
   VoidDeliveryNoteInput,
+  VoidGoodsReceiptInput,
 } from '@corebiz/application';
 import { send } from './client';
 
@@ -149,5 +150,12 @@ export function httpCommands() {
         supplierReference: orUndefined(input.supplierReference),
         notes: orUndefined(input.notes),
       }),
+
+    voidGoodsReceipt: (input: VoidGoodsReceiptInput & { goodsReceiptId: string }) =>
+      send<{ number: string }>(
+        'POST',
+        `/v1/purchasing/receipts/${encodeURIComponent(input.goodsReceiptId)}/void`,
+        { reason: input.reason },
+      ),
   } as const;
 }

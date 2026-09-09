@@ -9,6 +9,7 @@ import {
   makeInviteUser,
   makeIssueDeliveryNote,
   makeReceiveGoods,
+  makeVoidGoodsReceipt,
   makeRemoveMember,
   makeRevokeInvitation,
   makeSetCustomerStatus,
@@ -66,6 +67,7 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     createSupplier: makeCreateSupplier(shared),
     setSupplierStatus: makeSetSupplierStatus(shared),
     receiveGoods: makeReceiveGoods(shared),
+    voidGoodsReceipt: makeVoidGoodsReceipt(shared),
   } as const;
 }
 

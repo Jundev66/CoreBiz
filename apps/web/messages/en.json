@@ -424,6 +424,12 @@
     "received_ok": "Delivery {number} recorded. Stock is already updated.",
     "estimatedTotal": "Approximate total: $ {total}",
     "needsSupplier": "You need at least one supplier before recording a delivery.",
+    "voidTitle": "Void this receipt",
+    "voidExplain": "Receipt {number} keeps its number and its history. Whatever came in is removed from stock with a compensating movement, and the document is marked as voided with the reason you write.",
+    "voidReason": "Reason",
+    "voidReasonHint": "Damaged goods, wrong quantity received…",
+    "voidSubmit": "Void the receipt",
+    "voidSoldWarning": "If what arrived with this receipt has already been sold, the system will refuse to void it: you cannot un-receive something that already left.",
     "errors": {
       "Forbidden": "You do not have permission to do this.",
       "FeatureNotAvailable": "Purchases requires the {requiredPlan} plan.",

@@ -2,10 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
 import { UpgradeNotice } from '@/ui/upgrade-notice';
 import { DetailList } from '@/ui/detail';
+import { VoidReceiptForm } from '@/ui/void-receipt-form';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -124,9 +126,12 @@ export default async function GoodsReceiptDetailPage({
         </TableFrame>
       </section>
 
-      {/* El aviso legal va tambien aqui: esto documenta una compra, no la respalda
-          ante nadie. */}
-      <p className="mt-8 text-xs text-[var(--color-muted)]">{t('legal.notice')}</p>
+      {/* Anular solo se ofrece si la recepcion sigue viva Y quien mira puede hacerlo. El
+          caso de uso lo revalida igualmente: esto no es la seguridad, es no ensenar un
+          boton que va a decir que no. */}
+      {receipt.status !== 'voided' && can(ctx.actor, 'purchase:void') && (
+        <VoidReceiptForm goodsReceiptId={receipt.id} number={receipt.number} />
+      )}
     </Shell>
   );
 }

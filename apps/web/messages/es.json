@@ -424,6 +424,12 @@
     "received_ok": "Entrada {number} registrada. El inventario ya está actualizado.",
     "estimatedTotal": "Total aproximado: $ {total}",
     "needsSupplier": "Antes de registrar una entrada necesitas al menos un proveedor.",
+    "voidTitle": "Anular esta recepción",
+    "voidExplain": "La recepción {number} conserva su número y su historial. Lo que había entrado se quita del inventario con un movimiento compensatorio, y el documento queda marcado como anulado con el motivo que escribas.",
+    "voidReason": "Motivo",
+    "voidReasonHint": "Mercancía dañada, error en la cantidad recibida…",
+    "voidSubmit": "Anular la recepción",
+    "voidSoldWarning": "Si lo que llegó con esta recepción ya se vendió, el sistema no dejará anularla: no se puede dar por no llegado algo que ya salió.",
     "errors": {
       "Forbidden": "No tienes permiso para hacer esto.",
       "FeatureNotAvailable": "Compras requiere el plan {requiredPlan}.",

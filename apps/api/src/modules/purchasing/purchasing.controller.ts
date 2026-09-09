@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Inject,
   NotFoundException,
   Param,
@@ -12,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type z } from 'zod';
-import { createSupplierSchema, receiveGoodsSchema, setStatusSchema } from '@corebiz/contracts';
+import {
+  createSupplierSchema,
+  receiveGoodsSchema,
+  setStatusSchema,
+  voidGoodsReceiptSchema,
+} from '@corebiz/contracts';
 import type {
   GoodsReceiptListItem,
   GoodsReceiptView,
@@ -145,6 +152,31 @@ export class PurchasingController {
         supplierReference: body.supplierReference || null,
         notes: body.notes || null,
       }),
+    );
+  }
+
+  /**
+   * Anular una recepcion. POST sobre una subruta, no DELETE — igual que en ventas.
+   *
+   * Una recepcion anulada no desaparece: conserva su numero, quita del inventario lo que
+   * habia entrado y guarda el motivo. `DELETE` prometeria que deja de existir.
+   *
+   * Puede responder 422 aunque el documento sea anulable: si la mercancia recibida ya se
+   * vendio, el saldo no da para deshacer la entrada. Es la diferencia real con anular una
+   * venta, donde devolver al inventario siempre se puede.
+   */
+  @Post('receipts/:id/void')
+  // 200 y no 201: anular no crea nada. La recepcion que ya existia cambia de estado.
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('purchase:void')
+  @ApiOperation({ summary: 'Anular una recepcion, quitando del inventario lo que entro' })
+  async voidReceipt(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(voidGoodsReceiptSchema))
+    body: z.infer<typeof voidGoodsReceiptSchema>,
+  ): Promise<unknown> {
+    return unwrapOrThrow(
+      await this.useCases.voidGoodsReceipt({ goodsReceiptId: id, reason: body.reason }),
     );
   }
 }
