@@ -4,9 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { systemClock } from '@corebiz/application';
 import { makeInviteUser } from '@corebiz/application';
 import { DrizzleUnitOfWork } from '../src/drizzle/unit-of-work';
-import { acceptInvitation, previewInvitation } from '../src/drizzle/invitations-flow';
+import { acceptInvitation, previewInvitation } from '../src/prisma/invitations-flow';
 import { cryptoTokenFactory, hashInvitationToken } from '../src/crypto/tokens';
-import { listMemberships, provisionTenant } from '../src/drizzle/identity';
+import { listMemberships, provisionTenant } from '../src/prisma/identity';
 import {
   TEST_DATABASE_URL,
   closeTestDatabase,

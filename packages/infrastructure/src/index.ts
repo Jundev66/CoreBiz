@@ -23,14 +23,14 @@ export {
   type TenantProfile,
 } from './runtime';
 export { establishTenantContext, readOnly, asUser } from './drizzle/session';
-export { DrizzleRateLimiter, postgresRateLimiter } from './drizzle/rate-limiter';
+export { PrismaRateLimiter, postgresRateLimiter } from './prisma/rate-limiter';
 export {
   listMemberships,
   provisionTenant,
   type Membership,
   type ProvisionError,
   type ProvisionResult,
-} from './drizzle/identity';
+} from './prisma/identity';
 export {
   DrizzleInvitationRepository,
   DrizzleMembershipRepository,
@@ -43,10 +43,10 @@ export {
   acceptInvitation,
   type InvitationPreview,
   type AcceptInvitationResult,
-} from './drizzle/invitations-flow';
+} from './prisma/invitations-flow';
 export { DrizzleSupplierRepository, DrizzleGoodsReceiptRepository } from './drizzle/purchasing';
 export { drizzlePurchasingQueries } from './queries/purchasing';
-export { databaseIsReachable } from './drizzle/health';
+export { databaseIsReachable } from './prisma/health';
 export {
   demoCapacity,
   provisionDemoSandbox,
@@ -57,4 +57,4 @@ export {
   type ProvisionDemoResult,
   type ProvisionDemoOptions,
   type DemoCredentials,
-} from './drizzle/demo';
+} from './prisma/demo';

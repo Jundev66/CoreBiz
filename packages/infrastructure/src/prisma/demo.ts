@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { sql } from 'drizzle-orm';
-import { getDatabase } from '@corebiz/db';
+import { getPrisma } from '@corebiz/db';
 
 /**
  * Provision y control del sandbox de demostracion.
@@ -30,16 +29,16 @@ export interface DemoCapacity {
  * que no cabia cuando ya no cabe.
  */
 export async function demoCapacity(url: string, budgetBytes = 500_000_000): Promise<DemoCapacity> {
-  const rows = await getDatabase(url).execute(sql`select * from app.demo_capacity(${budgetBytes})`);
+  const rows = await getPrisma(url).$queryRaw<
+    {
+      mode: string;
+      used_bytes: string | number;
+      ratio: string | number;
+      active_sandboxes: number;
+    }[]
+  >`select * from app.demo_capacity(${budgetBytes})`;
 
-  const row = rows[0] as
-    | {
-        mode: string;
-        used_bytes: string | number;
-        ratio: string | number;
-        active_sandboxes: number;
-      }
-    | undefined;
+  const row = rows[0];
 
   if (row === undefined) {
     // Sin lectura no se puede saber si cabe. Se asume que no: quedarse sin
@@ -144,14 +143,14 @@ export async function provisionDemoSandbox(
   const password = demoPassword();
 
   try {
-    const rows = await getDatabase(url).execute(sql`
+    const rows = await getPrisma(url).$queryRaw<{ tenant_id: string; user_id: string }[]>`
       select out_tenant as tenant_id, out_user as user_id from app.provision_demo_session(
         ${options.templateTenantId}::uuid, ${email}, ${password},
         ${options.ipHash}, ${options.ttlHours}, ${readonly}
       )
-    `);
+    `;
 
-    const row = rows[0] as { tenant_id: string; user_id: string } | undefined;
+    const row = rows[0];
     if (row === undefined) return { ok: false, reason: 'failed' };
 
     return {
@@ -176,19 +175,21 @@ export async function provisionDemoSandbox(
  * afirmarlo en un test: que la medida de seguridad es la caducidad y no el cron.
  */
 export async function demoSandboxIsAlive(url: string, tenantId: string): Promise<boolean> {
-  const rows = await getDatabase(url).execute(sql`
-    select 1
+  const rows = await getPrisma(url).$queryRaw<{ uno: number }[]>`
+    select 1 as uno
       from public.tenants
      where id = ${tenantId}::uuid
        and is_demo
        and (expires_at is null or expires_at > now())
-  `);
+  `;
 
   return rows.length > 0;
 }
 
 /** Purga los sandboxes caducados. La invoca el cron de respaldo. */
 export async function purgeExpiredDemos(url: string): Promise<number> {
-  const rows = await getDatabase(url).execute(sql`select app.purge_expired_demos() as deleted`);
-  return Number((rows[0] as { deleted: number } | undefined)?.deleted ?? 0);
+  const rows = await getPrisma(url).$queryRaw<
+    { deleted: number }[]
+  >`select app.purge_expired_demos() as deleted`;
+  return Number(rows[0]?.deleted ?? 0);
 }

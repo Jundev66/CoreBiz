@@ -1,8 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
-import { DrizzleRateLimiter } from '../src/drizzle/rate-limiter';
-import { listMemberships, provisionTenant } from '../src/drizzle/identity';
+import { getPrisma } from '@corebiz/db';
+import { PrismaRateLimiter } from '../src/prisma/rate-limiter';
+import { listMemberships, provisionTenant } from '../src/prisma/identity';
 import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database';
 
 /**
@@ -42,7 +43,7 @@ async function dropUser(id: string): Promise<void> {
 afterAll(closeTestDatabase);
 
 describe('Limitador de peticiones', () => {
-  const limiter = new DrizzleRateLimiter(db);
+  const limiter = new PrismaRateLimiter(getPrisma(TEST_DATABASE_URL));
 
   it('deja pasar hasta el limite y bloquea a partir de ahi', async () => {
     const key = bucket();

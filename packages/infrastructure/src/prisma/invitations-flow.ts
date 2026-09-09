@@ -1,5 +1,4 @@
-import { sql } from 'drizzle-orm';
-import { getDatabase } from '@corebiz/db';
+import { getPrisma } from '@corebiz/db';
 import { asUser } from './session';
 
 /**
@@ -34,12 +33,16 @@ export async function previewInvitation(
   userId: string,
   token: string,
 ): Promise<InvitationPreview | null> {
-  const rows = await asUser(getDatabase(url), userId, (tx) =>
-    tx.execute(sql`select * from app.invitation_preview(${token})`),
+  const rows = await asUser(
+    getPrisma(url),
+    userId,
+    (tx) =>
+      tx.$queryRaw<
+        { tenant_name: string; role: string; expires_at: string | Date }[]
+      >`select * from app.invitation_preview(${token})`,
   );
 
-  const row = rows[0] as
-    { tenant_name: string; role: string; expires_at: string | Date } | undefined;
+  const row = rows[0];
 
   return row === undefined
     ? null
@@ -66,11 +69,14 @@ export async function acceptInvitation(
   token: string,
 ): Promise<AcceptInvitationResult> {
   try {
-    const rows = await asUser(getDatabase(url), userId, (tx) =>
-      tx.execute(sql`select app.accept_invitation(${token}) as tenant_id`),
+    const rows = await asUser(
+      getPrisma(url),
+      userId,
+      (tx) =>
+        tx.$queryRaw<{ tenant_id: string }[]>`select app.accept_invitation(${token}) as tenant_id`,
     );
 
-    const tenantId = (rows[0] as { tenant_id: string } | undefined)?.tenant_id;
+    const tenantId = rows[0]?.tenant_id;
     return tenantId === undefined ? { ok: false, error: 'UNKNOWN' } : { ok: true, tenantId };
   } catch (error) {
     const parts: string[] = [];

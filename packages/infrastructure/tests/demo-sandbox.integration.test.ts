@@ -5,7 +5,7 @@ import {
   demoSandboxIsAlive,
   provisionDemoSandbox,
   purgeExpiredDemos,
-} from '../src/drizzle/demo';
+} from '../src/prisma/demo';
 import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database';
 
 /**
