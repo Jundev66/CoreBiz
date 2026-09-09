@@ -14,7 +14,7 @@ export { DrizzleDocumentSequences } from './drizzle/sequences';
 export { DrizzleUsageCounter } from './drizzle/usage';
 export { DrizzleAuditLogger } from './drizzle/audit';
 export { DrizzlePaymentQueries } from './drizzle/payments';
-export { drizzleReadModels } from './queries/read-models';
+export { prismaReadModels } from './queries/read-models';
 export {
   postgresRuntime,
   loadTenantProfile,

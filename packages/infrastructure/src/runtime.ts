@@ -9,7 +9,7 @@ import type {
 } from '@corebiz/application';
 import { DrizzleUnitOfWork } from './drizzle/unit-of-work';
 import { readOnly } from './drizzle/session';
-import { drizzleReadModels } from './queries/read-models';
+import { prismaReadModels } from './queries/read-models';
 
 const { tenants, memberships } = schema;
 
@@ -35,13 +35,14 @@ export interface PostgresRuntime {
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
   const db = getDatabase(deps.url);
-  // Los dos clientes conviven mientras dura la migracion. Cada uno cachea su pool por
-  // URL, asi que esto no abre conexiones de mas: abre un pool por cliente y por base.
+  // Los dos clientes conviven mientras quede algo en Drizzle. El lado de LECTURA ya es
+  // Prisma entero; el Unit of Work todavia no, y no puede migrarse por partes porque
+  // dentro de una transaccion dos clientes serian dos conexiones.
   const prisma = getPrisma(deps.url);
 
   return {
     uow: new DrizzleUnitOfWork({ db, ctx: deps.ctx, ids: deps.ids, clock: deps.clock }),
-    queries: drizzleReadModels(db, prisma, deps.ctx, deps.clock),
+    queries: prismaReadModels(prisma, deps.ctx, deps.clock),
   };
 }
 

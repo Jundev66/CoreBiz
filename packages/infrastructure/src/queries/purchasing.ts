@@ -12,7 +12,7 @@ import type {
 } from '@corebiz/application';
 import { readOnly } from '../prisma/session';
 import { quantity } from './format';
-import { decodeCursor, encodeCursor, pageLimit } from '../prisma/pagination';
+import { decodeCursor, encodeCursor, escapeLikeWildcards, pageLimit } from '../prisma/pagination';
 
 /**
  * Lado de LECTURA de compras.
@@ -55,13 +55,12 @@ class PrismaPurchasingQueries implements PurchasingQueries {
           ...(filter.includeArchived !== true ? { archived_at: null } : {}),
           ...(search !== ''
             ? {
-                // `contains` escapa los comodines por su cuenta, asi que aqui NO se
-                // aplica `likePattern`: hacerlo escaparia dos veces y buscar "100%"
-                // dejaria de encontrar "100%".
+                // `contains` NO escapa los comodines: sin neutralizarlos, buscar "%"
+                // devuelve la tabla entera. Comprobado contra la base.
                 OR: [
-                  { name: { contains: search, mode: 'insensitive' } },
-                  { code: { contains: search, mode: 'insensitive' } },
-                  { tax_id: { contains: search, mode: 'insensitive' } },
+                  { name: { contains: escapeLikeWildcards(search), mode: 'insensitive' } },
+                  { code: { contains: escapeLikeWildcards(search), mode: 'insensitive' } },
+                  { tax_id: { contains: escapeLikeWildcards(search), mode: 'insensitive' } },
                 ],
               }
             : {}),

@@ -54,13 +54,26 @@ export function decodeCursor(raw: string | undefined): Cursor | null {
 }
 
 /**
- * Prepara un termino de busqueda para un LIKE.
+ * Neutraliza los comodines de un termino de busqueda.
  *
- * Escapa `%`, `_` y `\`, que son comodines. Sin esto, buscar "100%" devolveria
- * cualquier cosa que empiece por "100", y un termino de solo "%" recorreria la
- * tabla entera.
+ * `%`, `_` y `\` significan algo dentro de un LIKE. Sin escaparlos, buscar "100%"
+ * devuelve cualquier cosa que empiece por "100", y un termino de solo "%" o "_" trae la
+ * tabla entera — que es justo lo que hace quien escribe un caracter suelto en la caja de
+ * busqueda.
+ *
+ * HACE FALTA TAMBIEN CON PRISMA, y darlo por hecho costo una comprobacion en falso.
+ * `contains` NO escapa nada: compone `like '%' || $1 || '%'` y pasa el termino como
+ * parametro, asi que los comodines que lleve dentro siguen siendo comodines. Medido
+ * contra la base: con nueve clientes, buscar "%" devolvia los nueve.
+ *
+ * El escape funciona porque la barra invertida es el caracter de escape por defecto de
+ * LIKE en Postgres, y eso vale igual dentro de un parametro que dentro de un literal.
  */
+export function escapeLikeWildcards(search: string): string {
+  return search.trim().replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+/** El termino ya escapado y envuelto en comodines, para un LIKE escrito a mano. */
 export function likePattern(search: string): string {
-  const escaped = search.trim().replace(/[\\%_]/g, (ch) => `\\${ch}`);
-  return `%${escaped}%`;
+  return `%${escapeLikeWildcards(search)}%`;
 }
