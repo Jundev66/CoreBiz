@@ -258,8 +258,18 @@ export async function requestPasswordResetAction(
 
   const origin = (await headers()).get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? '';
   const supabase = await supabaseServer();
+
+  /*
+   * El enlace apunta a `/auth/callback`, NO directamente a `/reset-password`.
+   *
+   * Con el flujo PKCE el correo trae un `?code=` que hay que CANJEAR por una sesion de
+   * recuperacion, y ese canje solo puede ocurrir donde se pueden escribir cookies. Al
+   * apuntar directo al formulario, quien pulsaba el enlace llegaba sin sesion y la
+   * pantalla le decia que el enlace habia caducado — recien emitido. Nadie podia
+   * recuperar su contrasena, y el mensaje culpaba al enlace.
+   */
   await supabase.auth.resetPasswordForEmail(parsed.data, {
-    redirectTo: `${origin}/reset-password`,
+    redirectTo: `${origin}/auth/callback?next=%2Freset-password`,
   });
 
   return { status: 'sent' };
