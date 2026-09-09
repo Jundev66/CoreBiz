@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["node"],
+    // El cliente lo escribe Prisma, no nosotros. Comprobar su tipado no aporta nada y
+    // cuesta mucho: son ~79.000 lineas generadas que ya llevan `@ts-nocheck`.
+    "skipLibCheck": true
+  },
+  "include": ["generated/**/*.ts"]
+}

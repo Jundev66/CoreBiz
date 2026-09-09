@@ -20,6 +20,8 @@ export default tseslint.config(
       '**/.turbo/**',
       'e2e/.features-gen/**',
       'supabase/.temp/**',
+      // Codigo generado por `prisma generate`, con su propio `@ts-nocheck`.
+      'packages/prisma-client/generated/**',
     ],
   },
 
@@ -105,6 +107,10 @@ export default tseslint.config(
         // la infraestructura pueda alcanzarlo: si los casos de uso pudieran
         // importarlo, la arquitectura hexagonal seria decorativa.
         { type: 'db', pattern: 'packages/db/src/**' },
+        // El cliente generado por Prisma comparte elemento con `db` a proposito: hereda
+        // su politica sin escribir una nueva, y asi sigue siendo inalcanzable desde el
+        // dominio y desde los casos de uso.
+        { type: 'db', pattern: 'packages/prisma-client/**' },
         { type: 'infrastructure', pattern: 'packages/infrastructure/src/**' },
       ],
       'boundaries/include': ['packages/**/*.ts'],

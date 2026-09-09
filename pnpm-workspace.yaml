@@ -18,6 +18,10 @@ onlyBuiltDependencies:
   - supabase
   - lefthook
   - unrs-resolver
+  # Prisma trae un `preinstall` que prepara su CLI. Sin autorizarlo, `pnpm install`
+  # termina sin el y `prisma generate` falla en el despliegue, no en local.
+  - prisma
+  - '@prisma/engines'
 
 # Correcciones a dependencias mal declaradas por terceros.
 #

@@ -159,7 +159,7 @@ module.exports = {
     // sobre lo que veia y estaba mirando el sitio equivocado — el codigo fuente
     // de apps/api no toca el ORM, y eso es lo que hay que vigilar.
     exclude: {
-      path: '\.(spec|test)\.tsx?$|/__tests__/|^e2e/\.features-gen/|^apps/web/\.next/|^apps/api/dist/',
+      path: '\.(spec|test)\.tsx?$|/__tests__/|^e2e/\.features-gen/|^apps/web/\.next/|^apps/api/dist/|^packages/prisma-client/generated/',
     },
     tsPreCompilationDeps: true,
     /**

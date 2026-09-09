@@ -11,3 +11,8 @@ supabase/.temp/
 # Lo regenera `next build` en cada corrida, con su propio estilo de comillas.
 # Sin esta linea, `pnpm format:check` falla despues de cada build.
 apps/web/next-env.d.ts
+
+# El cliente de Prisma: ~79.000 lineas generadas, con su propio estilo y su
+# `@ts-nocheck` delante. No se commitea; formatearlo solo gastaria tiempo en cada
+# `prisma generate`.
+packages/prisma-client/generated/

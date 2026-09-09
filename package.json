@@ -37,7 +37,9 @@
     "prepare": "lefthook install || exit 0",
     "lint:fix": "eslint . --fix",
     "db:studio": "pnpm --filter @corebiz/db studio",
-    "check:non-fiscal": "bash scripts/check-non-fiscal.sh"
+    "check:non-fiscal": "bash scripts/check-non-fiscal.sh",
+    "db:pull": "pnpm --filter @corebiz/db db:pull",
+    "db:generate": "pnpm --filter @corebiz/db db:generate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

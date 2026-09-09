@@ -9,16 +9,22 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "db:pull": "prisma db pull",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@corebiz/domain": "workspace:*",
+    "@corebiz/prisma-client": "workspace:*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
     "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
     "drizzle-kit": "^0.31.6",
+    "prisma": "7.10.0",
     "typescript": "^5.9.3"
   }
 }
