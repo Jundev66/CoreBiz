@@ -139,6 +139,11 @@ jobs:
       # que es justo lo que crearia un problema legal para el negocio.
       - name: Verificar que no aparece vocabulario fiscal
         run: bash scripts/check-non-fiscal.sh
+      # Supabase manda las migraciones. Un `prisma migrate` compararia contra una base
+      # sombra sin politicas RLS ni funciones SECURITY DEFINER, y generaria un diff que
+      # las BORRA — es decir, cada empresa pasaria a ver las demas.
+      - name: Verificar que Prisma no gestiona migraciones
+        run: bash scripts/check-prisma-owns-nothing.sh
 
   integration:
     name: Persistencia y matriz de aislamiento RLS

@@ -24,7 +24,7 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 ## Stack
 
 **NestJS 11** · **Next.js 16** (App Router) · **TypeScript** · **Supabase** (Postgres, Auth) ·
-**Drizzle ORM** · **Zod** · **Tailwind CSS** · **Vitest** · **Playwright** + `playwright-bdd`
+**Prisma** · **Zod** · **Tailwind CSS** · **Vitest** · **Playwright** + `playwright-bdd`
 
 Dos procesos: una API REST en NestJS que aplica las reglas y habla con Postgres, y una
 interfaz en Next.js que la consume **desde el servidor** —el token nunca llega al
@@ -90,8 +90,8 @@ packages/
   domain/          Reglas de negocio puras. CERO dependencias — mira su package.json.
   application/     Casos de uso y puertos (interfaces). Solo depende de domain.
   contracts/       Esquemas Zod compartidos entre servidor y cliente.
-  db/              Esquema Drizzle y cliente de conexión con su pool.
-  infrastructure/  Adaptadores de Postgres: repositorios Drizzle, modelos de lectura,
+  db/              Esquema de Prisma (introspeccionado) y cliente con su pool.
+  infrastructure/  Adaptadores de Postgres: repositorios Prisma, modelos de lectura,
                    Unit of Work, limitador de peticiones y sandbox de demostración.
 apps/
   api/             NestJS. Controllers, guards y DTOs como adaptadores primarios.
@@ -113,14 +113,15 @@ Las decisiones con su contexto y sus alternativas descartadas están en [`docs/a
 1. [Arquitectura hexagonal con el dominio sin dependencias](docs/adr/001-arquitectura-hexagonal.md)
 2. [Dinero en bigint y moneda dual con tasa congelada](docs/adr/002-dinero-y-moneda-dual.md)
 3. [Notas de entrega en lugar de facturas fiscales](docs/adr/003-notas-de-entrega.md)
-4. [Drizzle sobre postgres.js, no PostgREST](docs/adr/004-drizzle-sobre-postgrest.md)
+4. [Drizzle sobre postgres.js, no PostgREST](docs/adr/004-drizzle-sobre-postgrest.md) — supersedida por la 10
 5. [Aislamiento multi-tenant en cuatro capas](docs/adr/005-aislamiento-multi-tenant.md)
 6. [Autenticación enteramente en el servidor](docs/adr/006-autenticacion-solo-en-el-servidor.md)
 7. [El token de invitación no se guarda](docs/adr/007-invitaciones-con-token-hasheado.md)
 8. [La nota se imprime en el navegador, no se genera como PDF](docs/adr/008-imprimir-en-el-navegador.md)
 9. [Una API dedicada en NestJS, y Next.js como cliente](docs/adr/009-api-dedicada-en-nestjs.md)
-   — supersede el rechazo de NestJS que hacía la 001, y **dice el motivo real** en lugar
-   de disfrazarlo de necesidad técnica.
+10. [Prisma en lugar de Drizzle, y por que](docs/adr/010-prisma-en-lugar-de-drizzle.md)
+    — supersede el rechazo de NestJS que hacía la 001, y **dice el motivo real** en lugar
+    de disfrazarlo de necesidad técnica.
 
 El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).

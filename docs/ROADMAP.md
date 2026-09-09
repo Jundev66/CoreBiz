@@ -26,7 +26,7 @@ Lo verificado, no lo aspiracional.
 | Interfaz (`apps/web`)         | ✅ 29 páginas, consumiendo la API desde el servidor, i18n ES/EN         |
 | Tests E2E + BDD               | ✅ 25 escenarios Gherkin, 58 specs, independientes del orden            |
 | Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla          |
-| Persistencia real             | ✅ Adaptadores Drizzle de cada puerto, UoW sobre transacción real       |
+| Persistencia real             | ✅ Adaptadores Prisma de cada puerto, UoW sobre transacción real        |
 | Tablas de negocio             | ✅ 16 tablas, 14 con `tenant_id`; migraciones y semilla que cuadra sola |
 | Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 68 tests de integración     |
 | Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación       |
@@ -100,7 +100,7 @@ necesitan una variante por adaptador y el criterio de abajo deja de poder cumpli
 
 **Qué construir**
 
-- [x] Esquema Drizzle de los módulos de negocio en `packages/db/src/schema/`: `customers`,
+- [x] Esquema de los módulos de negocio (hoy introspeccionado a `packages/db/prisma/`): `customers`,
       `products`, `stock_movements`, `delivery_notes`, `delivery_note_lines`, `document_sequences`
       y `tenant_usage`. Los nombres ya están comprometidos en la lista de la migración de políticas.
 - [x] Migraciones `create table` correspondientes. **Sin ellas, la migración de RLS salta las tablas
@@ -109,7 +109,7 @@ necesitan una variante por adaptador y el criterio de abajo deja de poder cumpli
 - [x] Convenciones ya decididas y que hay que respetar fila a fila: `bigint` en unidades mínimas para
       dinero, `uuid v7` como PK, índice compuesto con `tenant_id` **siempre primero**, tasa de cambio
       congelada en cada documento.
-- [x] `packages/infrastructure/` con los adaptadores Drizzle de cada puerto. Un archivo por
+- [x] `packages/infrastructure/` con los adaptadores de Prisma de cada puerto. Un archivo por
       repositorio, espejo de los de memoria.
 - [x] `UnitOfWork` real sobre una transacción de `postgres.js`, con `set_config(..., true)` para las
       GUCs de tenant. **Local a la transacción, nunca a la sesión** — con `false`, Supavisor reutiliza

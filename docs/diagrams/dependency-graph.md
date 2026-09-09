@@ -21,7 +21,7 @@ flowchart RL
   end
 
   subgraph adaptadores["Adaptadores — conocen el mundo exterior"]
-    infra["packages/infrastructure<br/><small>Drizzle · cripto</small>"]
+    infra["packages/infrastructure<br/><small>Prisma · cripto</small>"]
     db["packages/db<br/><small>esquema tipado · cliente</small>"]
   end
 
@@ -68,7 +68,7 @@ La única forma que tiene la interfaz de llegar al núcleo es HTTP; lo que impor
 directamente son `@corebiz/domain` —puro, y de ahí sale `Plan.of(code)` para que las
 pantallas sigan preguntando por sus cuotas— y los TIPOS de `@corebiz/application`, que
 son lo que mantiene su cliente HTTP comprobado contra el mismo puerto que cumple el
-adaptador de Drizzle. Valores de ese paquete, ninguno: eso lo vigila `pnpm lint`.
+adaptador de Prisma. Valores de ese paquete, ninguno: eso lo vigila `pnpm lint`.
 
 Que `apps/api` ocupe exactamente el sitio que ocupaba `apps/web` en este diagrama, sin
 que nada del núcleo se moviera, es la demostración de que el hexágono no era decorativo.
@@ -78,7 +78,7 @@ que nada del núcleo se moviera, es la demostración de que el hexágono no era 
 | Regla                        | Qué impide                                                                              |
 | ---------------------------- | --------------------------------------------------------------------------------------- |
 | `domain-is-pure`             | Que el dominio importe cualquier cosa que no sea el dominio.                            |
-| `application-no-infra`       | Que un caso de uso conozca Drizzle, Supabase o el esquema.                              |
+| `application-no-infra`       | Que un caso de uso conozca Prisma, Supabase o el esquema.                               |
 | `ui-no-direct-db`            | Que una pantalla hable con tablas en lugar de con casos de uso y modelos de lectura.    |
 | `no-circular`                | Ciclos entre módulos. Encontró uno real entre los puertos de repositorios y de compras. |
 | `web-no-infrastructure`      | Que la interfaz vuelva a hablar con Postgres. Es el criterio de aceptación de ADR 009.  |

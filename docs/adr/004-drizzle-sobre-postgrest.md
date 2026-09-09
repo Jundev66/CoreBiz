@@ -1,7 +1,16 @@
 # ADR 004 — Drizzle sobre postgres.js, no el cliente PostgREST de Supabase
 
-- **Estado**: aceptada
+- **Estado**: SUPERSEDIDA por [ADR 010](010-prisma-en-lugar-de-drizzle.md)
 - **Fecha**: 2026-09-06
+
+> **Lo que sigue siendo cierto de esta ADR:** todo lo que dice sobre por que NO se usa el
+> cliente PostgREST de Supabase, y los detalles del pooler, el tamano del pool y
+> `SET LOCAL`. El ORM cambio; el razonamiento sobre transacciones no.
+>
+> **Lo que ya no:** la eleccion de Drizzle, y el rechazo de Prisma que hay mas abajo. Su
+> primera razon —el arranque en frio— dejo de ser cierta con Prisma 7, que no lleva motor
+> en Rust. La segunda resulto cierta a medias. El motivo real del cambio no fue tecnico:
+> esta escrito en la [ADR 010](010-prisma-en-lugar-de-drizzle.md).
 
 ## Contexto
 
