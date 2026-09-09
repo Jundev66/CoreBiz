@@ -19,9 +19,12 @@
     "PORT",
     "SUPABASE_URL",
     "API_BASE_URL",
-    "INTERNAL_API_SECRET"
+    "INTERNAL_API_SECRET",
+    "LOGIN_MAX_PER_MINUTE",
+    "SUPABASE_ANON_KEY",
+    "E2E_DRIVER"
   ],
-  "globalDependencies": ["tsconfig.base.json", ".env.example"],
+  "globalDependencies": ["tsconfig.base.json", ".env.example", ".env"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

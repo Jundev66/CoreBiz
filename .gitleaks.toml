@@ -1,0 +1,29 @@
+# Configuracion de gitleaks, que corre en CI sobre el HISTORIAL COMPLETO
+# (`fetch-depth: 0` en el job `secrets` de .github/workflows/ci.yml).
+#
+# Se parte del conjunto de reglas por defecto y solo se exceptua un valor concreto.
+# La alternativa —apagar la regla `jwt` entera— dejaria pasar un token de verdad el
+# dia que alguien pegue uno por descuido, que es justo lo que este job existe para
+# impedir.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+La clave anonima del Supabase LOCAL. No es un secreto: la imprime `supabase start`,
+es identica en todas las instalaciones del mundo y solo sirve contra 127.0.0.1:54321.
+Aparece en la configuracion de Playwright y en el test de aislamiento porque ambos
+tienen que autenticarse contra la base local para comprobar que el aislamiento entre
+empresas se sostiene.
+
+Se exceptua el VALOR, no los ficheros ni la regla: si manana alguien pega en uno de
+esos dos ficheros un token distinto, gitleaks lo seguira encontrando.
+
+Esta en el historial desde los commits 83806c2 y c0b4c49, asi que borrarla del arbol
+de trabajo no serviria de nada contra un escaneo del historial completo — el unico
+arreglo real es declararla aqui.
+"""
+regexes = [
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''',
+]

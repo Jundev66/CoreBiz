@@ -27,9 +27,16 @@ import type { UseCases } from '../../composition/use-cases.provider';
 /**
  * Notas de entrega.
  *
- * NO son facturas fiscales y el sistema entero lo dice en voz alta (ADR 003): hay un
- * script en CI que rompe el build si aparece vocabulario tributario. Por eso el
- * recurso se llama `delivery-notes` y no `invoices`, tambien en la URL.
+ * El sistema entero dice en voz alta lo que estos documentos NO son (ADR 003): hay
+ * un script en CI que rompe el build si aparece vocabulario tributario. Por eso el
+ * recurso se llama `delivery-notes` en la URL, y no de la otra manera.
+ *
+ * Las dos lineas siguientes llevan el marcador que exime del guardian, porque son
+ * justo el caso para el que existe: niegan tener algo, y el guardian solo ve el
+ * termino.
+ *
+ *   NO son facturas fiscales.  // no-fiscal-ok
+ *   El recurso no se llama `invoices`.  // no-fiscal-ok
  */
 @ApiTags('ventas')
 @ApiBearerAuth()

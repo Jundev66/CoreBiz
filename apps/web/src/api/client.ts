@@ -27,10 +27,23 @@ export const DEMO_PLAN_COOKIE = 'corebiz_demo_plan';
  */
 const REQUEST_TIMEOUT_MS = 25_000;
 
+/**
+ * Falta configuracion. NO es lo mismo que una API dormida.
+ *
+ * Tiene tipo propio porque durante un tiempo no lo tuvo: `apiBaseUrl()` lanzaba un
+ * Error corriente desde DENTRO del try de `request()`, el catch lo reescribia como
+ * "la API no respondio" y la web mandaba cada pantalla a la sala de espera. El
+ * resultado es el peor de los mensajes posibles: invita a esperar a que despierte algo
+ * que no esta dormido, y que no va a arreglarse solo por mucho que se espere.
+ */
+export class ApiNotConfiguredError extends Error {}
+
 export function apiBaseUrl(): string {
   const url = process.env.API_BASE_URL;
   if (url === undefined || url === '') {
-    throw new Error('Falta API_BASE_URL. Arranca la API con `pnpm dev:api` o revisa el entorno.');
+    throw new ApiNotConfiguredError(
+      'Falta API_BASE_URL. Copia `.env.example` a `.env` en la raiz del repositorio, o revisa el entorno del despliegue.',
+    );
   }
   return url.replace(/\/$/, '');
 }
@@ -148,8 +161,12 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
    */
   const requestHeaders = { ...(await headers()), ...init?.headers };
 
+  // Por la misma razon, la URL se resuelve FUERA del try: si falta la variable, el
+  // fallo tiene que salir como lo que es y no acabar convertido en "no respondio".
+  const base = apiBaseUrl();
+
   try {
-    return await fetch(`${apiBaseUrl()}${path}`, {
+    return await fetch(`${base}${path}`, {
       ...init,
       headers: requestHeaders,
       /*

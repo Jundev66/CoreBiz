@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { cargarEntornoDeDesarrollo } from './config/dotenv';
 import { loadEnv } from './config/env';
 import { AllExceptionsFilter } from './http/all-exceptions.filter';
 
@@ -15,6 +16,10 @@ import { AllExceptionsFilter } from './http/all-exceptions.filter';
  * y no de esto.
  */
 async function bootstrap(): Promise<void> {
+  // El `.env` de la raiz se lee ANTES de validar, y solo fuera de produccion. El
+  // validador valida; de donde sale la configuracion lo decide el proceso.
+  cargarEntornoDeDesarrollo();
+
   const env = loadEnv();
   const app = await NestFactory.create(AppModule, { bodyParser: true });
 
