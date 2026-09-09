@@ -4,5 +4,5 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "drizzle.config.ts", "prisma.config.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "prisma.config.ts"]
 }

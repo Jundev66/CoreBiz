@@ -15,7 +15,7 @@ import type { PaymentQueries } from '@corebiz/application';
  * esta clase pasa a sumar los cobros pendientes y la regla empieza a morder sin
  * tocar ni el dominio ni el caso de uso.
  */
-export class DrizzlePaymentQueries implements PaymentQueries {
+export class PrismaPaymentQueries implements PaymentQueries {
   outstandingBalanceFor(_customerId: CustomerId, currency: 'USD' | 'VES'): Promise<Money> {
     return Promise.resolve(Money.zero(currency));
   }

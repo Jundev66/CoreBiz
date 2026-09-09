@@ -1,16 +1,16 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { Money, Plan, Product, Quantity, asId, type ProductId } from '@corebiz/domain';
 import { makeCreateSupplier, makeReceiveGoods, systemClock } from '@corebiz/application';
-import { getDatabase } from '@corebiz/db';
-import { DrizzleUnitOfWork } from '../src/drizzle/unit-of-work';
+import { getPrisma } from '@corebiz/db';
+import { PrismaUnitOfWork } from '../src/prisma/unit-of-work';
 import {
   TEST_DATABASE_URL,
   closeTestDatabase,
   createTestTenant,
   dropTestTenant,
   testIds,
+  testSql,
   type TestTenant,
 } from './support/database';
 
@@ -24,7 +24,7 @@ import {
  * inventarios paralelos, que es exactamente el error que se quiere impedir.
  */
 
-const db = getDatabase(TEST_DATABASE_URL);
+const prisma = getPrisma(TEST_DATABASE_URL);
 
 afterAll(closeTestDatabase);
 
@@ -37,8 +37,8 @@ describe('Recepcion de mercancia', () => {
     ctx: { ...tenant.ctx, plan: Plan.of('pro') },
   });
 
-  function uow(t: TestTenant): DrizzleUnitOfWork {
-    return new DrizzleUnitOfWork({ db, ctx: t.ctx, ids: testIds, clock: systemClock });
+  function uow(t: TestTenant): PrismaUnitOfWork {
+    return new PrismaUnitOfWork({ prisma, ctx: t.ctx, ids: testIds, clock: systemClock });
   }
 
   async function seedProduct(sku: string, initial: number): Promise<ProductId> {
@@ -108,11 +108,15 @@ describe('Recepcion de mercancia', () => {
     // ...y hay un movimiento que lo explica, en el MISMO libro mayor del que
     // resta la emision de una nota. Sin esta fila, el inventario habria cambiado
     // sin que nada pudiera decir por que.
-    const movements = await db.execute(sql`
+    // Se comprueba con el cliente CRUDO, no con el ORM que este test verifica. Ademas de
+    // ser lo correcto, evita una diferencia real entre drivers: `postgres.js` entrega las
+    // columnas `bigint` como cadena y Prisma como `BigInt`, asi que la misma asercion
+    // diria cosas distintas segun quien lea la fila.
+    const movements = await testSql()`
       select kind, quantity, balance_after, ref_type, ref_id
         from public.stock_movements
        where product_id = ${productId} and ref_type = 'goods_receipt'
-    `);
+    `;
 
     expect(movements).toHaveLength(1);
     expect(movements[0]).toMatchObject({

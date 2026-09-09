@@ -1,9 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
+import { getPrisma } from '@corebiz/db';
 import { systemClock } from '@corebiz/application';
 import { makeInviteUser } from '@corebiz/application';
-import { DrizzleUnitOfWork } from '../src/drizzle/unit-of-work';
+import { PrismaUnitOfWork } from '../src/prisma/unit-of-work';
 import { acceptInvitation, previewInvitation } from '../src/prisma/invitations-flow';
 import { cryptoTokenFactory, hashInvitationToken } from '../src/crypto/tokens';
 import { listMemberships, provisionTenant } from '../src/prisma/identity';
@@ -12,7 +12,7 @@ import {
   closeTestDatabase,
   createTestTenant,
   dropTestTenant,
-  testDb,
+  testSql,
   testIds,
   type TestTenant,
 } from './support/database';
@@ -27,21 +27,23 @@ import {
  * antes que lo que acepta.
  */
 
-const db = testDb();
+const sql = testSql();
 
 afterAll(closeTestDatabase);
 
 /** Un usuario capaz de aceptar: hace falta que tenga correo, como en el alta real. */
 async function newUserWithEmail(email: string): Promise<string> {
   const id = randomUUID();
-  await db.execute(sql`insert into auth.users (id, email) values (${id}, ${email})`);
+  await sql`insert into auth.users (id, email) values (${id}, ${email})`;
   return id;
 }
 
 async function cleanup(userIds: readonly string[], tenantIds: readonly string[]): Promise<void> {
   for (const tenantId of tenantIds) await dropTestTenant(tenantId as never);
-  for (const id of userIds) await db.execute(sql`delete from auth.users where id = ${id}`);
+  for (const id of userIds) await sql`delete from auth.users where id = ${id}`;
 }
+
+const prisma = getPrisma(TEST_DATABASE_URL);
 
 describe('Aceptar una invitacion', () => {
   let host: TestTenant;
@@ -49,8 +51,8 @@ describe('Aceptar una invitacion', () => {
 
   /** Crea una invitacion pasando por el caso de uso, no escribiendo la fila. */
   async function invite(email: string, role = 'sales'): Promise<{ token: string; id: string }> {
-    const uow = new DrizzleUnitOfWork({
-      db,
+    const uow = new PrismaUnitOfWork({
+      prisma,
       ctx: host.ctx,
       ids: testIds,
       clock: systemClock,
@@ -73,7 +75,7 @@ describe('Aceptar una invitacion', () => {
     host = await createTestTenant({ slug: `inv-${randomUUID().slice(0, 8)}` });
     invitedId = await newUserWithEmail(`invitado-${randomUUID().slice(0, 8)}@corebiz.test`);
     // El correo real del usuario recien creado, para invitar a esa direccion.
-    const rows = await db.execute(sql`select email from auth.users where id = ${invitedId}`);
+    const rows = await sql`select email from auth.users where id = ${invitedId}`;
     invitedMail = (rows[0] as { email: string }).email;
   });
 
@@ -82,9 +84,9 @@ describe('Aceptar una invitacion', () => {
   it('guarda el hash del token y NUNCA el token', async () => {
     const { token } = await invite(invitedMail);
 
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select token_hash from public.invitations where tenant_id = ${host.tenantId}
-    `);
+    `;
     const stored = (rows[0] as { token_hash: string }).token_hash;
 
     expect(stored).not.toBe(token);
@@ -133,9 +135,9 @@ describe('Aceptar una invitacion', () => {
   it('no deja entrar con una invitacion caducada', async () => {
     const { token, id } = await invite(invitedMail);
 
-    await db.execute(sql`
+    await sql`
       update public.invitations set expires_at = now() - interval '1 minute' where id = ${id}
-    `);
+    `;
 
     expect(await previewInvitation(TEST_DATABASE_URL, invitedId, token)).toBeNull();
 
@@ -148,7 +150,7 @@ describe('Aceptar una invitacion', () => {
   it('no deja entrar con una invitacion revocada', async () => {
     const { token, id } = await invite(invitedMail);
 
-    await db.execute(sql`update public.invitations set revoked_at = now() where id = ${id}`);
+    await sql`update public.invitations set revoked_at = now() where id = ${id}`;
 
     const result = await acceptInvitation(TEST_DATABASE_URL, invitedId, token);
     expect(result).toMatchObject({ ok: false, error: 'INVALID_INVITATION' });
@@ -188,20 +190,20 @@ describe('Aceptar una invitacion', () => {
   it('quien ya es miembro consume la invitacion sin duplicar la pertenencia', async () => {
     const { token } = await invite(invitedMail);
 
-    await db.execute(sql`
+    await sql`
       insert into public.memberships (tenant_id, user_id, role, status)
       values (${host.tenantId}, ${invitedId}, 'viewer', 'active')
-    `);
+    `;
 
     // Fallar aqui obligaria a explicar una situacion que a quien la vive le da
     // exactamente igual: ya esta dentro, que era lo que queria.
     const result = await acceptInvitation(TEST_DATABASE_URL, invitedId, token);
     expect(result).toMatchObject({ ok: true });
 
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select count(*)::int as n from public.memberships
        where tenant_id = ${host.tenantId} and user_id = ${invitedId}
-    `);
+    `;
     expect(Number((rows[0] as { n: number }).n)).toBe(1);
 
     await cleanup([invitedId], [host.tenantId]);

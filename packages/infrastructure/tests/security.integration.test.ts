@@ -1,10 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { getPrisma } from '@corebiz/db';
 import { PrismaRateLimiter } from '../src/prisma/rate-limiter';
 import { listMemberships, provisionTenant } from '../src/prisma/identity';
-import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database';
+import { TEST_DATABASE_URL, closeTestDatabase, testSql } from './support/database';
 
 /**
  * Lo que protege la puerta de entrada.
@@ -16,25 +15,25 @@ import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database
  * atomico y una transaccion que revierte entera.
  */
 
-const db = testDb();
+const sql = testSql();
 
 /** Cada test estrena bucket: reutilizarlos los haria dependientes del orden. */
 const bucket = () => `test:${randomUUID()}`;
 
 async function newUser(): Promise<string> {
   const id = randomUUID();
-  await db.execute(sql`insert into auth.users (id) values (${id})`);
+  await sql`insert into auth.users (id) values (${id})`;
   return id;
 }
 
 async function dropUser(id: string): Promise<void> {
   // Borra en cascada la pertenencia; el tenant se limpia aparte porque no cuelga
   // del usuario.
-  await db.execute(sql`
+  await sql`
     delete from public.tenants
      where id in (select tenant_id from public.memberships where user_id = ${id})
-  `);
-  await db.execute(sql`delete from auth.users where id = ${id}`);
+  `;
+  await sql`delete from auth.users where id = ${id}`;
 }
 
 // Al nivel del archivo y no dentro de un `describe`: colgado del primero, la
@@ -80,7 +79,7 @@ describe('Limitador de peticiones', () => {
     await limiter.hit(key, 1, 60);
     await limiter.hit(key, 1, 60);
 
-    const rows = await db.execute(sql`select hits from security.rate_limits where bucket = ${key}`);
+    const rows = await sql`select hits from security.rate_limits where bucket = ${key}`;
 
     // Si dejara de contar al bloquear, quien insistiera sin parar renovaria la
     // ventana en cuanto expirase: el limite seria un bache, no un muro.
@@ -98,7 +97,7 @@ describe('Limitador de peticiones', () => {
 
     expect(decisions.filter((d) => d.allowed)).toHaveLength(5);
 
-    const rows = await db.execute(sql`select hits from security.rate_limits where bucket = ${key}`);
+    const rows = await sql`select hits from security.rate_limits where bucket = ${key}`;
     expect(Number((rows[0] as { hits: number }).hits)).toBe(20);
   });
 
@@ -123,9 +122,9 @@ describe('Alta de empresa', () => {
 
     expect(result.ok).toBe(true);
 
-    const [tenant] = await db.execute(sql`
-      select slug, plan_code, is_demo from public.tenants where id = ${result.tenantId}
-    `);
+    const [tenant] = await sql`
+      select slug, plan_code, is_demo from public.tenants where id = ${result.tenantId!}
+    `;
     expect(tenant).toMatchObject({
       slug: 'panaderia-santa-rosa',
       plan_code: 'free',
@@ -134,24 +133,24 @@ describe('Alta de empresa', () => {
       is_demo: false,
     });
 
-    const [membership] = await db.execute(sql`
+    const [membership] = await sql`
       select role, status from public.memberships
-       where tenant_id = ${result.tenantId} and user_id = ${userId}
-    `);
+       where tenant_id = ${result.tenantId!} and user_id = ${userId}
+    `;
     expect(membership).toMatchObject({ role: 'owner', status: 'active' });
 
-    const [sequence] = await db.execute(sql`
+    const [sequence] = await sql`
       select prefix, next_number from public.document_sequences
-       where tenant_id = ${result.tenantId} and doc_type = 'delivery_note'
-    `);
+       where tenant_id = ${result.tenantId!} and doc_type = 'delivery_note'
+    `;
     expect(sequence).toMatchObject({ prefix: 'NE' });
 
     // El contador arranca en 1: quien crea la empresa ya ocupa plaza. En cero, el
     // plan gratuito admitiria un usuario de mas.
-    const [usage] = await db.execute(sql`
+    const [usage] = await sql`
       select count from public.tenant_usage
-       where tenant_id = ${result.tenantId} and resource = 'users'
-    `);
+       where tenant_id = ${result.tenantId!} and resource = 'users'
+    `;
     expect(Number((usage as { count: number }).count)).toBe(1);
 
     await dropUser(userId);
@@ -165,17 +164,14 @@ describe('Alta de empresa', () => {
 
     expect(first.ok && second.ok).toBe(true);
 
-    const rows = await db.execute(sql`
-      select slug from public.tenants where id in (${first.tenantId}, ${second.tenantId})
+    const rows = await sql<{ slug: string }[]>`
+      select slug from public.tenants where id in (${first.tenantId!}, ${second.tenantId!})
        order by slug
-    `);
+    `;
 
     // Dos negocios pueden llamarse igual. Pedirle a quien acaba de registrarse
     // que se invente otro nombre para su propia tienda seria absurdo.
-    expect(rows.map((r) => (r as { slug: string }).slug)).toEqual([
-      'bodega-la-esquina',
-      'bodega-la-esquina-1',
-    ]);
+    expect(rows.map((r) => r.slug)).toEqual(['bodega-la-esquina', 'bodega-la-esquina-1']);
 
     await dropUser(userId);
     await dropUser(otro);
@@ -190,9 +186,9 @@ describe('Alta de empresa', () => {
     // que solo pulso dos veces.
     expect(repeat).toMatchObject({ ok: false, error: 'ALREADY_OWNER' });
 
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select 1 from public.memberships where user_id = ${userId}
-    `);
+    `;
     expect(rows).toHaveLength(1);
 
     await dropUser(userId);
@@ -202,7 +198,7 @@ describe('Alta de empresa', () => {
     const result = await provisionTenant(TEST_DATABASE_URL, userId, { name: 'A' });
     expect(result).toMatchObject({ ok: false, error: 'INVALID_NAME' });
 
-    const rows = await db.execute(sql`select 1 from public.memberships where user_id = ${userId}`);
+    const rows = await sql`select 1 from public.memberships where user_id = ${userId}`;
     expect(rows).toHaveLength(0);
 
     await dropUser(userId);
@@ -228,10 +224,10 @@ describe('Alta de empresa', () => {
   it('deja fuera de la lista al tenant caducado', async () => {
     const created = await provisionTenant(TEST_DATABASE_URL, userId, { name: 'Efimero' });
 
-    await db.execute(sql`
+    await sql`
       update public.tenants set is_demo = true, expires_at = now() - interval '1 hour'
-       where id = ${created.tenantId}
-    `);
+       where id = ${created.tenantId!}
+    `;
 
     // Un sandbox caducado deja de existir para su dueno en el acto, sin esperar a
     // que el cron lo purgue. La purga es higiene de espacio, no la medida.

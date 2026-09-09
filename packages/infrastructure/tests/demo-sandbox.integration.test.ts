@@ -1,12 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
 import {
   demoCapacity,
   demoSandboxIsAlive,
   provisionDemoSandbox,
   purgeExpiredDemos,
 } from '../src/prisma/demo';
-import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database';
+import { TEST_DATABASE_URL, closeTestDatabase, testSql } from './support/database';
 
 /**
  * El sandbox efimero y la cuenta que lo opera.
@@ -23,7 +22,7 @@ import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database
  * en silencio hasta que llega el cobro.
  */
 
-const db = testDb();
+const sql = testSql();
 const TEMPLATE = '00000000-0000-4000-8000-000000000001';
 
 afterAll(closeTestDatabase);
@@ -37,12 +36,12 @@ afterAll(closeTestDatabase);
  * empezase a fallar por un motivo que no tiene nada que ver con lo que prueba.
  */
 async function dropSandboxes(): Promise<void> {
-  await db.execute(sql`delete from public.tenants where is_demo and id <> ${TEMPLATE}::uuid`);
-  await db.execute(sql`
+  await sql`delete from public.tenants where is_demo and id <> ${TEMPLATE}::uuid`;
+  await sql`
     delete from auth.users
      where coalesce((raw_app_meta_data ->> 'is_demo')::boolean, false)
-  `);
-  await db.execute(sql`delete from public.demo_sessions`);
+  `;
+  await sql`delete from public.demo_sessions`;
 }
 
 describe('Sandbox de demostracion', () => {
@@ -67,7 +66,7 @@ describe('Sandbox de demostracion', () => {
     // Fijar "8 clientes" haria que este test dependiera de que nadie haya tocado
     // la plantilla antes — y la suite E2E le da de alta clientes. Ademas, lo que
     // hay que comprobar es la FIDELIDAD de la copia, no el tamano de la semilla.
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select
         (select count(*) from public.customers where tenant_id = ${TEMPLATE}::uuid)::int as clientes_origen,
         (select count(*) from public.customers where tenant_id = ${result.tenantId}::uuid)::int as clientes_copia,
@@ -77,7 +76,7 @@ describe('Sandbox de demostracion', () => {
         (select count(*) from public.delivery_notes where tenant_id = ${result.tenantId}::uuid)::int as notas_copia,
         (select count(*) from public.delivery_note_lines where tenant_id = ${TEMPLATE}::uuid)::int as lineas_origen,
         (select count(*) from public.delivery_note_lines where tenant_id = ${result.tenantId}::uuid)::int as lineas_copia
-    `);
+    `;
 
     const counts = rows[0] as Record<string, number>;
     expect(Number(counts.clientes_copia)).toBe(Number(counts.clientes_origen));
@@ -93,26 +92,26 @@ describe('Sandbox de demostracion', () => {
     // sandbox lo explican SUS PROPIOS movimientos. Si el remapeo de claves
     // fallara, los movimientos apuntarian a productos de la plantilla y esto
     // saldria descuadrado.
-    const descuadres = await db.execute(sql`
+    const descuadres = await sql`
       select p.sku
         from public.products p
         left join public.stock_movements m on m.product_id = p.id
        where p.tenant_id = ${result.tenantId}::uuid and p.track_stock
        group by p.sku, p.on_hand
       having p.on_hand <> coalesce(sum(m.quantity), 0)
-    `);
+    `;
     expect(descuadres).toHaveLength(0);
 
     // Y las lineas apuntan a documentos y productos DEL SANDBOX, no de la
     // plantilla. Una sola linea cruzada seria una fuga entre demostraciones.
-    const cruzadas = await db.execute(sql`
+    const cruzadas = await sql`
       select 1
         from public.delivery_note_lines l
         left join public.delivery_notes dn on dn.id = l.delivery_note_id
         left join public.products p on p.id = l.product_id
        where l.tenant_id = ${result.tenantId}::uuid
          and (dn.tenant_id <> ${result.tenantId}::uuid or p.tenant_id <> ${result.tenantId}::uuid)
-    `);
+    `;
     expect(cruzadas).toHaveLength(0);
   });
 
@@ -121,7 +120,7 @@ describe('Sandbox de demostracion', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select
         u.encrypted_password = extensions.crypt(${result.password}, u.encrypted_password) as clave_ok,
         u.email_confirmed_at is not null as confirmado,
@@ -136,7 +135,7 @@ describe('Sandbox de demostracion', () => {
         exists (select 1 from auth.identities i where i.user_id = u.id) as tiene_identidad
       from auth.users u
      where u.id = ${result.userId}::uuid
-    `);
+    `;
 
     expect(rows[0]).toMatchObject({
       clave_ok: true,
@@ -156,11 +155,11 @@ describe('Sandbox de demostracion', () => {
     // Cada cuenta pertenece a UN tenant: el suyo. Si el clonado hubiera dejado
     // ademas la pertenencia copiada de la plantilla, una sola cuenta podria
     // recorrer todas las demostraciones abiertas.
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select m.user_id::text as usuario, m.tenant_id::text as tenant, m.role
         from public.memberships m
        where m.user_id in (${uno.userId}::uuid, ${otro.userId}::uuid)
-    `);
+    `;
 
     expect(rows).toHaveLength(2);
     expect(rows).toContainEqual(
@@ -178,9 +177,9 @@ describe('Sandbox de demostracion', () => {
 
     // El visitante tiene que ver aparecer en el visor lo que ACABA de hacer, no
     // el historial de otro. Es la unica tabla que se deja atras a proposito.
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select 1 from public.audit_log where tenant_id = ${result.tenantId}::uuid
-    `);
+    `;
     expect(rows).toHaveLength(0);
   });
 
@@ -189,13 +188,13 @@ describe('Sandbox de demostracion', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select
         (select next_number::int from public.document_sequences
           where tenant_id = ${TEMPLATE}::uuid and doc_type = 'delivery_note') as origen,
         (select next_number::int from public.document_sequences
           where tenant_id = ${result.tenantId}::uuid and doc_type = 'delivery_note') as copia
-    `);
+    `;
 
     const seq = rows[0] as { origen: number; copia: number };
 
@@ -213,10 +212,10 @@ describe('Sandbox de demostracion', () => {
 
     // Y no deja la cuenta a medias: la identidad y los datos se crean en la
     // misma transaccion, asi que si el clonado falla no queda un usuario suelto.
-    const huerfanos = await db.execute(sql`
+    const huerfanos = await sql`
       select 1 from auth.users
        where coalesce((raw_app_meta_data ->> 'is_demo')::boolean, false)
-    `);
+    `;
     expect(huerfanos).toHaveLength(0);
   });
 
@@ -237,9 +236,9 @@ describe('Sandbox de demostracion', () => {
     // su alta aparecería en todas las copias posteriores.
     expect(degradado.tenantId).toBe(TEMPLATE);
 
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select role from public.memberships where user_id = ${degradado.userId}::uuid
-    `);
+    `;
     expect(rows).toEqual([{ role: 'viewer' }]);
 
     // Y no ha costado una copia de la base: sigue habiendo un solo sandbox.
@@ -254,30 +253,30 @@ describe('Sandbox de demostracion', () => {
 
     expect(await demoSandboxIsAlive(TEST_DATABASE_URL, result.tenantId)).toBe(true);
 
-    await db.execute(sql`
+    await sql`
       update public.tenants set expires_at = now() - interval '1 minute'
        where id = ${result.tenantId}::uuid
-    `);
-    await db.execute(sql`
+    `;
+    await sql`
       update public.demo_sessions set expires_at = now() - interval '1 minute'
        where tenant_id = ${result.tenantId}::uuid
-    `);
+    `;
 
     // Caducado deja de ser accesible EN EL ACTO, sin esperar al cron. La purga
     // es higiene de espacio; la caducidad es la medida de seguridad.
     expect(await demoSandboxIsAlive(TEST_DATABASE_URL, result.tenantId)).toBe(false);
     expect(await purgeExpiredDemos(TEST_DATABASE_URL)).toBeGreaterThanOrEqual(1);
 
-    const tenant = await db.execute(sql`
+    const tenant = await sql`
       select 1 from public.tenants where id = ${result.tenantId}::uuid
-    `);
+    `;
     expect(tenant).toHaveLength(0);
 
     // Y la cuenta se va con el. Una cuenta huerfana no rompe nada visible, y por
     // eso mismo se acumularia durante meses sin que nadie lo notase.
-    const usuario = await db.execute(sql`
+    const usuario = await sql`
       select 1 from auth.users where id = ${result.userId}::uuid
-    `);
+    `;
     expect(usuario).toHaveLength(0);
   });
 
@@ -290,38 +289,38 @@ describe('Sandbox de demostracion', () => {
     expect(degradado.ok).toBe(true);
     if (!degradado.ok) return;
 
-    await db.execute(sql`
+    await sql`
       update public.demo_sessions set expires_at = now() - interval '1 minute'
        where user_id = ${degradado.userId}::uuid
-    `);
+    `;
 
     await purgeExpiredDemos(TEST_DATABASE_URL);
 
-    const usuario = await db.execute(sql`
+    const usuario = await sql`
       select 1 from auth.users where id = ${degradado.userId}::uuid
-    `);
+    `;
     expect(usuario).toHaveLength(0);
 
     // Y sin llevarse por delante la pertenencia de nadie mas en la plantilla.
-    const plantilla = await db.execute(sql`
+    const plantilla = await sql`
       select 1 from public.memberships where tenant_id = ${TEMPLATE}::uuid
-    `);
+    `;
     expect(plantilla.length).toBeGreaterThan(0);
   });
 
   it('la purga nunca se lleva la plantilla', async () => {
     // Un `expires_at` puesto por error en la plantilla borraria la demostracion
     // entera y no quedaria nada que clonar. La guarda va explicita en el SQL.
-    await db.execute(sql`
+    await sql`
       update public.tenants set expires_at = now() - interval '1 day' where id = ${TEMPLATE}::uuid
-    `);
+    `;
 
     await purgeExpiredDemos(TEST_DATABASE_URL);
 
-    const rows = await db.execute(sql`select 1 from public.tenants where id = ${TEMPLATE}::uuid`);
+    const rows = await sql`select 1 from public.tenants where id = ${TEMPLATE}::uuid`;
     expect(rows).toHaveLength(1);
 
-    await db.execute(sql`update public.tenants set expires_at = null where id = ${TEMPLATE}::uuid`);
+    await sql`update public.tenants set expires_at = null where id = ${TEMPLATE}::uuid`;
   });
 
   it('informa del modo segun el presupuesto de espacio', async () => {

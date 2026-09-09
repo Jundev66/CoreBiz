@@ -14,10 +14,10 @@
     "@corebiz/db": "workspace:*",
     "@corebiz/domain": "workspace:*",
     "@corebiz/prisma-client": "workspace:*",
-    "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.7"
   },
   "devDependencies": {
+    "@prisma/adapter-pg": "7.10.0",
     "@types/node": "^26.4.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

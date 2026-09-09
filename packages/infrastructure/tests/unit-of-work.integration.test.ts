@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
 import {
   Customer,
   Money,
@@ -10,14 +9,14 @@ import {
   type ProductId,
 } from '@corebiz/domain';
 import { systemClock } from '@corebiz/application';
-import { DrizzleUnitOfWork } from '../src/drizzle/unit-of-work';
-import { getDatabase } from '@corebiz/db';
+import { PrismaUnitOfWork } from '../src/prisma/unit-of-work';
+import { getPrisma } from '@corebiz/db';
 import {
   TEST_DATABASE_URL,
   closeTestDatabase,
   createTestTenant,
   dropTestTenant,
-  testDb,
+  testSql,
   testIds,
   type TestTenant,
 } from './support/database';
@@ -30,10 +29,10 @@ import {
  * movimientos de inventario se escriben y que el correlativo se bloquea.
  */
 
-const db = getDatabase(TEST_DATABASE_URL);
+const prisma = getPrisma(TEST_DATABASE_URL);
 
-function unitOfWork(tenant: TestTenant): DrizzleUnitOfWork {
-  return new DrizzleUnitOfWork({ db, ctx: tenant.ctx, ids: testIds, clock: systemClock });
+function unitOfWork(tenant: TestTenant): PrismaUnitOfWork {
+  return new PrismaUnitOfWork({ prisma, ctx: tenant.ctx, ids: testIds, clock: systemClock });
 }
 
 function aCustomer(tenant: TestTenant, code: string, name: string): Customer {
@@ -67,7 +66,7 @@ function aProduct(tenant: TestTenant, sku: string, initialStock: number): Produc
   return created.value;
 }
 
-describe('DrizzleUnitOfWork', () => {
+describe('PrismaUnitOfWork', () => {
   let alpha: TestTenant;
   let beta: TestTenant;
 
@@ -133,11 +132,11 @@ describe('DrizzleUnitOfWork', () => {
 
     await unitOfWork(alpha).run((repos) => repos.products.save(product));
 
-    const movements = await testDb().execute(sql`
+    const movements = await testSql()`
       select kind, quantity, balance_after, ref_type
         from public.stock_movements
        where product_id = ${product.id}
-    `);
+    `;
 
     // El alta con existencia inicial genera un movimiento de entrada. Si el
     // repositorio no drenase pullStockMovements(), el saldo estaria puesto pero

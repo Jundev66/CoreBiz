@@ -5,15 +5,15 @@
  * los casos de uso no conocen este paquete: la dependencia apunta hacia adentro,
  * y `pnpm arch` rompe el build si alguien la invierte.
  */
-export { DrizzleUnitOfWork, type UnitOfWorkDeps } from './drizzle/unit-of-work';
-export type { Tx } from './drizzle/tx';
-export { DrizzleCustomerRepository } from './drizzle/customers';
-export { DrizzleProductRepository } from './drizzle/products';
-export { DrizzleDeliveryNoteRepository } from './drizzle/delivery-notes';
-export { DrizzleDocumentSequences } from './drizzle/sequences';
-export { DrizzleUsageCounter } from './drizzle/usage';
-export { DrizzleAuditLogger } from './drizzle/audit';
-export { DrizzlePaymentQueries } from './drizzle/payments';
+export { PrismaUnitOfWork, type UnitOfWorkDeps } from './prisma/unit-of-work';
+export type { Tx } from './prisma/session';
+export { PrismaCustomerRepository } from './prisma/customers';
+export { PrismaProductRepository } from './prisma/products';
+export { PrismaDeliveryNoteRepository } from './prisma/delivery-notes';
+export { PrismaDocumentSequences } from './prisma/sequences';
+export { PrismaUsageCounter } from './prisma/usage';
+export { PrismaAuditLogger } from './prisma/audit';
+export { PrismaPaymentQueries } from './prisma/payments';
 export { prismaReadModels } from './queries/read-models';
 export {
   postgresRuntime,
@@ -22,7 +22,7 @@ export {
   type PostgresRuntimeDeps,
   type TenantProfile,
 } from './runtime';
-export { establishTenantContext, readOnly, asUser } from './drizzle/session';
+export { establishTenantContext, readOnly, asUser } from './prisma/session';
 export { PrismaRateLimiter, postgresRateLimiter } from './prisma/rate-limiter';
 export {
   listMemberships,
@@ -32,10 +32,10 @@ export {
   type ProvisionResult,
 } from './prisma/identity';
 export {
-  DrizzleInvitationRepository,
-  DrizzleMembershipRepository,
-  DrizzleTenantSettingsRepository,
-} from './drizzle/administration';
+  PrismaInvitationRepository,
+  PrismaMembershipRepository,
+  PrismaTenantSettingsRepository,
+} from './prisma/administration';
 export { prismaAdminQueries } from './queries/administration';
 export { cryptoTokenFactory, hashInvitationToken } from './crypto/tokens';
 export {
@@ -44,7 +44,7 @@ export {
   type InvitationPreview,
   type AcceptInvitationResult,
 } from './prisma/invitations-flow';
-export { DrizzleSupplierRepository, DrizzleGoodsReceiptRepository } from './drizzle/purchasing';
+export { PrismaSupplierRepository, PrismaGoodsReceiptRepository } from './prisma/purchasing';
 export { prismaPurchasingQueries } from './queries/purchasing';
 export { databaseIsReachable } from './prisma/health';
 export {

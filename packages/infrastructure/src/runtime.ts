@@ -1,5 +1,4 @@
-import { and, eq } from 'drizzle-orm';
-import { getDatabase, getPrisma, schema } from '@corebiz/db';
+import { getPrisma } from '@corebiz/db';
 import type {
   Clock,
   IdGenerator,
@@ -7,11 +6,9 @@ import type {
   TenantContext,
   UnitOfWork,
 } from '@corebiz/application';
-import { DrizzleUnitOfWork } from './drizzle/unit-of-work';
-import { readOnly } from './drizzle/session';
+import { PrismaUnitOfWork } from './prisma/unit-of-work';
+import { readOnly } from './prisma/session';
 import { prismaReadModels } from './queries/read-models';
-
-const { tenants, memberships } = schema;
 
 /**
  * Punto de entrada del adaptador de Postgres.
@@ -34,14 +31,10 @@ export interface PostgresRuntime {
 }
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
-  const db = getDatabase(deps.url);
-  // Los dos clientes conviven mientras quede algo en Drizzle. El lado de LECTURA ya es
-  // Prisma entero; el Unit of Work todavia no, y no puede migrarse por partes porque
-  // dentro de una transaccion dos clientes serian dos conexiones.
   const prisma = getPrisma(deps.url);
 
   return {
-    uow: new DrizzleUnitOfWork({ db, ctx: deps.ctx, ids: deps.ids, clock: deps.clock }),
+    uow: new PrismaUnitOfWork({ prisma, ctx: deps.ctx, ids: deps.ids, clock: deps.clock }),
     queries: prismaReadModels(prisma, deps.ctx, deps.clock),
   };
 }
@@ -75,33 +68,40 @@ export async function loadTenantProfile(
   url: string,
   ctx: TenantContext,
 ): Promise<TenantProfile | null> {
-  const db = getDatabase(url);
+  const prisma = getPrisma(url);
 
-  return readOnly(db, ctx, async (tx) => {
-    const rows = await tx
-      .select({ tenant: tenants, role: memberships.role })
-      .from(tenants)
-      .innerJoin(
-        memberships,
-        and(eq(memberships.tenantId, tenants.id), eq(memberships.userId, ctx.actor.userId)),
-      )
-      .where(and(eq(tenants.id, ctx.tenantId), eq(memberships.status, 'active')))
-      .limit(1);
+  return readOnly(prisma, ctx, async (tx) => {
+    // El join se pide como relacion filtrada: solo interesa la empresa si el usuario tiene
+    // en ella una membresia ACTIVA. Pedirlo asi, y no en dos consultas, evita el hueco en
+    // el que la membresia se revoca entre una y otra.
+    const row = await tx.tenants.findFirst({
+      where: {
+        id: ctx.tenantId,
+        memberships: { some: { user_id: ctx.actor.userId, status: 'active' } },
+      },
+      include: {
+        memberships: {
+          where: { user_id: ctx.actor.userId, status: 'active' },
+          select: { role: true },
+          take: 1,
+        },
+      },
+    });
 
-    const row = rows[0];
-    if (row === undefined) return null;
+    const role = row?.memberships[0]?.role;
+    if (row === null || role === undefined) return null;
 
     return {
-      slug: row.tenant.slug,
-      planCode: row.tenant.planCode,
-      role: row.role,
-      isDemo: row.tenant.isDemo,
-      expiresAt: row.tenant.expiresAt,
-      taxLabel: row.tenant.taxLabel ?? 'Impuesto informativo',
-      taxRateBp: row.tenant.taxRateBp,
-      baseCurrency: row.tenant.baseCurrency,
-      exchangeRateScaled: row.tenant.exchangeRateScaled,
-      exchangeRateAt: row.tenant.exchangeRateAt,
+      slug: row.slug,
+      planCode: row.plan_code,
+      role,
+      isDemo: row.is_demo,
+      expiresAt: row.expires_at,
+      taxLabel: row.tax_label ?? 'Impuesto informativo',
+      taxRateBp: row.tax_rate_bp,
+      baseCurrency: row.base_currency,
+      exchangeRateScaled: row.exchange_rate_scaled,
+      exchangeRateAt: row.exchange_rate_at,
     };
   });
 }

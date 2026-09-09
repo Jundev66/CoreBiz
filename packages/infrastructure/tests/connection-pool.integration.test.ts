@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
-import { getDatabase } from '@corebiz/db';
-import { TEST_DATABASE_URL, closeTestDatabase, testDb } from './support/database';
+import { getPrisma } from '@corebiz/db';
+import { TEST_DATABASE_URL, closeTestDatabase, testSql } from './support/database';
 
 /**
  * El cliente de base de datos se REUTILIZA.
@@ -25,12 +24,12 @@ afterAll(closeTestDatabase);
 
 /** Conexiones abiertas contra esta base, excluida la del propio andamiaje. */
 async function backendCount(): Promise<number> {
-  const rows = await testDb().execute(sql`
+  const rows = await testSql()`
     select count(*)::int as n
       from pg_stat_activity
      where datname = current_database()
        and pid <> pg_backend_pid()
-  `);
+  `;
   return Number((rows[0] as { n: number }).n);
 }
 
@@ -41,7 +40,7 @@ describe('Reutilizacion del cliente de base de datos', () => {
     // Cincuenta llamadas es lo que hace la aplicacion en un pufado de requests:
     // cada pagina monta su contenedor, y el limitador de peticiones pide el suyo.
     for (let i = 0; i < 50; i += 1) {
-      await getDatabase(TEST_DATABASE_URL).execute(sql`select 1`);
+      await getPrisma(TEST_DATABASE_URL).$queryRaw`select 1`;
     }
 
     const after = await backendCount();
@@ -54,9 +53,9 @@ describe('Reutilizacion del cliente de base de datos', () => {
 
   it('no abre una conexion nueva por cada peticion', async () => {
     const first = await backendCount();
-    await getDatabase(TEST_DATABASE_URL).execute(sql`select 1`);
+    await getPrisma(TEST_DATABASE_URL).$queryRaw`select 1`;
     const second = await backendCount();
-    await getDatabase(TEST_DATABASE_URL).execute(sql`select 1`);
+    await getPrisma(TEST_DATABASE_URL).$queryRaw`select 1`;
     const third = await backendCount();
 
     // La segunda llamada no puede costar mas conexiones que la primera.

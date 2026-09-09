@@ -1,16 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { sql } from 'drizzle-orm';
-import postgres from 'postgres';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { ROLES, WRITE_ROLES, asId, type TenantId } from '@corebiz/domain';
-import { schema } from '@corebiz/db';
-import { establishTenantContext } from '../src/drizzle/session';
+import { getPrisma } from '@corebiz/db';
+import { Prisma, PrismaClient } from '@corebiz/prisma-client';
+import { establishTenantContext, type Tx } from '../src/prisma/session';
 import {
   TEST_DATABASE_URL,
   closeTestDatabase,
   createTestTenant,
   dropTestTenant,
-  testDb,
+  testSql,
   type TestTenant,
 } from './support/database';
 
@@ -36,7 +35,7 @@ import {
  * cambio, entra siempre por `set local role authenticated`.
  */
 
-const db = testDb();
+const sql = testSql();
 
 /**
  * Tablas con `tenant_id` cubiertas por la matriz generica.
@@ -73,13 +72,10 @@ const COVERED = [
 const SPECIAL_CASED = ['audit_log', 'demo_sessions'] as const;
 
 /** Ejecuta SQL crudo con el contexto del tenant puesto y el rol ya cambiado. */
-async function asTenant<T>(
-  tenant: TestTenant,
-  fn: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    await establishTenantContext(tx, tenant.ctx);
-    return fn(tx);
+async function asTenant<T>(tenant: TestTenant, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return getPrisma(TEST_DATABASE_URL).$transaction(async (tx) => {
+    await establishTenantContext(tx as Tx, tenant.ctx);
+    return fn(tx as Tx);
   });
 }
 
@@ -97,23 +93,23 @@ async function seedOneRowPerTable(tenant: TestTenant): Promise<void> {
   const noteId = crypto.randomUUID();
 
   // memberships ya la creo createTestTenant().
-  await db.execute(sql`
+  await sql`
     insert into public.customers (id, tenant_id, code, name)
     values (${customerId}, ${t}, 'CLI-RLS', 'Cliente de la matriz')
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.products (id, tenant_id, sku, name, price_minor, price_currency, on_hand)
     values (${productId}, ${t}, 'SKU-RLS', 'Producto de la matriz', 1000, 'USD', 50000)
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.stock_movements
       (id, tenant_id, product_id, kind, quantity, balance_after, ref_type, occurred_at)
     values (${crypto.randomUUID()}, ${t}, ${productId}, 'in', 50000, 50000, 'initial', now())
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.delivery_notes (
       id, tenant_id, number, customer_id, status, currency,
       exchange_rate_scaled, exchange_rate_from, exchange_rate_to, exchange_rate_at,
@@ -125,65 +121,65 @@ async function seedOneRowPerTable(tenant: TestTenant): Promise<void> {
       'Impuesto informativo', 1600,
       1000, 160, 1160, 42340, now()
     )
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.delivery_note_lines (
       tenant_id, delivery_note_id, line_no, product_id,
       description_snapshot, unit_snapshot, quantity, unit_price_minor, line_total_minor
     ) values (${t}, ${noteId}, 1, ${productId}, 'Producto de la matriz', 'und', 1000, 1000, 1000)
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.document_sequences (tenant_id, doc_type, prefix, next_number)
     values (${t}, 'delivery_note', 'NE', 2)
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.tenant_usage (tenant_id, resource, period, count)
     values (${t}, 'customers', 'total', 1)
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.audit_log (id, tenant_id, actor_id, action, entity_type, entity_id)
     values (${crypto.randomUUID()}, ${t}, ${tenant.userId}, 'rls.probe', 'customer', ${customerId})
-  `);
+  `;
 
   // El hash es de un token que no existe: aqui no se prueba el flujo de
   // aceptacion, solo que la fila queda fuera del alcance de otro tenant.
-  await db.execute(sql`
+  await sql`
     insert into public.invitations (id, tenant_id, email, role, token_hash, expires_at)
     values (
       ${crypto.randomUUID()}, ${t}, 'invitado@corebiz.test', 'sales',
       encode(extensions.digest(${crypto.randomUUID()}, 'sha256'), 'hex'),
       now() + interval '7 days'
     )
-  `);
+  `;
 
   const supplierId = crypto.randomUUID();
   const receiptId = crypto.randomUUID();
 
-  await db.execute(sql`
+  await sql`
     insert into public.suppliers (id, tenant_id, code, name)
     values (${supplierId}, ${t}, 'PRV-RLS', 'Proveedor de la matriz')
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.goods_receipts (
       id, tenant_id, number, supplier_id, status, currency, total_minor, received_at
     ) values (
       ${receiptId}, ${t}, 'RM-RLS-001', ${supplierId}, 'received', 'USD', 1000, now()
     )
-  `);
+  `;
 
-  await db.execute(sql`
+  await sql`
     insert into public.goods_receipt_lines (
       tenant_id, goods_receipt_id, line_no, product_id,
       description_snapshot, unit_snapshot, quantity, unit_cost_minor, line_total_minor
     ) values (
       ${t}, ${receiptId}, 1, ${productId}, 'Producto de la matriz', 'und', 1000, 1000, 1000
     )
-  `);
+  `;
 }
 
 /**
@@ -219,10 +215,14 @@ async function expectRejection(operation: Promise<unknown>, motivo: RegExp): Pro
 
 /** Filas que ve `postgres`, sin politicas de por medio. */
 async function rowsOwnedBy(table: string, tenantId: TenantId): Promise<number> {
-  const rows = await db.execute(
-    sql`select count(*)::int as n from ${sql.raw(`public.${table}`)} where tenant_id = ${tenantId}`,
+  // El nombre de tabla se interpola porque un identificador no puede ir parametrizado, y
+  // sale de `COVERED`/`SPECIAL_CASED`, dos listas fijas de este mismo fichero. El VALOR si
+  // va parametrizado.
+  const rows = await sql.unsafe<{ n: number }[]>(
+    `select count(*)::int as n from public.${table} where tenant_id = $1`,
+    [tenantId],
   );
-  return Number((rows[0] as { n: number }).n);
+  return Number(rows[0]!.n);
 }
 
 describe('Aislamiento multi-tenant', () => {
@@ -252,25 +252,25 @@ describe('Aislamiento multi-tenant', () => {
       expect(await rowsOwnedBy(table, beta.tenantId)).toBeGreaterThan(0);
 
       const [visible, updated, deleted] = await asTenant(alpha, async (tx) => {
-        const seen = await tx.execute(
-          sql`select count(*)::int as n from ${sql.raw(`public.${table}`)}
-               where tenant_id = ${beta.tenantId}`,
-        );
+        const seen = await tx.$queryRaw<{ n: number }[]>`
+          select count(*)::int as n from ${Prisma.raw(`public.${table}`)}
+           where tenant_id = ${beta.tenantId}::uuid
+        `;
 
         // `set tenant_id = tenant_id` es un update valido que no cambia nada: sirve
         // para probar CUALQUIER tabla sin conocer sus columnas. Lo que se mide es
         // cuantas filas alcanza, y el USING de la politica tiene que dejarlo en cero.
-        const touched = await tx.execute(
-          sql`update ${sql.raw(`public.${table}`)} set tenant_id = tenant_id
-               where tenant_id = ${beta.tenantId} returning 1`,
-        );
+        const touched = await tx.$queryRaw<unknown[]>`
+          update ${Prisma.raw(`public.${table}`)} set tenant_id = tenant_id
+           where tenant_id = ${beta.tenantId}::uuid returning 1
+        `;
 
-        const removed = await tx.execute(
-          sql`delete from ${sql.raw(`public.${table}`)}
-               where tenant_id = ${beta.tenantId} returning 1`,
-        );
+        const removed = await tx.$queryRaw<unknown[]>`
+          delete from ${Prisma.raw(`public.${table}`)}
+           where tenant_id = ${beta.tenantId}::uuid returning 1
+        `;
 
-        return [Number((seen[0] as { n: number }).n), touched.length, removed.length];
+        return [Number(seen[0]!.n), touched.length, removed.length];
       });
 
       expect(visible).toBe(0);
@@ -283,12 +283,12 @@ describe('Aislamiento multi-tenant', () => {
   });
 
   it('cubre todas las tablas con tenant_id que existen en el esquema', async () => {
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select table_name
         from information_schema.columns
        where table_schema = 'public' and column_name = 'tenant_id'
        order by table_name
-    `);
+    `;
 
     const inSchema = rows.map((r) => (r as { table_name: string }).table_name);
     const covered = [...COVERED, ...SPECIAL_CASED].sort();
@@ -300,12 +300,12 @@ describe('Aislamiento multi-tenant', () => {
   });
 
   it('mantiene row level security habilitada Y FORZADA en todas ellas', async () => {
-    const rows = await db.execute(sql`
+    const rows = await sql`
       select c.relname, c.relrowsecurity, c.relforcerowsecurity
         from pg_class c
         join pg_namespace n on n.oid = c.relnamespace
        where n.nspname = 'public' and c.relkind = 'r'
-    `);
+    `;
 
     const flags = new Map(
       rows.map((r) => {
@@ -335,11 +335,13 @@ describe('Aislamiento multi-tenant', () => {
     // permiso de escritura podria regalarle sus datos a otro tenant — o
     // colocarselos.
     await expectRejection(
-      asTenant(alpha, (tx) =>
-        tx.execute(sql`
-          update public.customers set tenant_id = ${beta.tenantId}
-           where tenant_id = ${alpha.tenantId} and code = 'CLI-RLS'
-        `),
+      asTenant(
+        alpha,
+        (tx) =>
+          tx.$executeRaw`
+          update public.customers set tenant_id = ${beta.tenantId}::uuid
+           where tenant_id = ${alpha.tenantId}::uuid and code = 'CLI-RLS'
+        `,
       ),
       /row-level security/i,
     );
@@ -349,11 +351,13 @@ describe('Aislamiento multi-tenant', () => {
 
   it('impide insertar una fila a nombre de otro tenant', async () => {
     await expectRejection(
-      asTenant(alpha, (tx) =>
-        tx.execute(sql`
+      asTenant(
+        alpha,
+        (tx) =>
+          tx.$executeRaw`
           insert into public.customers (id, tenant_id, code, name)
-          values (${crypto.randomUUID()}, ${beta.tenantId}, 'CLI-INTRUSO', 'No deberia entrar')
-        `),
+          values (${crypto.randomUUID()}::uuid, ${beta.tenantId}::uuid, 'CLI-INTRUSO', 'No deberia entrar')
+        `,
       ),
       /row-level security/i,
     );
@@ -373,56 +377,54 @@ describe('Aislamiento multi-tenant', () => {
     // `max: 1` fuerza que las dos transacciones compartan conexion, que es la
     // condicion que hay que reproducir. El test comprueba ademas que realmente la
     // compartieron: si cada una fuese a un backend distinto, pasaria en vacio.
-    const client = postgres(TEST_DATABASE_URL, { max: 1, prepare: false, ssl: false });
-    const single = drizzle(client, { schema });
+    // Cliente PROPIO y con UNA sola conexion: es lo que garantiza que las dos
+    // transacciones caigan en el mismo backend. Con el cliente compartido no se podria
+    // afirmar, y la prueba pasaria en vacio.
+    const adapter = new PrismaPg({ connectionString: TEST_DATABASE_URL, max: 1, ssl: false });
+    const single = new PrismaClient({ adapter });
 
     try {
-      const first = await single.transaction(async (tx) => {
-        await establishTenantContext(tx, alpha.ctx);
-        const seen = await tx.execute(
-          sql`select count(*)::int as n from public.customers where tenant_id = ${alpha.tenantId}`,
-        );
-        const pid = await tx.execute(sql`select pg_backend_pid()::int as pid`);
-        return {
-          rows: Number((seen[0] as { n: number }).n),
-          pid: Number((pid[0] as { pid: number }).pid),
-        };
+      const first = await single.$transaction(async (tx) => {
+        await establishTenantContext(tx as Tx, alpha.ctx);
+        const seen = await tx.$queryRaw<{ n: number }[]>`
+          select count(*)::int as n from public.customers
+           where tenant_id = ${alpha.tenantId}::uuid
+        `;
+        const pid = await tx.$queryRaw<{ pid: number }[]>`select pg_backend_pid()::int as pid`;
+        return { rows: Number(seen[0]!.n), pid: Number(pid[0]!.pid) };
       });
 
       expect(first.rows).toBe(1);
 
-      const second = await single.transaction(async (tx) => {
-        // A proposito NO se establece contexto: se comprueba que la transaccion
-        // anterior no dejo el suyo puesto.
-        const leaked = await tx.execute(
-          sql`select current_setting('app.tenant_id', true) as tenant_id`,
-        );
-        const pid = await tx.execute(sql`select pg_backend_pid()::int as pid`);
-        return {
-          tenantId: (leaked[0] as { tenant_id: string | null }).tenant_id,
-          pid: Number((pid[0] as { pid: number }).pid),
-        };
+      const second = await single.$transaction(async (tx) => {
+        // A proposito NO se establece contexto: se comprueba que la transaccion anterior
+        // no dejo el suyo puesto.
+        const leaked = await tx.$queryRaw<{ tenant_id: string | null }[]>`
+          select current_setting('app.tenant_id', true) as tenant_id
+        `;
+        const pid = await tx.$queryRaw<{ pid: number }[]>`select pg_backend_pid()::int as pid`;
+        return { tenantId: leaked[0]!.tenant_id, pid: Number(pid[0]!.pid) };
       });
 
       expect(second.pid).toBe(first.pid);
       expect(second.tenantId === null || second.tenantId === '').toBe(true);
 
       // Y el rol tampoco se queda pegado: `set local role` se deshace al confirmar.
-      const third = await single.transaction(async (tx) => {
-        await establishTenantContext(tx, beta.ctx);
-        const seen = await tx.execute(sql`
+      const third = await single.$transaction(async (tx) => {
+        await establishTenantContext(tx as Tx, beta.ctx);
+        const seen = await tx.$queryRaw<{ propias: number; ajenas: number }[]>`
           select
-            count(*) filter (where tenant_id = ${beta.tenantId})::int  as propias,
-            count(*) filter (where tenant_id = ${alpha.tenantId})::int as ajenas
+            count(*) filter (where tenant_id = ${beta.tenantId}::uuid)::int  as propias,
+            count(*) filter (where tenant_id = ${alpha.tenantId}::uuid)::int as ajenas
           from public.customers
-        `);
-        return seen[0] as { propias: number; ajenas: number };
+        `;
+        return seen[0]!;
       });
 
       expect(Number(third.propias)).toBe(1);
       expect(Number(third.ajenas)).toBe(0);
     } finally {
-      await client.end({ timeout: 5 });
+      await single.$disconnect();
     }
   });
 
@@ -434,15 +436,18 @@ describe('Aislamiento multi-tenant', () => {
     it('deja escribir y leer las entradas propias', async () => {
       const entryId = crypto.randomUUID();
 
-      await asTenant(alpha, (tx) =>
-        tx.execute(sql`
+      await asTenant(
+        alpha,
+        (tx) =>
+          tx.$queryRaw`
           insert into public.audit_log (id, tenant_id, actor_id, action)
           values (${entryId}, ${alpha.tenantId}, ${alpha.userId}, 'customer.created')
-        `),
+        `,
       );
 
-      const rows = await asTenant(alpha, (tx) =>
-        tx.execute(sql`select action from public.audit_log where id = ${entryId}`),
+      const rows = await asTenant(
+        alpha,
+        (tx) => tx.$queryRaw`select action from public.audit_log where id = ${entryId}`,
       );
 
       expect(rows).toHaveLength(1);
@@ -455,18 +460,19 @@ describe('Aislamiento multi-tenant', () => {
       // Un registro de auditoria que se puede editar no es un registro de
       // auditoria.
       await expectRejection(
-        asTenant(alpha, (tx) =>
-          tx.execute(
-            sql`update public.audit_log set action = 'manipulado'
+        asTenant(
+          alpha,
+          (tx) =>
+            tx.$queryRaw`update public.audit_log set action = 'manipulado'
                  where tenant_id = ${alpha.tenantId}`,
-          ),
         ),
         /permission denied/i,
       );
 
       await expectRejection(
-        asTenant(alpha, (tx) =>
-          tx.execute(sql`delete from public.audit_log where tenant_id = ${alpha.tenantId}`),
+        asTenant(
+          alpha,
+          (tx) => tx.$queryRaw`delete from public.audit_log where tenant_id = ${alpha.tenantId}`,
         ),
         /permission denied/i,
       );
@@ -475,14 +481,12 @@ describe('Aislamiento multi-tenant', () => {
     it('solo lo leen owner y admin', async () => {
       const vendedor = await createTestTenant({ role: 'sales', slug: `rls-sales-${Date.now()}` });
       try {
-        await db.execute(sql`
+        await sql`
           insert into public.audit_log (id, tenant_id, actor_id, action)
           values (${crypto.randomUUID()}, ${vendedor.tenantId}, ${vendedor.userId}, 'probe')
-        `);
+        `;
 
-        const rows = await asTenant(vendedor, (tx) =>
-          tx.execute(sql`select 1 from public.audit_log`),
-        );
+        const rows = await asTenant(vendedor, (tx) => tx.$queryRaw`select 1 from public.audit_log`);
 
         // La auditoria dice quien hizo que. Que la lea cualquiera con permiso de
         // escritura convierte una medida de control en un panel de vigilancia
@@ -499,7 +503,7 @@ describe('Aislamiento multi-tenant', () => {
     // pantalla que la lea, asi que el privilegio correcto es ninguno: lo que no
     // se puede consultar no se puede filtrar.
     await expectRejection(
-      asTenant(alpha, (tx) => tx.execute(sql`select 1 from public.demo_sessions`)),
+      asTenant(alpha, (tx) => tx.$queryRaw`select 1 from public.demo_sessions`),
       /permission denied/i,
     );
   });
@@ -510,10 +514,11 @@ describe('Aislamiento multi-tenant', () => {
 
   describe('las politicas dicen lo mismo que el dominio', () => {
     async function rolesNamedIn(fn: string): Promise<readonly string[]> {
-      const rows = await db.execute(
-        sql`select pg_get_functiondef(${sql.raw(`'app.${fn}'::regprocedure`)}) as src`,
+      // El nombre viene de una lista fija de este fichero, no de fuera.
+      const rows = await sql.unsafe<{ src: string }[]>(
+        `select pg_get_functiondef('app.${fn}'::regprocedure) as src`,
       );
-      const src = (rows[0] as { src: string }).src;
+      const src = rows[0]!.src;
       // Anclado a `current_role()` a proposito: un `/in\s*\(/` suelto acierta
       // dentro del PROPIO NOMBRE de la funcion —`is_adm` + `in()`— y devuelve una
       // lista vacia que hace pasar la comparacion contraria.
@@ -533,11 +538,11 @@ describe('Aislamiento multi-tenant', () => {
     });
 
     it('la restriccion de memberships admite exactamente los ROLES del dominio', async () => {
-      const rows = await db.execute(sql`
+      const rows = await sql`
         select pg_get_constraintdef(oid) as def
           from pg_constraint
          where conname = 'memberships_role_check'
-      `);
+      `;
       const def = (rows[0] as { def: string }).def;
       const found = [...def.matchAll(/'([^']+)'/g)].map((m) => m[1] ?? '').sort();
 
@@ -554,12 +559,14 @@ describe('Aislamiento multi-tenant', () => {
     // tienen BYPASSRLS: si la aplicacion se quedara operando con uno de ellos,
     // cada test de esta suite seguiria en verde y el aislamiento no existiria.
     // Lo que lo garantiza es el `set local role authenticated` del Unit of Work.
-    const rows = await asTenant(alpha, (tx) =>
-      tx.execute(sql`
+    const rows = await asTenant(
+      alpha,
+      (tx) =>
+        tx.$queryRaw<{ usuario: string; bypassa: boolean; es_super: boolean }[]>`
         select current_user::text as usuario,
                (select rolbypassrls from pg_roles where rolname = current_user) as bypassa,
                (select rolsuper     from pg_roles where rolname = current_user) as es_super
-      `),
+      `,
     );
 
     expect(rows[0]).toMatchObject({
@@ -577,19 +584,15 @@ describe('Aislamiento multi-tenant', () => {
     try {
       await seedOneRowPerTable(efimero);
 
-      const antes = await asTenant(efimero, (tx) =>
-        tx.execute(sql`select 1 from public.customers`),
-      );
+      const antes = await asTenant(efimero, (tx) => tx.$queryRaw`select 1 from public.customers`);
       expect(antes).toHaveLength(1);
 
-      await db.execute(sql`
+      await sql`
         update public.tenants set is_demo = true, expires_at = now() - interval '1 hour'
          where id = ${asId<TenantId>(efimero.tenantId)}
-      `);
+      `;
 
-      const despues = await asTenant(efimero, (tx) =>
-        tx.execute(sql`select 1 from public.customers`),
-      );
+      const despues = await asTenant(efimero, (tx) => tx.$queryRaw`select 1 from public.customers`);
       expect(despues).toHaveLength(0);
     } finally {
       await dropTestTenant(efimero.tenantId);

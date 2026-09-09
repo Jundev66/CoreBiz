@@ -27,7 +27,7 @@ import { prismaAdminQueries } from './administration';
 import { prismaPurchasingQueries } from './purchasing';
 import { readOnly } from '../prisma/session';
 import { money, quantity, toMinor } from './format';
-import { usagePeriod } from '../drizzle/usage';
+import { usagePeriod } from '../prisma/usage';
 
 /**
  * Lado de lectura sobre Postgres.

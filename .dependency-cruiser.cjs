@@ -8,9 +8,9 @@
  *   domain        -> no depende de NADA (ni de otro package, ni de node_modules)
  *   application   -> solo domain
  *   contracts     -> solo zod
- *   db            -> drizzle + domain (tipos)
+ *   db            -> prisma + domain (tipos)
  *   infrastructure-> puede con todo excepto apps/
- *   apps/web      -> nunca toca drizzle ni SQL directamente
+ *   apps/web      -> nunca toca el ORM ni SQL directamente
  */
 module.exports = {
   forbidden: [
@@ -34,7 +34,7 @@ module.exports = {
       name: 'application-no-infra',
       comment:
         'packages/application solo puede depender de packages/domain. Los adaptadores ' +
-        'concretos (drizzle, supabase, http) se inyectan en el composition root.',
+        'concretos (prisma, supabase, http) se inyectan en el composition root.',
       severity: 'error',
       from: { path: '^packages/application/src' },
       to: { path: '^(packages/(infrastructure|db|testing)|apps)/' },
@@ -51,18 +51,36 @@ module.exports = {
     {
       name: 'no-orm-outside-infra',
       comment:
-        'drizzle-orm y postgres solo se importan desde packages/db y packages/infrastructure. ' +
-        'Si aparecen en apps/web o en el dominio, la persistencia se ha filtrado fuera del adaptador.',
+        'Prisma y el driver solo se importan desde packages/db, packages/infrastructure y el ' +
+        'propio cliente generado. Si aparecen en apps/web o en el dominio, la persistencia se ' +
+        'ha filtrado fuera del adaptador.',
       severity: 'error',
-      from: { pathNot: '^packages/(db|infrastructure|testing)/' },
-      to: { path: 'node_modules/(drizzle-orm|postgres)/' },
+      from: { pathNot: '^packages/(db|infrastructure|prisma-client|testing)/' },
+      /*
+       * Tres formas, y las tres hacen falta.
+       *
+       * El cliente de Prisma se GENERA dentro de un paquete del workspace, asi que la
+       * dependencia resuelve a `packages/prisma-client/...` y NO a `node_modules/`. Con el
+       * patron de antes —que solo miraba node_modules— esta regla habria dejado de ver
+       * nada y habria seguido en verde para siempre, que es peor que no tenerla.
+       *
+       * La tercera alternativa cubre el especificador en crudo, para cuando la ruta no
+       * resuelve: con `hoist=false`, un import desde un paquete que no declara la
+       * dependencia no se resuelve, y sin esto pasaria de largo.
+       */
+      to: {
+        path:
+          'node_modules/(@prisma/client|@prisma/adapter-pg|prisma|postgres|pg)/' +
+          '|^packages/prisma-client/' +
+          '|^(@corebiz/prisma-client|@prisma/client|@prisma/adapter-pg|postgres|pg)$',
+      },
     },
     {
       name: 'ui-no-direct-db',
       comment: 'La capa web habla con casos de uso y queries, nunca con tablas.',
       severity: 'error',
       from: { path: '^apps/web/(app|src/ui)/' },
-      to: { path: '^packages/(db|infrastructure)/src/(drizzle|schema)/' },
+      to: { path: '^packages/(db|infrastructure)/src/prisma/|^packages/prisma-client/' },
     },
 
     // ── La web es SOLO entrega ────────────────────────────────────────────
@@ -155,7 +173,7 @@ module.exports = {
     //
     // En el caso de `apps/api/dist` ademas MIENTE: ahi dentro vive una copia
     // compilada de packages/db y packages/infrastructure, y sus importaciones de
-    // drizzle disparaban `no-orm-outside-infra` 27 veces. La regla tenia razon
+    // Prisma disparaban `no-orm-outside-infra` una vez por fichero. La regla tenia razon
     // sobre lo que veia y estaba mirando el sitio equivocado — el codigo fuente
     // de apps/api no toca el ORM, y eso es lo que hay que vigilar.
     exclude: {
