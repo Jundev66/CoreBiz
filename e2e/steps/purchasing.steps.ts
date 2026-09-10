@@ -30,12 +30,6 @@ When('I open the suppliers page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Suppliers', level: 1 })).toBeVisible();
 });
 
-Then('I should see that purchases require the paid plan', async ({ page }) => {
-  // El modulo se VE bloqueado, no desaparece. Ocultarlo haria imposible que
-  // alguien decidiera si le interesa.
-  await expect(page.getByText(/is on the PRO plan/i)).toBeVisible();
-});
-
 Then('I should not see any supplier', async ({ page }) => {
   await expect(page.getByRole('table')).toHaveCount(0);
 });

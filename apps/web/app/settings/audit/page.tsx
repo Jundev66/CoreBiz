@@ -52,8 +52,6 @@ export default async function AuditPage({
       ])
     : [{ items: [], nextCursor: null }, []];
 
-  const canExport = ctx.plan.has('audit_export');
-
   return (
     <Shell
       ctx={ctx}
@@ -71,18 +69,12 @@ export default async function AuditPage({
           </p>
         </div>
 
-        {canExport ? (
-          <a
-            href={`/api/audit/export?${exportQuery(params)}`}
-            className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
-          >
-            {t('settings.audit.export')}
-          </a>
-        ) : (
-          <p className="text-sm text-[var(--color-muted)]">
-            🔒 {t('settings.audit.exportRequiresPro')}
-          </p>
-        )}
+        <a
+          href={`/api/audit/export?${exportQuery(params)}`}
+          className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
+        >
+          {t('settings.audit.export')}
+        </a>
       </div>
 
       {!canRead ? (

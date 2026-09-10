@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { setProductStatusAction } from '@/actions/sales';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
+import { BackLink } from '@/ui/primitives';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
 import { StockAdjustForm } from '@/ui/stock-adjust-form';
 
@@ -46,6 +46,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       subtitle={product.sku}
       action={
         <div className="flex flex-wrap items-center gap-3">
+          <BackLink href="/products">{t('products.title')}</BackLink>
           <StatusBadge
             archived={product.archived}
             activeLabel={t('status.active')}
@@ -159,12 +160,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           )}
         </section>
       )}
-
-      <p className="mt-8">
-        <Link href="/products" className="text-sm underline underline-offset-4">
-          {t('common.back')}
-        </Link>
-      </p>
     </Shell>
   );
 }

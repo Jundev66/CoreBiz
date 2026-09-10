@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { AlertTriangle } from 'lucide-react';
 import { apiForRequest } from '@/api/session';
-import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
+import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 export default async function ProductsPage({
   searchParams,
@@ -14,7 +15,6 @@ export default async function ProductsPage({
 
   const includeArchived = archivados === '1';
   const page = await queries.products.list({ limit: 50, includeArchived });
-  const quota = ctx.plan.quota('products', await queries.usage.current('products'));
 
   const belowMinimum = page.items.filter((p) => p.belowMinimum);
 
@@ -27,16 +27,6 @@ export default async function ProductsPage({
       {...(creado !== undefined ? { toast: t('products.created', { sku: creado }) } : {})}
       action={
         <div className="flex items-end gap-6">
-          <QuotaBar
-            current={quota.current}
-            limit={quota.limit}
-            label={t('quota.usage', {
-              current: quota.current,
-              limit: quota.limit,
-              resource: t('products.title').toLowerCase(),
-            })}
-            nearLimitLabel={t('quota.nearLimit')}
-          />
           <PrimaryLink href="/products/new">{t('products.new')}</PrimaryLink>
         </div>
       }
@@ -104,9 +94,11 @@ export default async function ProductsPage({
                     <span className={product.belowMinimum ? 'text-[var(--color-warn-ink)]' : ''}>
                       {product.onHand} {product.unit}
                       {product.belowMinimum && (
-                        <span aria-label={t('products.lowStock')} className="ml-1">
-                          ⚠
-                        </span>
+                        <AlertTriangle
+                          aria-label={t('products.lowStock')}
+                          className="ml-1.5 inline size-3.5 align-[-2px]"
+                          strokeWidth={2}
+                        />
                       )}
                     </span>
                   ) : (

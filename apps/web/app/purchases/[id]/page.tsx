@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
-import { UpgradeNotice } from '@/ui/upgrade-notice';
+import { BackLink } from '@/ui/primitives';
 import { DetailList } from '@/ui/detail';
 import { VoidReceiptForm } from '@/ui/void-receipt-form';
 
@@ -36,14 +35,6 @@ export default async function GoodsReceiptDetailPage({
   const { id } = await params;
   const { ctx, session, queries } = await apiForRequest();
 
-  if (!ctx.plan.has('purchasing')) {
-    return (
-      <Shell ctx={ctx} session={session} title={t('purchases.detail')}>
-        <UpgradeNotice feature={t('purchases.title')} />
-      </Shell>
-    );
-  }
-
   const receipt = await queries.purchasing.receiptById(id);
 
   // 404 y no 403: un 403 confirmaria que el documento existe en otra empresa.
@@ -55,11 +46,7 @@ export default async function GoodsReceiptDetailPage({
       session={session}
       title={receipt.number}
       subtitle={receipt.supplierName}
-      action={
-        <Link href="/purchases" className="text-sm text-[var(--color-muted)] hover:underline">
-          ← {t('purchases.title')}
-        </Link>
-      }
+      action={<BackLink href="/purchases">{t('purchases.title')}</BackLink>}
     >
       {receipt.status === 'voided' && (
         <p

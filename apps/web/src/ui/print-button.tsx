@@ -19,7 +19,7 @@ export function PrintButton({ label, hint }: { label: string; hint: string }) {
       >
         {label}
       </button>
-      <p className="mt-1 text-xs text-neutral-500">{hint}</p>
+      <p className="mt-1 text-xs text-[var(--color-muted)]">{hint}</p>
     </div>
   );
 }

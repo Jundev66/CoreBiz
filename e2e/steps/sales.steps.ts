@@ -1,17 +1,13 @@
 import { expect, type Locator } from '@playwright/test';
-import { Given, When, Then, setDemoCookies, readStock } from './fixtures';
+import { Given, When, Then, readStock } from './fixtures';
 
 /**
- * Pasos de ventas, inventario y planes.
+ * Pasos de ventas e inventario.
  *
  * El estado se comprueba a traves de la interfaz, no del almacen interno: si la
  * pantalla de inventario dice 220 unidades, es que el usuario ve 220 unidades. Un test
  * que consultase el estado por dentro pasaria aunque la pantalla mostrase otra cosa.
  */
-
-Given('the business is on the free plan', async ({ page }) => {
-  await setDemoCookies(page, { plan: 'free' });
-});
 
 /**
  * Lee el stock actual y lo guarda en el mundo del escenario.
@@ -122,14 +118,6 @@ Then('the note carries the non-fiscal notice', async ({ page }) => {
   await expect(page.getByText(/no fiscal value/i).first()).toBeVisible();
 });
 
-Then('I should see that reports require the paid plan', async ({ page }) => {
-  await expect(page.getByText('available on the PRO plan')).toBeVisible();
-});
-
-Then('I should not see any sales figures', async ({ page }) => {
-  await expect(page.getByText('Period sales')).toHaveCount(0);
-});
-
 Then('I should see the sales figures', async ({ page }) => {
   await expect(page.getByText('Period sales')).toBeVisible();
   await expect(page.getByText('Inventory value')).toBeVisible();
@@ -139,10 +127,8 @@ Then('I should see the best selling products', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Best selling products' })).toBeVisible();
 });
 
-Then('the reports link is marked as a paid feature', async ({ page }) => {
-  // El modulo bloqueado se muestra con candado en lugar de ocultarse: saber que existe
-  // algo mas es parte de como funciona un freemium honesto.
-  const link = page.getByRole('link', { name: /Reports/ });
-  await expect(link).toBeVisible();
-  await expect(link.getByLabel('PRO')).toBeVisible();
+Then('the reports link is available', async ({ page }) => {
+  // Llevaba un candado al lado mientras el modulo era de pago. Ahora es un enlace y
+  // nada mas, que es justo lo que hay que comprobar: que sigue ahi y se puede pulsar.
+  await expect(page.getByRole('link', { name: /Reports/ })).toBeVisible();
 });

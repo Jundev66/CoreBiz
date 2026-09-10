@@ -46,10 +46,10 @@ export default async function DemoPage() {
       <p className="mt-3 text-[var(--color-muted)]">{t('demo.intro')}</p>
 
       {!alreadyInside && (
-        <ul className="mt-6 space-y-2 text-sm text-[var(--color-muted)]">
-          <li>· {t('demo.pointOwnCopy')}</li>
-          <li>· {t('demo.pointCredentials')}</li>
-          <li>· {t('demo.pointExpires')}</li>
+        <ul className="mt-6 list-disc space-y-2 pl-5 text-sm text-[var(--color-muted)] marker:text-[var(--color-line-strong)]">
+          <li>{t('demo.pointOwnCopy')}</li>
+          <li>{t('demo.pointCredentials')}</li>
+          <li>{t('demo.pointExpires')}</li>
         </ul>
       )}
 

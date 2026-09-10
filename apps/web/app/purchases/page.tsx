@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
-import { UpgradeNotice } from '@/ui/upgrade-notice';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -27,19 +26,6 @@ export default async function PurchasesPage({
   const { creado } = await searchParams;
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
-
-  if (!ctx.plan.has('purchasing')) {
-    return (
-      <Shell
-        ctx={ctx}
-        session={session}
-        title={t('purchases.title')}
-        subtitle={t('purchases.subtitle')}
-      >
-        <UpgradeNotice feature={t('purchases.title')} />
-      </Shell>
-    );
-  }
 
   const page = await queries.purchasing.receipts({ limit: 50 });
 

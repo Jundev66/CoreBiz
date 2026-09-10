@@ -1,18 +1,23 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { autoLoginConfig } from '@/demo/sandbox';
 
 /**
  * Middleware: cabeceras de seguridad y refresco de la sesion.
  *
- * Corre en el runtime Edge, asi que NO puede tocar la base de datos: `postgres.js`
- * es Node puro. Es una limitacion util, porque empuja las decisiones a donde
- * deben estar. Aqui solo pasan dos cosas:
+ * NO toca la base de datos. Antes era una imposicion del runtime Edge; desde Next 16
+ * esto corre en Node y podria, asi que pasa a ser una regla nuestra y conviene decirlo
+ * en voz alta: quien decide accesos consulta la pertenencia real, y ese sitio es el
+ * composition root de la API, no un archivo que se ejecuta antes de cada peticion.
+ * Aqui solo pasan tres cosas:
  *
  *   1. Se renueva el token de Supabase si toca, escribiendo las cookies en la
  *      RESPUESTA. Es el unico sitio donde se puede hacer: un Server Component no
  *      puede escribir cookies.
  *   2. Se ponen las cabeceras de seguridad, con una CSP que lleva un nonce
  *      distinto en cada request.
+ *   3. En desarrollo, y solo si no hay sesion, se entra con la cuenta sembrada.
+ *      Va aqui por lo mismo que el punto 1: hay que escribir cookies.
  *
  * Quien decide si alguien puede ver una pantalla NO es este archivo: es la API, que
  * consulta la pertenencia real en la base de datos. Un guardia en el middleware que se
@@ -49,12 +54,6 @@ function contentSecurityPolicy(nonce: string): string {
     // En produccion el CSS viaja como archivo servido por el propio origen. En
     // desarrollo Next lo inyecta en linea para poder recargarlo en caliente.
     production ? `style-src 'self' 'nonce-${nonce}'` : `style-src 'self' 'unsafe-inline'`,
-
-    // Concesion consciente y acotada: la barra de cuota calcula su ancho en el
-    // servidor y lo pinta como atributo `style`, que es lo que gobierna
-    // `style-src-attr`. La alternativa —generar una clase por porcentaje— seria
-    // peor codigo para no ganar nada: un atributo de estilo no ejecuta nada.
-    `style-src-attr 'unsafe-inline'`,
 
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
@@ -104,6 +103,29 @@ function applySecurityHeaders(headers: Headers, nonce: string): void {
   }
 }
 
+/**
+ * Pantallas que se ven SIN sesion, y que por tanto el inicio automatico no toca.
+ *
+ * Las de cuenta son el motivo principal: si entrar solo alcanzara a `/login`, nadie
+ * podria volver a probar el acceso real ni el alta —y `acceptance.spec.ts` las visita
+ * justamente sin sesion, asi que la suite lo cazaria—. `/demo` queda fuera porque es
+ * la otra puerta, la que reparte copias propias. `/api` tampoco: esas rutas traen su
+ * propia autorizacion y no son pantallas.
+ */
+const SIN_SESION = [
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/auth/callback',
+  '/demo',
+  '/api',
+];
+
+function admiteInicioAutomatico(pathname: string): boolean {
+  return !SIN_SESION.some((ruta) => pathname === ruta || pathname.startsWith(`${ruta}/`));
+}
+
 export async function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = contentSecurityPolicy(nonce);
@@ -120,7 +142,7 @@ export async function middleware(request: NextRequest) {
    * La ruta pedida, para poder volver a ella.
    *
    * Next no expone el pathname a los Server Components, y hace falta en un caso muy
-   * concreto: cuando la API esta despertando —el plan gratuito de Render la duerme a
+   * concreto: cuando el servicio de datos esta iniciandose —el alojamiento lo duerme a
    * los quince minutos— la pantalla de espera necesita saber a donde llevar de vuelta.
    * Sin esto, quien abriera un enlace profundo acabaria en la portada.
    */
@@ -128,8 +150,8 @@ export async function middleware(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  // Refresco de la sesion. Si Supabase no esta configurado —`pnpm dev:nodb`— se
-  // salta entero: la demo en memoria no tiene sesiones que renovar.
+  // Refresco de la sesion. Si Supabase no esta configurado se salta entero: es el
+  // caso del driver en memoria, que solo usa la suite y no tiene sesiones que renovar.
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
@@ -153,10 +175,24 @@ export async function middleware(request: NextRequest) {
 
     // Llamarlo es el efecto: `getUser()` verifica el token contra el servidor de
     // autenticacion y, si estaba a punto de caducar, deja las cookies renovadas
-    // en la respuesta. El valor devuelto no se usa aqui a proposito — quien
-    // decide permisos es el composition root, con la pertenencia de la base de
-    // datos delante.
-    await supabase.auth.getUser();
+    // en la respuesta. Quien decide permisos NO es esto — eso es el composition
+    // root, con la pertenencia de la base de datos delante.
+    const { data } = await supabase.auth.getUser();
+
+    // Entrar solo con la cuenta sembrada. Solo cuando NO hay ya una sesion, asi que
+    // ocurre una vez por visitante y no en cada peticion; a partir de ahi manda la
+    // cookie de siempre. `signInWithPassword` escribe las cookies renovadas en la
+    // respuesta por el mismo `setAll` de arriba.
+    if (
+      data.user === null &&
+      autoLoginConfig.enabled() &&
+      admiteInicioAutomatico(request.nextUrl.pathname)
+    ) {
+      await supabase.auth.signInWithPassword({
+        email: autoLoginConfig.email(),
+        password: autoLoginConfig.password(),
+      });
+    }
   }
 
   applySecurityHeaders(response.headers, nonce);

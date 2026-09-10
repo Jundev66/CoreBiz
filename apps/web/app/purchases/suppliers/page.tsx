@@ -3,8 +3,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
-import { Shell, QuotaBar, TableFrame, Empty } from '@/ui/shell';
-import { UpgradeNotice } from '@/ui/upgrade-notice';
+import { Shell, TableFrame, Empty } from '@/ui/shell';
 import { SupplierForm } from '@/ui/supplier-form';
 import { StatusBadge, StatusToggle } from '@/ui/detail';
 import { setSupplierStatusAction } from '@/actions/purchasing';
@@ -30,29 +29,15 @@ export default async function SuppliersPage({
   const { archivados, creado } = await searchParams;
   const { ctx, session, queries } = await apiForRequest();
 
-  if (!ctx.plan.has('purchasing')) {
-    return (
-      <Shell
-        ctx={ctx}
-        session={session}
-        title={t('suppliers.title')}
-        subtitle={t('suppliers.subtitle')}
-      >
-        <UpgradeNotice feature={t('purchases.title')} />
-      </Shell>
-    );
-  }
-
   // Quien no puede escribir proveedores ve el listado y nada mas. Ocultar el formulario
   // NO es la medida de seguridad —el caso de uso revalida el permiso— pero enseñar un
   // formulario que va a fallar al enviarlo hace perder el tiempo y parecer un fallo.
   const puedeEscribir = can(ctx.actor, 'supplier:write');
 
-  const [page, used] = await Promise.all([
-    queries.purchasing.suppliers({ limit: 50, includeArchived: archivados === '1' }),
-    queries.usage.current('suppliers'),
-  ]);
-  const quota = ctx.plan.quota('suppliers', used);
+  const page = await queries.purchasing.suppliers({
+    limit: 50,
+    includeArchived: archivados === '1',
+  });
 
   return (
     <Shell
@@ -61,18 +46,6 @@ export default async function SuppliersPage({
       title={t('suppliers.title')}
       subtitle={t('suppliers.subtitle')}
       {...(creado !== undefined ? { toast: t('suppliers.created', { code: creado }) } : {})}
-      action={
-        <QuotaBar
-          current={quota.current}
-          limit={quota.limit}
-          label={t('quota.usage', {
-            current: quota.current,
-            limit: quota.limit,
-            resource: t('suppliers.title').toLowerCase(),
-          })}
-          nearLimitLabel={t('quota.nearLimit')}
-        />
-      }
     >
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-labelledby="suppliers-list">

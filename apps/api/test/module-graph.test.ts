@@ -26,6 +26,7 @@ let app: INestApplication;
 
 beforeAll(async () => {
   process.env.DATA_DRIVER = 'memory';
+  process.env.ALLOW_MEMORY_DRIVER = '1';
   resetEnv();
 
   // `abortOnError: false`: por defecto un fallo al montar el arbol llama a

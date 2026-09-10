@@ -13,12 +13,8 @@ Given('I am signed in as an owner', async ({ page }) => {
   // El idioma y el rol van por cookie ANTES de entrar: la pantalla de acceso ya
   // tiene que salir en el idioma del escenario, y el rol solo se obedece dentro
   // de un tenant marcado `is_demo`, que es donde entra esta cuenta.
-  await setDemoCookies(page, { role: 'owner', plan: 'free', locale: 'en' });
+  await setDemoCookies(page, { role: 'owner', locale: 'en' });
   await signIn(page);
-});
-
-Given('the business is on the paid plan', async ({ page }) => {
-  await setDemoCookies(page, { plan: 'pro' });
 });
 
 When('I open the customers page', async ({ page }) => {
@@ -116,12 +112,4 @@ When('I show the archived customers', async ({ page }) => {
 Then('I should see a validation error on the name field', async ({ page }) => {
   const field = page.getByLabel('Name', { exact: false });
   await expect(field).toHaveAttribute('aria-invalid', 'true');
-});
-
-Then('I should see the customer quota for the free plan', async ({ page }) => {
-  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '50');
-});
-
-Then('I should see the customer quota for the paid plan', async ({ page }) => {
-  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '5000');
 });

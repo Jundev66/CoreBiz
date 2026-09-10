@@ -5,7 +5,7 @@ import { inMemoryRateLimiter, RATE_LIMITS } from './rate-limiter';
  * El doble en memoria del limitador.
  *
  * Se prueba con el mismo rigor que el de Postgres porque es el que sostiene
- * `pnpm dev:nodb` y los tests de los casos de uso: un doble que se comporta
+ * el driver en memoria y los tests de los casos de uso: un doble que se comporta
  * distinto del adaptador real convierte toda la suite que lo usa en una opinion.
  */
 

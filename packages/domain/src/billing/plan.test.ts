@@ -1,90 +1,68 @@
 import { describe, it, expect } from 'vitest';
 import { Plan, PLAN_CODES, RESOURCES, FEATURES } from './plan';
 
-const free = Plan.of('free');
-const pro = Plan.of('pro');
+const plan = Plan.of('free');
 
 describe('Plan — cuotas', () => {
-  it('permite crear mientras quede espacio', () => {
-    const result = free.checkQuota('customers', 49);
-    expect(result.ok).toBe(true);
+  it('no bloquea por mucho que haya registrado', () => {
+    expect(plan.checkQuota('customers', 0).ok).toBe(true);
+    expect(plan.checkQuota('customers', 50).ok).toBe(true);
+    expect(plan.checkQuota('customers', 5_000_000).ok).toBe(true);
   });
 
-  it('bloquea exactamente en el limite, no despues', () => {
-    // Con 50 clientes y limite 50, crear el 51 debe fallar.
-    const result = free.checkQuota('customers', 50);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.kind).toBe('QuotaExceeded');
-      expect(result.error.limit).toBe(50);
-      expect(result.error.current).toBe(50);
+  it('tampoco bloquea una importacion grande de golpe', () => {
+    // La cantidad solicitada se sigue teniendo en cuenta; lo que ya no hay es techo
+    // contra el que chocar.
+    expect(plan.checkQuota('customers', 45, 10_000).ok).toBe(true);
+  });
+
+  it('deja el mismo margen en todos los recursos', () => {
+    for (const resource of RESOURCES) {
+      expect(plan.checkQuota(resource, 1_000_000).ok, resource).toBe(true);
     }
   });
 
-  it('tiene en cuenta la cantidad solicitada, no solo una unidad', () => {
-    // Importar 10 clientes teniendo 45 y limite 50 debe fallar antes de empezar.
-    expect(free.checkQuota('customers', 45, 10).ok).toBe(false);
-    expect(free.checkQuota('customers', 45, 5).ok).toBe(true);
-  });
-
-  it('el plan PRO da margen muy superior sobre el mismo recurso', () => {
-    expect(pro.limitFor('customers')).toBeGreaterThan(free.limitFor('customers'));
-    expect(pro.checkQuota('customers', 100).ok).toBe(true);
-  });
-
-  it('expone el estado para pintarlo en la interfaz', () => {
-    const status = free.quota('customers', 45);
+  it('expone un estado coherente para la interfaz', () => {
+    const status = plan.quota('customers', 45);
     expect(status).toMatchObject({
       resource: 'customers',
-      limit: 50,
       current: 45,
-      remaining: 5,
       exceeded: false,
     });
-    expect(status.ratio).toBeCloseTo(0.9);
+    // Sin techo, la fraccion consumida es cero: nada que dibujar y nada de lo que avisar.
+    expect(status.ratio).toBe(0);
   });
 
-  it('avisa cuando se acerca al limite', () => {
-    expect(free.isNearLimit('customers', 39)).toBe(false);
-    expect(free.isNearLimit('customers', 40)).toBe(true);
+  it('nunca avisa de que se acerca a un limite que no existe', () => {
+    expect(plan.isNearLimit('customers', 40)).toBe(false);
+    expect(plan.isNearLimit('customers', 10_000_000)).toBe(false);
   });
 
   it('nunca reporta restante negativo aunque los datos vengan pasados de rosca', () => {
-    expect(free.quota('customers', 999).remaining).toBe(0);
-    expect(free.quota('customers', 999).ratio).toBe(1);
+    expect(plan.quota('customers', 999).remaining).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe('Plan — gating de modulos', () => {
-  it('el plan gratuito no incluye ningun modulo de pago', () => {
-    expect(free.features).toHaveLength(0);
+describe('Plan — modulos', () => {
+  it('incluye TODOS los modulos del sistema', () => {
+    expect(plan.features).toHaveLength(FEATURES.length);
     for (const feature of FEATURES) {
-      expect(free.has(feature)).toBe(false);
+      expect(plan.has(feature), feature).toBe(true);
     }
   });
 
-  it('el plan PRO desbloquea reportes, compras y la exportacion de auditoria', () => {
-    expect(pro.has('reports')).toBe(true);
-    expect(pro.has('purchasing')).toBe(true);
-    expect(pro.has('audit_export')).toBe(true);
-  });
-
-  it('al bloquear indica que plan hace falta, para poder ofrecer el upgrade', () => {
-    const result = free.checkFeature('reports');
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.kind).toBe('FeatureNotAvailable');
-      expect(result.error.requiredPlan).toBe('pro');
-    }
-  });
-
-  it('cada modulo declarado lo ofrece algun plan', () => {
-    // Es la guarda contra volver a acumular banderas decorativas. Hubo tres
-    // reservadas "para mas adelante" que nadie comprobaba nunca, y una bandera que
-    // no bloquea nada no reserva nada: solo hace creer que la funcion existe.
+  it('no bloquea ningun modulo', () => {
     for (const feature of FEATURES) {
-      expect(pro.has(feature), feature).toBe(true);
+      expect(plan.checkFeature(feature).ok, feature).toBe(true);
     }
+  });
+
+  it('reportes, compras y exportacion de auditoria estan disponibles', () => {
+    // Los tres que hasta ahora estaban detras del plan de pago. Se nombran uno a uno
+    // a proposito: es la regresion concreta que este archivo tiene que cazar.
+    expect(plan.has('reports')).toBe(true);
+    expect(plan.has('purchasing')).toBe(true);
+    expect(plan.has('audit_export')).toBe(true);
   });
 });
 
@@ -98,38 +76,35 @@ describe('Plan — construccion', () => {
     if (!bogus.ok) expect(bogus.error.kind).toBe('UnknownPlan');
   });
 
-  it('isFree distingue el plan gratuito', () => {
-    expect(free.isFree).toBe(true);
-    expect(pro.isFree).toBe(false);
+  it('todos los codigos dan el MISMO plan sin restricciones', () => {
+    // `tenants.plan_code` sigue existiendo en la base y el clonador de demostraciones
+    // lo copia. Este test es el que garantiza que ese valor ya no puede recortarle
+    // nada a nadie: da igual con cual se entre.
+    for (const code of PLAN_CODES) {
+      const each = Plan.of(code);
+      for (const feature of FEATURES) {
+        expect(each.has(feature), `${code} / ${feature}`).toBe(true);
+      }
+      for (const resource of RESOURCES) {
+        expect(each.checkQuota(resource, 1_000_000).ok, `${code} / ${resource}`).toBe(true);
+      }
+    }
   });
 });
 
 describe('Plan — coherencia de las definiciones', () => {
   it('todo plan define un limite para TODOS los recursos', () => {
-    // Un recurso sin limite definido daria `undefined` y la comparacion seria siempre
-    // falsa: la cuota quedaria desactivada en silencio. Este test lo impide.
+    // Un recurso sin limite definido daria `undefined`, y `current + amount > undefined`
+    // es siempre falso: la cuota quedaria desactivada en silencio. Hoy eso coincide con
+    // lo que queremos, pero por accidente, y un accidente no es una decision. Este test
+    // sigue exigiendo que el limite este declarado.
     for (const code of PLAN_CODES) {
-      const plan = Plan.of(code);
+      const each = Plan.of(code);
       for (const resource of RESOURCES) {
-        const limit = plan.limitFor(resource);
+        const limit = each.limitFor(resource);
         expect(typeof limit, `${code} no define limite para ${resource}`).toBe('number');
         expect(limit).toBeGreaterThan(0);
       }
-    }
-  });
-
-  it('PRO nunca es mas restrictivo que FREE en ningun recurso', () => {
-    for (const resource of RESOURCES) {
-      expect(
-        pro.limitFor(resource),
-        `PRO limita ${resource} mas que FREE: seria un downgrade de pago`,
-      ).toBeGreaterThanOrEqual(free.limitFor(resource));
-    }
-  });
-
-  it('PRO incluye todas las funciones de FREE', () => {
-    for (const feature of free.features) {
-      expect(pro.has(feature)).toBe(true);
     }
   });
 });

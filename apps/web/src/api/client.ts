@@ -15,7 +15,6 @@ import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
  */
 
 export const DEMO_ROLE_COOKIE = 'corebiz_demo_role';
-export const DEMO_PLAN_COOKIE = 'corebiz_demo_plan';
 
 /**
  * Cuanto se espera a la API antes de rendirse.
@@ -77,7 +76,7 @@ export async function accessTokenOrRedirect(): Promise<string> {
  *
  * En modo memoria NO hay Supabase, asi que no hay token que mandar y no hay nada que
  * aislar: la API reconoce ese modo y resuelve una identidad fija. Exigir sesion aqui
- * rompia `pnpm dev:nodb` y la suite E2E entera — todas las pantallas redirigian a
+ * rompia el driver en memoria y la suite E2E entera — todas las pantallas redirigian a
  * `/login`, que es una pantalla que en ese modo no lleva a ninguna parte.
  */
 async function authorization(): Promise<Record<string, string>> {
@@ -89,20 +88,20 @@ async function headers(): Promise<Record<string, string>> {
   const store = await cookies();
   const tenant = store.get(ACTIVE_TENANT_COOKIE)?.value;
   const demoRole = store.get(DEMO_ROLE_COOKIE)?.value;
-  const demoPlan = store.get(DEMO_PLAN_COOKIE)?.value;
 
   return {
     'content-type': 'application/json',
     ...(await authorization()),
     ...(tenant !== undefined ? { 'x-corebiz-tenant': tenant } : {}),
     /*
-     * Las cookies de demostracion viajan como cabeceras. La API solo las obedece
-     * dentro de un tenant marcado `is_demo` Y siendo ya propietario, asi que solo
-     * pueden QUITAR permisos: una cabecera es aun mas facil de escribir que una
-     * cookie, y esa doble condicion es lo unico que impide que esto sea una escalada.
+     * El rol de demostracion viaja como cabecera. La API solo la obedece dentro de un
+     * tenant marcado `is_demo` Y siendo ya propietario, asi que solo puede QUITAR
+     * permisos: una cabecera es aun mas facil de escribir que una cookie, y esa doble
+     * condicion es lo unico que impide que esto sea una escalada.
+     *
+     * Habia otra para alternar el plan. Se fue con los planes.
      */
     ...(demoRole !== undefined ? { 'x-corebiz-demo-role': demoRole } : {}),
-    ...(demoPlan !== undefined ? { 'x-corebiz-demo-plan': demoPlan } : {}),
   };
 }
 
@@ -146,7 +145,7 @@ export class ApiUnavailableError extends Error {}
  */
 async function redirectToWakeScreen(): Promise<never> {
   const path = (await requestHeadersOf()).get('x-corebiz-path') ?? '/';
-  redirect(`/despertando?next=${encodeURIComponent(path)}`);
+  redirect(`/waking-up?next=${encodeURIComponent(path)}`);
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {

@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { updateTenantSettingsAction, type AdminState } from '@/actions/administration';
+import { Field } from '@/ui/field';
 
 const INITIAL: AdminState = { status: 'idle' };
 
@@ -109,38 +110,5 @@ export function TenantSettingsForm({
         <p className="text-sm text-[var(--color-muted)]">{t('settings.readOnlyNotice')}</p>
       )}
     </form>
-  );
-}
-
-function Field({
-  name,
-  label,
-  hint,
-  defaultValue,
-  inputMode,
-}: {
-  name: string;
-  label: string;
-  hint: string;
-  defaultValue: string;
-  inputMode?: 'decimal';
-}) {
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium">
-        {label}
-      </label>
-      <input
-        id={name}
-        name={name}
-        defaultValue={defaultValue}
-        inputMode={inputMode}
-        aria-describedby={`${name}-hint`}
-        className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
-      />
-      <p id={`${name}-hint`} className="mt-1.5 text-xs text-[var(--color-muted)]">
-        {hint}
-      </p>
-    </div>
   );
 }

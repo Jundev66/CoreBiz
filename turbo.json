@@ -24,7 +24,10 @@
     "INTERNAL_API_SECRET",
     "LOGIN_MAX_PER_MINUTE",
     "SUPABASE_ANON_KEY",
-    "E2E_DRIVER"
+    "E2E_DRIVER",
+    "DEMO_AUTO_LOGIN",
+    "DEMO_AUTO_LOGIN_EMAIL",
+    "DEMO_AUTO_LOGIN_PASSWORD"
   ],
   "globalDependencies": ["tsconfig.base.json", ".env.example", ".env"],
   "tasks": {

@@ -36,7 +36,7 @@ export async function GET(): Promise<Response> {
   const driver = activeDriver();
 
   if (driver === 'memory') {
-    // `pnpm dev:nodb` no tiene base de datos que comprobar, y decirlo es mas
+    // El driver en memoria no tiene base de datos que comprobar, y decirlo es mas
     // util que inventarse un "ok" que no significa lo mismo.
     return json({ status: 'ok', driver, api: 'skipped' }, 200);
   }

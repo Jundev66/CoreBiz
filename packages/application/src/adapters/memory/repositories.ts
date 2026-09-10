@@ -38,7 +38,7 @@ import type {
  * Cumplen dos funciones a la vez, y por eso viven aqui y no en los tests:
  *
  *   1. Permiten testear casos de uso sin base de datos, en milisegundos.
- *   2. Alimentan `pnpm dev:nodb`, que arranca la aplicacion COMPLETA sin Postgres ni
+ *   2. Alimentan el driver en memoria, que arranca la aplicacion COMPLETA sin Postgres ni
  *      Docker. Si la arquitectura hexagonal fuese decorativa, eso no seria posible.
  *
  * Imitan el comportamiento del adaptador real en lo que importa: el filtrado por tenant
@@ -144,7 +144,7 @@ export interface RecordedAuditEntry extends AuditEntry {
 export class InMemoryAuditLogger implements AuditLogger {
   /**
    * El array puede venir de fuera para que el lado de LECTURA vea lo mismo que
-   * se acaba de escribir. Sin eso, el visor de auditoria de `pnpm dev:nodb`
+   * se acaba de escribir. Sin eso, el visor de auditoria de el driver en memoria
    * saldria siempre vacio y el modulo no se podria ni mirar sin base de datos.
    */
   constructor(

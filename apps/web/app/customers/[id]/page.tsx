@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { setCustomerStatusAction } from '@/actions/customers';
 import { Shell } from '@/ui/shell';
+import { BackLink } from '@/ui/primitives';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,6 +37,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       subtitle={customer.code}
       action={
         <div className="flex flex-wrap items-center gap-3">
+          <BackLink href="/customers">{t('customers.title')}</BackLink>
           <StatusBadge
             archived={customer.archived}
             activeLabel={t('status.active')}
@@ -79,12 +80,6 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         ]}
         emptyLabel={t('common.notSet')}
       />
-
-      <p className="mt-8">
-        <Link href="/customers" className="text-sm underline underline-offset-4">
-          {t('common.back')}
-        </Link>
-      </p>
     </Shell>
   );
 }

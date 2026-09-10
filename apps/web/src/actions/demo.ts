@@ -51,7 +51,7 @@ export async function startDemoAction(_prev: DemoState, _formData: FormData): Pr
    * decision de "aceptar el arranque en frio" obliga a cambiar como funciona algo, y
    * no solo a anadir una pantalla.
    */
-  if (!(await apiIsAwake())) redirect('/despertando?next=%2Fdemo');
+  if (!(await apiIsAwake())) redirect('/waking-up?next=%2Fdemo');
 
   const fingerprint = await clientFingerprint();
 

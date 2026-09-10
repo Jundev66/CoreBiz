@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { issueDeliveryNoteAction, type IssueNoteState } from '@/actions/sales';
 
@@ -191,9 +192,9 @@ export function DeliveryNoteForm({
                   type="button"
                   onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
                   aria-label={`${t('common.remove')} ${index + 1}`}
-                  className="rounded-md border border-[var(--color-line)] px-3 py-2 text-sm"
+                  className="rounded-[var(--radius-control)] border border-[var(--color-line)] px-3 py-2 text-sm transition hover:border-[var(--color-danger)] hover:text-[var(--color-danger-ink)]"
                 >
-                  ✕
+                  <X aria-hidden="true" className="size-4" strokeWidth={2} />
                 </button>
               )}
             </div>

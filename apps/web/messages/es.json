@@ -1,9 +1,10 @@
 {
   "app": {
     "name": "CoreBiz",
-    "tagline": "Mini ERP para pequeños comercios"
+    "tagline": "Inventario, ventas y documentos de entrega en un solo sistema."
   },
   "nav": {
+    "home": "Inicio",
     "customers": "Clientes",
     "products": "Productos",
     "deliveryNotes": "Notas de entrega",
@@ -13,7 +14,7 @@
   },
   "customers": {
     "title": "Clientes",
-    "subtitle": "Directorio de clientes del comercio",
+    "subtitle": "Clientes registrados",
     "new": "Nuevo cliente",
     "code": "Código",
     "name": "Nombre",
@@ -28,21 +29,14 @@
     "address": "Dirección",
     "addressLine1": "Calle y número",
     "addressCity": "Ciudad",
-    "addressState": "Estado",
+    "addressState": "Estado / Región",
     "archive": "Archivar",
     "restore": "Devolver a la lista",
     "archivedNotice": "Este cliente está archivado: no aparece en la lista ni se puede elegir al emitir una nota. Sus documentos anteriores siguen intactos.",
     "showArchived": "Ver también los archivados"
   },
-  "quota": {
-    "usage": "{current} de {limit} {resource}",
-    "nearLimit": "Te estás acercando al límite de tu plan.",
-    "exceeded": "Alcanzaste el límite de tu plan.",
-    "monthly": "{current} de {limit} documentos este mes"
-  },
   "errors": {
     "Forbidden": "No tienes permiso para hacer esto.",
-    "QuotaExceeded": "Alcanzaste el límite de {limit} en tu plan actual.",
     "Required": "El campo {field} es obligatorio.",
     "TooShort": "El campo {field} es demasiado corto.",
     "TooLong": "El campo {field} es demasiado largo.",
@@ -63,7 +57,6 @@
     "InvalidCost": "El costo no es válido.",
     "InvalidStock": "La cantidad de inventario no es válida.",
     "OutOfRange": "El campo {field} está fuera de rango.",
-    "FeatureNotAvailable": "Esta función requiere el plan {requiredPlan}.",
     "StockNotTracked": "Este producto no lleva control de inventario, así que no hay nada que ajustar.",
     "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
     "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
@@ -78,8 +71,6 @@
     "deliveryNoteKind": "Nota de entrega — documento interno"
   },
   "demo": {
-    "banner": "Modo demostración",
-    "memoryDriver": "Ejecutándose sin base de datos, con datos de ejemplo en memoria.",
     "title": "Prueba CoreBiz",
     "intro": "Te damos una copia propia del sistema, con datos de un comercio de ejemplo. Puedes tocarlo todo.",
     "pointOwnCopy": "Es tu copia: nadie más ve lo que hagas.",
@@ -213,11 +204,7 @@
   },
   "reports": {
     "title": "Reportes",
-    "subtitle": "Análisis de ventas e inventario",
-    "locked": "Este módulo está disponible en el plan PRO.",
-    "lockedDetail": "Incluye reportes de ventas, análisis de inventario y exportación a CSV.",
-    "simulate": "Ver con plan PRO",
-    "back": "Volver al plan gratuito",
+    "subtitle": "Ventas e inventario",
     "salesTotal": "Ventas del período",
     "documentsIssued": "Documentos emitidos",
     "averageTicket": "Ticket promedio",
@@ -254,7 +241,7 @@
       "haveAccount": "¿Ya tienes cuenta?",
       "signIn": "Entrar",
       "closedTitle": "El registro está cerrado",
-      "closedBody": "Esta instalación se enseña con datos de ejemplo. Puedes recorrer el sistema entero con una copia propia, sin dar ningún dato.",
+      "closedBody": "El registro no está abierto en esta instalación. Puedes recorrer el sistema completo con una copia propia, sin dar ningún dato.",
       "closedDemo": "Probar la demostración"
     },
     "forgot": {
@@ -301,8 +288,15 @@
     }
   },
   "home": {
+    "title": "Inicio",
+    "subtitle": "Cómo va el negocio hoy",
+    "recentNotes": "Últimas notas de entrega",
+    "lowStock": "Productos bajo mínimo",
+    "lowStockEmpty": "Ningún producto está por debajo de su mínimo.",
+    "seeAll": "Ver todo",
     "ownAccount": "¿Quieres tu propio sistema?",
-    "ownAccountHint": "Crea una cuenta gratuita y empieza con tu negocio en menos de un minuto."
+    "ownAccountHint": "Crea una cuenta y empieza con tu negocio en menos de un minuto.",
+    "signedOutLead": "Inventario, ventas y documentos de entrega para empresas que necesitan orden y no un ERP entero."
   },
   "roles": {
     "owner": "Dueño",
@@ -313,7 +307,7 @@
   },
   "settings": {
     "title": "Ajustes",
-    "subtitle": "Cómo está configurada tu empresa y quién trabaja en ella",
+    "subtitle": "Configuración de la empresa y personas con acceso",
     "saved": "Guardado.",
     "readOnlyNotice": "Solo el dueño y los administradores pueden cambiar esto.",
     "tabs": {
@@ -324,16 +318,6 @@
     "business": {
       "heading": "Datos de la empresa",
       "description": "Se usan en todas tus notas de entrega."
-    },
-    "plan": {
-      "heading": "Tu plan: {plan}",
-      "description": "Lo que llevas usado este mes."
-    },
-    "resources": {
-      "customers": "clientes",
-      "products": "productos",
-      "users": "personas",
-      "documents_month": "notas este mes"
     },
     "fields": {
       "taxLabel": "Nombre del impuesto",
@@ -358,7 +342,6 @@
       "InvalidEmail": "Ese correo no parece válido.",
       "AlreadyMember": "{email} ya trabaja en esta empresa.",
       "AlreadyInvited": "Ya hay una invitación pendiente para {email}.",
-      "QuotaExceeded": "Tu plan admite {limit}. Quita a alguien o cancela una invitación.",
       "UnknownRole": "Ese rol no existe.",
       "MemberNotFound": "Esa persona ya no está en la empresa.",
       "OnlyOwnerGrantsOwnership": "Solo el dueño puede nombrar a otro dueño.",
@@ -388,8 +371,7 @@
       "inviteHeading": "Invitar a alguien",
       "invite": "Enviar invitación",
       "roleHint": "Ventas emite notas; Almacén ajusta inventario; Solo lectura únicamente mira.",
-      "seatsExplanation": "Una invitación pendiente ocupa una plaza hasta que se acepta o se cancela.",
-      "seatsExhausted": "No te quedan plazas en tu plan. Puedes intentarlo igual: el sistema te dirá que no.",
+      "inviteDescription": "Quien acepte entrará con el rol que le asignes aquí. Una invitación pendiente sigue viva hasta que se acepta o se cancela.",
       "inviteCreated": "Invitación creada.",
       "inviteShare": "Copia este enlace y pásaselo a esa persona. Solo se muestra una vez.",
       "inviteLink": "Enlace de invitación"
@@ -408,7 +390,6 @@
       "allActions": "Todas las acciones",
       "empty": "No hay actividad que mostrar con esos filtros.",
       "export": "Descargar CSV",
-      "exportRequiresPro": "Descargar requiere el plan PRO",
       "notAllowed": "Solo el dueño y los administradores pueden ver la actividad."
     }
   },
@@ -420,13 +401,13 @@
     "signInFirst": "Para aceptar esta invitación necesitas una cuenta. Crea una o entra con la tuya.",
     "invalidTitle": "Esta invitación ya no vale",
     "invalidBody": "Puede que haya caducado, que se haya cancelado o que ya la hayas usado. Pídele a esa empresa que te mande una nueva.",
-    "needsDatabase": "Las invitaciones necesitan la base de datos. Esta demostración corre en memoria."
+    "needsDatabase": "Esta instalación todavía no tiene la autenticación configurada, así que no se pueden aceptar invitaciones."
   },
   "purchases": {
     "title": "Compras",
-    "subtitle": "Lo que le compras a tus proveedores",
+    "subtitle": "Compras a proveedores",
     "new": "Registrar entrada",
-    "newSubtitle": "Anota lo que acaba de llegar y el inventario se actualiza solo",
+    "newSubtitle": "Registra lo recibido y el inventario queda actualizado",
     "suppliers": "Proveedores",
     "empty": "Todavía no has registrado ninguna entrada de mercancía.",
     "number": "Número",
@@ -452,9 +433,7 @@
     "voidSoldWarning": "Si lo que llegó con esta recepción ya se vendió, el sistema no dejará anularla: no se puede dar por no llegado algo que ya salió.",
     "errors": {
       "Forbidden": "No tienes permiso para hacer esto.",
-      "FeatureNotAvailable": "Compras requiere el plan {requiredPlan}.",
       "InvalidFormat": "Revisa los datos.",
-      "QuotaExceeded": "Alcanzaste el límite de {limit} en tu plan actual.",
       "SupplierNotFound": "El proveedor no existe.",
       "ProductNotFound": "Uno de los productos no existe.",
       "InvalidQuantity": "Una de las cantidades no es válida.",
@@ -487,7 +466,7 @@
   },
   "suppliers": {
     "title": "Proveedores",
-    "subtitle": "A quién le compras",
+    "subtitle": "Proveedores registrados",
     "new": "Nuevo proveedor",
     "code": "Código",
     "name": "Nombre",
@@ -502,18 +481,14 @@
     "showArchived": "Ver también los archivados",
     "state": "Estado"
   },
-  "plans": {
-    "lockedHeading": "{feature} está en el plan PRO",
-    "lockedBody": "Tu plan actual no incluye este módulo. Puedes verlo aquí para saber qué hace, y activarlo cuando lo necesites."
-  },
   "status": {
     "active": "Activo",
     "archived": "Archivado"
   },
   "waking": {
-    "title": "Despertando el servidor",
-    "lead": "El servicio de datos estaba dormido. El alojamiento gratuito lo apaga tras quince minutos sin visitas, y tarda cerca de un minuto en volver.",
-    "explain": "Esto pasa una vez. A partir de ahora la aplicación responde al instante mientras la estés usando.",
+    "title": "Preparando el servicio",
+    "lead": "El servicio de datos estaba inactivo y se está iniciando. Suele tardar cerca de un minuto.",
+    "explain": "Ocurre una sola vez. A partir de aquí la aplicación responde al instante mientras la estés usando.",
     "waiting": "Comprobando…",
     "ready": "Listo. Entrando…",
     "stuck": "Está tardando más de lo normal. Puedes esperar un poco más o volver a intentarlo.",

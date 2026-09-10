@@ -1,109 +1,194 @@
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
-import { activeDriver } from '@/api/session';
+import { getFormatter, getTranslations } from 'next-intl/server';
+import { AlertTriangle } from 'lucide-react';
+import { can } from '@corebiz/domain';
+import { apiForRequest } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
 import { signupConfig } from '@/demo/sandbox';
+import { Shell, TableFrame, Empty } from '@/ui/shell';
+import { Card, Stat, SectionTitle, SecondaryLink } from '@/ui/primitives';
 
 /**
- * Portada.
+ * La raiz hace dos trabajos, y son dos pantallas distintas.
  *
- * Hace dos trabajos y conviene que se note cual es cual: para quien ya usa el
- * sistema es el punto de partida del dia, y para quien llega desde un enlace es
- * la explicacion de que es esto. Por eso los modulos van arriba —lo que se usa
- * todos los dias no se esconde detras de un texto de bienvenida— y la invitacion
- * a crear cuenta va debajo, donde solo la lee quien todavia no tiene una.
+ * CON sesion es el panel de inicio: lo primero que se ve al abrir el sistema, y por eso
+ * tiene que decir algo. Antes era una lista de enlaces a los modulos —los mismos que ya
+ * estan en el menu—, es decir, una pantalla entera que no aportaba un solo dato.
  *
- * No llama a `apiForRequest()` a proposito: eso montaria el contenedor de datos y,
- * sin sesion ni demostracion disponible, redirigiria a la pantalla de acceso. La
- * portada tiene que poder verse siempre.
+ * SIN sesion es la presentacion del producto. Ese caso solo ocurre desplegado: en
+ * desarrollo se entra solo con la cuenta sembrada, asi que la portada publica
+ * practicamente no se ve. Sigue existiendo porque en produccion es la puerta.
+ *
+ * No llama a `apiForRequest()` hasta saber que hay sesion, y eso es deliberado: montar
+ * el contenedor de datos sin sesion redirige a la pantalla de acceso, y la portada
+ * publica tiene que poder verse siempre.
  */
 export default async function HomePage() {
-  const t = await getTranslations();
-  const driver = activeDriver();
   const user = supabaseIsConfigured() ? await currentUser() : null;
+  return user === null ? <Presentacion /> : <Panel />;
+}
 
-  const modules = [
-    { href: '/customers', label: t('nav.customers'), hint: t('customers.subtitle') },
-    { href: '/products', label: t('nav.products'), hint: t('products.subtitle') },
-    { href: '/delivery-notes', label: t('nav.deliveryNotes'), hint: t('deliveryNotes.subtitle') },
-    { href: '/reports', label: t('nav.reports'), hint: t('reports.subtitle') },
-  ];
+async function Panel() {
+  const t = await getTranslations();
+  const format = await getFormatter();
+  const { ctx, session, queries } = await apiForRequest();
+
+  /*
+   * El resumen de ventas exige `report:read`, y almacen no lo tiene.
+   *
+   * Sin esta comprobacion, quien entrara con ese rol recibiria un 403 del API y la
+   * pantalla de inicio —la primera que se ve— seria un error. Se degrada: se le enseñan
+   * las secciones que si le corresponden, que ademas son las suyas.
+   */
+  const puedeVerCifras = can(ctx.actor, 'report:read');
+
+  const [resumen, notas, productos] = await Promise.all([
+    puedeVerCifras ? queries.reports.salesSummary() : Promise.resolve(null),
+    queries.deliveryNotes.list({ limit: 5 }),
+    queries.products.list({ limit: 100 }),
+  ]);
+
+  const bajoMinimo = productos.items.filter((p) => p.belowMinimum);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <header className="mb-10">
-        <h1 className="text-4xl font-semibold tracking-tight">{t('app.name')}</h1>
-        <p className="mt-2 text-lg text-[var(--color-muted)]">{t('app.tagline')}</p>
-      </header>
-
-      {driver === 'memory' && (
-        <div className="mb-10 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-          <p className="text-sm font-medium">{t('demo.banner')}</p>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">{t('demo.memoryDriver')}</p>
+    <Shell ctx={ctx} session={session} title={t('home.title')} subtitle={t('home.subtitle')}>
+      {resumen !== null && (
+        <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label={t('reports.salesTotal')} value={`$ ${resumen.salesTotal}`} />
+          <Stat label={t('reports.documentsIssued')} value={String(resumen.documentCount)} />
+          <Stat label={t('reports.averageTicket')} value={`$ ${resumen.averageTicket}`} />
+          <Stat label={t('reports.stockValue')} value={`$ ${resumen.inventoryValue}`} />
         </div>
       )}
 
-      <nav aria-label={t('app.name')}>
-        <ul className="space-y-3">
-          {modules.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="flex items-center justify-between gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-4 transition hover:border-[var(--color-brand)]"
-              >
-                <span>
-                  <span className="block font-medium">{item.label}</span>
-                  <span className="mt-0.5 block text-sm text-[var(--color-muted)]">
-                    {item.hint}
-                  </span>
-                </span>
-                <span aria-hidden="true" className="text-[var(--color-muted)]">
-                  →
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <section aria-labelledby="ultimas-notas">
+          <SectionTitle action={<SeeAll href="/delivery-notes" label={t('home.seeAll')} />}>
+            <span id="ultimas-notas">{t('home.recentNotes')}</span>
+          </SectionTitle>
 
-      {/* Solo para quien no ha entrado. A quien ya tiene sesion, invitarle a
-          crear una cuenta le sobra y le confunde. */}
-      {user === null && (
-        <section className="mt-10 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-          <h2 className="text-base font-medium">{t('home.ownAccount')}</h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">{t('home.ownAccountHint')}</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {/* Probar va PRIMERO y con el color de marca. Los modulos de arriba
-                llevan al acceso mientras no haya sesion, asi que sin esta puerta
-                quien llega desde un enlace solo encuentra un formulario que
-                todavia no tiene motivos para rellenar. */}
-            <Link
-              href="/demo"
-              className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
-            >
-              {t('demo.start')}
-            </Link>
-            {signupConfig.enabled() && (
-              <Link
-                href="/signup"
-                className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
-              >
-                {t('auth.signup.submit')}
-              </Link>
-            )}
-            <Link
-              href="/login"
-              className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
-            >
-              {t('auth.login.submit')}
-            </Link>
-          </div>
+          {notas.items.length === 0 ? (
+            <Empty>{t('deliveryNotes.empty')}</Empty>
+          ) : (
+            <TableFrame>
+              <tbody>
+                {notas.items.map((nota) => (
+                  <tr key={nota.id} className="border-b border-[var(--color-line)] last:border-0">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/delivery-notes/${nota.id}`}
+                        className="font-mono text-xs underline-offset-2 hover:underline"
+                      >
+                        {nota.number}
+                      </Link>
+                      {nota.issuedAt !== null && (
+                        <span className="ml-2 text-xs text-[var(--color-muted)]">
+                          {format.dateTime(nota.issuedAt, { dateStyle: 'medium' })}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-ink-soft)]">{nota.customerName}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">$ {nota.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          )}
         </section>
-      )}
 
-      <footer className="mt-16 border-t border-[var(--color-line)] pt-6">
-        <p className="text-sm text-[var(--color-muted)]">{t('legal.notice')}</p>
-      </footer>
+        <section aria-labelledby="bajo-minimo">
+          <SectionTitle action={<SeeAll href="/products" label={t('home.seeAll')} />}>
+            <span id="bajo-minimo">{t('home.lowStock')}</span>
+          </SectionTitle>
+
+          {bajoMinimo.length === 0 ? (
+            <Card className="px-6 py-14 text-center text-sm text-[var(--color-muted)]">
+              {t('home.lowStockEmpty')}
+            </Card>
+          ) : (
+            <TableFrame>
+              <tbody>
+                {bajoMinimo.map((producto) => (
+                  <tr
+                    key={producto.id}
+                    className="border-b border-[var(--color-line)] last:border-0"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/products/${producto.id}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {producto.name}
+                      </Link>
+                      <span className="ml-2 font-mono text-xs text-[var(--color-muted)]">
+                        {producto.sku}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums text-[var(--color-warn-ink)]">
+                      <AlertTriangle
+                        aria-label={t('products.lowStock')}
+                        className="mr-1.5 inline size-3.5 align-[-2px]"
+                        strokeWidth={2}
+                      />
+                      {producto.onHand} {producto.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          )}
+        </section>
+      </div>
+    </Shell>
+  );
+}
+
+function SeeAll({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="text-xs text-[var(--color-muted)] underline-offset-4 transition hover:text-[var(--color-ink)] hover:underline"
+    >
+      {label}
+    </Link>
+  );
+}
+
+/**
+ * La puerta publica. Solo se ve desplegado, donde no hay inicio de sesion automatico.
+ */
+async function Presentacion() {
+  const t = await getTranslations();
+
+  return (
+    <main className="mx-auto max-w-2xl px-5 py-20 lg:py-28">
+      <h1 className="text-3xl font-semibold tracking-tight">{t('app.name')}</h1>
+      <p className="mt-3 text-lg text-[var(--color-ink-soft)]">{t('app.tagline')}</p>
+      <p className="mt-4 text-sm text-[var(--color-muted)]">{t('home.signedOutLead')}</p>
+
+      <Card className="mt-10 p-6">
+        <h2 className="text-base font-medium">{t('home.ownAccount')}</h2>
+        <p className="mt-1 text-sm text-[var(--color-muted)]">{t('home.ownAccountHint')}</p>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          {/* Probar va PRIMERO y con el color de marca. Quien llega desde un enlace
+              todavia no tiene motivos para rellenar un formulario de acceso. */}
+          <Link
+            href="/demo"
+            className="inline-flex items-center rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)] shadow-[var(--shadow-xs)] transition hover:bg-[var(--color-brand-hover)]"
+          >
+            {t('demo.start')}
+          </Link>
+          {signupConfig.enabled() && (
+            <SecondaryLink href="/signup">{t('auth.signup.submit')}</SecondaryLink>
+          )}
+          <SecondaryLink href="/login">{t('auth.login.submit')}</SecondaryLink>
+        </div>
+      </Card>
+
+      <p className="mt-16 border-t border-[var(--color-line)] pt-5 text-xs text-[var(--color-muted)]">
+        {t('legal.notice')}
+      </p>
     </main>
   );
 }

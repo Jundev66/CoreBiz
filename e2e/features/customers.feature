@@ -53,14 +53,3 @@ Feature: Customer directory
     Then I should not see that customer
     When I show the archived customers
     Then I should see that customer
-
-  # The quota is part of the product, not a hidden implementation detail:
-  # the shop owner must be able to see how much room is left before being blocked.
-  Scenario: The free plan shows the customer quota
-    When I open the customers page
-    Then I should see the customer quota for the free plan
-
-  Scenario: Upgrading to the paid plan raises the quota
-    Given the business is on the paid plan
-    When I open the customers page
-    Then I should see the customer quota for the paid plan

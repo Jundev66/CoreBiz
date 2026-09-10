@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations, getFormatter } from 'next-intl/server';
+import { ArrowLeft } from 'lucide-react';
 import { apiForRequest } from '@/api/session';
 import { PrintButton } from '@/ui/print-button';
 
@@ -55,8 +56,12 @@ export default async function PrintDeliveryNotePage({
     <main className="mx-auto max-w-[21cm] bg-white p-8 text-black print:p-0">
       {/* Solo se ve en pantalla. Al imprimir sobra, y peor: se imprimiria. */}
       <div className="mb-8 flex items-center justify-between gap-4 print:hidden">
-        <a href={`/delivery-notes/${id}`} className="text-sm underline underline-offset-4">
-          ← {t('common.back')}
+        <a
+          href={`/delivery-notes/${id}`}
+          className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
+          {t('common.back')}
         </a>
         <PrintButton label={t('deliveryNotes.print')} hint={t('deliveryNotes.printHint')} />
       </div>

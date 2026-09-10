@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Plan, asId, type Customer, type TenantId, type UserId } from '@corebiz/domain';
+import { asId, type Customer, type TenantId, type UserId } from '@corebiz/domain';
 import {
   InMemoryUnitOfWork,
   InMemoryAuditLogger,
@@ -189,9 +189,14 @@ describe('createCustomer — autorizacion', () => {
 });
 
 describe('createCustomer — cuota del plan', () => {
-  it('bloquea al alcanzar el limite del plan gratuito', async () => {
+  it('no se queda sin espacio, por muchos clientes que ya haya', async () => {
+    // Aqui habia dos tests: uno que exigia el bloqueo a los 50 clientes del plan
+    // gratuito y otro que comprobaba que el de pago lo levantaba. Ya no hay dos
+    // planes. Lo que se sigue comprobando —y por eso el test no se borra— es que la
+    // llamada a `checkQuota` del caso de uso sigue en su sitio y sigue dejando pasar:
+    // si alguien reintrodujera un techo sin querer, este archivo lo diria.
     const customers = new Map<string, Customer>();
-    const usage = new Map<string, number>([[`${TENANT}:customers`, 50]]);
+    const usage = new Map<string, number>([[`${TENANT}:customers`, 5_000]]);
     const createCustomer = makeCreateCustomer({
       uow: new InMemoryUnitOfWork(customers, usage, TENANT),
       ctx: makeTestContext(),
@@ -199,29 +204,8 @@ describe('createCustomer — cuota del plan', () => {
       ids: sequentialIdGenerator(),
     });
 
-    const result = await createCustomer({ name: 'Cliente X' });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.kind).toBe('QuotaExceeded');
-      if (result.error.kind === 'QuotaExceeded') {
-        expect(result.error.limit).toBe(50);
-        expect(result.error.resource).toBe('customers');
-      }
-    }
-    expect(customers.size).toBe(0);
-  });
-
-  it('el mismo tenant con plan PRO si puede seguir', async () => {
-    const usage = new Map<string, number>([[`${TENANT}:customers`, 50]]);
-    const createCustomer = makeCreateCustomer({
-      uow: new InMemoryUnitOfWork(new Map(), usage, TENANT),
-      ctx: makeTestContext({ plan: Plan.of('pro') }),
-      clock: fixedClock(NOW),
-      ids: sequentialIdGenerator(),
-    });
-
     expect((await createCustomer({ name: 'Cliente X' })).ok).toBe(true);
+    expect(customers.size).toBe(1);
   });
 });
 

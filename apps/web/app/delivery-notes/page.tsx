@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
-import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
+import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
 const STATUS_STYLES: Record<string, string> = {
@@ -21,7 +21,6 @@ export default async function DeliveryNotesPage({
   const { ctx, session, queries } = await apiForRequest();
 
   const page = await queries.deliveryNotes.list({ limit: 50 });
-  const quota = ctx.plan.quota('documents_month', await queries.usage.current('documents_month'));
 
   return (
     <Shell
@@ -32,12 +31,6 @@ export default async function DeliveryNotesPage({
       {...(creado !== undefined ? { toast: t('deliveryNotes.created', { number: creado }) } : {})}
       action={
         <div className="flex items-end gap-6">
-          <QuotaBar
-            current={quota.current}
-            limit={quota.limit}
-            label={t('quota.monthly', { current: quota.current, limit: quota.limit })}
-            nearLimitLabel={t('quota.nearLimit')}
-          />
           <PrimaryLink href="/delivery-notes/new">{t('deliveryNotes.new')}</PrimaryLink>
         </div>
       }

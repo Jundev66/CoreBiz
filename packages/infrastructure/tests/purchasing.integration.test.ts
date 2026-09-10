@@ -31,7 +31,14 @@ afterAll(closeTestDatabase);
 describe('Recepcion de mercancia', () => {
   let tenant: TestTenant;
 
-  /** El modulo esta gated a PRO, asi que el contexto tiene que tenerlo. */
+  /**
+   * Contexto con el codigo de plan `pro`.
+   *
+   * Cuando compras estaba detras del plan de pago, esto era obligatorio para que el
+   * caso de uso dejara pasar. Ya no lo es —los dos codigos apuntan al mismo plan sin
+   * limites— y se conserva a proposito: que estos tests sigan pasando sin cambiar la
+   * llamada es la prueba de que abrir el modulo no rompio nada de lo que ya habia.
+   */
   const pro = (): TestTenant => ({
     ...tenant,
     ctx: { ...tenant.ctx, plan: Plan.of('pro') },
@@ -161,10 +168,15 @@ describe('Recepcion de mercancia', () => {
     await dropTestTenant(tenant.tenantId);
   });
 
-  it('el plan gratuito no puede usar el modulo, ni por la puerta de atras', async () => {
-    // Contexto FREE: es exactamente lo que llega si alguien invoca la Server
-    // Action a mano sin pasar por la pantalla, que es lo unico que la pantalla
-    // no puede impedir.
+  it('el modulo esta abierto, y la puerta de atras topa con las reglas del dominio', async () => {
+    // Este test comprobaba que el plan gratuito chocaba contra el candado de compras
+    // aunque invocara la Server Action a mano, sin pasar por la pantalla. El candado
+    // ya no existe; la llamada por la puerta de atras si, y sigue siendo lo que hay
+    // que vigilar: quien entra por ahi tiene que encontrarse las MISMAS reglas.
+    //
+    // Asi que la peticion es la misma y lo que cambia es QUIEN la rechaza: antes el
+    // plan, ahora el dominio. El proveedor inventado no existe, y eso se comprueba
+    // contra la base de datos con RLS delante.
     const receiveGoods = makeReceiveGoods({
       uow: uow(tenant),
       ctx: tenant.ctx,
@@ -176,11 +188,8 @@ describe('Recepcion de mercancia', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toMatchObject({
-        kind: 'FeatureNotAvailable',
-        feature: 'purchasing',
-        requiredPlan: 'pro',
-      });
+      expect(result.error.kind).not.toBe('FeatureNotAvailable');
+      expect(result.error.kind).toBe('SupplierNotFound');
     }
 
     await dropTestTenant(tenant.tenantId);

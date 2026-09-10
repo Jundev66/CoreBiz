@@ -29,13 +29,10 @@ export default async function TeamPage() {
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
 
-  const [team, invitations, used] = await Promise.all([
+  const [team, invitations] = await Promise.all([
     queries.admin.team(),
     queries.admin.pendingInvitations(),
-    queries.usage.current('users'),
   ]);
-
-  const quota = ctx.plan.quota('users', used);
   const canManage = ctx.actor.role === 'owner' || ctx.actor.role === 'admin';
 
   return (
@@ -150,19 +147,12 @@ export default async function TeamPage() {
           <h2 id="invite-heading" className="mb-1 text-lg font-medium">
             {t('settings.team.inviteHeading')}
           </h2>
-          <p className="mb-2 text-sm text-[var(--color-muted)]">
-            {t('quota.usage', {
-              current: quota.current,
-              limit: quota.limit,
-              resource: t('settings.resources.users'),
-            })}
-          </p>
-          <p className="mb-6 text-xs text-[var(--color-muted)]">
-            {t('settings.team.seatsExplanation')}
+          <p className="mb-6 text-sm text-[var(--color-muted)]">
+            {t('settings.team.inviteDescription')}
           </p>
 
           {canManage ? (
-            <InviteForm exhausted={quota.exceeded} />
+            <InviteForm />
           ) : (
             <p className="text-sm text-[var(--color-muted)]">{t('settings.readOnlyNotice')}</p>
           )}

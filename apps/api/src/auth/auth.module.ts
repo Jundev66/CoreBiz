@@ -7,7 +7,7 @@ import { activeDriver } from '../config/driver';
  * El verificador de tokens se construye PEREZOSAMENTE.
  *
  * En modo memoria no hay Supabase, y exigir `SUPABASE_URL` para arrancar romperia
- * `pnpm dev:nodb` y la mitad de la suite E2E — que corren sin credenciales a
+ * el driver en memoria y la mitad de la suite E2E — que corren sin credenciales a
  * proposito, porque esa es la prueba de que la arquitectura hexagonal es real.
  */
 @Module({

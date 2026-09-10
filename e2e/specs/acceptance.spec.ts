@@ -152,13 +152,10 @@ test.describe('Aprobacion del sistema', () => {
   });
 
   test.describe('Pantallas de dentro', () => {
-    // El plan PRO para que compras y reportes sirvan su contenido en lugar del
-    // aviso de modulo bloqueado. Ese aviso ya lo cubren los escenarios BDD; aqui
-    // lo que hay que recorrer es la pantalla de verdad.
-    test.beforeEach(async ({ page, context }) => {
-      await context.addCookies([
-        { name: 'corebiz_demo_plan', value: 'pro', domain: 'localhost', path: '/' },
-      ]);
+    // Aqui se sembraba una cookie de plan PRO para que compras y reportes sirvieran
+    // su contenido en lugar del aviso de modulo bloqueado. Ya no hay planes ni aviso:
+    // todas las pantallas sirven lo suyo con entrar.
+    test.beforeEach(async ({ page }) => {
       await signIn(page);
     });
 
@@ -239,8 +236,15 @@ test.describe('Aprobacion del sistema', () => {
         await page.locator('input[name="quantity"]').first().fill('1');
         await page.locator('input[name="unitCost"]').first().fill('1.00');
         await page.getByRole('button', { name: /record the delivery|registrar/i }).click();
-        await expect(page.locator('main').getByRole('status')).toBeVisible();
-        await page.goto('/purchases');
+
+        // Se espera a la NAVEGACION, no al aviso flotante.
+        //
+        // Aqui habia `main >> role=status`, y no podia funcionar: el aviso de "listo"
+        // lo pinta el marco por encima de todo, fuera de `<main>`, y ahi dentro no hay
+        // ningun `role=status`. No se veia porque esta rama solo se ejecuta con la base
+        // recien sembrada —sin recepciones que reutilizar— y esa es justo la ruta que
+        // toma `pnpm approve`, que nadie habia corrido.
+        await page.waitForURL(/\/purchases(\?|$)/);
       }
 
       await page.getByRole('link', { name: /^RM-/ }).first().click();

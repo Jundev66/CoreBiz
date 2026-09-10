@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
-import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
+import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 /**
  * Listado de clientes.
@@ -22,7 +22,6 @@ export default async function CustomersPage({
 
   const includeArchived = archivados === '1';
   const page = await queries.customers.list({ limit: 25, includeArchived });
-  const quota = ctx.plan.quota('customers', await queries.usage.current('customers'));
 
   return (
     <Shell
@@ -33,18 +32,6 @@ export default async function CustomersPage({
       {...(creado !== undefined ? { toast: t('customers.created', { code: creado }) } : {})}
       action={
         <div className="flex items-end gap-6">
-          {/* La cuota se muestra siempre, no solo al agotarse: enterarse del
-              limite justo cuando te bloquea es la peor forma de descubrirlo. */}
-          <QuotaBar
-            current={quota.current}
-            limit={quota.limit}
-            label={t('quota.usage', {
-              current: quota.current,
-              limit: quota.limit,
-              resource: t('customers.title').toLowerCase(),
-            })}
-            nearLimitLabel={t('quota.nearLimit')}
-          />
           <PrimaryLink href="/customers/new">{t('customers.new')}</PrimaryLink>
         </div>
       }

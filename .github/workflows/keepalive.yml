@@ -17,7 +17,7 @@ name: Keepalive
 # Lo que este cron NO pretende es mantener Render despierto. El plan gratuito duerme
 # el servicio a los 15 minutos, y sostenerlo 24/7 consumiria casi las 750 horas-mes
 # que da el plan, dejando cero margen. Se acepta el arranque en frio y se tapa con la
-# pantalla de /despertando; ver docs/adr/009-api-dedicada-en-nestjs.md.
+# pantalla de /waking-up; ver docs/adr/009-api-dedicada-en-nestjs.md.
 #
 # ⚠️ AVISO: GitHub deshabilita los workflows programados de un repositorio tras 60
 # dias SIN COMMITS. Este keepalive no basta por si solo. Hay que configurar ademas un

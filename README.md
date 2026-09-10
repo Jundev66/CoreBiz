@@ -1,7 +1,8 @@
 # CoreBiz
 
-Mini ERP SaaS multi-tenant para pequeños comercios. Arquitectura hexagonal en TypeScript,
-aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tests completa.
+Sistema de gestión comercial multi-tenant: inventario, ventas y documentos de entrega.
+Arquitectura hexagonal en TypeScript, aislamiento de datos con Row Level Security de
+PostgreSQL y una pirámide de tests completa.
 
 > **Aviso legal.** CoreBiz genera **notas de entrega**: documentos internos **no fiscales**.
 > No emite facturas fiscales, no aplica numeración de control ni cumple los requisitos de
@@ -13,13 +14,13 @@ aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tes
 
 ## Qué demuestra este proyecto
 
-|                   |                                                                                                                                                                                                                                                   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                                                                        |
-| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                                                                |
-| **Testing**       | **417 tests**: 266 unitarios (Vitest + property-based con fast-check), 68 de integración contra Postgres real, 25 escenarios BDD en Gherkin y 58 E2E con Playwright, incluidas accesibilidad con axe y una pasada de aprobación por las 29 rutas. |
-| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, y **ninguna clave capaz de saltarse RLS en el despliegue**. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                                               |
-| **SaaS**          | Planes con cuotas aplicadas en el dominio, gating de módulos y un circuit breaker que protege el presupuesto de infraestructura.                                                                                                                  |
+|                   |                                                                                                                                                                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                                                                     |
+| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                                                             |
+| **Testing**       | **497 tests**: 322 unitarios (Vitest + property-based con fast-check), 82 de integración contra Postgres real, 20 escenarios BDD en Gherkin y 73 E2E con Playwright, incluidas accesibilidad con axe y una pasada de aprobación por las rutas. |
+| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, y **ninguna clave capaz de saltarse RLS en el despliegue**. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                                            |
+| **SaaS**          | Multi-tenant con aislamiento probado, demostración efímera por visitante y un circuit breaker que protege el presupuesto de infraestructura.                                                                                                   |
 
 ## Stack
 
@@ -31,7 +32,9 @@ interfaz en Next.js que la consume **desde el servidor** —el token nunca llega
 navegador—. El núcleo (dominio y casos de uso) no sabe que existe ninguno de los dos, y
 esa es la parte que merece mirarse: cambiar el adaptador primario no obligó a tocarlo.
 
-Desplegado en Vercel, Render y Supabase, los tres en plan gratuito. Coste: **$0**.
+Pensado para desplegarse en Vercel, Render y Supabase, los tres en plan gratuito, con un
+coste de infraestructura de **$0**. El recorrido completo está en
+[`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
 
@@ -42,20 +45,7 @@ corepack enable            # o: npm install -g pnpm
 pnpm install
 ```
 
-### Sin Docker — la vía rápida
-
-```bash
-pnpm dev:nodb
-```
-
-Arranca **las dos aplicaciones** con adaptadores en memoria precargados con datos de
-ejemplo. No necesita Postgres, ni Docker, ni credenciales. Que esto siga siendo posible
-después de partir el sistema en dos procesos es la mejor prueba que hay de que la
-arquitectura aguanta: el interruptor sigue siendo uno. Que esto sea posible no es un
-truco de demo: es la consecuencia directa de que el dominio no sepa que existe una base
-de datos. Si la arquitectura hexagonal fuese decorativa, este comando no podría existir.
-
-### Con la base de datos real
+### Arrancar
 
 ```bash
 pnpm db:start              # Supabase local en Docker + migraciones + seed
@@ -65,6 +55,17 @@ pnpm dev                   # levanta la API y la interfaz a la vez
 La interfaz sirve en `:3000` y la API en `:3001`, con su OpenAPI navegable en
 [`/docs`](http://localhost:3001/docs) — que **no se publica en producción**, porque un
 mapa completo de la superficie de escritura de un ERP es reconocimiento gratis.
+
+Abrir `:3000` en desarrollo deja **dentro**, con la sesión de la cuenta sembrada ya
+iniciada: no hay formulario de acceso entre tú y el sistema. Se apaga con
+`DEMO_AUTO_LOGIN=false`, y en producción no se aplica nunca — allí la puerta es
+`/demo`, que entrega a cada visitante su propia copia.
+
+> **El producto no arranca sin base de datos.** Existen adaptadores en memoria y son
+> buenos —sostienen la suite entera sin Docker, que es lo que la hace rápida y gratis en
+> CI— pero son **dobles de prueba**, no un modo de uso. Pedirlos exige
+> `ALLOW_MEMORY_DRIVER=1`, y sin ese permiso el proceso se niega a levantar en lugar de
+> servir datos inventados como si fueran los de la empresa.
 
 ### Comandos
 
@@ -266,13 +267,18 @@ negocio cada vez que alguien abre un PDF antiguo.
 
 ---
 
-## Sobre los planes y el uso comercial
+## Sobre el uso comercial
 
-CoreBiz implementa un modelo freemium completo (cuotas por recurso, gating de módulos,
-enforcement en el dominio) porque es parte de lo que el proyecto demuestra. **No se cobra
-por él ni se ofrece como servicio comercial**: el plan Hobby de Vercel está limitado a uso
-personal no comercial, y respetarlo es parte de conocer la plataforma sobre la que se
-construye. La ruta de migración para un despliegue comercial está documentada en los ADR.
+**Todos los módulos están abiertos y no hay cuotas.** Hubo un modelo freemium completo
+—límites por recurso y gating de módulos, aplicados en el dominio— y se retiró: un
+candado sobre una función que nadie va a vender no protege ingresos, solo le dice a quien
+prueba el sistema que la mitad no es para él. La maquinaria sigue en su sitio y probada
+(`packages/domain/src/billing/plan.ts`), con una única definición que hoy lo incluye todo,
+así que volver a cobrar sería escribir otra definición, no rehacer el dominio.
+
+**No se cobra por CoreBiz ni se ofrece como servicio comercial**: el plan Hobby de Vercel
+está limitado a uso personal no comercial, y respetarlo es parte de conocer la plataforma
+sobre la que se construye.
 
 ## Licencia
 

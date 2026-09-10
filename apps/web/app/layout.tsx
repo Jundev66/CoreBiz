@@ -1,7 +1,23 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import './globals.css';
+
+/**
+ * Inter, variable y servida desde el propio origen.
+ *
+ * Hasta aqui la interfaz salia con la fuente por defecto del sistema operativo, que es
+ * lo que hace que una aplicacion se lea como una pagina sin terminar. `next/font` la
+ * descarga en tiempo de BUILD y la sirve desde el mismo dominio: ni una peticion a
+ * Google en tiempo de ejecucion —lo que ademas evita tener que abrir la CSP— y ni un
+ * salto de texto al cargar, porque el tamano de la fuente se conoce de antemano.
+ */
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('app');
@@ -17,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={inter.variable}>
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
       </body>

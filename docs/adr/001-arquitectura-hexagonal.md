@@ -28,8 +28,11 @@ La separación no se confía a la disciplina de quien escribe. Se hace cumplir e
 **A favor**
 
 - El dominio se testea sin mocks, sin contenedores y en milisegundos.
-- `pnpm dev:nodb` arranca la aplicación entera sin Postgres. Es la prueba observable de que
-  la separación es real, no documentada.
+- La suite entera —incluidos los escenarios BDD y los E2E— corre contra adaptadores en
+  memoria, sin Postgres y sin Docker. Es la prueba observable de que la separación es real
+  y no documentada. **No es una forma de usar el producto**: arrancarlo así exige un
+  permiso explícito (`ALLOW_MEMORY_DRIVER`) y sin él el proceso se niega a levantar, para
+  que nadie acabe operando sobre datos inventados creyendo que son los de su empresa.
 - Cambiar de proveedor de persistencia toca `infrastructure`, nada más.
 
 **En contra**

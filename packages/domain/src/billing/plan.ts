@@ -52,31 +52,40 @@ interface PlanDefinition {
 }
 
 /**
- * Los limites del plan gratuito no son arbitrarios: buscan que un comercio muy pequeno
- * pueda trabajar de verdad, y a la vez que el consumo agregado quepa holgadamente en los
- * 500 MB de base de datos del plan gratuito de Supabase.
+ * Un solo plan, con todo incluido y sin techo.
+ *
+ * Antes habia dos —uno gratuito con limites y uno de pago que los levantaba— y CoreBiz
+ * dejo de ser un producto que se cobra. Un candado sobre una funcion que nadie va a
+ * vender no protege ingresos: solo le dice a quien prueba el sistema que la mitad no
+ * es para el.
+ *
+ * Lo que NO se ha hecho es arrancar la maquinaria. La clase `Plan` sigue entera, los
+ * siete casos de uso siguen preguntando por su cuota y los guards de la API siguen
+ * consultando el modulo. Todo eso sigue en su sitio, probado, y ahora responde que si.
+ * Volver a cobrar es escribir aqui otra definicion; no es reescribir el dominio.
+ */
+const SIN_LIMITES: PlanDefinition = {
+  limits: {
+    customers: Number.POSITIVE_INFINITY,
+    products: Number.POSITIVE_INFINITY,
+    suppliers: Number.POSITIVE_INFINITY,
+    documents_month: Number.POSITIVE_INFINITY,
+    users: Number.POSITIVE_INFINITY,
+  },
+  features: [...FEATURES],
+};
+
+/**
+ * Los dos codigos sobreviven, y apuntan al mismo plan.
+ *
+ * `tenants.plan_code` existe en la base con una restriccion que solo acepta estos dos
+ * valores, y el clonador de demostraciones lo copia. Quitarlos costaria una migracion
+ * para no ganar nada: lo que decide que puede hacer alguien es esta definicion, y hoy
+ * es la misma se mire por donde se mire.
  */
 const PLAN_DEFINITIONS: Readonly<Record<PlanCode, PlanDefinition>> = {
-  free: {
-    limits: {
-      customers: 50,
-      products: 100,
-      suppliers: 25,
-      documents_month: 100,
-      users: 2,
-    },
-    features: [],
-  },
-  pro: {
-    limits: {
-      customers: 5_000,
-      products: 5_000,
-      suppliers: 1_000,
-      documents_month: 2_000,
-      users: 15,
-    },
-    features: ['reports', 'audit_export', 'purchasing'],
-  },
+  free: SIN_LIMITES,
+  pro: SIN_LIMITES,
 };
 
 /** Resultado de consultar una cuota, con lo necesario para explicarla en pantalla. */
@@ -152,10 +161,6 @@ export class Plan {
 
   get features(): readonly Feature[] {
     return this.definition.features;
-  }
-
-  get isFree(): boolean {
-    return this.code === 'free';
   }
 
   /** Avisa cuando conviene mostrar el aviso de "te estas quedando sin espacio". */

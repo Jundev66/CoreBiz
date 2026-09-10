@@ -12,27 +12,17 @@ const ROLES = ['admin', 'sales', 'warehouse', 'viewer'] as const;
 /**
  * Invitar a alguien.
  *
- * El formulario se deja ENVIABLE aunque la cuota este agotada, y solo avisa. Es
- * deliberado: quien bloquea es el caso de uso, y si la pantalla impidiera el
- * envio, el limite pareceria vivir en el boton. Cualquiera puede invocar la
- * Server Action directamente; el "no" tiene que venir del servidor y tiene que
- * poder verse.
+ * Aqui habia un aviso de "plazas agotadas" y el formulario se dejaba enviable de todos
+ * modos, para que el "no" viniera del servidor y no pareciera vivir en el boton. Ya no
+ * hay plazas que agotar, pero el principio se queda escrito porque sigue rigiendo todo
+ * lo demas: quien decide es el caso de uso, no la pantalla.
  */
-export function InviteForm({ exhausted }: { exhausted: boolean }) {
+export function InviteForm() {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(inviteUserAction, INITIAL);
 
   return (
     <form action={formAction} className="space-y-4">
-      {exhausted && (
-        <p
-          role="status"
-          className="rounded-md border border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-4 py-3 text-sm"
-        >
-          {t('settings.team.seatsExhausted')}
-        </p>
-      )}
-
       <div>
         <label htmlFor="invite-email" className="block text-sm font-medium">
           {t('auth.email')}

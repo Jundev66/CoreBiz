@@ -58,12 +58,12 @@ function header(req: AuthenticatedRequest, name: string): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-function memoryContext(role: Role, planOverride: 'pro' | null): TenantContext {
+function memoryContext(role: Role): TenantContext {
   return {
     tenantId: MEMORY_TENANT,
     tenantSlug: 'comercial-demo',
     actor: { userId: MEMORY_USER_ID, role },
-    plan: Plan.of(planOverride ?? 'free'),
+    plan: Plan.of('free'),
     settings: DEMO_SETTINGS,
     isDemo: true,
   };
@@ -102,10 +102,9 @@ export const activeContextProvider: FactoryProvider = {
   ): Promise<ResolvedContext | null> => {
     const rawRole = header(req, 'x-corebiz-demo-role');
     const roleOverride: Role | null = rawRole !== undefined && isRole(rawRole) ? rawRole : null;
-    const planOverride = header(req, 'x-corebiz-demo-plan') === 'pro' ? 'pro' : null;
 
     if (activeDriver() === 'memory') {
-      return { ctx: memoryContext(roleOverride ?? 'owner', planOverride), session: MEMORY_SESSION };
+      return { ctx: memoryContext(roleOverride ?? 'owner'), session: MEMORY_SESSION };
     }
 
     // Cuenta creada pero sin empresa. Pasa cuando el alta exige confirmar el correo
@@ -146,9 +145,10 @@ export const activeContextProvider: FactoryProvider = {
       tenantId: asId<TenantId>(active.tenantId),
       tenantSlug: active.slug,
       actor: { userId: asId<UserId>(identity.userId), role },
-      plan: Plan.of(
-        active.isDemo && planOverride !== null ? planOverride : planFrom(active.planCode),
-      ),
+      // El codigo sigue viniendo de la empresa, pero todos apuntan al mismo plan sin
+      // limites. Aqui habia ademas una cabecera de demostracion para alternar entre
+      // gratuito y de pago; se fue con los planes, porque no queda nada que alternar.
+      plan: Plan.of(planFrom(active.planCode)),
       settings: DEMO_SETTINGS,
       isDemo: active.isDemo,
     };

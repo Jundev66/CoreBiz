@@ -6,7 +6,6 @@ import { getTranslations, getFormatter } from 'next-intl/server';
 import { accessTokenOrRedirect } from '@/api/client';
 import { acceptInvitationViaApi, previewInvitationViaApi } from '@/api/onboarding';
 import { currentUser, supabaseIsConfigured, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
-import { activeDriver } from '@/api/session';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -45,9 +44,9 @@ export default async function AcceptInvitationPage({
 
   if (token === undefined || token === '') return <Invalid />;
 
-  // En modo memoria no hay invitaciones que aceptar: no hay sesiones ni base de
-  // datos. Se dice en lugar de fallar con un error de conexion.
-  if (activeDriver() === 'memory' || !supabaseIsConfigured()) {
+  // Sin Supabase configurado no hay sesiones que crear, asi que no hay invitacion
+  // que aceptar. Se dice en lugar de fallar con un error de conexion.
+  if (!supabaseIsConfigured()) {
     return (
       <Card title={t('invitation.title')}>
         <p className="text-sm text-[var(--color-muted)]">{t('invitation.needsDatabase')}</p>

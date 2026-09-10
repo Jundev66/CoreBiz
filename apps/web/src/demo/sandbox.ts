@@ -33,6 +33,31 @@ export const signupConfig = {
   enabled: () => process.env.SIGNUP_ENABLED !== 'false',
 } as const;
 
+/**
+ * Entrar solo, con la cuenta sembrada, sin pasar por el formulario.
+ *
+ * Existe para que abrir el sistema en local sea abrirlo y ya: quien clona el
+ * repositorio ve el sistema funcionando, no un formulario de acceso pidiendole
+ * credenciales que todavia no tiene.
+ *
+ * **Nunca en produccion, y no por configuracion sino por codigo.** Ahi la puerta es
+ * `/demo`, que le da a cada visitante su propia copia con credenciales desechables:
+ * entrar todos con la misma cuenta significaria escribir todos sobre la MISMA
+ * empresa, que ademas es la plantilla que se clona para los demas. Dejar esto como
+ * una variable que alguien pudiera poner a `true` en Vercel seria dejar cargada esa
+ * trampa; por eso `enabled()` mira primero el entorno de ejecucion y solo despues la
+ * variable.
+ *
+ * La sesion que crea es una sesion NORMAL: `signInWithPassword` contra Supabase Auth,
+ * en el servidor, con su cookie httpOnly. No hay atajo ni identidad fabricada, asi que
+ * la ADR 006 sigue en pie y el resto del sistema no se entera de como se entro.
+ */
+export const autoLoginConfig = {
+  enabled: () => process.env.NODE_ENV !== 'production' && process.env.DEMO_AUTO_LOGIN === 'true',
+  email: () => process.env.DEMO_AUTO_LOGIN_EMAIL ?? 'demo@corebiz.local',
+  password: () => process.env.DEMO_AUTO_LOGIN_PASSWORD ?? 'corebiz-demo',
+} as const;
+
 /*
  * Aqui vivian tambien `ttlHours`, `maxConcurrent` y `maxPerHour`. Se fueron a la API,
  * que es quien aprovisiona: tener los limites en el lado que NO los aplica es la forma

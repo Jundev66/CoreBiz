@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Check, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -71,9 +72,11 @@ export function Toast({ message }: { message: string }) {
       className="fixed bottom-6 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm shadow-lg"
     >
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="text-[var(--color-brand)]">
-          ✓
-        </span>
+        <Check
+          aria-hidden="true"
+          className="mt-0.5 size-4 shrink-0 text-[var(--color-success)]"
+          strokeWidth={2.25}
+        />
         <p className="flex-1">{message}</p>
         {/* Cerrar a mano existe porque seis segundos es poco para quien lee despacio y
             mucho para quien ya lo leyo. */}
@@ -82,7 +85,7 @@ export function Toast({ message }: { message: string }) {
           onClick={() => setVisible(false)}
           className="text-[var(--color-muted)] hover:text-[var(--color-ink)]"
         >
-          <span aria-hidden="true">✕</span>
+          <X aria-hidden="true" className="size-4" strokeWidth={2} />
           <span className="sr-only">{t('common.close')}</span>
         </button>
       </div>

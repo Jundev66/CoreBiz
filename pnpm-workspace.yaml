@@ -29,6 +29,15 @@ onlyBuiltDependencies:
 # que es justo lo que se busca. `packageExtensions` las corrige en el sitio adecuado
 # —la declaracion del paquete— en lugar de relajar el aislamiento de todo el monorepo.
 packageExtensions:
+  lucide-react:
+    peerDependencies:
+      # Sus tipos hacen `import * as react from 'react'`, pero el paquete no declara
+      # `@types/react`. Con `hoist=false` no le llega por casualidad, asi que TypeScript
+      # resuelve `react` sin tipos y TODO el modulo degenera a `any`: `tsc` lo tapa con
+      # `skipLibCheck` y el fallo aparece mucho mas lejos, como "unsafe assignment" en
+      # el lint de la pantalla que pinta un icono.
+      '@types/react': '*'
+
   playwright-bdd:
     dependencies:
       # playwright-bdd resuelve `playwright` y `playwright-core` en runtime, pero solo

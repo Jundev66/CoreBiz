@@ -59,9 +59,9 @@ flowchart RL
 
 Las flechas apuntan **siempre hacia adentro**. `packages/domain` no tiene ninguna
 saliente — ni siquiera hacia `contracts` — y su `package.json` no declara una sola
-dependencia. Es la propiedad que hace posible `pnpm dev:nodb`: si el dominio conociera
-la base de datos, no habría forma de sustituirla por un almacén en memoria y arrancar la
-aplicación completa sin Docker.
+dependencia. Es la propiedad que hace posible que la suite entera corra sin Docker: si el
+dominio conociera la base de datos, no habría forma de sustituirla por un almacén en
+memoria y levantar la aplicación completa contra él.
 
 **Las dos flechas de puntos que salen de `apps/web` son las que cuentan la migración.**
 La única forma que tiene la interfaz de llegar al núcleo es HTTP; lo que importa

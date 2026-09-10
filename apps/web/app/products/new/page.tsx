@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
+import { BackLink } from '@/ui/primitives';
 import { ProductForm } from '@/ui/product-form';
 
 export default async function NewProductPage() {
@@ -13,11 +13,7 @@ export default async function NewProductPage() {
       ctx={ctx}
       session={session}
       title={t('products.new')}
-      action={
-        <Link href="/products" className="text-sm text-[var(--color-muted)] hover:underline">
-          ← {t('products.title')}
-        </Link>
-      }
+      action={<BackLink href="/products">{t('products.title')}</BackLink>}
     >
       <div className="max-w-2xl">
         <ProductForm />

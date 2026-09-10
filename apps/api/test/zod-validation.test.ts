@@ -77,7 +77,7 @@ describe('validacion de entrada', () => {
 
   it('acepta identificadores que NO son uuid', () => {
     // El adaptador en memoria usa identificadores legibles a proposito. Exigir uuid
-    // aqui rompia `pnpm dev:nodb` y la suite BDD entera, con un error de validacion en
+    // aqui rompia el driver en memoria y la suite BDD entera, con un error de validacion en
     // el borde que el dominio nunca llegaba a ver.
     const notes = new ZodValidationPipe(issueDeliveryNoteSchema);
     expect(

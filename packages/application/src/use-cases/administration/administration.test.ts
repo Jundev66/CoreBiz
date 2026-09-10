@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Plan, asId, type TenantId, type UserId } from '@corebiz/domain';
+import { asId, type TenantId, type UserId } from '@corebiz/domain';
 import {
   InMemoryMembershipRepository,
   InMemoryUnitOfWork,
@@ -102,28 +102,23 @@ describe('Modulo de administracion', () => {
       expect(stores.usage.get(`${TENANT}:users`)).toBe(2);
     });
 
-    it('bloquea cuando el plan gratuito se queda sin plazas', async () => {
-      // El plan FREE admite 2. Con la duena dentro y una invitacion viva, la
-      // siguiente no cabe.
-      await invite()({ email: 'primera@corebiz.test', role: 'sales' });
-      const result = await invite()({ email: 'segunda@corebiz.test', role: 'sales' });
-
-      expect(result.ok).toBe(false);
-      if (result.ok) return;
-      expect(result.error).toMatchObject({ kind: 'QuotaExceeded', resource: 'users', limit: 2 });
-
-      // Y no deja rastro: ni invitacion, ni plaza consumida de mas.
-      expect(stores.invitations.size).toBe(1);
-      expect(stores.usage.get(`${TENANT}:users`)).toBe(2);
-    });
-
-    it('el plan PRO levanta el limite sin tocar el codigo', async () => {
-      const pro = makeTestContext({ plan: Plan.of('pro') });
-
-      await invite(pro)({ email: 'a@corebiz.test', role: 'sales' });
-      const result = await invite(pro)({ email: 'b@corebiz.test', role: 'sales' });
+    it('no hay tope de plazas: el equipo puede crecer', async () => {
+      // Antes el plan gratuito admitia dos personas y la tercera invitacion se
+      // rechazaba. Ya no hay plazas que agotar; lo que se conserva —y es lo que este
+      // test vigila— es que cada invitacion siga reservando la suya, porque de eso
+      // depende el contador de arriba.
+      //
+      // Un mismo `invitar` para las dos, y no `invite()` dos veces: cada llamada a
+      // `invite()` construye un generador de identificadores nuevo, asi que las dos
+      // invitaciones nacerian con el MISMO id y la segunda pisaria a la primera. Con
+      // el limite anterior nunca se noto, porque nunca llegaban dos.
+      const invitar = invite();
+      await invitar({ email: 'primera@corebiz.test', role: 'sales' });
+      const result = await invitar({ email: 'segunda@corebiz.test', role: 'sales' });
 
       expect(result.ok).toBe(true);
+      expect(stores.invitations.size).toBe(2);
+      expect(stores.usage.get(`${TENANT}:users`)).toBe(3);
     });
 
     it('rechaza a quien no tiene permiso, aunque llame directamente', async () => {

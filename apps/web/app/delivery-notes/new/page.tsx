@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
+import { BackLink } from '@/ui/primitives';
 import { DeliveryNoteForm } from '@/ui/delivery-note-form';
 
 export default async function NewDeliveryNotePage() {
@@ -35,11 +36,7 @@ export default async function NewDeliveryNotePage() {
       ctx={ctx}
       session={session}
       title={t('deliveryNotes.new')}
-      action={
-        <Link href="/delivery-notes" className="text-sm text-[var(--color-muted)] hover:underline">
-          ← {t('deliveryNotes.title')}
-        </Link>
-      }
+      action={<BackLink href="/delivery-notes">{t('deliveryNotes.title')}</BackLink>}
     >
       {sinTasa ? (
         <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-8 py-12 text-center">

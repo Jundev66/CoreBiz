@@ -60,7 +60,7 @@ export interface SessionInfo {
 }
 
 /** Cookies con las que la demo permite cambiar de rol y de plan sin reiniciar nada. */
-export { DEMO_ROLE_COOKIE, DEMO_PLAN_COOKIE } from './client';
+export { DEMO_ROLE_COOKIE } from './client';
 
 export type DataDriver = 'postgres' | 'memory';
 
@@ -70,7 +70,7 @@ export type DataDriver = 'postgres' | 'memory';
  * La interfaz ya no elige adaptador —eso lo hace la API— pero sigue necesitando saber
  * en que modo corre el sistema para dos cosas concretas: no ofrecer el alta de cuenta
  * cuando no hay Supabase detras, y avisar de que los datos son de mentira. Las dos
- * aplicaciones reciben la misma variable, y `pnpm dev:nodb` la pone para ambas.
+ * aplicaciones reciben la misma variable, y la suite la pone para ambas.
  */
 export function activeDriver(): DataDriver {
   return process.env.DATA_DRIVER === 'memory' ? 'memory' : 'postgres';

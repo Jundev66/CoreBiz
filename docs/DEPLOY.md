@@ -212,7 +212,7 @@ mes** y sostener un servicio 24/7 son ~730. Cabría, sin ningún margen, y cualq
 redespliegue o segunda instancia se saldría del plan.
 
 La decisión es la contraria: **aceptar el arranque en frío y contarlo**. Quien lo
-encuentra ve `/despertando`, que explica qué pasa, cuánto lleva y que solo ocurre una
+encuentra ve `/waking-up`, que explica qué pasa, cuánto lleva y que solo ocurre una
 vez. Ver [ADR 009](adr/009-api-dedicada-en-nestjs.md).
 
 ## 7. Comprobar

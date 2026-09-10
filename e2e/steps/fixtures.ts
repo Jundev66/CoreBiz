@@ -35,7 +35,7 @@ export const test = base.extend<{ world: CustomerWorld }>({
 export const { Given, When, Then } = createBdd(test);
 
 /**
- * El rol y el plan viajan en cookies, lo mismo que en la demo publica.
+ * El rol viaja en cookie, lo mismo que en la demo publica.
  *
  * Sembrar el estado por cookie en lugar de navegar por la interfaz hace los escenarios
  * rapidos y estables: preparar el contexto no deberia depender de que los formularios
@@ -43,7 +43,7 @@ export const { Given, When, Then } = createBdd(test);
  */
 export async function setDemoCookies(
   page: Page,
-  values: { role?: string; plan?: string; locale?: string },
+  values: { role?: string; locale?: string },
 ): Promise<void> {
   const url = new URL(page.url() === 'about:blank' ? 'http://localhost:3210' : page.url());
   const cookies = [];
@@ -52,14 +52,6 @@ export async function setDemoCookies(
     cookies.push({
       name: 'corebiz_demo_role',
       value: values.role,
-      domain: url.hostname,
-      path: '/',
-    });
-  }
-  if (values.plan) {
-    cookies.push({
-      name: 'corebiz_demo_plan',
-      value: values.plan,
       domain: url.hostname,
       path: '/',
     });

@@ -114,8 +114,10 @@ create policy tenants_update on public.tenants for update to authenticated
   using (id = app.current_tenant() and app.is_admin())
   with check (id = app.current_tenant());
 
--- Crear y borrar tenants pasa por casos de uso con service_role (alta de cuenta y
--- provision del sandbox), nunca por una escritura directa del usuario.
+-- Crear y borrar tenants pasa por funciones SECURITY DEFINER acotadas y revocadas de
+-- public (`app.provision_tenant`, `app.provision_demo_session`), nunca por una escritura
+-- directa del usuario. NO se usa service_role: este despliegue no tiene esa clave, y esa
+-- es la unica mitigacion del modelo de amenazas que no puede fallar.
 drop policy if exists tenants_insert on public.tenants;
 create policy tenants_insert on public.tenants for insert to authenticated
   with check (false);

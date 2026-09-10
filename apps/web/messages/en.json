@@ -1,9 +1,10 @@
 {
   "app": {
     "name": "CoreBiz",
-    "tagline": "Mini ERP for small businesses"
+    "tagline": "Inventory, sales and delivery documents in one system."
   },
   "nav": {
+    "home": "Home",
     "customers": "Customers",
     "products": "Products",
     "deliveryNotes": "Delivery notes",
@@ -13,7 +14,7 @@
   },
   "customers": {
     "title": "Customers",
-    "subtitle": "Business customer directory",
+    "subtitle": "Registered customers",
     "new": "New customer",
     "code": "Code",
     "name": "Name",
@@ -28,21 +29,14 @@
     "address": "Address",
     "addressLine1": "Street and number",
     "addressCity": "City",
-    "addressState": "State",
+    "addressState": "State / Region",
     "archive": "Archive",
     "restore": "Bring back to the list",
     "archivedNotice": "This customer is archived: it does not show in the list and cannot be picked when issuing a note. Its earlier documents are untouched.",
     "showArchived": "Also show archived"
   },
-  "quota": {
-    "usage": "{current} of {limit} {resource}",
-    "nearLimit": "You are approaching your plan limit.",
-    "exceeded": "You have reached your plan limit.",
-    "monthly": "{current} of {limit} documents this month"
-  },
   "errors": {
     "Forbidden": "You do not have permission to do this.",
-    "QuotaExceeded": "You have reached the limit of {limit} on your current plan.",
     "Required": "The {field} field is required.",
     "TooShort": "The {field} field is too short.",
     "TooLong": "The {field} field is too long.",
@@ -63,7 +57,6 @@
     "InvalidCost": "The cost is not valid.",
     "InvalidStock": "The inventory quantity is not valid.",
     "OutOfRange": "The {field} field is out of range.",
-    "FeatureNotAvailable": "This feature requires the {requiredPlan} plan.",
     "StockNotTracked": "This product does not track stock, so there is nothing to adjust.",
     "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
     "InvalidRequest": "We could not read that request. Reload the page and try again.",
@@ -78,8 +71,6 @@
     "deliveryNoteKind": "Delivery note — internal document"
   },
   "demo": {
-    "banner": "Demo mode",
-    "memoryDriver": "Running without a database, using in-memory sample data.",
     "title": "Try CoreBiz",
     "intro": "We give you your own copy of the system, with data from a sample shop. You can touch everything.",
     "pointOwnCopy": "It is your copy: nobody else sees what you do.",
@@ -166,7 +157,7 @@
   },
   "deliveryNotes": {
     "title": "Delivery notes",
-    "subtitle": "Goods dispatch documents",
+    "subtitle": "Outbound goods documents",
     "new": "New delivery note",
     "number": "Number",
     "customer": "Customer",
@@ -213,11 +204,7 @@
   },
   "reports": {
     "title": "Reports",
-    "subtitle": "Sales and inventory analysis",
-    "locked": "This module is available on the PRO plan.",
-    "lockedDetail": "Includes sales reports, inventory analysis and CSV export.",
-    "simulate": "Preview with PRO plan",
-    "back": "Back to free plan",
+    "subtitle": "Sales and inventory",
     "salesTotal": "Period sales",
     "documentsIssued": "Documents issued",
     "averageTicket": "Average ticket",
@@ -254,7 +241,7 @@
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",
       "closedTitle": "Sign-up is closed",
-      "closedBody": "This installation is shown with sample data. You can walk through the whole system with your own copy, without giving any details.",
+      "closedBody": "Sign-up is not open on this installation. You can walk through the whole system with your own copy, without giving any details.",
       "closedDemo": "Try the demo"
     },
     "forgot": {
@@ -301,8 +288,15 @@
     }
   },
   "home": {
+    "title": "Home",
+    "subtitle": "How the business is doing today",
+    "recentNotes": "Latest delivery notes",
+    "lowStock": "Products below minimum",
+    "lowStockEmpty": "No product is below its minimum.",
+    "seeAll": "See all",
     "ownAccount": "Want your own system?",
-    "ownAccountHint": "Create a free account and get your business running in under a minute."
+    "ownAccountHint": "Create an account and start with your business in under a minute.",
+    "signedOutLead": "Inventory, sales and delivery documents for businesses that need order, not a whole ERP."
   },
   "roles": {
     "owner": "Owner",
@@ -313,7 +307,7 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "How your business is set up and who works in it",
+    "subtitle": "Business configuration and who has access",
     "saved": "Saved.",
     "readOnlyNotice": "Only the owner and administrators can change this.",
     "tabs": {
@@ -324,16 +318,6 @@
     "business": {
       "heading": "Business details",
       "description": "These appear on every delivery note you issue."
-    },
-    "plan": {
-      "heading": "Your plan: {plan}",
-      "description": "What you have used this month."
-    },
-    "resources": {
-      "customers": "customers",
-      "products": "products",
-      "users": "people",
-      "documents_month": "notes this month"
     },
     "fields": {
       "taxLabel": "Tax label",
@@ -358,7 +342,6 @@
       "InvalidEmail": "That email does not look valid.",
       "AlreadyMember": "{email} already works in this business.",
       "AlreadyInvited": "There is already a pending invitation for {email}.",
-      "QuotaExceeded": "Your plan allows {limit}. Remove someone or cancel an invitation.",
       "UnknownRole": "That role does not exist.",
       "MemberNotFound": "That person is no longer in the business.",
       "OnlyOwnerGrantsOwnership": "Only the owner can appoint another owner.",
@@ -388,8 +371,7 @@
       "inviteHeading": "Invite someone",
       "invite": "Send invitation",
       "roleHint": "Sales issues notes; Warehouse adjusts stock; Read only just looks.",
-      "seatsExplanation": "A pending invitation holds a seat until it is accepted or cancelled.",
-      "seatsExhausted": "You have no seats left on your plan. You can still try: the system will say no.",
+      "inviteDescription": "Whoever accepts joins with the role you set here. A pending invitation stays live until it is accepted or cancelled.",
       "inviteCreated": "Invitation created.",
       "inviteShare": "Copy this link and send it to that person. It is shown only once.",
       "inviteLink": "Invitation link"
@@ -408,7 +390,6 @@
       "allActions": "All actions",
       "empty": "No activity matches those filters.",
       "export": "Download CSV",
-      "exportRequiresPro": "Downloading requires the PRO plan",
       "notAllowed": "Only the owner and administrators can see the activity."
     }
   },
@@ -420,13 +401,13 @@
     "signInFirst": "You need an account to accept this invitation. Create one or sign in.",
     "invalidTitle": "This invitation is no longer valid",
     "invalidBody": "It may have expired, been cancelled, or already been used. Ask that business to send you a new one.",
-    "needsDatabase": "Invitations need the database. This demo runs in memory."
+    "needsDatabase": "This installation has no authentication configured yet, so invitations cannot be accepted."
   },
   "purchases": {
     "title": "Purchases",
-    "subtitle": "What you buy from your suppliers",
+    "subtitle": "Purchases from suppliers",
     "new": "Record a delivery",
-    "newSubtitle": "Write down what just arrived and the stock updates itself",
+    "newSubtitle": "Record what arrived and the inventory stays up to date",
     "suppliers": "Suppliers",
     "empty": "You have not recorded any incoming goods yet.",
     "number": "Number",
@@ -452,9 +433,7 @@
     "voidSoldWarning": "If what arrived with this receipt has already been sold, the system will refuse to void it: you cannot un-receive something that already left.",
     "errors": {
       "Forbidden": "You do not have permission to do this.",
-      "FeatureNotAvailable": "Purchases requires the {requiredPlan} plan.",
       "InvalidFormat": "Check the details.",
-      "QuotaExceeded": "You reached the limit of {limit} on your current plan.",
       "SupplierNotFound": "That supplier does not exist.",
       "ProductNotFound": "One of the products does not exist.",
       "InvalidQuantity": "One of the quantities is not valid.",
@@ -487,7 +466,7 @@
   },
   "suppliers": {
     "title": "Suppliers",
-    "subtitle": "Who you buy from",
+    "subtitle": "Registered suppliers",
     "new": "New supplier",
     "code": "Code",
     "name": "Name",
@@ -502,18 +481,14 @@
     "showArchived": "Also show archived",
     "state": "State"
   },
-  "plans": {
-    "lockedHeading": "{feature} is on the PRO plan",
-    "lockedBody": "Your current plan does not include this module. You can see it here to know what it does, and turn it on when you need it."
-  },
   "status": {
     "active": "Active",
     "archived": "Archived"
   },
   "waking": {
-    "title": "Waking the server",
-    "lead": "The data service was asleep. Free hosting shuts it down after fifteen minutes without visitors, and it takes about a minute to come back.",
-    "explain": "This happens once. From now on the app responds instantly while you are using it.",
+    "title": "Starting the service",
+    "lead": "The data service was idle and is starting up. It usually takes about a minute.",
+    "explain": "This happens once. From here on the application responds instantly while you are using it.",
     "waiting": "Checking…",
     "ready": "Ready. Taking you in…",
     "stuck": "This is taking longer than usual. You can wait a bit more or try again.",

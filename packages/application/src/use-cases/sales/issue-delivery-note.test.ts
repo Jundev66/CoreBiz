@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   Customer,
   Money,
-  Plan,
   Product,
   Quantity,
   asId,
@@ -322,25 +321,11 @@ describe('issueDeliveryNote — autorizacion y limites', () => {
     if (!result.ok) expect(result.error.kind).toBe('CreditLimitExceeded');
   });
 
-  it('bloquea al agotar la cuota mensual de documentos', async () => {
+  it('no hay tope mensual de documentos', async () => {
     const product = setup();
-    stores.usage.set(`${TENANT}:documents_month`, 100);
+    stores.usage.set(`${TENANT}:documents_month`, 2_000);
 
     const result = await issueWith()({
-      customerId: 'cus-1',
-      lines: [{ productId: product.id, quantity: '1', unitPrice: '1.00' }],
-    });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.kind).toBe('QuotaExceeded');
-  });
-
-  it('con plan PRO la misma cuota deja continuar', async () => {
-    const product = setup();
-    stores.usage.set(`${TENANT}:documents_month`, 100);
-    const ctx = makeTestContext({ plan: Plan.of('pro') });
-
-    const result = await issueWith(ctx)({
       customerId: 'cus-1',
       lines: [{ productId: product.id, quantity: '1', unitPrice: '1.00' }],
     });

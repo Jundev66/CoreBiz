@@ -190,7 +190,7 @@ export interface SalesStores {
    *
    * Un ARRAY porque es append-only y el orden de llegada es el dato. Existe para
    * que la ficha de un producto ensene lo MISMO en memoria que sobre Postgres: sin
-   * el, `pnpm dev:nodb` mostraria un historial vacio y daria a entender que los
+   * el, el driver en memoria mostraria un historial vacio y daria a entender que los
    * movimientos no se guardan.
    */
   readonly stockMovements: StoredMovement[];

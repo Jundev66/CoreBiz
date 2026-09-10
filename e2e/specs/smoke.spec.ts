@@ -20,34 +20,31 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Recorrido basico', () => {
-  test('la portada carga y lleva al modulo de clientes', async ({ page }) => {
+  test('la raiz es el panel de inicio y lleva al modulo de clientes', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'CoreBiz', level: 1 })).toBeVisible();
-    await page.getByRole('link', { name: /clientes|customers/i }).click();
+    // Con sesion, la raiz ya no es una portada con enlaces: es el panel. Antes el
+    // encabezado era el nombre del producto, que en una pantalla de trabajo no dice
+    // nada — el h1 tiene que nombrar DONDE estas.
+    await expect(page.getByRole('heading', { name: /inicio|home/i, level: 1 })).toBeVisible();
+
+    await page
+      .getByRole('link', { name: /clientes|customers/i })
+      .first()
+      .click();
 
     await expect(page).toHaveURL(/\/customers$/);
     await expect(page.getByRole('table')).toBeVisible();
   });
 
-  test('el listado muestra los datos sembrados con su cuota', async ({ page }) => {
+  test('el listado muestra los datos sembrados', async ({ page }) => {
     await page.goto('/customers');
 
+    // Se comprueban dos filas y no una: una sola podria colarse desde un mensaje
+    // suelto, mientras que dos clientes concretos del sembrador solo pueden venir de
+    // la consulta que alimenta la tabla.
     await expect(page.getByRole('cell', { name: 'Bodega La Esquina' })).toBeVisible();
-
-    // La cuota se expone como progressbar con sus valores ARIA: se puede verificar sin
-    // depender de como este redactado el texto, y ademas es accesible.
-    //
-    // El limite se comprueba exacto porque es una regla del plan; el consumo solo se
-    // comprueba coherente, porque los escenarios BDD comparten servidor y pueden haber
-    // dado de alta clientes antes. Fijar aqui un numero exacto haria que este test
-    // fallase segun el ORDEN de ejecucion, que no es lo que pretende verificar.
-    const quota = page.getByRole('progressbar');
-    await expect(quota).toHaveAttribute('aria-valuemax', '50');
-
-    const used = Number(await quota.getAttribute('aria-valuenow'));
-    expect(used).toBeGreaterThanOrEqual(8);
-    expect(used).toBeLessThanOrEqual(50);
+    await expect(page.getByRole('cell', { name: 'Ferreteria El Tornillo' })).toBeVisible();
   });
 
   test('el aviso de documento no fiscal esta presente', async ({ page }) => {
@@ -67,7 +64,7 @@ test.describe('Internacionalizacion', () => {
 
     await page.goto('/customers');
     await expect(page.getByRole('heading', { name: 'Customers' })).toBeVisible();
-    await expect(page.getByText('Business customer directory')).toBeVisible();
+    await expect(page.getByText('Registered customers')).toBeVisible();
   });
 });
 

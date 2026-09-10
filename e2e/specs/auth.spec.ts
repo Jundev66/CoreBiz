@@ -81,10 +81,8 @@ test.describe('Cuentas y sesion', () => {
     await expect(page.getByRole('cell', { name: 'Bodega La Esquina' })).toHaveCount(0);
     await expect(page.getByRole('cell', { name: 'Ferreteria El Tornillo' })).toHaveCount(0);
 
-    // La empresa nueva arranca sin clientes, con su cuota entera por gastar.
-    const quota = page.getByRole('progressbar');
-    await expect(quota).toHaveAttribute('aria-valuenow', '0');
-    await expect(quota).toHaveAttribute('aria-valuemax', '50');
+    // Y arranca vacia de verdad: ni una sola fila en la tabla de clientes.
+    await expect(page.getByRole('row')).toHaveCount(0);
   });
 
   test('la pantalla de recuperacion no revela si la direccion existe', async ({ page }) => {

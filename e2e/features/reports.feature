@@ -1,28 +1,23 @@
-Feature: Plan gating on the reports module
+Feature: Reading the sales figures
 
   As the owner of a small shop
-  I want to know which features my plan includes
-  So that I can decide whether upgrading is worth it
+  I want to see what the business sold and what the stock is worth
+  So that I can decide with numbers instead of impressions
 
-  # The gate is enforced on the server, in the use case and in the query layer.
-  # Hiding the menu link would not be a limit: anyone could type the URL.
+  # This module used to sit behind a paid plan, and this file used to be about the
+  # lock: what the free plan could not reach and how the paid one opened it. There
+  # are no plans any more, so what is left to check is the thing that actually
+  # matters — that the figures come out, and that they come from the documents that
+  # were issued rather than from a fixture.
 
   Background:
     Given I am signed in as an owner
 
-  Scenario: The free plan cannot open the reports module
-    Given the business is on the free plan
-    When I open the reports page
-    Then I should see that reports require the paid plan
-    And I should not see any sales figures
-
-  Scenario: The paid plan unlocks the reports
-    Given the business is on the paid plan
+  Scenario: The reports module opens and shows the figures
     When I open the reports page
     Then I should see the sales figures
     And I should see the best selling products
 
-  Scenario: The locked module is visible in the navigation, not hidden
-    Given the business is on the free plan
+  Scenario: Reports are reachable from the navigation
     When I open the products page
-    Then the reports link is marked as a paid feature
+    Then the reports link is available

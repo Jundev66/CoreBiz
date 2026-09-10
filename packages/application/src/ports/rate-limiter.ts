@@ -56,7 +56,7 @@ export type RateLimitPolicy = keyof typeof RATE_LIMITS;
 /**
  * Contador en memoria.
  *
- * Sirve para los tests y para `pnpm dev:nodb`. NO sirve en produccion, y conviene
+ * Sirve para los tests. NO sirve en produccion, y conviene
  * decir por que en voz alta: en serverless cada instancia de funcion tiene su
  * propio proceso, asi que diez instancias con "8 intentos cada una" son ochenta
  * intentos. Un limitador que no comparte estado no limita nada.

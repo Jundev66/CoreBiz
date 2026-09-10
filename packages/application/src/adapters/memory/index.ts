@@ -6,7 +6,7 @@
  * dobles: documentacion ejecutable del contrato que cada puerto promete, y la unica
  * forma de testear un caso de uso en milisegundos.
  *
- * Ademas alimentan `pnpm dev:nodb`, que arranca la aplicacion completa sin base de
+ * Ademas alimentan el driver en memoria, que arranca la aplicacion completa sin base de
  * datos. Los adaptadores que SI hacen IO (Postgres, Supabase) viven donde deben:
  * en @corebiz/infrastructure.
  */

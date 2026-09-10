@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createSupplierAction, type PurchasingState } from '@/actions/purchasing';
+import { Field } from '@/ui/field';
 
 const INITIAL: PurchasingState = { status: 'idle' };
 
@@ -21,10 +22,12 @@ export function SupplierForm() {
     <form action={formAction} className="space-y-4">
       {/* El codigo lo genera el sistema al guardar (`PRV26000001`). */}
       <Field name="name" label={t('suppliers.name')} required autoComplete="organization" />
-      <Field name="contactName" label={t('suppliers.contact')} />
-      <Field name="phone" label={t('suppliers.phone')} type="tel" />
-      <Field name="email" label={t('suppliers.email')} type="email" />
-      <Field name="taxId" label={t('suppliers.taxId')} />
+      {/* Aqui solo el nombre es obligatorio, asi que lo que se señala es lo contrario:
+          marcar cuatro campos como opcionales dice mas que marcar uno como exigido. */}
+      <Field name="contactName" label={t('suppliers.contact')} optional />
+      <Field name="phone" label={t('suppliers.phone')} type="tel" optional />
+      <Field name="email" label={t('suppliers.email')} type="email" optional />
+      <Field name="taxId" label={t('suppliers.taxId')} optional />
 
       {state.status === 'error' && state.errorKind !== undefined && (
         <p
@@ -43,41 +46,5 @@ export function SupplierForm() {
         {pending ? '…' : t('common.save')}
       </button>
     </form>
-  );
-}
-
-function Field({
-  name,
-  label,
-  type = 'text',
-  required,
-  autoComplete,
-}: {
-  name: string;
-  label: string;
-  type?: string;
-  required?: boolean;
-  autoComplete?: string;
-}) {
-  const t = useTranslations();
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium">
-        {label}
-        {required !== true && (
-          <span className="ml-1 text-xs font-normal text-[var(--color-muted)]">
-            {t('common.optional')}
-          </span>
-        )}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        required={required}
-        autoComplete={autoComplete}
-        className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
-      />
-    </div>
   );
 }

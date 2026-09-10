@@ -4,6 +4,7 @@ import { getTranslations, getFormatter } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
+import { BackLink } from '@/ui/primitives';
 import { MarkDeliveredForm } from '@/ui/mark-delivered-form';
 import { VoidNoteForm } from '@/ui/void-note-form';
 
@@ -36,12 +37,7 @@ export default async function DeliveryNoteDetailPage({
       subtitle={note.customerName}
       action={
         <div className="flex flex-wrap items-center gap-4">
-          <Link
-            href="/delivery-notes"
-            className="text-sm text-[var(--color-muted)] hover:underline"
-          >
-            ← {t('deliveryNotes.title')}
-          </Link>
+          <BackLink href="/delivery-notes">{t('deliveryNotes.title')}</BackLink>
           {/* La vista de impresion se sirve sin el marco de la aplicacion: lo
               que se imprime tiene que ser el documento, no una captura de la
               aplicacion con el documento dentro. */}

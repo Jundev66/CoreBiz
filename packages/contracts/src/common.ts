@@ -16,7 +16,7 @@ export const uuidSchema = z.string().uuid();
  * satisfacer y unos identificadores que se pueden leer hacen depurables los datos
  * sembrados.
  *
- * Exigir uuid aqui rompia `pnpm dev:nodb` y la suite BDD entera con un error de
+ * Exigir uuid aqui rompia el driver en memoria y la suite BDD entera con un error de
  * validacion en el borde, sin que el dominio llegase a enterarse. Y no aportaba
  * seguridad: quien no tiene acceso a un registro recibe 404 lo escriba como lo
  * escriba, porque el filtro es la pertenencia al tenant, no la forma del texto.

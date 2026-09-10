@@ -44,7 +44,7 @@ import type { SalesStores } from './sales';
  * Lado de lectura en memoria.
  *
  * Deriva los mismos modelos planos que la version SQL, pero recorriendo los
- * agregados del almacen. Existe para que `pnpm dev:nodb` y la suite E2E sigan
+ * agregados del almacen. Existe para que el driver en memoria y la suite E2E sigan
  * funcionando sin Postgres, y para que las dos implementaciones tengan que
  * ponerse de acuerdo en un contrato explicito en vez de en lo que devuelva la
  * base de datos.
@@ -356,7 +356,7 @@ class InMemoryReportQueries implements ReportQueries {
  * Lee de los MISMOS almacenes en los que escriben los casos de uso, incluido el
  * registro de auditoria. Si leyera de otro sitio, el visor mostraria un mundo
  * distinto del que la aplicacion acaba de escribir, y el modulo no se podria
- * probar sin base de datos — que es justo lo que `pnpm dev:nodb` promete.
+ * probar sin base de datos — que es justo lo que el driver en memoria permite.
  */
 class InMemoryAdminQueries implements AdminQueries {
   constructor(

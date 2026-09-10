@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createCustomerAction, type ActionState } from '@/actions/customers';
+import { Field } from '@/ui/field';
 
 const INITIAL: ActionState = { status: 'idle' };
 
@@ -33,16 +34,14 @@ export function CustomerForm() {
           label={t('customers.name')}
           required
           error={fieldError('name')}
-          t={t}
           autoComplete="organization"
         />
-        <Field name="taxId" label={t('customers.taxId')} error={fieldError('taxId')} t={t} />
+        <Field name="taxId" label={t('customers.taxId')} error={fieldError('taxId')} />
         <Field
           name="email"
           label={t('customers.email')}
           type="email"
           error={fieldError('email')}
-          t={t}
           autoComplete="email"
         />
         <Field
@@ -50,14 +49,13 @@ export function CustomerForm() {
           label={t('customers.phone')}
           type="tel"
           error={fieldError('phone')}
-          t={t}
           autoComplete="tel"
         />
         <Field
           name="creditLimit"
           label={t('customers.creditLimit')}
           error={fieldError('creditLimit')}
-          t={t}
+
           inputMode="decimal"
           placeholder="1500,00"
         />
@@ -67,26 +65,27 @@ export function CustomerForm() {
           forma de rellenarla: ni aqui ni por la API. En tres campos porque quien lleva
           la mercancia busca la ciudad antes que la calle. */}
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-1 text-sm font-medium">{t('customers.address')}</legend>
+        {/* El grupo se distingue de sus campos: mismo peso y mismo tamaño que las
+            etiquetas de dentro hacia que "Direccion" pareciera un campo mas. */}
+        <legend className="mb-2 text-xs font-semibold tracking-wide text-[var(--color-muted)] uppercase">
+          {t('customers.address')}
+        </legend>
         <Field
           name="addressLine1"
           label={t('customers.addressLine1')}
           error={fieldError('addressLine1')}
-          t={t}
           autoComplete="address-line1"
         />
         <Field
           name="addressCity"
           label={t('customers.addressCity')}
           error={fieldError('addressCity')}
-          t={t}
           autoComplete="address-level2"
         />
         <Field
           name="addressState"
           label={t('customers.addressState')}
           error={fieldError('addressState')}
-          t={t}
           autoComplete="address-level1"
         />
       </fieldset>
@@ -107,48 +106,5 @@ export function CustomerForm() {
         {pending ? '…' : t('common.save')}
       </button>
     </form>
-  );
-}
-
-interface FieldProps {
-  name: string;
-  label: string;
-  type?: string;
-  required?: boolean;
-  error?: string | undefined;
-  placeholder?: string;
-  autoComplete?: string;
-  inputMode?: 'decimal' | 'text';
-  t: ReturnType<typeof useTranslations>;
-}
-
-function Field({ name, label, type = 'text', required, error, t, ...rest }: FieldProps) {
-  const errorId = `${name}-error`;
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium">
-        {label}
-        {required && (
-          <span aria-hidden="true" className="ml-0.5 text-[var(--color-danger-ink)]">
-            *
-          </span>
-        )}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        required={required}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        className="mt-1 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
-        {...rest}
-      />
-      {error && (
-        <p id={errorId} className="mt-1 text-xs text-[var(--color-danger-ink)]">
-          {t(`errors.${error}`, { field: label })}
-        </p>
-      )}
-    </div>
   );
 }

@@ -6,8 +6,8 @@ cumple lo que promete.
 
 El criterio de "terminado" es concreto y verificable:
 
-> Un reclutador abre `corebiz.vercel.app/demo` desde el móvil, recibe su propio entorno con
-> datos sembrados, opera el ciclo completo de venta, choca contra el límite del plan gratuito,
+> Un reclutador abre la demostración desde el móvil, recibe su propio entorno con datos
+> sembrados, opera el ciclo completo de venta —comprar, tener existencias, vender, imprimir—
 > y nada de lo que haga alcanza los datos de otro visitante. El repo, mientras tanto, tiene la
 > matriz de aislamiento RLS en verde dentro de CI.
 
@@ -17,29 +17,32 @@ El criterio de "terminado" es concreto y verificable:
 
 Lo verificado, no lo aspiracional.
 
-| Capa                          | Estado                                                                  |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| Dominio (`packages/domain`)   | ✅ Ventas, inventario, RBAC, planes, dinero dual. 266 tests unitarios   |
-| Casos de uso                  | ✅ 15, con puertos definidos y auditoría                                |
-| Adaptadores en memoria        | ✅ Con rollback real. Sostienen `pnpm dev:nodb` y toda la suite         |
-| API (`apps/api`)              | ✅ NestJS, 36 rutas, guards de RBAC, OpenAPI. Es la capa de entrega     |
-| Interfaz (`apps/web`)         | ✅ 29 páginas, consumiendo la API desde el servidor, i18n ES/EN         |
-| Tests E2E + BDD               | ✅ 25 escenarios Gherkin, 58 specs, independientes del orden            |
-| Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla          |
-| Persistencia real             | ✅ Adaptadores Prisma de cada puerto, UoW sobre transacción real        |
-| Tablas de negocio             | ✅ 16 tablas, 14 con `tenant_id`; migraciones y semilla que cuadra sola |
-| Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 68 tests de integración     |
-| Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación       |
-| Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy       |
-| Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`          |
-| Compras y proveedores         | ✅ `Supplier` y `GoodsReceipt` con su detalle, gated a PRO              |
-| Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes          |
-| Demo efímero                  | ✅ Credenciales propias por visitante, TTL 24 h, purga y disyuntor      |
-| Cobros, presupuestos, órdenes | 🚧 Anunciados en el menú, con su pantalla y su explicación              |
-| Despliegue                    | 🚧 `render.yaml` y la guía completa; falta ejecutarla en cuentas reales |
+| Capa                          | Estado                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| Dominio (`packages/domain`)   | ✅ Ventas, inventario, RBAC, dinero dual. ~180 tests unitarios             |
+| Casos de uso                  | ✅ 15, con puertos definidos y auditoría                                   |
+| Adaptadores en memoria        | ✅ Con rollback real. Dobles de prueba: sostienen toda la suite sin Docker |
+| API (`apps/api`)              | ✅ NestJS, guards de RBAC, OpenAPI. Es la capa de entrega                  |
+| Interfaz (`apps/web`)         | ✅ Consume la API desde el servidor, i18n ES/EN (sin selector en pantalla) |
+| Tests E2E + BDD               | ✅ 20 escenarios Gherkin, 73 specs, independientes del orden               |
+| Arquitectura verificada en CI | ✅ `dependency-cruiser` rompe el build si el dominio se acopla             |
+| Persistencia real             | ✅ Adaptadores Prisma de cada puerto, UoW sobre transacción real           |
+| Tablas de negocio             | ✅ 16 tablas, 14 con `tenant_id`; migraciones y semilla que cuadra sola    |
+| Aislamiento probado           | ✅ Matriz sobre toda tabla con `tenant_id`. 82 tests de integración        |
+| Autenticación                 | ✅ Supabase Auth, sesión en cookies httpOnly, alta y recuperación          |
+| Cabeceras de seguridad        | ✅ CSP con nonce por request, HSTS, COOP/CORP, Permissions-Policy          |
+| Limitación de peticiones      | ✅ UPSERT atómico en Postgres, detrás del puerto `RateLimiter`             |
+| Compras y proveedores         | ✅ `Supplier` y `GoodsReceipt` con su detalle. Abierto, sin plan de pago   |
+| Administración                | ✅ Invitaciones con token hasheado, roles, auditoría y ajustes             |
+| Demo efímero                  | ✅ Credenciales propias por visitante, TTL 24 h, purga y disyuntor         |
+| Planes y cuotas               | ⛔ Retirados: un solo plan sin límites. La maquinaria sigue en el dominio  |
+| Edición de registros          | ⛔ Solo alta y archivado. Los mutadores existen en el dominio y no se usan |
+| Paginación navegable          | ⛔ Keyset en clientes y proveedores; el resto sirve un `LIMIT` fijo        |
+| Cobros, presupuestos, órdenes | ⛔ Fuera de alcance. Ya no se anuncian en el menú                          |
+| Despliegue                    | 🚧 `render.yaml` y la guía completa; falta ejecutarla en cuentas reales    |
 
 **La lectura honesta:** el sistema corre sobre Postgres con las políticas RLS ejecutándose en CI,
-tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 25 escenarios
+tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 20 escenarios
 BDD pasan contra los dos adaptadores sin cambiar una línea.
 
 Desde 2026-09-08 la capa de entrega es una API en NestJS y `apps/web` la consume por HTTP
@@ -127,7 +130,7 @@ módulo de cobros quedó fuera del alcance: el límite de crédito está impleme
 y hoy no llega a dispararse.
 
 **Hecho cuando:** `DATA_DRIVER=postgres pnpm dev` levanta la aplicación contra Supabase local y los
-25 escenarios BDD pasan **sin tocarse una línea**. Ese es el punto: si los tests no distinguen el
+20 escenarios BDD pasan **sin tocarse una línea**. Ese es el punto: si los tests no distinguen el
 adaptador, la arquitectura hexagonal era real.
 
 ---
@@ -163,7 +166,7 @@ aislamiento que nunca ha fallado no ha demostrado nada.
 - [x] Job `integration` en CI con `supabase start` sobre `ubuntu-latest`.
 
 **Hecho:** el job `integration` levanta Supabase en CI, corre la matriz y después ejecuta los
-mismos 25 escenarios BDD contra Postgres. `pnpm test:integration` ya no lleva _(pendiente)_
+mismos 20 escenarios BDD contra Postgres. `pnpm test:integration` ya no lleva _(pendiente)_
 en la tabla del README. Esta es la fase que responde la pregunta de entrevista _"¿cómo sabes que tu
 multi-tenant no filtra datos?"_ con un comando en vez de con una explicación.
 
@@ -217,13 +220,16 @@ Cierra el bucle de la multi-tenancy: sin esto un tenant no puede crecer más all
       SMTP configurado, así que el enlace se muestra UNA vez y quien invita lo hace llegar por
       donde quiera. Menos cómodo y más honesto que un correo que nunca sale.
 - [x] Gestión de roles, respetando el trigger `enforce_last_owner` que ya impide quedarse sin dueño.
-- [x] Visor del `audit_log` con filtros por actor, acción y fecha; exportación **gated a PRO**.
+- [x] Visor del `audit_log` con filtros por actor, acción y fecha, y exportación a CSV.
 - [x] Ajustes del tenant: etiqueta y tasa del impuesto informativo, moneda base, tasa de cambio.
 - [x] Panel de consumo del plan, con los mismos contadores que ya bloquean en el caso de uso.
+      **Retirado** al abrir el producto: ya no hay cuotas que consumir.
 
-**Hecho:** hay un escenario BDD que invita en bucle hasta que el servidor dice que no, y el mensaje
-que aparece habla del **límite del plan** — algo que la pantalla no podría decir si el bloqueo
-viviera en el botón. El formulario se deja enviable a propósito con las plazas agotadas.
+**Hecho, y luego deshecho a propósito.** Hubo un escenario BDD que invitaba en bucle hasta que el
+servidor decía que no, y el mensaje hablaba del **límite del plan** — algo que la pantalla no
+podría decir si el bloqueo viviera en el botón. Ese escenario se fue con las cuotas. El principio
+que defendía sigue rigiendo el resto del sistema: quien decide es el caso de uso, no el formulario,
+y por eso los formularios se dejan enviables aunque la acción vaya a fallar.
 
 **Tres decisiones que merecen leerse:**
 
@@ -260,7 +266,7 @@ Cierra el ciclo **comprar → stock → vender**.
       integración que comprueba la fila de `stock_movements`, no solo el saldo: un test que solo
       mirase `on_hand` pasaría igual con dos inventarios paralelos, que es el error a impedir.
 - [x] Casos de uso, adaptadores, esquema, interfaz y escenarios BDD, siguiendo el patrón ya establecido.
-- [x] Módulo completo **gated a PRO**, con el gate en el caso de uso. El módulo se ve bloqueado en
+- [x] Módulo completo. Estuvo detrás del plan de pago, con el gate en el caso de uso; hoy está abierto. Se veía bloqueado en
       el menú en lugar de desaparecer: saber que existe algo más es parte de un freemium honesto.
 
 **Nota de alcance:** `Supplier` es un CRUD casi plano y está bien que lo sea. El músculo hexagonal se

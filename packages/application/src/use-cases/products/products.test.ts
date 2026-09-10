@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  Plan,
   Product,
   Money,
   Quantity,
@@ -158,18 +157,9 @@ describe('createProduct', () => {
     expect((await build(ctx)({ sku: 'A', name: 'Producto', price: '1.00' })).ok).toBe(true);
   });
 
-  it('respeta la cuota de productos del plan', async () => {
-    stores.usage.set(`${TENANT}:products`, 100);
-    const result = await build()({ sku: 'A', name: 'Producto', price: '1.00' });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.kind).toBe('QuotaExceeded');
-  });
-
-  it('con plan PRO la misma cuota deja continuar', async () => {
-    stores.usage.set(`${TENANT}:products`, 100);
-    const ctx = makeTestContext({ plan: Plan.of('pro') });
-    expect((await build(ctx)({ sku: 'A', name: 'Producto', price: '1.00' })).ok).toBe(true);
+  it('el catalogo no tiene techo', async () => {
+    stores.usage.set(`${TENANT}:products`, 5_000);
+    expect((await build()({ sku: 'A', name: 'Producto', price: '1.00' })).ok).toBe(true);
   });
 });
 

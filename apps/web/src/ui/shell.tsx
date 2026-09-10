@@ -1,5 +1,15 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
+import {
+  Users,
+  Package,
+  FileText,
+  Truck,
+  BarChart3,
+  Settings,
+  LayoutDashboard,
+} from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
 import { Toast } from '@/ui/toast';
 import type { TenantContext } from '@corebiz/application';
@@ -9,8 +19,17 @@ import type { SessionInfo } from '@/api/session';
 /**
  * Marco comun de las pantallas de la aplicacion.
  *
- * Es un Server Component: la navegacion, el plan y el aviso legal se resuelven en el
- * servidor y al navegador no llega ni una linea de JavaScript por esto.
+ * Es un Server Component: la navegacion y el aviso legal se resuelven en el servidor y
+ * al navegador no llega ni una linea de JavaScript por esto.
+ *
+ * La estructura es de HERRAMIENTA y no de sitio web: modulos fijos a la izquierda,
+ * contenido a la derecha. Antes era una barra horizontal de enlaces de texto, que es la
+ * forma de un menu de navegacion y no la de un sistema de gestion — y esa diferencia se
+ * nota antes de leer una sola palabra.
+ *
+ * En pantallas estrechas la columna pasa a ser una tira horizontal desplazable. No hay
+ * menu desplegable a proposito: exigiria estado de cliente para algo que se resuelve
+ * con scroll, y dejaria de funcionar exactamente cuando mas falta hace.
  */
 
 interface ShellProps {
@@ -48,6 +67,15 @@ export async function Shell({
   const t = await getTranslations();
 
   /*
+   * La ruta actual, para marcar el modulo en el que se esta.
+   *
+   * Un Server Component no conoce el pathname, pero el middleware ya lo deja en una
+   * cabecera de peticion para la pantalla de espera. Reutilizarla evita convertir toda
+   * la navegacion en un componente de cliente solo para pintar un estado activo.
+   */
+  const rutaActual = ((await headers()).get('x-corebiz-path') ?? '').split('?')[0] ?? '';
+
+  /*
    * El menu ensena lo que el sistema HACE, y nada mas.
    *
    * Antes llevaba «Presupuestos» y «Cobros» marcados como en desarrollo, con el
@@ -57,68 +85,90 @@ export async function Shell({
    * es el ciclo completo —comprar, tener existencias, vender— y ese esta entero.
    */
   const nav = [
-    { href: '/customers', label: t('nav.customers') },
-    { href: '/products', label: t('nav.products') },
-    { href: '/delivery-notes', label: t('nav.deliveryNotes') },
-    { href: '/purchases', label: t('nav.purchases'), pro: 'purchasing' as const },
-    { href: '/reports', label: t('nav.reports'), pro: 'reports' as const },
-    { href: '/settings', label: t('nav.settings') },
+    { href: '/', label: t('nav.home'), Icon: LayoutDashboard, exacto: true },
+    { href: '/customers', label: t('nav.customers'), Icon: Users },
+    { href: '/products', label: t('nav.products'), Icon: Package },
+    { href: '/delivery-notes', label: t('nav.deliveryNotes'), Icon: FileText },
+    { href: '/purchases', label: t('nav.purchases'), Icon: Truck },
+    { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
+    { href: '/settings', label: t('nav.settings'), Icon: Settings },
   ];
 
-  return (
-    <div className="min-h-screen">
-      {toast !== undefined && <Toast message={toast} />}
-      {session?.isDemo === true && <DemoNotice session={session} />}
+  const estaAqui = (href: string, exacto?: boolean): boolean =>
+    exacto === true
+      ? rutaActual === href
+      : rutaActual === href || rutaActual.startsWith(href + '/');
 
-      <header className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
+  return (
+    <div className="min-h-screen lg:flex">
+      {toast !== undefined && <Toast message={toast} />}
+
+      <aside className="border-b border-[var(--color-line)] bg-[var(--color-surface)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-b-0">
+        <div className="px-5 py-4 lg:px-6 lg:py-6">
+          <Link href="/" className="text-[15px] font-semibold tracking-tight">
             {t('app.name')}
           </Link>
+        </div>
 
-          <nav aria-label={t('app.name')} className="flex flex-wrap gap-1">
-            {nav.map((item) => (
+        <nav
+          aria-label={t('app.name')}
+          className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible lg:pb-0"
+        >
+          {nav.map(({ href, label, Icon, exacto }) => {
+            const aqui = estaAqui(href, exacto);
+            return (
               <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-md px-3 py-1.5 text-sm transition hover:bg-[var(--color-canvas)]"
+                key={href}
+                href={href}
+                {...(aqui ? { 'aria-current': 'page' as const } : {})}
+                className={[
+                  'flex shrink-0 items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-2 text-sm transition',
+                  aqui
+                    ? 'bg-[var(--color-brand-soft)] font-medium text-[var(--color-brand)]'
+                    : 'text-[var(--color-ink-soft)] hover:bg-[var(--color-subtle)] hover:text-[var(--color-ink)]',
+                ].join(' ')}
               >
-                {item.label}
-                {/* El candado se muestra siempre, no se oculta el modulo: saber que
-                    existe algo mas es parte de como funciona un freemium honesto. */}
-                {item.pro !== undefined && !ctx.plan.has(item.pro) && (
-                  <span aria-label="PRO" className="ml-1.5 text-xs opacity-60">
-                    🔒
-                  </span>
-                )}
+                <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+                {label}
               </Link>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
 
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-[var(--color-line)] px-3 py-1 text-xs uppercase tracking-wide">
-              {ctx.plan.code}
-            </span>
-            {session && <AccountArea session={session} activeTenantId={ctx.tenantId} />}
+        {session && (
+          <div className="mt-auto hidden border-t border-[var(--color-line)] px-3 py-4 lg:block">
+            <AccountArea session={session} activeTenantId={ctx.tenantId} />
           </div>
-        </div>
-      </header>
+        )}
+      </aside>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-            {subtitle && <p className="mt-1 text-[var(--color-muted)]">{subtitle}</p>}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {session?.isDemo === true && <DemoNotice session={session} />}
+
+        {session && (
+          <div className="border-b border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-3 lg:hidden">
+            <AccountArea session={session} activeTenantId={ctx.tenantId} />
           </div>
-          {action}
-        </div>
+        )}
 
-        {children}
-      </main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 lg:px-10 lg:py-10">
+          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+              {subtitle && <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p>}
+            </div>
+            {action}
+          </div>
 
-      <footer className="mx-auto max-w-6xl border-t border-[var(--color-line)] px-6 py-6">
-        <p className="text-sm text-[var(--color-muted)]">{t('legal.notice')}</p>
-      </footer>
+          {children}
+        </main>
+
+        <footer className="mx-auto w-full max-w-6xl px-5 pb-8 lg:px-10">
+          <p className="border-t border-[var(--color-line)] pt-5 text-xs text-[var(--color-muted)]">
+            {t('legal.notice')}
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
@@ -131,11 +181,6 @@ export async function Shell({
  * envia al elegir. Un menu desplegable con estado de cliente seria mas vistoso y
  * dejaria de funcionar exactamente cuando mas falta hace — con la conexion mala,
  * en un movil viejo, en el mostrador de una tienda.
- *
- * Todo el mundo llega aqui con sesion —tambien quien esta en la demostracion, que
- * recibe credenciales propias en `/demo`— asi que "cerrar sesion" siempre cierra
- * algo de verdad. La unica excepcion es el modo memoria, donde no hay
- * autenticacion en absoluto.
  */
 async function AccountArea({
   session,
@@ -147,20 +192,7 @@ async function AccountArea({
   const t = await getTranslations();
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {/* En una demostracion, "crear mi cuenta" va JUNTO a "salir", no en su
-          lugar. Quien esta probando el sistema tiene una sesion de verdad que
-          puede querer cerrar, y a la vez es la unica persona a la que tiene
-          sentido ofrecerle empezar con su propio negocio. */}
-      {session.isDemo && signupConfig.enabled() && (
-        <Link
-          href="/signup"
-          className="rounded-md border border-[var(--color-brand)] px-3 py-1.5 text-sm font-medium transition hover:bg-[var(--color-brand)]/10"
-        >
-          {t('demo.createAccount')}
-        </Link>
-      )}
-
+    <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-stretch lg:gap-3">
       {session.memberships.length > 1 && (
         <form action={switchTenantAction}>
           <label htmlFor="tenantId" className="sr-only">
@@ -170,7 +202,7 @@ async function AccountArea({
             id="tenantId"
             name="tenantId"
             defaultValue={activeTenantId}
-            className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
+            className="w-full rounded-[var(--radius-control)] border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
           >
             {session.memberships.map((m) => (
               <option key={m.tenantId} value={m.tenantId}>
@@ -178,29 +210,45 @@ async function AccountArea({
               </option>
             ))}
           </select>
-          <button type="submit" className="ml-2 text-sm underline underline-offset-4">
+          <button type="submit" className="mt-1 text-xs underline underline-offset-4">
             {t('common.change')}
           </button>
         </form>
       )}
 
       {session.email !== null && (
-        <span className="hidden text-sm text-[var(--color-muted)] sm:inline">{session.email}</span>
+        <span className="truncate text-xs text-[var(--color-muted)]" title={session.email}>
+          {session.email}
+        </span>
       )}
 
-      {/* Sin correo no hay sesion que cerrar: es el modo memoria, donde la
-          aplicacion arranca sin base de datos y no hay autenticacion. Ofrecer
-          "salir" ahi seria un boton que no hace nada. */}
-      {session.email !== null && (
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
+      <div className="flex flex-wrap items-center gap-2">
+        {/* En una demostracion, "crear mi cuenta" va JUNTO a "salir", no en su
+            lugar. Quien esta probando el sistema tiene una sesion de verdad que
+            puede querer cerrar, y a la vez es la unica persona a la que tiene
+            sentido ofrecerle empezar con su propio negocio. */}
+        {session.isDemo && signupConfig.enabled() && (
+          <Link
+            href="/signup"
+            className="rounded-[var(--radius-control)] border border-[var(--color-brand)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-brand)] transition hover:bg-[var(--color-brand-soft)]"
           >
-            {t('auth.signOut')}
-          </button>
-        </form>
-      )}
+            {t('demo.createAccount')}
+          </Link>
+        )}
+
+        {/* Sin correo no hay sesion que cerrar: es el driver de pruebas, que no
+            tiene autenticacion. Ofrecer "salir" ahi seria un boton que no hace nada. */}
+        {session.email !== null && (
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="rounded-[var(--radius-control)] border border-[var(--color-line)] px-2.5 py-1.5 text-xs transition hover:border-[var(--color-line-strong)] hover:bg-[var(--color-subtle)]"
+            >
+              {t('auth.signOut')}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -220,20 +268,11 @@ async function AccountArea({
 async function DemoNotice({ session }: { session: SessionInfo }) {
   const t = await getTranslations();
 
-  if (session.memoryDriver) {
-    // Sin base de datos: es una demostracion y no caduca porque no hay nada
-    // persistido que pueda caducar.
-    return (
-      <Banner>
-        <strong className="font-medium">{t('demo.banner')}</strong> {t('demo.memoryDriver')}
-      </Banner>
-    );
-  }
-
   if (session.expiresAt === null) {
-    // El comercio de ejemplo sobre Postgres. Tampoco caduca —es la plantilla que se
-    // clona— pero decir aqui "corriendo sin base de datos" seria falso, y era lo que
-    // decia hasta que un test lo enseno en su captura de pantalla.
+    // El comercio de ejemplo. No caduca porque es la plantilla que se clona para
+    // cada visitante. Antes habia aqui una rama para el driver en memoria que
+    // anunciaba "corriendo sin base de datos"; ese modo ya no es una forma de usar
+    // el producto, asi que el producto ha dejado de hablar de el.
     return <Banner>{t('demo.templateNotice')}</Banner>;
   }
 
@@ -248,45 +287,9 @@ function Banner({ children }: { children: React.ReactNode }) {
   return (
     <div
       role="status"
-      className="border-b border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-6 py-2 text-center text-sm text-[var(--color-warn-ink)]"
+      className="border-b border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)] px-5 py-2 text-center text-xs text-[var(--color-warn-ink)]"
     >
       {children}
-    </div>
-  );
-}
-
-/** Barra de cuota. Se muestra siempre, no solo al agotarse. */
-export function QuotaBar({
-  current,
-  limit,
-  label,
-  nearLimitLabel,
-}: {
-  current: number;
-  limit: number;
-  label: string;
-  nearLimitLabel: string;
-}) {
-  const ratio = limit === 0 ? 1 : Math.min(1, current / limit);
-  const near = ratio >= 0.8;
-
-  return (
-    <div className="text-right">
-      <p className="text-sm font-medium">{label}</p>
-      <div
-        className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-[var(--color-line)]"
-        role="progressbar"
-        aria-valuenow={current}
-        aria-valuemin={0}
-        aria-valuemax={limit}
-        aria-label={label}
-      >
-        <div
-          className={near ? 'h-full bg-[var(--color-warn)]' : 'h-full bg-[var(--color-brand)]'}
-          style={{ width: `${Math.round(ratio * 100)}%` }}
-        />
-      </div>
-      {near && <p className="mt-1 text-xs text-[var(--color-warn-ink)]">{nearLimitLabel}</p>}
     </div>
   );
 }
@@ -295,7 +298,7 @@ export function PrimaryLink({ href, children }: { href: string; children: React.
   return (
     <Link
       href={href}
-      className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
+      className="inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-3.5 py-2 text-sm font-medium text-[var(--color-brand-ink)] shadow-[var(--shadow-xs)] transition hover:bg-[var(--color-brand-hover)]"
     >
       {children}
     </Link>
@@ -305,17 +308,15 @@ export function PrimaryLink({ href, children }: { href: string; children: React.
 /** Contenedor de tabla con scroll propio: la pagina nunca desborda en movil. */
 export function TableFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-[var(--color-line)]">
-      <table className="w-full border-collapse bg-[var(--color-surface)] text-left text-sm">
-        {children}
-      </table>
+    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-xs)]">
+      <table className="w-full border-collapse text-left text-sm">{children}</table>
     </div>
   );
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-lg border border-dashed border-[var(--color-line)] px-6 py-12 text-center text-[var(--color-muted)]">
+    <p className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-line-strong)] px-6 py-14 text-center text-sm text-[var(--color-muted)]">
       {children}
     </p>
   );

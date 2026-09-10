@@ -161,7 +161,7 @@ export class InMemoryMembershipRepository implements MembershipRepository {
     return Promise.resolve();
   }
 
-  /** Solo para preparar escenarios de test y para la siembra de `dev:nodb`. */
+  /** Solo para preparar escenarios de test y para la siembra de el driver en memoria. */
   seed(member: MemberRecord): void {
     this.store.set(this.key(member.userId), { ...member, tenantId: this.tenantId });
   }
