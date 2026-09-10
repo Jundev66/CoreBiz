@@ -18,9 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * recibe cero filas de la base de datos. El aviso de abajo es cortesia para que
  * entienda por que ve la tabla vacia, no la medida que le impide verla.
  *
- * La exportacion a CSV esta reservada al plan PRO, igual que los reportes. El
- * gating se aplica en la ruta que genera el archivo, no en la visibilidad del
- * enlace: ocultar un boton no es un limite.
+ * La exportacion a CSV va por su propia ruta, que vuelve a comprobar quien pide el
+ * archivo en lugar de fiarse de que el enlace solo se pinte para quien puede: ocultar
+ * un boton no es un limite.
  */
 export default async function AuditPage({
   searchParams,

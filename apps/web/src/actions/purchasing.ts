@@ -2,18 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { z } from 'zod';
+import { parseSupplierForm } from '@corebiz/contracts';
 import { apiForRequest } from '@/api/session';
 import { toFormFailure } from '@/api/failure';
 
 /**
  * Server Actions de compras.
  *
- * El modulo entero esta reservado al plan PRO, y el gate lo aplica el caso de
- * uso — no estas funciones, ni la ruta, ni la visibilidad del enlace. Estas
- * acciones son exactamente el camino que usaria alguien invocandolas a mano
- * desde la consola del navegador, y por eso son el sitio donde comprobar que el
- * limite de verdad esta puesto: no lo estan comprobando ellas.
+ * Estas funciones NO deciden nada: validan la forma del formulario y reenvian. Los
+ * permisos los comprueba el caso de uso, no la ruta ni la visibilidad del enlace.
+ * Son exactamente el camino que usaria alguien invocandolas a mano desde la consola
+ * del navegador, y por eso son el sitio donde se ve que el limite esta en otra parte.
  */
 
 export interface PurchasingState {
@@ -37,25 +36,11 @@ function campo(formData: FormData, name: string): string {
   return typeof value === 'string' ? value : '';
 }
 
-const supplierInput = z.object({
-  name: z.string().trim().min(2).max(120),
-  taxId: z.string().trim().optional(),
-  email: z.string().trim().optional(),
-  phone: z.string().trim().optional(),
-  contactName: z.string().trim().optional(),
-});
-
 export async function createSupplierAction(
   _prev: PurchasingState,
   formData: FormData,
 ): Promise<PurchasingState> {
-  const parsed = supplierInput.safeParse({
-    name: formData.get('name'),
-    taxId: formData.get('taxId') ?? undefined,
-    email: formData.get('email') ?? undefined,
-    phone: formData.get('phone') ?? undefined,
-    contactName: formData.get('contactName') ?? undefined,
-  });
+  const parsed = parseSupplierForm(formData);
   if (!parsed.success) return { status: 'error', errorKind: 'InvalidFormat' };
 
   const { createSupplier } = await apiForRequest();
@@ -65,6 +50,10 @@ export async function createSupplierAction(
     email: parsed.data.email || null,
     phone: parsed.data.phone || null,
     contactName: parsed.data.contactName || null,
+    // El contrato y la API lo aceptan desde el principio y esta accion lo dejaba caer.
+    // La pantalla todavia no ofrece el campo, asi que hoy llega vacio siempre; lo que
+    // se arregla es que deje de perderse en el camino el dia que se ofrezca.
+    notes: parsed.data.notes || null,
   });
 
   if (!result.ok) return failure(result.error);
@@ -139,7 +128,7 @@ export async function receiveGoodsAction(
 /**
  * Archivar un proveedor, o devolverlo a la lista.
  *
- * El gate PRO lo aplica el caso de uso, no esta funcion: una Server Action se puede
+ * El permiso lo comprueba el caso de uso, no esta funcion: una Server Action se puede
  * invocar directamente, asi que un modulo protegido solo por el enlace del menu no
  * esta protegido.
  */

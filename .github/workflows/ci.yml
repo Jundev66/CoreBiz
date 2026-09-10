@@ -133,7 +133,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   non-fiscal-guard:
-    name: Guardia de lenguaje no fiscal
+    name: Guardianes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -147,6 +147,11 @@ jobs:
       # las BORRA — es decir, cada empresa pasaria a ver las demas.
       - name: Verificar que Prisma no gestiona migraciones
         run: bash scripts/check-prisma-owns-nothing.sh
+      # Una clave sin traducir no rompe nada: next-intl pinta la clave en crudo. La
+      # pantalla responde 200 y no deja error de consola, asi que `pnpm approve` la da
+      # por buena y el fallo espera a que alguien abra esa pantalla en ese idioma.
+      - name: Verificar la paridad de los dos idiomas
+        run: bash scripts/check-i18n-parity.sh
 
   integration:
     name: Persistencia y matriz de aislamiento RLS

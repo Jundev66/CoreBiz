@@ -4,10 +4,10 @@ import { decimalStringSchema, recordIdSchema } from './common';
 /**
  * Esquemas de entrada de compras.
  *
- * El modulo entero esta reservado al plan PRO, y ese limite NO se comprueba aqui: vive
- * en el caso de uso, que es lo unico que lo aplica venga la peticion de donde venga.
- * Un esquema que rechazase por plan daria un 400 donde corresponde un 403, y ademas
- * pondria una regla de negocio en el sitio donde nadie la busca.
+ * Aqui solo se comprueba la FORMA. Los permisos los aplica el caso de uso, que es lo
+ * unico que los aplica venga la peticion de donde venga. Un esquema que rechazase por
+ * permiso daria un 400 donde corresponde un 403, y ademas pondria una regla de negocio
+ * en el sitio donde nadie la busca.
  */
 
 export const createSupplierSchema = z
@@ -27,6 +27,30 @@ export const createSupplierSchema = z
   .strict();
 
 export type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
+
+/** Campos que este comando acepta. Cualquier otro se ignora por completo. */
+const CREATE_SUPPLIER_FIELDS = ['name', 'taxId', 'email', 'phone', 'contactName', 'notes'] as const;
+
+/**
+ * Convierte un formulario HTML al schema.
+ *
+ * Mismo patron y mismos dos motivos que `parseCustomerForm`: lista explicita como
+ * defensa contra mass assignment, y nunca `Object.fromEntries`, porque React inyecta
+ * sus propios campos en el FormData de una Server Action y `.strict()` fallaria en
+ * todos los envios.
+ *
+ * Existe para que la Server Action deje de traer su propia copia del esquema. La tenia,
+ * y ya habia divergido: sin regex de correo y sin longitudes maximas, asi que la web
+ * aceptaba un proveedor que la API rechazaba despues.
+ */
+export function parseSupplierForm(formData: FormData) {
+  const raw: Record<string, string> = {};
+  for (const field of CREATE_SUPPLIER_FIELDS) {
+    const value = formData.get(field);
+    if (typeof value === 'string') raw[field] = value;
+  }
+  return createSupplierSchema.safeParse(raw);
+}
 
 export const goodsReceiptLineSchema = z
   .object({

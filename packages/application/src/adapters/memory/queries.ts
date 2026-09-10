@@ -50,8 +50,32 @@ import type { SalesStores } from './sales';
  * base de datos.
  */
 
+/**
+ * Un listado que todavia no pagina en ninguno de los dos adaptadores.
+ *
+ * Devolver `nextCursor: null` no es pereza: es lo que devuelve la version SQL, y las
+ * dos tienen que decir lo mismo. Un cursor que solo existe en memoria haria pasar en
+ * verde un escenario que contra Postgres no puede pasar, que es exactamente el fallo
+ * que esta pareja de adaptadores existe para impedir.
+ */
 function page<T>(items: readonly T[], limit: number): Page<T> {
   return { items: items.slice(0, limit), nextCursor: null };
+}
+
+/**
+ * Paginacion por desplazamiento, para los listados que la version SQL sirve por keyset.
+ *
+ * El cursor es OPACO por contrato —lo dice `pagination.ts` en infraestructura— asi que
+ * que uno cuente posiciones y el otro recuerde la ultima fila es legitimo: nadie fuera
+ * de cada adaptador puede mirar dentro. Lo que no es legitimo es que uno pagine y el
+ * otro no, y eso es lo que esto arregla.
+ */
+function paginate<T>(items: readonly T[], limit: number, cursor: string | undefined): Page<T> {
+  const start = cursor !== undefined ? Number(cursor) : 0;
+  return {
+    items: items.slice(start, start + limit),
+    nextCursor: start + limit < items.length ? String(start + limit) : null,
+  };
 }
 
 function matches(haystack: readonly (string | null)[], needle: string): boolean {
@@ -76,6 +100,7 @@ class InMemoryCustomerQueries implements CustomerQueries {
     search?: string;
     includeArchived?: boolean;
     limit?: number;
+    cursor?: string;
   }): Promise<Page<CustomerListItem>> {
     const items = this.scoped()
       .filter((c) => filter.includeArchived === true || !c.isArchived)
@@ -89,7 +114,7 @@ class InMemoryCustomerQueries implements CustomerQueries {
         archived: c.isArchived,
       }));
 
-    return Promise.resolve(page(items, filter.limit ?? 25));
+    return Promise.resolve(paginate(items, filter.limit ?? 25, filter.cursor));
   }
 
   options(limit = 500): Promise<readonly CustomerOption[]> {
@@ -507,10 +532,17 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
 
   suppliers(filter: {
     search?: string;
+    includeArchived?: boolean;
     limit?: number;
     cursor?: string;
   }): Promise<Page<SupplierListItem>> {
-    let items = this.scopedSuppliers();
+    // `includeArchived` faltaba en esta firma y el filtro no se aplicaba: la version
+    // SQL escondia los archivados y esta los servia. El puerto lo declaraba desde el
+    // principio, pero la bivarianza de metodos de TypeScript acepta un parametro mas
+    // estrecho sin una queja, asi que el contrato incumplido no daba error de tipos.
+    let items = this.scopedSuppliers().filter(
+      (s) => filter.includeArchived === true || !s.isArchived,
+    );
 
     if (filter.search !== undefined && filter.search !== '') {
       const needle = filter.search.toLowerCase();
@@ -521,27 +553,26 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
 
     items.sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
-    const limit = filter.limit ?? 25;
-    const start = filter.cursor !== undefined ? Number(filter.cursor) : 0;
-    const slice = items.slice(start, start + limit);
+    const rows = items.map((s): SupplierListItem => ({
+      id: s.id,
+      code: s.code,
+      name: s.name,
+      taxId: s.taxId,
+      contactName: s.contactName,
+      phone: s.phone,
+      archived: s.isArchived,
+    }));
 
-    return Promise.resolve({
-      items: slice.map((s) => ({
-        id: s.id,
-        code: s.code,
-        name: s.name,
-        taxId: s.taxId,
-        contactName: s.contactName,
-        phone: s.phone,
-        archived: s.isArchived,
-      })),
-      nextCursor: start + limit < items.length ? String(start + limit) : null,
-    });
+    return Promise.resolve(paginate(rows, filter.limit ?? 25, filter.cursor));
   }
 
   supplierOptions(limit = 500): Promise<readonly SupplierOption[]> {
     return Promise.resolve(
       this.scopedSuppliers()
+        // Un proveedor archivado no puede elegirse para una recepcion nueva. La version
+        // SQL ya lo excluia; aqui se colaba, y el desplegable ofrecia a alguien con
+        // quien el comercio decidio dejar de trabajar.
+        .filter((s) => !s.isArchived)
         .slice(0, limit)
         .map((s) => ({ id: s.id, code: s.code, name: s.name })),
     );
