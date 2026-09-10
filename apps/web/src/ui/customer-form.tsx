@@ -63,6 +63,34 @@ export function CustomerForm() {
         />
       </div>
 
+      {/* La direccion. La ficha del cliente lleva enseñandola desde siempre y no habia
+          forma de rellenarla: ni aqui ni por la API. En tres campos porque quien lleva
+          la mercancia busca la ciudad antes que la calle. */}
+      <fieldset className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-1 text-sm font-medium">{t('customers.address')}</legend>
+        <Field
+          name="addressLine1"
+          label={t('customers.addressLine1')}
+          error={fieldError('addressLine1')}
+          t={t}
+          autoComplete="address-line1"
+        />
+        <Field
+          name="addressCity"
+          label={t('customers.addressCity')}
+          error={fieldError('addressCity')}
+          t={t}
+          autoComplete="address-level2"
+        />
+        <Field
+          name="addressState"
+          label={t('customers.addressState')}
+          error={fieldError('addressState')}
+          t={t}
+          autoComplete="address-level1"
+        />
+      </fieldset>
+
       {/* El aviso ocupa sitio siempre que hay mensaje, y se anuncia a lectores de
           pantalla: un error que solo se ve no sirve a todo el mundo. */}
       {state.status === 'error' && state.errorKind && !state.fieldErrors && (

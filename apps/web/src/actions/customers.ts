@@ -54,6 +54,9 @@ export async function createCustomerAction(
     email: parsed.data.email || null,
     phone: parsed.data.phone || null,
     creditLimit: parsed.data.creditLimit || null,
+    addressLine1: parsed.data.addressLine1 || null,
+    addressCity: parsed.data.addressCity || null,
+    addressState: parsed.data.addressState || null,
   });
 
   // El error del dominio se traduce a una clave; el texto lo pone la capa de

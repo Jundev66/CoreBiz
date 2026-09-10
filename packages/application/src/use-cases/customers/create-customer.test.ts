@@ -52,6 +52,58 @@ describe('createCustomer', () => {
     expect(customers.size).toBe(2);
   });
 
+  it('guarda la direccion en partes, no como un texto suelto', async () => {
+    // Que la direccion este estructurada es lo que permite que quien reparte busque
+    // por ciudad. El formulario la manda plana porque HTML no tiene objetos; el
+    // caso de uso la vuelve a montar.
+    const createCustomer = build();
+
+    const result = await createCustomer({
+      name: 'Bodega La Esquina',
+      addressLine1: '  Av. Bolivar 12  ',
+      addressCity: 'Maracay',
+      addressState: 'Aragua',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(customers.get(result.value.id)?.address).toEqual({
+      line1: 'Av. Bolivar 12',
+      city: 'Maracay',
+      state: 'Aragua',
+    });
+  });
+
+  it('admite una direccion a medias', async () => {
+    // Saber la ciudad y no la calle es lo normal cuando el cliente se da de alta por
+    // telefono. Exigirlo todo obligaria a inventarse el resto.
+    const createCustomer = build();
+
+    const result = await createCustomer({ name: 'Bodega La Esquina', addressCity: 'Maracay' });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(customers.get(result.value.id)?.address).toEqual({ city: 'Maracay' });
+  });
+
+  it('sin ninguna parte, NO guarda una direccion vacia', async () => {
+    // Un objeto vacio y la ausencia de direccion se cuentan distinto: la ficha pinta
+    // un guion cuando no hay direccion, y una linea en blanco cuando la hay pero no
+    // dice nada. Lo segundo parece un fallo de la pantalla.
+    const createCustomer = build();
+
+    const result = await createCustomer({
+      name: 'Bodega La Esquina',
+      addressLine1: '   ',
+      addressCity: '',
+      addressState: null,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(customers.get(result.value.id)?.address).toBeNull();
+  });
+
   it('el correlativo se reinicia al cambiar de ano', async () => {
     const enDosMilVeintiseis = build();
     expect((await enDosMilVeintiseis({ name: 'Cliente de 2026' })).ok).toBe(true);

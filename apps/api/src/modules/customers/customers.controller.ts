@@ -101,6 +101,9 @@ export class CustomersController {
         email: body.email || null,
         phone: body.phone || null,
         creditLimit: body.creditLimit || null,
+        addressLine1: body.addressLine1 || null,
+        addressCity: body.addressCity || null,
+        addressState: body.addressState || null,
       }),
     );
   }

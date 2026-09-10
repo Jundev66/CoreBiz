@@ -115,6 +115,27 @@ export function GoodsReceiptForm({
         </div>
       </div>
 
+      {/* Las notas se pintaban en el detalle de la recepcion y no habia forma de
+          escribirlas: salian siempre vacias. Aqui va lo que la recepcion necesita
+          explicar y no cabe en la referencia — «faltaron dos cajas», «llego con el
+          precio cambiado». */}
+      <div>
+        <label htmlFor="notes" className="block text-sm font-medium">
+          {t('purchases.notes')}
+          <span className="ml-1 text-xs font-normal text-[var(--color-muted)]">
+            {t('common.optional')}
+          </span>
+        </label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows={2}
+          maxLength={500}
+          placeholder={t('purchases.notesHint')}
+          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+        />
+      </div>
+
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium">{t('purchases.lines')}</legend>
 

@@ -40,6 +40,16 @@ export interface CreateCustomerInput {
   readonly email?: string | null;
   readonly phone?: string | null;
   readonly creditLimit?: string | null;
+  /**
+   * La direccion llega PLANA y se estructura aqui, en el borde de la aplicacion.
+   *
+   * Un formulario HTML no tiene objetos anidados, y el dominio la guarda estructurada
+   * porque una direccion tiene partes con significado propio. Ese desajuste se resuelve
+   * en un sitio, y este es el sitio.
+   */
+  readonly addressLine1?: string | null;
+  readonly addressCity?: string | null;
+  readonly addressState?: string | null;
 }
 
 export type CreateCustomerError =
@@ -87,6 +97,16 @@ export function makeCreateCustomer(deps: CreateCustomerDeps) {
         creditLimit = parsed.value;
       }
 
+      // Una direccion sin ninguna parte rellena es AUSENCIA de direccion, no una
+      // direccion vacia: guardar `{}` haria que la ficha pintase una linea en blanco
+      // en lugar del guion que dice "no lo sabemos".
+      const partes = {
+        ...(input.addressLine1?.trim() ? { line1: input.addressLine1.trim() } : {}),
+        ...(input.addressCity?.trim() ? { city: input.addressCity.trim() } : {}),
+        ...(input.addressState?.trim() ? { state: input.addressState.trim() } : {}),
+      };
+      const address = Object.keys(partes).length > 0 ? partes : null;
+
       // 4. El dominio decide si los datos forman un cliente valido.
       const created = Customer.create({
         id: asId<CustomerId>(deps.ids.next()),
@@ -96,6 +116,7 @@ export function makeCreateCustomer(deps: CreateCustomerDeps) {
         taxId: input.taxId ?? null,
         email: input.email ?? null,
         phone: input.phone ?? null,
+        address,
         creditLimit,
         createdAt: deps.clock.now(),
       });

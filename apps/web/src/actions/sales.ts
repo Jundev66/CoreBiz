@@ -30,16 +30,52 @@ function field(formData: FormData, name: string): string {
 }
 
 /**
+ * El descuento se teclea en PORCENTAJE y viaja en puntos basicos.
+ *
+ * La conversion vive aqui, en el borde, y no en el contrato ni en el dominio: dentro
+ * el descuento es un entero de puntos basicos —1250 es un 12,5 %— precisamente para no
+ * arrastrar decimales por todo el calculo. Lo que cambia en el borde es solo la unidad
+ * con la que una persona esta comoda escribiendo.
+ *
+ * Un texto que no es un numero se trata como ausencia, no como cero: escribir "doce" no
+ * debe aplicar un descuento del 0 % en silencio, debe dejar la linea sin descuento.
+ */
+function discountToBasisPoints(raw: string): number | undefined {
+  const percent = Number(raw.trim().replace(',', '.'));
+  if (raw.trim() === '' || !Number.isFinite(percent)) return undefined;
+  return Math.round(percent * 100);
+}
+
+/**
  * Las lineas llegan como campos repetidos del formulario (`line-product`,
- * `line-quantity`). Se recomponen aqui emparejando por posicion, y se descartan las
- * filas vacias: dejar una fila en blanco sin querer no deberia impedir emitir.
+ * `line-quantity`, `line-price`, `line-discount`). Se recomponen aqui emparejando por
+ * posicion, y se descartan las filas vacias: dejar una fila en blanco sin querer no
+ * deberia impedir emitir.
+ *
+ * Precio y descuento se OMITEN cuando vienen vacios en lugar de enviarse como cadena
+ * vacia o como cero. Ausente significa "el precio de catalogo, sin descuento", que es
+ * lo normal; mandarlos siempre convertiria cada linea en una negociacion.
  */
 function parseLines(formData: FormData) {
-  const productIds = formData.getAll('line-product').filter((v) => typeof v === 'string');
-  const quantities = formData.getAll('line-quantity').filter((v) => typeof v === 'string');
+  const textos = (name: string) =>
+    formData.getAll(name).filter((v): v is string => typeof v === 'string');
+
+  const productIds = textos('line-product');
+  const quantities = textos('line-quantity');
+  const prices = textos('line-price');
+  const discounts = textos('line-discount');
 
   return productIds
-    .map((productId, index) => ({ productId, quantity: quantities[index] ?? '' }))
+    .map((productId, index) => {
+      const unitPrice = (prices[index] ?? '').trim();
+      const discountBp = discountToBasisPoints(discounts[index] ?? '');
+      return {
+        productId,
+        quantity: quantities[index] ?? '',
+        ...(unitPrice !== '' ? { unitPrice } : {}),
+        ...(discountBp !== undefined ? { discountBp } : {}),
+      };
+    })
     .filter((line) => line.productId !== '' && line.quantity.trim() !== '');
 }
 
@@ -133,6 +169,11 @@ export async function createProductAction(
     initialStock: field(formData, 'initialStock') || null,
     minStock: field(formData, 'minStock') || null,
     ...(unit ? { unit } : {}),
+    // Una casilla sin marcar NO viaja en el formulario. Se manda el booleano explicito
+    // en los dos sentidos, porque el dominio da ambos por ciertos cuando faltan y
+    // omitirlos convertiria un "no" en un "si".
+    taxable: formData.has('taxable'),
+    trackStock: formData.has('trackStock'),
   });
 
   if (!result.ok) return toFormFailure(result.error);

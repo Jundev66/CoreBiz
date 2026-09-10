@@ -27,13 +27,37 @@ export const createCustomerSchema = z
       .or(z.literal('')),
     phone: z.string().trim().max(32).optional().or(z.literal('')),
     creditLimit: decimalStringSchema.optional().or(z.literal('')),
+    /*
+     * La direccion, en tres campos y no en uno.
+     *
+     * El dominio la guarda estructurada desde el principio (`CustomerAddress`), la
+     * ficha ya sabia enseñarla y NADA podia rellenarla: ni el formulario ni la API.
+     * Llegaba aqui como el unico dato de un cliente que solo se podia meter a mano
+     * en la base de datos.
+     *
+     * Separada porque una direccion sirve para llevar mercancia: quien reparte busca
+     * la ciudad antes que la calle, y un texto libre unico obliga a leerlo entero
+     * cada vez.
+     */
+    addressLine1: z.string().trim().max(160, 'TooLong').optional().or(z.literal('')),
+    addressCity: z.string().trim().max(80, 'TooLong').optional().or(z.literal('')),
+    addressState: z.string().trim().max(80, 'TooLong').optional().or(z.literal('')),
   })
   .strict();
 
 export type CreateCustomerFormInput = z.infer<typeof createCustomerSchema>;
 
 /** Campos que este comando acepta. Cualquier otro se ignora por completo. */
-const CREATE_CUSTOMER_FIELDS = ['name', 'taxId', 'email', 'phone', 'creditLimit'] as const;
+const CREATE_CUSTOMER_FIELDS = [
+  'name',
+  'taxId',
+  'email',
+  'phone',
+  'creditLimit',
+  'addressLine1',
+  'addressCity',
+  'addressState',
+] as const;
 
 /**
  * Convierte un formulario HTML al schema.

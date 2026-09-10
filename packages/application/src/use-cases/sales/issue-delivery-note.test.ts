@@ -140,6 +140,37 @@ describe('issueDeliveryNote', () => {
     // 20,00 + 16 % = 23,20
     expect(result.ok && result.value.total).toBe('23.20');
   });
+
+  it('aplica el descuento por linea', async () => {
+    // El descuento viajaba en el contrato y en el caso de uso desde el principio, y el
+    // formulario no lo pedia: llegaba siempre ausente. Se teclea en porcentaje y viaja
+    // en puntos basicos —1000 es un 10 %— para que la aritmetica no arrastre decimales.
+    seedCustomer();
+    const product = seedProduct('SKU-001', '100.00', '10');
+
+    const result = await build()({
+      customerId: 'cus-1',
+      lines: [{ productId: product.id, quantity: '1', discountBp: 1000 }],
+    });
+
+    // 100,00 − 10 % = 90,00; + 16 % = 104,40
+    expect(result.ok && result.value.total).toBe('104.40');
+  });
+
+  it('el descuento se aplica SOBRE el precio pactado, no sobre el de catalogo', async () => {
+    // El orden importa y no es obvio: si el descuento se calculase sobre el catalogo,
+    // pactar un precio y ademas descontar podria dejar la linea por debajo de cero.
+    seedCustomer();
+    const product = seedProduct('SKU-001', '100.00', '10');
+
+    const result = await build()({
+      customerId: 'cus-1',
+      lines: [{ productId: product.id, quantity: '1', unitPrice: '50.00', discountBp: 1000 }],
+    });
+
+    // 50,00 − 10 % = 45,00; + 16 % = 52,20
+    expect(result.ok && result.value.total).toBe('52.20');
+  });
 });
 
 describe('issueDeliveryNote — atomicidad', () => {

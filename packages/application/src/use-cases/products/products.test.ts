@@ -43,6 +43,38 @@ describe('createProduct', () => {
     stores = createSalesStores();
   });
 
+  it('un servicio se crea SIN control de existencias', async () => {
+    // Los dos interruptores existian en el dominio y ninguna pantalla los ofrecia: todo
+    // producto nacia gravado y con existencias vigiladas. Una hora de instalacion no
+    // tiene estante, y vigilarle el stock la dejaria eternamente bajo minimo.
+    const result = await build()({
+      name: 'Hora de instalacion',
+      price: '15.00',
+      taxable: false,
+      trackStock: false,
+      initialStock: '5',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const producto = stores.products.get(result.value.id);
+    expect(producto?.taxable).toBe(false);
+    expect(producto?.trackStock).toBe(false);
+    // Y sin control de existencias, el stock inicial NO genera movimiento: no hay nada
+    // que contar, asi que no hay nada que explicar en el libro.
+    expect(stores.stockMovements).toHaveLength(0);
+  });
+
+  it('sin decir nada, el producto nace gravado y con existencias', async () => {
+    const result = await build()({ name: 'Harina 1kg', price: '2.50' });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const producto = stores.products.get(result.value.id);
+    expect(producto?.taxable).toBe(true);
+    expect(producto?.trackStock).toBe(true);
+  });
+
   it('crea el producto normalizando el SKU que se escribe', async () => {
     const result = await build()({ sku: ' hrn-001 ', name: 'Harina 1kg', price: '2.50' });
 

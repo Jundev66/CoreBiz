@@ -45,6 +45,9 @@ export function httpCommands() {
         email: orUndefined(input.email),
         phone: orUndefined(input.phone),
         creditLimit: orUndefined(input.creditLimit),
+        addressLine1: orUndefined(input.addressLine1),
+        addressCity: orUndefined(input.addressCity),
+        addressState: orUndefined(input.addressState),
       }),
 
     setCustomerStatus: (input: SetCustomerStatusInput) =>

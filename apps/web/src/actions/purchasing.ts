@@ -114,12 +114,14 @@ export async function receiveGoodsAction(
   }
 
   const reference = formData.get('supplierReference');
+  const notes = formData.get('notes');
 
   const { receiveGoods } = await apiForRequest();
   const result = await receiveGoods({
     supplierId,
     lines: parseLines(formData),
     supplierReference: typeof reference === 'string' && reference !== '' ? reference : null,
+    notes: typeof notes === 'string' && notes.trim() !== '' ? notes : null,
   });
 
   if (!result.ok) return failure(result.error);

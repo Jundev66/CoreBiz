@@ -23,6 +23,10 @@ interface LineDraft {
   readonly key: number;
   productId: string;
   quantity: string;
+  /** Vacio significa "el precio de catalogo": no es lo mismo que cero. */
+  unitPrice: string;
+  /** En porcentaje, que es como se habla. Se convierte a puntos basicos en la accion. */
+  discount: string;
 }
 
 /**
@@ -32,6 +36,11 @@ interface LineDraft {
  * El total que se muestra aqui es ORIENTATIVO: el calculo bueno lo hace el dominio al
  * emitir, con su propio redondeo. Duplicar aqui la aritmetica exacta seria pedir que
  * las dos versiones se desincronicen tarde o temprano.
+ *
+ * El precio por linea se deja VACIO por defecto y el marcador de posicion enseña el de
+ * catalogo. Rellenarlo con el precio de catalogo tendria un efecto feo: el documento
+ * quedaria con un precio pactado que nadie pacto, y el dia que suba la tarifa nadie
+ * sabria si aquella venta llevaba precio propio o simplemente se copio el del momento.
  */
 export function DeliveryNoteForm({
   customers,
@@ -44,15 +53,30 @@ export function DeliveryNoteForm({
 }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(issueDeliveryNoteAction, INITIAL);
-  const [lines, setLines] = useState<LineDraft[]>([{ key: 0, productId: '', quantity: '' }]);
+  const [lines, setLines] = useState<LineDraft[]>([
+    { key: 0, productId: '', quantity: '', unitPrice: '', discount: '' },
+  ]);
 
-  const priceOf = (productId: string) =>
+  const catalogPrice = (productId: string) =>
     Number(products.find((p) => p.id === productId)?.price ?? '0');
 
-  const subtotal = lines.reduce(
-    (acc, line) => acc + priceOf(line.productId) * (Number(line.quantity.replace(',', '.')) || 0),
-    0,
-  );
+  const decimal = (raw: string) => Number(raw.replace(',', '.'));
+
+  /** El precio tecleado manda sobre el de catalogo; vacio o ilegible, el de catalogo. */
+  const priceOf = (line: LineDraft) => {
+    const typed = decimal(line.unitPrice);
+    return line.unitPrice.trim() !== '' && Number.isFinite(typed)
+      ? typed
+      : catalogPrice(line.productId);
+  };
+
+  const lineTotal = (line: LineDraft) => {
+    const quantity = decimal(line.quantity) || 0;
+    const discount = decimal(line.discount) || 0;
+    return priceOf(line) * quantity * (1 - discount / 100);
+  };
+
+  const subtotal = lines.reduce((acc, line) => acc + lineTotal(line), 0);
   const estimatedTotal = subtotal * (1 + taxRateBp / 10_000);
 
   const updateLine = (key: number, patch: Partial<LineDraft>) =>
@@ -128,10 +152,38 @@ export function DeliveryNoteForm({
                 />
               </div>
 
+              <div className="w-28">
+                <label htmlFor={`line-price-${line.key}`} className="sr-only">
+                  {t('deliveryNotes.unitPrice')} {index + 1}
+                </label>
+                <input
+                  id={`line-price-${line.key}`}
+                  name="line-price"
+                  inputMode="decimal"
+                  placeholder={product ? product.price : t('deliveryNotes.unitPrice')}
+                  value={line.unitPrice}
+                  onChange={(e) => updateLine(line.key, { unitPrice: e.target.value })}
+                  className="w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="w-24">
+                <label htmlFor={`line-discount-${line.key}`} className="sr-only">
+                  {t('deliveryNotes.discount')} {index + 1}
+                </label>
+                <input
+                  id={`line-discount-${line.key}`}
+                  name="line-discount"
+                  inputMode="decimal"
+                  placeholder="% 0"
+                  value={line.discount}
+                  onChange={(e) => updateLine(line.key, { discount: e.target.value })}
+                  className="w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                />
+              </div>
+
               <span className="w-24 py-2 text-right text-sm tabular-nums text-[var(--color-muted)]">
-                {product
-                  ? `$ ${(priceOf(line.productId) * (Number(line.quantity.replace(',', '.')) || 0)).toFixed(2)}`
-                  : ''}
+                {product ? `$ ${lineTotal(line).toFixed(2)}` : ''}
               </span>
 
               {lines.length > 1 && (
@@ -151,13 +203,34 @@ export function DeliveryNoteForm({
         <button
           type="button"
           onClick={() =>
-            setLines((prev) => [...prev, { key: Date.now(), productId: '', quantity: '' }])
+            setLines((prev) => [
+              ...prev,
+              { key: Date.now(), productId: '', quantity: '', unitPrice: '', discount: '' },
+            ])
           }
           className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm"
         >
           + {t('common.add')}
         </button>
       </fieldset>
+
+      {/* Las notas viajaban en el contrato y en el caso de uso desde el principio, y
+          ningun formulario las pedia: llegaban siempre vacias. Es donde va lo que el
+          documento necesita decir y no cabe en una linea — «entregar por la puerta de
+          atras», «el cliente recoge el lunes». */}
+      <div>
+        <label htmlFor="notes" className="block text-sm font-medium">
+          {t('deliveryNotes.notes')}
+        </label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows={2}
+          maxLength={500}
+          placeholder={t('deliveryNotes.notesHint')}
+          className="mt-1 w-full max-w-2xl rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+        />
+      </div>
 
       <div className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
         <div className="flex justify-between text-sm">

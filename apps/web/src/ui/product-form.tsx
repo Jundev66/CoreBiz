@@ -39,6 +39,23 @@ export function ProductForm() {
         <Input name="minStock" label={t('products.minStock')} inputMode="decimal" />
       </div>
 
+      {/* Los dos interruptores que el dominio siempre supo respetar y ninguna pantalla
+          ofrecia: todo producto nacia gravado y con existencias controladas.
+
+          Marcados por defecto porque es el caso normal, pero destildarlos tiene efectos
+          de verdad. Un servicio —una hora de instalacion— no tiene existencias que
+          controlar, y sin este interruptor el sistema le vigilaria un stock que no
+          existe y avisaria de que esta bajo minimo. */}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">{t('products.behaviour')}</legend>
+        <Check name="taxable" label={t('products.taxable')} hint={t('products.taxableHint')} />
+        <Check
+          name="trackStock"
+          label={t('products.trackStock')}
+          hint={t('products.trackStockHint')}
+        />
+      </fieldset>
+
       {state.status === 'error' && state.errorKind && (
         <p role="alert" className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm">
           {t(`errors.${state.errorKind}`, state.errorParams ?? {})}
@@ -103,6 +120,40 @@ function Input({
           {hint}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Una casilla con su explicacion.
+ *
+ * Sin valor propio: lo que viaja es la PRESENCIA del campo. Un `input` de tipo casilla
+ * sin marcar no aparece en el formulario enviado, asi que el servidor lee "marcada" como
+ * presente y "sin marcar" como ausente. Funciona porque las dos casillas se pintan
+ * siempre; el dia que una se pinte condicionalmente, ausente dejaria de significar "la
+ * desmarco" para significar tambien "no se la enseñe".
+ */
+function Check({ name, label, hint }: { name: string; label: string; hint: string }) {
+  const hintId = `${name}-hint`;
+
+  return (
+    <div className="flex items-start gap-2">
+      <input
+        id={name}
+        name={name}
+        type="checkbox"
+        defaultChecked
+        aria-describedby={hintId}
+        className="mt-1"
+      />
+      <div>
+        <label htmlFor={name} className="text-sm font-medium">
+          {label}
+        </label>
+        <p id={hintId} className="text-xs text-[var(--color-muted)]">
+          {hint}
+        </p>
+      </div>
     </div>
   );
 }
