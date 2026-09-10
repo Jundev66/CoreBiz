@@ -89,7 +89,11 @@ When(
     // Se guarda el numero que devuelve la confirmacion. Sin el, volver a abrir el
     // documento significaria "el primero de la lista", y con los escenarios
     // corriendo en paralelo ese puede ser el de otro.
-    const confirmation = page.locator('main').getByRole('status');
+    //
+    // El aviso ya no vive en `main`: registrar devuelve al listado y el aviso llega
+    // flotando encima del marco. Se acota por el NUMERO, que es lo que se viene a
+    // buscar, en lugar de por la zona de la pagina.
+    const confirmation = page.getByRole('status').filter({ hasText: /RM-\d+/ });
     await expect(confirmation).toBeVisible();
     const found = /RM-\d+/.exec((await confirmation.textContent()) ?? '');
     if (found !== null) world.lastNumber = found[0];
@@ -103,11 +107,10 @@ When('I record a delivery with no lines', async ({ page }) => {
 });
 
 Then('the delivery is recorded successfully', async ({ page }) => {
-  // Acotado a `main` por el mismo motivo que los `role="alert"` de mas abajo se
-  // acotan al formulario: el marco de la aplicacion pinta su propio
-  // `role="status"` —el aviso de que la demostracion es temporal— y una busqueda
-  // sin acotar encuentra los dos y falla por ambiguedad.
-  await expect(page.locator('main').getByRole('status')).toContainText(/recorded/i);
+  // Se filtra por el texto y no por la zona: el marco pinta su propio `role="status"`
+  // —el aviso de que la demostracion es temporal— y una busqueda sin acotar encuentra
+  // los dos y falla por ambiguedad.
+  await expect(page.getByRole('status').filter({ hasText: /recorded/i })).toBeVisible();
 });
 
 Then(

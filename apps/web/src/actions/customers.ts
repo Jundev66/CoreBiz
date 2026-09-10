@@ -64,7 +64,19 @@ export async function createCustomerAction(
   if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/customers');
-  return { status: 'success', createdCode: result.value.code };
+
+  /*
+   * Se VUELVE AL LISTADO, y el aviso viaja en la URL.
+   *
+   * Antes se quedaba en el formulario con un parrafo que decia «Cliente creado. Su
+   * codigo es CLT26000009» — el mensaje se leia como parte del formulario y la persona
+   * se quedaba delante de campos vacios sin ver lo que acababa de crear. Lo natural
+   * despues de dar de alta a alguien es verlo en la lista.
+   *
+   * `redirect` LANZA (es una excepcion de control de Next), asi que nada de lo que
+   * venga despues se ejecuta. No hay `return` que escribir.
+   */
+  redirect(`/customers?creado=${encodeURIComponent(result.value.code)}`);
 }
 
 /**

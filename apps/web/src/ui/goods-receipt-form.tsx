@@ -243,12 +243,6 @@ export function GoodsReceiptForm({
         </p>
       )}
 
-      {state.status === 'success' && (
-        <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
-          {t('purchases.received_ok', { number: state.createdNumber ?? '' })}
-        </p>
-      )}
-
       <button
         type="submit"
         disabled={pending}

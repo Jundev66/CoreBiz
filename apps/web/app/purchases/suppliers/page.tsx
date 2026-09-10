@@ -24,10 +24,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SuppliersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archivados?: string }>;
+  searchParams: Promise<{ archivados?: string; creado?: string }>;
 }) {
   const t = await getTranslations();
-  const { archivados } = await searchParams;
+  const { archivados, creado } = await searchParams;
   const { ctx, session, queries } = await apiForRequest();
 
   if (!ctx.plan.has('purchasing')) {
@@ -60,6 +60,7 @@ export default async function SuppliersPage({
       session={session}
       title={t('suppliers.title')}
       subtitle={t('suppliers.subtitle')}
+      {...(creado !== undefined ? { toast: t('suppliers.created', { code: creado }) } : {})}
       action={
         <QuotaBar
           current={quota.current}

@@ -112,7 +112,8 @@
     "optional": "(optional)",
     "saving": "Saving…",
     "view": "View",
-    "notSet": "—"
+    "notSet": "—",
+    "close": "Close"
   },
   "products": {
     "title": "Products",

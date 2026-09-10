@@ -112,7 +112,8 @@
     "optional": "(opcional)",
     "saving": "Guardando…",
     "view": "Ver",
-    "notSet": "—"
+    "notSet": "—",
+    "close": "Cerrar"
   },
   "products": {
     "title": "Productos",

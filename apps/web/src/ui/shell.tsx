@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { signupConfig } from '@/demo/sandbox';
+import { Toast } from '@/ui/toast';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
@@ -24,9 +25,26 @@ interface ShellProps {
    * sesion.
    */
   readonly session?: SessionInfo;
+  /**
+   * Aviso flotante de "listo", si la pantalla llega despues de crear algo.
+   *
+   * Vive en el marco y no en cada pantalla porque el aviso es del SISTEMA, no del
+   * listado: aparece encima de todo, se va solo y no ocupa sitio en el contenido. Cada
+   * pantalla decide QUE dice —el texto depende de si se creo un cliente o una nota— y
+   * el marco decide como se ve.
+   */
+  readonly toast?: string;
 }
 
-export async function Shell({ ctx, session, title, subtitle, action, children }: ShellProps) {
+export async function Shell({
+  ctx,
+  session,
+  title,
+  subtitle,
+  action,
+  toast,
+  children,
+}: ShellProps) {
   const t = await getTranslations();
 
   /*
@@ -49,6 +67,7 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
 
   return (
     <div className="min-h-screen">
+      {toast !== undefined && <Toast message={toast} />}
       {session?.isDemo === true && <DemoNotice session={session} />}
 
       <header className="border-b border-[var(--color-line)] bg-[var(--color-surface)]">

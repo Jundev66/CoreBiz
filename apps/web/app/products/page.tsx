@@ -6,10 +6,10 @@ import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archivados?: string }>;
+  searchParams: Promise<{ archivados?: string; creado?: string }>;
 }) {
   const t = await getTranslations();
-  const { archivados } = await searchParams;
+  const { archivados, creado } = await searchParams;
   const { ctx, session, queries } = await apiForRequest();
 
   const includeArchived = archivados === '1';
@@ -24,6 +24,7 @@ export default async function ProductsPage({
       session={session}
       title={t('products.title')}
       subtitle={t('products.subtitle')}
+      {...(creado !== undefined ? { toast: t('products.created', { sku: creado }) } : {})}
       action={
         <div className="flex items-end gap-6">
           <QuotaBar

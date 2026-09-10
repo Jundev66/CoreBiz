@@ -70,7 +70,9 @@ export async function createSupplierAction(
   if (!result.ok) return failure(result.error);
 
   revalidatePath('/purchases/suppliers');
-  return { status: 'success', createdNumber: result.value.code };
+  // El formulario de proveedores vive AL LADO de su listado, asi que "volver" es
+  // quedarse: lo que cambia es que el aviso sale flotando y la lista ya trae el nuevo.
+  redirect(`/purchases/suppliers?creado=${encodeURIComponent(result.value.code)}`);
 }
 
 /**
@@ -131,7 +133,7 @@ export async function receiveGoodsAction(
   revalidatePath('/purchases');
   revalidatePath('/products');
 
-  return { status: 'success', createdNumber: result.value.number };
+  redirect(`/purchases?creado=${encodeURIComponent(result.value.number)}`);
 }
 
 /**

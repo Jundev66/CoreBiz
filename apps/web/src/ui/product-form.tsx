@@ -62,12 +62,6 @@ export function ProductForm() {
         </p>
       )}
 
-      {state.status === 'success' && (
-        <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
-          {t('products.created', { sku: state.createdCode ?? '' })}
-        </p>
-      )}
-
       <button
         type="submit"
         disabled={pending}

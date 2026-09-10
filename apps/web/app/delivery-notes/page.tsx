@@ -5,14 +5,18 @@ import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'border-[var(--color-line)] text-[var(--color-muted)]',
   issued: 'border-[var(--color-brand)] text-[var(--color-brand)]',
   delivered: 'border-[var(--color-brand)] text-[var(--color-brand)]',
   voided: 'border-[var(--color-danger)] text-[var(--color-danger-ink)] line-through',
 };
 
-export default async function DeliveryNotesPage() {
+export default async function DeliveryNotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ creado?: string }>;
+}) {
   const t = await getTranslations();
+  const { creado } = await searchParams;
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
 
@@ -25,6 +29,7 @@ export default async function DeliveryNotesPage() {
       session={session}
       title={t('deliveryNotes.title')}
       subtitle={t('deliveryNotes.subtitle')}
+      {...(creado !== undefined ? { toast: t('deliveryNotes.created', { number: creado }) } : {})}
       action={
         <div className="flex items-end gap-6">
           <QuotaBar

@@ -130,10 +130,13 @@ test.describe('Demostracion efimera', () => {
         .fill(code);
       await uno.page.getByRole('button', { name: /save|guardar/i }).click();
 
-      // Se espera la confirmacion ANTES de navegar. Sin esto, el `goto` corre
-      // contra la Server Action todavia en vuelo y el listado se pide antes de
-      // que exista la fila — un fallo que parece de aislamiento y es de tiempos.
-      await expect(uno.page.locator('form').getByRole('status')).toBeVisible();
+      // Se espera a estar de VUELTA en el listado antes de seguir. Sin esto, el `goto`
+      // corre contra la Server Action todavia en vuelo y la lista se pide antes de que
+      // exista la fila — un fallo que parece de aislamiento y es de tiempos.
+      //
+      // Antes se esperaba al aviso dentro del formulario; ya no vive ahi, y ademas se
+      // va solo a los seis segundos: la URL es una senal mas firme que algo que caduca.
+      await uno.page.waitForURL(/\/customers(\?|$)/);
 
       await uno.page.goto('/customers');
       await expect(uno.page.getByRole('cell', { name: code })).toBeVisible();

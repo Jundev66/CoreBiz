@@ -18,8 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
  * la peticion de donde venga. Esta pantalla solo explica por que no hay nada que
  * ver, y ofrece el camino para tenerlo.
  */
-export default async function PurchasesPage() {
+export default async function PurchasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ creado?: string }>;
+}) {
   const t = await getTranslations();
+  const { creado } = await searchParams;
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
 
@@ -42,6 +47,7 @@ export default async function PurchasesPage() {
     <Shell
       ctx={ctx}
       session={session}
+      {...(creado !== undefined ? { toast: t('purchases.received_ok', { number: creado }) } : {})}
       title={t('purchases.title')}
       subtitle={t('purchases.subtitle')}
       action={

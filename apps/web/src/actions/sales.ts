@@ -101,7 +101,7 @@ export async function issueDeliveryNoteAction(
 
   revalidatePath('/delivery-notes');
   revalidatePath('/products');
-  return { status: 'success', createdNumber: result.value.number };
+  redirect(`/delivery-notes?creado=${encodeURIComponent(result.value.number)}`);
 }
 
 /**
@@ -179,7 +179,9 @@ export async function createProductAction(
   if (!result.ok) return toFormFailure(result.error);
 
   revalidatePath('/products');
-  return { status: 'success', createdCode: result.value.sku };
+  // Vuelta al catalogo con el SKU en la URL: es donde se comprueba que el producto
+  // quedo como se queria, y donde se le ajusta el stock si hace falta.
+  redirect(`/products?creado=${encodeURIComponent(result.value.sku)}`);
 }
 
 /**

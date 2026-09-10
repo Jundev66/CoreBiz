@@ -97,7 +97,7 @@ When('I open the reports page', async ({ page }) => {
 });
 
 Then('the note is issued successfully', async ({ page }) => {
-  await expect(page.locator('form').getByRole('status')).toContainText('issued successfully');
+  await expect(page.getByRole('status').filter({ hasText: /issued successfully/ })).toBeVisible();
 });
 
 Then('I should see an error saying the document needs at least one line', async ({ page }) => {

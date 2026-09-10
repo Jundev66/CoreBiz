@@ -249,12 +249,6 @@ export function DeliveryNoteForm({
         </p>
       )}
 
-      {state.status === 'success' && state.createdNumber && (
-        <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
-          {t('deliveryNotes.created', { number: state.createdNumber })}
-        </p>
-      )}
-
       <button
         type="submit"
         disabled={pending}

@@ -24,6 +24,9 @@ When(
     // Se espera la confirmacion ANTES de seguir. Sin esto, el paso siguiente
     // recarga la pantalla mientras la Server Action sigue en vuelo y lee el
     // saldo anterior — un fallo que parece del ajuste y es de tiempos.
+    //
+    // Este SI sigue dentro del formulario: ajustar el inventario no crea nada, asi que
+    // no lleva a ningun listado. Lo que confirma es un saldo, y se lee donde se cambio.
     await expect(page.locator('form').getByRole('status')).toBeVisible();
   },
 );

@@ -14,10 +14,10 @@ import { Shell, QuotaBar, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archivados?: string }>;
+  searchParams: Promise<{ archivados?: string; creado?: string }>;
 }) {
   const t = await getTranslations();
-  const { archivados } = await searchParams;
+  const { archivados, creado } = await searchParams;
   const { ctx, session, queries } = await apiForRequest();
 
   const includeArchived = archivados === '1';
@@ -30,6 +30,7 @@ export default async function CustomersPage({
       session={session}
       title={t('customers.title')}
       subtitle={t('customers.subtitle')}
+      {...(creado !== undefined ? { toast: t('customers.created', { code: creado }) } : {})}
       action={
         <div className="flex items-end gap-6">
           {/* La cuota se muestra siempre, no solo al agotarse: enterarse del

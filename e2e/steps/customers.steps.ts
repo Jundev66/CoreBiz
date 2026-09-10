@@ -47,9 +47,11 @@ Then('I should see the customer {string}', async ({ page }, name: string) => {
 });
 
 Then('I should see a success confirmation', async ({ page }) => {
-  // `role=status` en lugar de un selector de clase: si el aviso no es anunciable por un
-  // lector de pantalla, el test debe fallar igual que si no se viese.
-  await expect(page.locator('form').getByRole('status')).toContainText(/created/i);
+  // El aviso ya NO vive dentro del formulario: crear un cliente devuelve al listado y
+  // el aviso llega flotando encima. Se sigue buscando por `role=status` y no por una
+  // clase — si no es anunciable por un lector de pantalla, esto debe fallar igual que
+  // si no se viese— pero acotado al que trae el codigo, porque el marco pinta el suyo.
+  await expect(page.getByRole('status').filter({ hasText: /created/i })).toBeVisible();
 });
 
 Then('the confirmation shows the code the system assigned', async ({ page }) => {
@@ -57,7 +59,7 @@ Then('the confirmation shows the code the system assigned', async ({ page }) => 
   // garantizar ya no es que se rechace un codigo repetido —no puede haberlo— sino
   // que a quien acaba de dar de alta se le DIGA cual le tocó. Un codigo que existe
   // y no se ve obliga a ir a buscarlo al listado.
-  await expect(page.locator('form').getByRole('status')).toContainText(/CLT\d{8}/);
+  await expect(page.getByRole('status').filter({ hasText: /CLT\d{8}/ })).toBeVisible();
 });
 
 /**
@@ -73,7 +75,9 @@ When('I register a customer just for this scenario', async ({ page, world }) => 
   await page.goto('/customers/new');
   await page.getByLabel('Name', { exact: false }).fill(world.lastCode);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('form').getByRole('status')).toBeVisible();
+  // Guardar devuelve al listado. Esperar a la URL es mas firme que esperar al aviso,
+  // que se va solo a los seis segundos.
+  await page.waitForURL(/\/customers(\?|$)/);
 });
 
 When('I open its details', async ({ page, world }) => {
