@@ -3,7 +3,6 @@ import type { ValidationError } from '../shared/errors';
 import {
   AggregateRoot,
   type ProductId,
-  type PurchaseOrderId,
   type SupplierId,
   type TenantId,
   type UserId,
@@ -34,15 +33,22 @@ import { QUANTITY_SCALE, type Quantity } from '../shared/value-objects/quantity'
  * dato; que hacer con el es una decision posterior.
  */
 
-export type GoodsReceiptStatus = 'draft' | 'received' | 'voided';
+/**
+ * Solo dos estados, y el que falta importa.
+ *
+ * NO hay `draft`. Se declaraba y ningun constructor lo producia, asi que su unico
+ * efecto era obligar a comprobarlo en sitios donde nunca podia darse. Y conceptualmente
+ * sobra: un borrador de recepcion es una ORDEN DE COMPRA —mercancia que se espera— y eso
+ * es otro documento. Una recepcion existe porque la mercancia ya llego.
+ */
+export type GoodsReceiptStatus = 'received' | 'voided';
 
 export type GoodsReceiptError =
   | ValidationError
   | { kind: 'NoLines' }
   | { kind: 'DuplicateProduct'; sku: string }
   | { kind: 'StockNotTracked'; sku: string }
-  | { kind: 'AlreadyVoided' }
-  | { kind: 'CannotVoidDraft' };
+  | { kind: 'AlreadyVoided' };
 
 export interface GoodsReceiptLine {
   readonly lineNo: number;
@@ -59,7 +65,6 @@ export interface GoodsReceiptProps {
   readonly tenantId: TenantId;
   readonly number: string;
   readonly supplierId: SupplierId;
-  readonly purchaseOrderId: PurchaseOrderId | null;
   readonly status: GoodsReceiptStatus;
   readonly currency: Currency;
   readonly lines: readonly GoodsReceiptLine[];
@@ -102,7 +107,6 @@ export class GoodsReceipt extends AggregateRoot<string> {
     tenantId: TenantId;
     number: string;
     supplierId: SupplierId;
-    purchaseOrderId?: PurchaseOrderId | null;
     currency: Currency;
     lines: readonly {
       product: { id: ProductId; name: string; unit: string; trackStock: boolean };
@@ -176,7 +180,6 @@ export class GoodsReceipt extends AggregateRoot<string> {
       tenantId: input.tenantId,
       number: input.number,
       supplierId: input.supplierId,
-      purchaseOrderId: input.purchaseOrderId ?? null,
       status: 'received',
       currency: input.currency,
       lines: built,
@@ -233,7 +236,6 @@ export class GoodsReceipt extends AggregateRoot<string> {
    */
   void(reason: string, at: Date): Result<readonly StockEntry[], GoodsReceiptError> {
     if (this.props.status === 'voided') return err({ kind: 'AlreadyVoided' });
-    if (this.props.status === 'draft') return err({ kind: 'CannotVoidDraft' });
     if (reason.trim().length === 0) return err({ kind: 'Required', field: 'reason' });
 
     this.props = {

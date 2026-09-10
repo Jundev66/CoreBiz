@@ -5,6 +5,7 @@ import {
   Supplier,
   asId,
   type Currency,
+  type GoodsReceiptStatus,
   type ProductId,
   type SupplierId,
   type TenantId,
@@ -13,6 +14,7 @@ import {
 import type { GoodsReceiptRepository, Page, SupplierRepository } from '@corebiz/application';
 import type { Prisma } from '@corebiz/prisma-client';
 import type { Tx } from './session';
+import { estadoValido } from './mappers';
 import { decodeCursor, encodeCursor, escapeLikeWildcards, pageLimit } from './pagination';
 
 /**
@@ -145,8 +147,11 @@ function toReceipt(row: ReceiptRow, lines: readonly ReceiptLineRow[]): GoodsRece
     tenantId: asId<TenantId>(row.tenant_id),
     number: row.number,
     supplierId: asId<SupplierId>(row.supplier_id),
-    purchaseOrderId: null,
-    status: row.status as 'draft' | 'received' | 'voided',
+    status: estadoValido<GoodsReceiptStatus>(
+      row.status,
+      ['received', 'voided'],
+      'goods_receipts.status',
+    ),
     currency,
     lines: [...lines]
       .sort((a, b) => a.line_no - b.line_no)

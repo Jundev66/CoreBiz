@@ -146,6 +146,28 @@ export function fromProduct(product: Product): ProductInsert {
 
 // ─── DeliveryNote ────────────────────────────────────────────────────────────
 
+/**
+ * Convierte el texto de una columna de estado en el estado del dominio.
+ *
+ * Una CONVERSION a secas —`row.status as DeliveryNoteStatus`— promete algo que no puede
+ * cumplir: si la fila trae un valor que el dominio ya no conoce, el tipo dice que si y
+ * el agregado sigue adelante con un estado imposible. El fallo aparece mucho despues y
+ * en otro sitio.
+ *
+ * Aqui revienta donde se lee, diciendo la columna y el valor. Deberia ser inalcanzable
+ * —la base lo restringe con un CHECK— y por eso mismo, si ocurre, hay que enterarse.
+ */
+export function estadoValido<T extends string>(
+  valor: string,
+  permitidos: readonly T[],
+  columna: string,
+): T {
+  if ((permitidos as readonly string[]).includes(valor)) return valor as T;
+  throw new Error(
+    `${columna}: estado desconocido "${valor}" (se esperaba ${permitidos.join(', ')})`,
+  );
+}
+
 export function toDeliveryNote(
   row: DeliveryNoteRow,
   lineRows: readonly DeliveryNoteLineRow[],
@@ -171,8 +193,11 @@ export function toDeliveryNote(
     tenantId: asId<TenantId>(row.tenant_id),
     number: row.number,
     customerId: asId<CustomerId>(row.customer_id),
-    quoteId: row.quote_id,
-    status: row.status as DeliveryNoteStatus,
+    status: estadoValido<DeliveryNoteStatus>(
+      row.status,
+      ['issued', 'delivered', 'voided'],
+      'delivery_notes.status',
+    ),
     currency,
     // La tasa se reconstruye con su fecha de captura, no con la de hoy: es lo que hace que
     // reimprimir una nota antigua no reescriba el historico.
@@ -212,7 +237,6 @@ export function fromDeliveryNote(note: DeliveryNote): DeliveryNoteInsert {
     tenant_id: s.tenantId,
     number: s.number,
     customer_id: s.customerId,
-    quote_id: s.quoteId,
     status: s.status,
     currency: s.currency,
     exchange_rate_scaled: s.exchangeRate.scaledRate,

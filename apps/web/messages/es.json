@@ -9,10 +9,7 @@
     "deliveryNotes": "Notas de entrega",
     "purchases": "Compras",
     "reports": "Reportes",
-    "settings": "Ajustes",
-    "payments": "Cobros",
-    "quotes": "Presupuestos",
-    "purchaseOrders": "Órdenes de compra"
+    "settings": "Ajustes"
   },
   "customers": {
     "title": "Clientes",
@@ -139,7 +136,6 @@
     "belowMinimum": "{count, plural, one {# producto esta bajo su minimo} other {# productos estan bajo su minimo}}.",
     "empty": "Aún no hay productos en el catálogo.",
     "created": "Producto creado. Su código es {sku}.",
-    "adjust": "Ajustar",
     "adjustTitle": "Ajustar inventario",
     "currentStock": "ahora hay {onHand} {unit}",
     "countedBalance": "Cuántas hay de verdad",
@@ -464,7 +460,6 @@
       "TooLong": "El campo {field} es demasiado largo.",
       "Required": "El campo {field} es obligatorio.",
       "AlreadyVoided": "Esta entrada ya estaba anulada.",
-      "CannotVoidDraft": "Esta entrada todavía no se ha registrado.",
       "InsufficientStock": "No hay suficiente inventario de {sku}.",
       "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
       "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
@@ -507,42 +502,6 @@
   "status": {
     "active": "Activo",
     "archived": "Archivado"
-  },
-  "development": {
-    "badge": "En desarrollo",
-    "whyHeading": "Por qué todavía no está",
-    "meanwhileHeading": "Mientras tanto"
-  },
-  "payments": {
-    "title": "Cobros",
-    "subtitle": "Lo que te deben y lo que ya te pagaron",
-    "summary": "Registrar los pagos que recibes y saber, en cualquier momento, cuánto te debe cada cliente.",
-    "pointRecord": "Registrar un pago contra una o varias notas de entrega, en efectivo, transferencia o divisa.",
-    "pointBalance": "Saldo pendiente por cliente, calculado de los documentos y los pagos, nunca escrito a mano.",
-    "pointCreditLimit": "Activar el límite de crédito, que ya está implementado y hoy no llega a dispararse.",
-    "pointAging": "Antigüedad de la deuda: qué lleva más de 30, 60 y 90 días sin cobrarse.",
-    "why": "Es el siguiente módulo, y el que más se nota que falta. El límite de crédito ya está escrito y probado en las reglas de negocio, pero la consulta de saldo pendiente devuelve siempre cero porque no hay cobros que restar: la regla existe y nunca se dispara. Se dejó fuera para tener antes un ciclo completo de comprar, vender y reportar.",
-    "meanwhile": "El límite de crédito de cada cliente ya se puede registrar en su ficha, listo para cuando el módulo entre:"
-  },
-  "quotes": {
-    "title": "Presupuestos",
-    "subtitle": "Lo que ofreces antes de despachar",
-    "summary": "Pasar un presupuesto a un cliente y convertirlo en nota de entrega cuando lo acepte, sin volver a escribirlo.",
-    "pointDraft": "Mismas líneas y mismos totales que una nota de entrega, con su tasa de cambio congelada.",
-    "pointNoStock": "No mueve inventario: un presupuesto no despacha nada, solo compromete un precio.",
-    "pointConvert": "Caducidad, y conversión a nota de entrega en un clic cuando el cliente dice que sí.",
-    "why": "El correlativo ya los contempla y el documento se parece mucho a una nota de entrega. Lo que cambia son dos cosas —que no mueve inventario y que caduca— y son justo las que impiden reutilizar las reglas tal cual. Se prefirió terminar el documento que sí mueve mercancía.",
-    "meanwhile": "Para dejar un precio por escrito puedes emitir la nota de entrega cuando se cierre la venta:"
-  },
-  "purchaseOrders": {
-    "title": "Órdenes de compra",
-    "subtitle": "Lo que pides antes de que llegue",
-    "summary": "Dejar por escrito lo que le pediste a un proveedor y ver qué falta por llegar.",
-    "pointOrder": "La orden con sus líneas y su coste acordado, antes de que entre nada al inventario.",
-    "pointPartial": "Recepciones parciales contra la misma orden: llegan diez de veinte y se anota.",
-    "pointPending": "Qué está pedido y aún no ha llegado, que es la mitad de la pregunta al reponer.",
-    "why": "Es un recorte declarado, no un olvido. Para un comercio pequeño lo que mueve el negocio es registrar lo que llegó; pedir formalmente antes es un flujo de empresas con departamento de compras. El ciclo comprar, inventario y vender queda cerrado sin esto.",
-    "meanwhile": "Registra la entrada de mercancía cuando llegue, que es lo que actualiza el inventario:"
   },
   "waking": {
     "title": "Despertando el servidor",

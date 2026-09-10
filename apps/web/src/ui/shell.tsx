@@ -29,19 +29,18 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
   const t = await getTranslations();
 
   /*
-   * Los modulos que faltan aparecen en el menu, marcados.
+   * El menu ensena lo que el sistema HACE, y nada mas.
    *
-   * Esconderlos haria el menu mas corto y el sistema mas dificil de juzgar: quien
-   * lo evalua busca "cobros" el primer minuto, y no encontrar ni la pantalla ni una
-   * explicacion se lee como que el sistema es incompleto Y ademas confuso. Con la
-   * marca delante, un hueco pasa a ser un alcance declarado.
+   * Antes llevaba «Presupuestos» y «Cobros» marcados como en desarrollo, con el
+   * argumento de que un hueco declarado se juzga mejor que un hueco a secas. Con el
+   * alcance recortado el argumento se da la vuelta: dos entradas que no llevan a nada
+   * en un menu de seis hacen que el sistema parezca un tercio vacio. Lo que se ensena
+   * es el ciclo completo —comprar, tener existencias, vender— y ese esta entero.
    */
   const nav = [
     { href: '/customers', label: t('nav.customers') },
     { href: '/products', label: t('nav.products') },
     { href: '/delivery-notes', label: t('nav.deliveryNotes') },
-    { href: '/quotes', label: t('nav.quotes'), dev: true },
-    { href: '/payments', label: t('nav.payments'), dev: true },
     { href: '/purchases', label: t('nav.purchases'), pro: 'purchasing' as const },
     { href: '/reports', label: t('nav.reports'), pro: 'reports' as const },
     { href: '/settings', label: t('nav.settings') },
@@ -70,13 +69,6 @@ export async function Shell({ ctx, session, title, subtitle, action, children }:
                 {item.pro !== undefined && !ctx.plan.has(item.pro) && (
                   <span aria-label="PRO" className="ml-1.5 text-xs opacity-60">
                     🔒
-                  </span>
-                )}
-                {/* Texto y no un punto de color: un color no dice nada a quien no
-                    distingue el verde del gris, ni a quien no sabe cual es cual. */}
-                {item.dev === true && (
-                  <span className="ml-1.5 text-[0.65rem] uppercase tracking-wide text-[var(--color-warn-ink)]">
-                    {t('development.badge')}
                   </span>
                 )}
               </Link>

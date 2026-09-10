@@ -20,25 +20,24 @@ export type Role = (typeof ROLES)[number];
 /**
  * Permisos con forma `recurso:accion`. El comodin `*` se admite tanto como recurso
  * completo (`customer:*`) como global (`*`, exclusivo del propietario).
+ *
+ * La lista solo contiene permisos que ALGUIEN COMPRUEBA. Se fueron siete que no
+ * comprobaba nadie: `customer:delete` y `product:delete` —no hay borrado en el sistema,
+ * solo archivado, y conceder permiso para algo que no existe hace creer que existe— y
+ * los de presupuestos y cobros, cuyos modulos se retiraron. Un permiso que nadie
+ * consulta no protege nada y sugiere una puerta que no esta puesta.
  */
 export const PERMISSIONS = [
   'customer:read',
   'customer:write',
-  'customer:delete',
   'product:read',
   'product:write',
-  'product:delete',
   'stock:read',
   'stock:adjust',
-  'quote:read',
-  'quote:write',
-  'quote:delete',
   'delivery_note:read',
   'delivery_note:issue',
   'delivery_note:deliver',
   'delivery_note:void',
-  'payment:read',
-  'payment:write',
   'supplier:read',
   'supplier:write',
   'purchase:read',
@@ -74,21 +73,14 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
   admin: [
     'customer:read',
     'customer:write',
-    'customer:delete',
     'product:read',
     'product:write',
-    'product:delete',
     'stock:read',
     'stock:adjust',
-    'quote:read',
-    'quote:write',
-    'quote:delete',
     'delivery_note:read',
     'delivery_note:issue',
     'delivery_note:deliver',
     'delivery_note:void',
-    'payment:read',
-    'payment:write',
     'supplier:read',
     'supplier:write',
     'purchase:read',
@@ -110,12 +102,8 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
     'customer:write',
     'product:read',
     'stock:read',
-    'quote:read',
-    'quote:write',
     'delivery_note:read',
     'delivery_note:issue',
-    'payment:read',
-    'payment:write',
     'report:read',
   ],
 
@@ -135,9 +123,7 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
     'customer:read',
     'product:read',
     'stock:read',
-    'quote:read',
     'delivery_note:read',
-    'payment:read',
     'supplier:read',
     'purchase:read',
   ],

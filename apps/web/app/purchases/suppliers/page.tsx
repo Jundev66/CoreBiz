@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, QuotaBar, TableFrame, Empty } from '@/ui/shell';
 import { UpgradeNotice } from '@/ui/upgrade-notice';
@@ -41,6 +42,11 @@ export default async function SuppliersPage({
       </Shell>
     );
   }
+
+  // Quien no puede escribir proveedores ve el listado y nada mas. Ocultar el formulario
+  // NO es la medida de seguridad —el caso de uso revalida el permiso— pero enseñar un
+  // formulario que va a fallar al enviarlo hace perder el tiempo y parecer un fallo.
+  const puedeEscribir = can(ctx.actor, 'supplier:write');
 
   const [page, used] = await Promise.all([
     queries.purchasing.suppliers({ limit: 50, includeArchived: archivados === '1' }),
@@ -134,14 +140,16 @@ export default async function SuppliersPage({
                           activeLabel={t('status.active')}
                           archivedLabel={t('status.archived')}
                         />
-                        <StatusToggle
-                          action={setSupplierStatusAction}
-                          idField="supplierId"
-                          id={supplier.id}
-                          archived={supplier.archived}
-                          archiveLabel={t('suppliers.archive')}
-                          restoreLabel={t('suppliers.restore')}
-                        />
+                        {puedeEscribir && (
+                          <StatusToggle
+                            action={setSupplierStatusAction}
+                            idField="supplierId"
+                            id={supplier.id}
+                            archived={supplier.archived}
+                            archiveLabel={t('suppliers.archive')}
+                            restoreLabel={t('suppliers.restore')}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -151,12 +159,14 @@ export default async function SuppliersPage({
           )}
         </section>
 
-        <aside aria-labelledby="supplier-form-heading">
-          <h2 id="supplier-form-heading" className="mb-4 text-lg font-medium">
-            {t('suppliers.new')}
-          </h2>
-          <SupplierForm />
-        </aside>
+        {puedeEscribir && (
+          <aside aria-labelledby="supplier-form-heading">
+            <h2 id="supplier-form-heading" className="mb-4 text-lg font-medium">
+              {t('suppliers.new')}
+            </h2>
+            <SupplierForm />
+          </aside>
+        )}
       </div>
     </Shell>
   );

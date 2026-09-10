@@ -35,7 +35,6 @@ export const issueDeliveryNoteSchema = z
      * BDD que no habia que tocar — que es exactamente para lo que estan.
      */
     lines: z.array(deliveryNoteLineSchema),
-    quoteId: recordIdSchema.optional().or(z.literal('')),
     notes: z.string().trim().max(500).optional().or(z.literal('')),
   })
   .strict();

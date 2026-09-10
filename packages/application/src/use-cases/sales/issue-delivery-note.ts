@@ -39,7 +39,6 @@ export interface IssueDeliveryNoteInput {
     readonly unitPrice?: string;
     readonly discountBp?: number;
   }[];
-  readonly quoteId?: string | null;
   readonly notes?: string | null;
 }
 
@@ -144,7 +143,6 @@ export function makeIssueDeliveryNote(deps: IssueDeliveryNoteDeps) {
         tenantId: deps.ctx.tenantId,
         number,
         customerId: customer.id,
-        quoteId: input.quoteId ?? null,
         lines,
         exchangeRate,
         currency: baseCurrency,

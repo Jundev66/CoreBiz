@@ -32,7 +32,7 @@ describe('RBAC — separacion de responsabilidades', () => {
   it('almacen ajusta inventario pero no toca precios de venta ni clientes', () => {
     expect(can(actor('warehouse'), 'stock:adjust')).toBe(true);
     expect(can(actor('warehouse'), 'customer:write')).toBe(false);
-    expect(can(actor('warehouse'), 'quote:write')).toBe(false);
+    expect(can(actor('warehouse'), 'delivery_note:issue')).toBe(false);
   });
 
   it('un observador no escribe absolutamente nada', () => {
@@ -60,7 +60,7 @@ describe('RBAC — separacion de responsabilidades', () => {
 
 describe('RBAC — mecanica', () => {
   it('canAll exige todos los permisos, no solo alguno', () => {
-    expect(canAll(actor('sales'), ['customer:read', 'quote:write'])).toBe(true);
+    expect(canAll(actor('sales'), ['customer:read', 'delivery_note:issue'])).toBe(true);
     expect(canAll(actor('sales'), ['customer:read', 'delivery_note:void'])).toBe(false);
   });
 

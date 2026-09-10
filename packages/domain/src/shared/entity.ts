@@ -15,10 +15,7 @@ export type Branded<T, B extends string> = T & { readonly [brand]: B };
 export type CustomerId = Branded<string, 'CustomerId'>;
 export type ProductId = Branded<string, 'ProductId'>;
 export type SupplierId = Branded<string, 'SupplierId'>;
-export type QuoteId = Branded<string, 'QuoteId'>;
 export type DeliveryNoteId = Branded<string, 'DeliveryNoteId'>;
-export type PaymentId = Branded<string, 'PaymentId'>;
-export type PurchaseOrderId = Branded<string, 'PurchaseOrderId'>;
 export type TenantId = Branded<string, 'TenantId'>;
 export type UserId = Branded<string, 'UserId'>;
 

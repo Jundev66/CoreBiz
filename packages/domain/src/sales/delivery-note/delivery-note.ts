@@ -35,10 +35,17 @@ import type { Product, ProductError } from '../../products/product';
  * borrando los originales. Un documento entregado y anulado sigue existiendo: el
  * historico debe poder explicar que salio y que volvio.
  */
-export type DeliveryNoteStatus = 'draft' | 'issued' | 'delivered' | 'voided';
+/**
+ * Tres estados, y el que falta importa.
+ *
+ * NO hay `draft`. Se declaraba, ningun constructor lo producia y la unica transicion que
+ * salia de el —`draft -> issued`— no la ejecutaba nadie. Una nota nace EMITIDA porque
+ * emitirla es lo que saca la mercancia del almacen; guardar un borrador de algo que aun
+ * no ha salido es un presupuesto, que es otro documento.
+ */
+export type DeliveryNoteStatus = 'issued' | 'delivered' | 'voided';
 
 const ALLOWED_TRANSITIONS: Readonly<Record<DeliveryNoteStatus, readonly DeliveryNoteStatus[]>> = {
-  draft: ['issued', 'voided'],
   issued: ['delivered', 'voided'],
   delivered: ['voided'],
   voided: [],
@@ -50,8 +57,6 @@ export type DeliveryNoteError =
   | { kind: 'NoLines' }
   | { kind: 'DuplicateProduct'; sku: string }
   | { kind: 'InvalidTransition'; from: DeliveryNoteStatus; to: DeliveryNoteStatus }
-  | { kind: 'AlreadyIssued' }
-  | { kind: 'NotIssued' }
   | { kind: 'DiscountOutOfRange'; basisPoints: number };
 
 export interface DeliveryNoteLine {
@@ -86,7 +91,6 @@ export interface DeliveryNoteProps {
   readonly tenantId: TenantId;
   readonly number: string;
   readonly customerId: CustomerId;
-  readonly quoteId: string | null;
   readonly status: DeliveryNoteStatus;
   readonly currency: Currency;
   /** Tasa CONGELADA al emitir. Ver ADR 002: reconvertir despues reescribe el historico. */
@@ -139,7 +143,6 @@ export class DeliveryNote extends AggregateRoot<DeliveryNoteId> {
     tenantId: TenantId;
     number: string;
     customerId: CustomerId;
-    quoteId?: string | null;
     lines: readonly DeliveryNoteLineInput[];
     exchangeRate: ExchangeRate;
     currency: Currency;
@@ -241,7 +244,6 @@ export class DeliveryNote extends AggregateRoot<DeliveryNoteId> {
       tenantId: input.tenantId,
       number: input.number,
       customerId: input.customerId,
-      quoteId: input.quoteId ?? null,
       status: 'issued',
       currency: input.currency,
       exchangeRate: input.exchangeRate,

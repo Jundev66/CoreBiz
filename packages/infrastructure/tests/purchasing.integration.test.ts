@@ -225,3 +225,44 @@ describe('Recepcion de mercancia', () => {
     await dropTestTenant(otra.tenantId);
   });
 });
+
+describe('El estado borrador ya no existe', () => {
+  /**
+   * Se comprueba contra la BASE y no contra el tipo.
+   *
+   * Quitar `'draft'` del tipo de TypeScript no impide que la columna lo acepte: el tipo
+   * se va al compilar y la fila entraria igual, para reventar mucho despues al
+   * hidratarla. La restriccion que de verdad lo impide es la del CHECK, y esta prueba
+   * es la unica forma de saber que sigue puesta.
+   */
+  it('la base RECHAZA una nota de entrega en borrador', async () => {
+    const tenant = await createTestTenant();
+    const sql = testSql();
+
+    const intento = sql`
+      insert into public.delivery_notes (id, tenant_id, number, customer_id, status, currency,
+        exchange_rate_scaled, exchange_rate_from, exchange_rate_to, exchange_rate_at,
+        tax_label_snapshot, tax_rate_bp_snapshot, subtotal_minor, tax_minor, total_minor,
+        total_secondary_minor, issued_at)
+      values (${randomUUID()}, ${tenant.tenantId}, 'NE-999999', ${randomUUID()}, 'draft', 'USD',
+        3650000000, 'USD', 'VES', now(), 'Impuesto', 1600, 0, 0, 0, 0, now())
+    `;
+
+    await expect(intento).rejects.toThrow(/delivery_notes_status_check/);
+    await dropTestTenant(tenant.tenantId);
+  });
+
+  it('la base RECHAZA una recepcion en borrador', async () => {
+    const tenant = await createTestTenant();
+    const sql = testSql();
+
+    const intento = sql`
+      insert into public.goods_receipts (id, tenant_id, number, supplier_id, status, currency,
+        total_minor, received_at)
+      values (${randomUUID()}, ${tenant.tenantId}, 'RM-999999', ${randomUUID()}, 'draft', 'USD', 0, now())
+    `;
+
+    await expect(intento).rejects.toThrow(/goods_receipts_status_check/);
+    await dropTestTenant(tenant.tenantId);
+  });
+});

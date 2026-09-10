@@ -88,7 +88,6 @@ export function httpCommands() {
       send<{ id: string; number: string }>('POST', '/v1/delivery-notes', {
         customerId: input.customerId,
         lines: input.lines,
-        quoteId: orUndefined(input.quoteId),
         notes: orUndefined(input.notes),
       }),
 

@@ -33,7 +33,13 @@ export function makeSetSupplierStatus(deps: SetSupplierStatusDeps) {
     if (!deps.ctx.plan.has('purchasing')) {
       return err({ kind: 'FeatureNotAvailable', feature: 'purchasing' });
     }
-    if (!can(deps.ctx.actor, 'purchase:write')) return err({ kind: 'Forbidden' });
+    // `supplier:write`, el mismo que exige dar de alta un proveedor. Antes pedia
+    // `purchase:write`: dos permisos distintos para escribir sobre el MISMO agregado,
+    // asi que quien podia crear un proveedor podia no poder archivarlo. Ambos los tienen
+    // hoy los mismos roles, de modo que no cambia quien puede hacer que; lo que cambia
+    // es que la respuesta a "quien manda sobre los proveedores" deja de tener dos
+    // versiones.
+    if (!can(deps.ctx.actor, 'supplier:write')) return err({ kind: 'Forbidden' });
 
     return deps.uow.run(async (repos) => {
       const supplier = await repos.suppliers.findById(asId<SupplierId>(input.supplierId));

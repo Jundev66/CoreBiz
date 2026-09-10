@@ -89,7 +89,6 @@ export class DeliveryNotesController {
           ...(line.unitPrice !== undefined ? { unitPrice: line.unitPrice } : {}),
           ...(line.discountBp !== undefined ? { discountBp: line.discountBp } : {}),
         })),
-        quoteId: body.quoteId || null,
         notes: body.notes || null,
       }),
     );

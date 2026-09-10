@@ -9,10 +9,7 @@
     "deliveryNotes": "Delivery notes",
     "purchases": "Purchases",
     "reports": "Reports",
-    "settings": "Settings",
-    "payments": "Payments",
-    "quotes": "Quotes",
-    "purchaseOrders": "Purchase orders"
+    "settings": "Settings"
   },
   "customers": {
     "title": "Customers",
@@ -139,7 +136,6 @@
     "belowMinimum": "{count, plural, one {# product is below its minimum} other {# products are below their minimum}}.",
     "empty": "No products in the catalogue yet.",
     "created": "Product created. Its code is {sku}.",
-    "adjust": "Adjust",
     "adjustTitle": "Adjust stock",
     "currentStock": "currently {onHand} {unit}",
     "countedBalance": "How many there actually are",
@@ -464,7 +460,6 @@
       "TooLong": "The {field} field is too long.",
       "Required": "The {field} field is required.",
       "AlreadyVoided": "This delivery was already voided.",
-      "CannotVoidDraft": "This delivery has not been recorded yet.",
       "InsufficientStock": "There is not enough stock of {sku}.",
       "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
       "InvalidRequest": "We could not read that request. Reload the page and try again.",
@@ -507,42 +502,6 @@
   "status": {
     "active": "Active",
     "archived": "Archived"
-  },
-  "development": {
-    "badge": "In development",
-    "whyHeading": "Why it is not here yet",
-    "meanwhileHeading": "In the meantime"
-  },
-  "payments": {
-    "title": "Payments",
-    "subtitle": "What you are owed and what has been paid",
-    "summary": "Record the payments you receive and know, at any moment, how much each customer owes you.",
-    "pointRecord": "Record a payment against one or several delivery notes, in cash, transfer or foreign currency.",
-    "pointBalance": "Outstanding balance per customer, derived from documents and payments, never typed in.",
-    "pointCreditLimit": "Switch on the credit limit, which is already implemented and never fires today.",
-    "pointAging": "Debt ageing: what has been outstanding for more than 30, 60 and 90 days.",
-    "why": "It is the next module, and the one whose absence shows most. The credit limit is already written and tested in the business rules, but the outstanding-balance query always returns zero because there are no payments to subtract: the rule exists and never fires. It was left out to get a complete buy-sell-report cycle first.",
-    "meanwhile": "Each customer credit limit can already be recorded on their record, ready for when the module lands:"
-  },
-  "quotes": {
-    "title": "Quotes",
-    "subtitle": "What you offer before dispatching",
-    "summary": "Send a customer a quote and turn it into a delivery note when they accept, without typing it again.",
-    "pointDraft": "Same lines and same totals as a delivery note, with its exchange rate frozen.",
-    "pointNoStock": "It moves no stock: a quote dispatches nothing, it only commits a price.",
-    "pointConvert": "An expiry date, and one-click conversion into a delivery note when the customer says yes.",
-    "why": "The numbering already covers them and the document looks a lot like a delivery note. Two things differ — it moves no stock and it expires — and those are exactly what prevents reusing the rules as they are. Finishing the document that does move goods came first.",
-    "meanwhile": "To put a price in writing you can issue the delivery note once the sale closes:"
-  },
-  "purchaseOrders": {
-    "title": "Purchase orders",
-    "subtitle": "What you ordered before it arrives",
-    "summary": "Put in writing what you asked a supplier for, and see what is still to arrive.",
-    "pointOrder": "The order with its lines and agreed cost, before anything enters stock.",
-    "pointPartial": "Partial receipts against the same order: ten of twenty arrive and get recorded.",
-    "pointPending": "What is ordered and has not arrived, which is half the question when restocking.",
-    "why": "It is a declared cut, not an oversight. For a small shop what moves the business is recording what arrived; ordering formally beforehand is a flow for companies with a purchasing department. The buy, stock and sell cycle is closed without it.",
-    "meanwhile": "Record the goods receipt when it arrives, which is what updates stock:"
   },
   "waking": {
     "title": "Waking the server",

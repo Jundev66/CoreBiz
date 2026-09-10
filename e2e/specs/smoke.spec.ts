@@ -81,8 +81,6 @@ test.describe('Accesibilidad', () => {
     '/purchases',
     // Los modulos en desarrollo tambien se navegan y tambien se leen con un lector
     // de pantalla: una pantalla que solo explica algo no esta exenta.
-    '/payments',
-    '/quotes',
     '/login',
   ]) {
     test(`sin violaciones serias en ${path}`, async ({ page }) => {
