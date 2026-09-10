@@ -24,6 +24,7 @@ export type {
   CustomerDetail,
   ProductDetail,
   StockMovementItem,
+  SupplierDetail,
   SupplierListItem,
   SupplierOption,
   TeamMemberView,

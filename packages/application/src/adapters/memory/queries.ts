@@ -33,6 +33,7 @@ import type {
   PurchasingQueries,
   ReportQueries,
   SalesReport,
+  SupplierDetail,
   SupplierListItem,
   SupplierOption,
   TeamMemberView,
@@ -142,8 +143,13 @@ class InMemoryCustomerQueries implements CustomerQueries {
       archived: found.isArchived,
       email: snapshot.email,
       phone: snapshot.phone,
-      // La direccion viaja como una linea legible: la ficha la pinta, no la edita.
+      // Dos formas de la misma direccion, y las dos hacen falta: la linea legible
+      // la pinta la ficha y el papel; las partes las rellena el formulario de edicion,
+      // que no puede deshacer el formato sin adivinar donde acaba la calle.
       address: formatAddress(snapshot.address),
+      addressLine1: snapshot.address?.line1 ?? null,
+      addressCity: snapshot.address?.city ?? null,
+      addressState: snapshot.address?.state ?? null,
     });
   }
 }
@@ -197,6 +203,7 @@ class InMemoryProductQueries implements ProductQueries {
       cost: snapshot.cost?.toString() ?? null,
       minStock: snapshot.minStock?.toCompactString() ?? null,
       taxable: snapshot.taxable,
+      description: snapshot.description,
     });
   }
 
@@ -564,6 +571,23 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
     }));
 
     return Promise.resolve(paginate(rows, filter.limit ?? 25, filter.cursor));
+  }
+
+  supplierById(id: string): Promise<SupplierDetail | null> {
+    const found = this.scopedSuppliers().find((s) => s.id === id);
+    if (found === undefined) return Promise.resolve(null);
+
+    return Promise.resolve({
+      id: found.id,
+      code: found.code,
+      name: found.name,
+      taxId: found.taxId,
+      contactName: found.contactName,
+      phone: found.phone,
+      archived: found.isArchived,
+      email: found.email,
+      notes: found.notes,
+    });
   }
 
   supplierOptions(limit = 500): Promise<readonly SupplierOption[]> {

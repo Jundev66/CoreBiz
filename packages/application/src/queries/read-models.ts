@@ -41,7 +41,17 @@ export interface CustomerListItem {
 export interface CustomerDetail extends CustomerListItem {
   readonly email: string | null;
   readonly phone: string | null;
+  /**
+   * La direccion en una linea legible, para PINTARLA.
+   *
+   * Se conserva porque es lo que quiere la ficha y el papel: una direccion formateada
+   * de un tirón. Para EDITARLA no sirve —no se puede deshacer el formato sin adivinar
+   * donde acaba la calle y empieza la ciudad— y por eso viajan tambien las partes.
+   */
   readonly address: string | null;
+  readonly addressLine1: string | null;
+  readonly addressCity: string | null;
+  readonly addressState: string | null;
 }
 
 /** Lo justo para un desplegable: identificador y como se muestra. */
@@ -82,6 +92,7 @@ export interface ProductDetail extends ProductListItem {
   readonly cost: string | null;
   readonly minStock: string | null;
   readonly taxable: boolean;
+  readonly description: string | null;
 }
 
 /**
@@ -275,6 +286,17 @@ export interface SupplierListItem {
   readonly archived: boolean;
 }
 
+/**
+ * La ficha completa de un proveedor.
+ *
+ * No existia: los proveedores solo se podian listar. Un listado sirve para elegir, no
+ * para rellenar un formulario de edicion — le faltan el correo y las notas.
+ */
+export interface SupplierDetail extends SupplierListItem {
+  readonly email: string | null;
+  readonly notes: string | null;
+}
+
 export interface SupplierOption {
   readonly id: string;
   readonly code: string;
@@ -324,6 +346,8 @@ export interface PurchasingQueries {
     cursor?: string;
   }): Promise<Page<SupplierListItem>>;
   supplierOptions(limit?: number): Promise<readonly SupplierOption[]>;
+  /** Null si no existe o si es de otro tenant: desde fuera no se distingue. */
+  supplierById(id: string): Promise<SupplierDetail | null>;
   receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>>;
   /** Null si no existe o si es de otro tenant: desde fuera no se distingue. */
   receiptById(id: string): Promise<GoodsReceiptView | null>;

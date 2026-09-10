@@ -6,6 +6,7 @@ import type {
   GoodsReceiptView,
   Page,
   PurchasingQueries,
+  SupplierDetail,
   SupplierListItem,
   SupplierOption,
   TenantContext,
@@ -92,6 +93,27 @@ class PrismaPurchasingQueries implements PurchasingQueries {
           archived: row.archived_at !== null,
         })),
         nextCursor: hasMore && last !== undefined ? encodeCursor(last.name, last.id) : null,
+      };
+    });
+  }
+
+  supplierById(id: string): Promise<SupplierDetail | null> {
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      // Acotado por tenant y no solo por id: pedir la ficha de otro comercio tiene que
+      // responder "no existe", no "no puedes".
+      const row = await tx.suppliers.findFirst({ where: { tenant_id: this.ctx.tenantId, id } });
+      if (row === null) return null;
+
+      return {
+        id: row.id,
+        code: row.code,
+        name: row.name,
+        taxId: row.tax_id,
+        contactName: row.contact_name,
+        phone: row.phone,
+        archived: row.archived_at !== null,
+        email: row.email,
+        notes: row.notes,
       };
     });
   }

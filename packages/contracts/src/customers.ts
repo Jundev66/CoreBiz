@@ -79,3 +79,38 @@ export function parseCustomerForm(formData: FormData) {
   }
   return createCustomerSchema.safeParse(raw);
 }
+
+/**
+ * Corregir un cliente: los mismos campos, mas el identificador de a quien se corrige.
+ *
+ * El `code` NO esta, y su ausencia es la regla: lo asigna el sistema al dar de alta y
+ * es la unica referencia estable que tiene un cliente en los documentos ya impresos.
+ * Con `.strict()`, colarlo en el cuerpo de la peticion no lo ignora en silencio — da
+ * un 400.
+ */
+export const updateCustomerSchema = createCustomerSchema
+  .extend({ customerId: z.string().min(1) })
+  .strict();
+
+export type UpdateCustomerFormInput = z.infer<typeof updateCustomerSchema>;
+
+/**
+ * El mismo comando, tal y como llega por HTTP.
+ *
+ * Sin `customerId`: ahi viaja en la ruta. Aceptarlo por las dos vias permitiria que
+ * discreparan, y obligaria a decidir cual gana — una decision que no hace falta tomar
+ * si solo hay un sitio donde ponerlo.
+ */
+export const updateCustomerBodySchema = updateCustomerSchema.omit({ customerId: true }).strict();
+
+const UPDATE_CUSTOMER_FIELDS = ['customerId', ...CREATE_CUSTOMER_FIELDS] as const;
+
+/** Mismo patron y mismos dos motivos que `parseCustomerForm`. */
+export function parseCustomerUpdateForm(formData: FormData) {
+  const raw: Record<string, string> = {};
+  for (const field of UPDATE_CUSTOMER_FIELDS) {
+    const value = formData.get(field);
+    if (typeof value === 'string') raw[field] = value;
+  }
+  return updateCustomerSchema.safeParse(raw);
+}

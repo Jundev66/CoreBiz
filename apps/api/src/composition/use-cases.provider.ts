@@ -4,8 +4,11 @@ import {
   makeAdjustStock,
   makeChangeMemberRole,
   makeCreateCustomer,
+  makeUpdateCustomer,
   makeCreateProduct,
+  makeUpdateProduct,
   makeCreateSupplier,
+  makeUpdateSupplier,
   makeInviteUser,
   makeIssueDeliveryNote,
   makeMarkDelivered,
@@ -49,8 +52,10 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
 
   return {
     createCustomer: makeCreateCustomer(shared),
+    updateCustomer: makeUpdateCustomer(shared),
     setCustomerStatus: makeSetCustomerStatus(shared),
     createProduct: makeCreateProduct(shared),
+    updateProduct: makeUpdateProduct(shared),
     adjustStock: makeAdjustStock(shared),
     setProductStatus: makeSetProductStatus(shared),
     issueDeliveryNote: makeIssueDeliveryNote(shared),
@@ -67,9 +72,10 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     revokeInvitation: makeRevokeInvitation(shared),
     updateTenantSettings: makeUpdateTenantSettings(shared),
 
-    // Compras. Modulo entero gated a PRO: el gate vive en el caso de uso, no en la
-    // ruta ni en el guard.
+    // Compras. El gate del modulo vive en el caso de uso, no en la ruta ni en el guard:
+    // una Server Action se puede invocar directamente.
     createSupplier: makeCreateSupplier(shared),
+    updateSupplier: makeUpdateSupplier(shared),
     setSupplierStatus: makeSetSupplierStatus(shared),
     receiveGoods: makeReceiveGoods(shared),
     voidGoodsReceipt: makeVoidGoodsReceipt(shared),

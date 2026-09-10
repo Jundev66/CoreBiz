@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type z } from 'zod';
-import { createCustomerSchema, setStatusSchema } from '@corebiz/contracts';
+import {
+  createCustomerSchema,
+  setStatusSchema,
+  updateCustomerBodySchema,
+} from '@corebiz/contracts';
 import type { CustomerDetail, CustomerListItem, CustomerOption, Page } from '@corebiz/application';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { RequirePermission } from '../../auth/require-permission.decorator';
@@ -97,6 +101,43 @@ export class CustomersController {
         name: body.name,
         // La cadena vacia que manda un formulario no es un valor: es la ausencia de
         // uno. El dominio distingue null de "" y aqui es donde se traduce.
+        taxId: body.taxId || null,
+        email: body.email || null,
+        phone: body.phone || null,
+        creditLimit: body.creditLimit || null,
+        addressLine1: body.addressLine1 || null,
+        addressCity: body.addressCity || null,
+        addressState: body.addressState || null,
+      }),
+    );
+  }
+
+  /**
+   * Corregir la ficha.
+   *
+   * El identificador viaja en la RUTA y no en el cuerpo, asi que el esquema del cuerpo
+   * se lo quita: mandarlo por las dos vias permitiria que discrepasen, y entonces habria
+   * que decidir cual gana — una decision que no hace falta tomar si solo hay un sitio.
+   * Con `.strict()`, colarlo en el cuerpo da un 400.
+   *
+   * Convive con `:id/status` sin orden preferente: `:id` casa un unico segmento, asi que
+   * `/abc/status` no entra por aqui. El orden solo importa cuando una ruta literal puede
+   * confundirse con un identificador, que es el caso de `@Get('options')` mas arriba.
+   */
+  @Patch(':id')
+  @RequirePermission('customer:write')
+  @ApiOperation({ summary: 'Corregir la ficha de un cliente' })
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateCustomerBodySchema))
+    body: z.infer<typeof updateCustomerBodySchema>,
+  ): Promise<{ id: string; code: string }> {
+    return unwrapOrThrow(
+      await this.useCases.updateCustomer({
+        customerId: id,
+        name: body.name,
+        // Igual que al crear: la cadena vacia de un formulario es AUSENCIA de valor.
+        // Aqui ademas significa "vacialo", y el caso de uso lo distingue de omitir.
         taxId: body.taxId || null,
         email: body.email || null,
         phone: body.phone || null,

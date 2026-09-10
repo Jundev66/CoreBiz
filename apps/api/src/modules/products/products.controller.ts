@@ -12,7 +12,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { adjustStockSchema, createProductSchema, setStatusSchema } from '@corebiz/contracts';
+import {
+  adjustStockSchema,
+  createProductSchema,
+  setStatusSchema,
+  updateProductBodySchema,
+} from '@corebiz/contracts';
 import type {
   Page,
   ProductDetail,
@@ -104,6 +109,37 @@ export class ProductsController {
         minStock: body.minStock || null,
         ...(body.taxable !== undefined ? { taxable: body.taxable } : {}),
         ...(body.trackStock !== undefined ? { trackStock: body.trackStock } : {}),
+      }),
+    );
+  }
+
+  /**
+   * Corregir la ficha.
+   *
+   * NO toca el inventario, y el esquema es lo primero que lo garantiza: no acepta ni
+   * `initialStock` ni `trackStock` ni el saldo. El saldo se mueve por `:id/stock`, que
+   * exige un motivo, y ese es el unico camino.
+   *
+   * Tampoco acepta `sku`. Con `.strict()`, mandarlo da un 400 en lugar de ignorarse.
+   */
+  @Patch(':id')
+  @RequirePermission('product:write')
+  @ApiOperation({ summary: 'Corregir la ficha de un producto' })
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateProductBodySchema))
+    body: z.infer<typeof updateProductBodySchema>,
+  ): Promise<{ id: string; sku: string }> {
+    return unwrapOrThrow(
+      await this.useCases.updateProduct({
+        productId: id,
+        name: body.name,
+        price: body.price,
+        unit: body.unit || null,
+        cost: body.cost || null,
+        minStock: body.minStock || null,
+        description: body.description || null,
+        ...(body.taxable !== undefined ? { taxable: body.taxable } : {}),
       }),
     );
   }

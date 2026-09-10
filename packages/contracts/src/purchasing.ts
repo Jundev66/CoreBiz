@@ -52,6 +52,33 @@ export function parseSupplierForm(formData: FormData) {
   return createSupplierSchema.safeParse(raw);
 }
 
+/**
+ * Corregir un proveedor. Los mismos campos, mas a quien se corrige.
+ *
+ * El `code` no esta: lo asigna el sistema al dar de alta, y con `.strict()` mandarlo
+ * da un 400 en lugar de ignorarse en silencio.
+ */
+export const updateSupplierSchema = createSupplierSchema
+  .extend({ supplierId: z.string().min(1) })
+  .strict();
+
+export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
+
+/** El mismo comando por HTTP. Sin `supplierId`: ahi viaja en la ruta. */
+export const updateSupplierBodySchema = updateSupplierSchema.omit({ supplierId: true }).strict();
+
+const UPDATE_SUPPLIER_FIELDS = ['supplierId', ...CREATE_SUPPLIER_FIELDS] as const;
+
+/** Mismo patron y mismos dos motivos que `parseSupplierForm`. */
+export function parseSupplierUpdateForm(formData: FormData) {
+  const raw: Record<string, string> = {};
+  for (const field of UPDATE_SUPPLIER_FIELDS) {
+    const value = formData.get(field);
+    if (typeof value === 'string') raw[field] = value;
+  }
+  return updateSupplierSchema.safeParse(raw);
+}
+
 export const goodsReceiptLineSchema = z
   .object({
     productId: recordIdSchema,

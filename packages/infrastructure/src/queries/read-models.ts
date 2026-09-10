@@ -172,7 +172,13 @@ class PrismaCustomerQueries implements CustomerQueries {
         archived: row.archived_at !== null,
         email: row.email,
         phone: row.phone,
+        // Dos formas de la misma direccion, y las dos hacen falta: la linea legible
+        // la pinta la ficha y el papel; las partes las rellena el formulario de
+        // edicion, que no puede deshacer el formato sin adivinar donde acaba la calle.
         address: formatAddress(row.address),
+        addressLine1: partOfAddress(row.address, 'line1'),
+        addressCity: partOfAddress(row.address, 'city'),
+        addressState: partOfAddress(row.address, 'state'),
       };
     });
   }
@@ -191,6 +197,19 @@ function formatAddress(raw: unknown): string | null {
     (part): part is string => typeof part === 'string' && part.trim() !== '',
   );
   return parts.length === 0 ? null : parts.join(', ');
+}
+
+/**
+ * Una parte suelta de la direccion, tal y como se guardo.
+ *
+ * La columna es JSON, asi que su contenido no lo garantiza el esquema: se comprueba que
+ * lo que hay es texto en lugar de confiar en que lo sea. Una direccion guardada por una
+ * version anterior con otra forma devuelve null, que es lo que el formulario sabe pintar.
+ */
+function partOfAddress(raw: unknown, key: 'line1' | 'city' | 'state'): string | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const value = (raw as Record<string, unknown>)[key];
+  return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
 class PrismaProductQueries implements ProductQueries {
@@ -269,6 +288,7 @@ class PrismaProductQueries implements ProductQueries {
         cost: p.cost_minor === null ? null : money(p.cost_minor, p.price_currency as Currency),
         minStock: p.min_stock === null ? null : quantity(p.min_stock),
         taxable: p.taxable,
+        description: p.description,
       };
     });
   }

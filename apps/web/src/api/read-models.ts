@@ -17,6 +17,7 @@ import type {
   ReadModels,
   SalesReport,
   StockMovementItem,
+  SupplierDetail,
   SupplierListItem,
   SupplierOption,
   TeamMemberView,
@@ -199,6 +200,8 @@ export function httpReadModels(): ReadModels {
         ),
       supplierOptions: (limit) =>
         get<readonly SupplierOption[]>(`/v1/purchasing/suppliers/options${query({ limit })}`),
+      supplierById: (id) =>
+        getOrNull<SupplierDetail>(`/v1/purchasing/suppliers/${encodeURIComponent(id)}`),
       receipts: async (filter) => {
         const page = await get<Page<Wire<GoodsReceiptListItem>>>(
           `/v1/purchasing/receipts${query({ limit: filter.limit })}`,

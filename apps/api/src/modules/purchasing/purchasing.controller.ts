@@ -16,6 +16,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type z } from 'zod';
 import {
   createSupplierSchema,
+  updateSupplierBodySchema,
   receiveGoodsSchema,
   setStatusSchema,
   voidGoodsReceiptSchema,
@@ -25,6 +26,7 @@ import type {
   GoodsReceiptView,
   Page,
   SupplierListItem,
+  SupplierDetail,
   SupplierOption,
 } from '@corebiz/application';
 import { FeatureGuard } from '../../auth/feature.guard';
@@ -88,6 +90,26 @@ export class PurchasingController {
     return this.runtime.queries.purchasing.supplierOptions(query.limit);
   }
 
+  /**
+   * Ficha completa de un proveedor.
+   *
+   * Declarada DESPUES de `suppliers/options` a proposito: Express resuelve por orden de
+   * declaracion, y con esta delante una peticion a `/suppliers/options` entraria por
+   * aqui buscando un proveedor llamado "options" y respondiendo 404.
+   */
+  @Get('suppliers/:id')
+  @RequirePermission('supplier:read')
+  @ApiOperation({ summary: 'Ficha completa de un proveedor' })
+  async supplierById(@Param('id') id: string): Promise<SupplierDetail> {
+    const supplier = await this.runtime.queries.purchasing.supplierById(id);
+    // 404 tanto si no existe como si es de otra empresa: un 403 confirmaria que ese
+    // identificador existe en alguna parte.
+    if (supplier === null) {
+      throw new NotFoundException({ errorKind: 'SupplierNotFound', errorParams: { id } });
+    }
+    return supplier;
+  }
+
   @Post('suppliers')
   @RequirePermission('supplier:write')
   @ApiOperation({ summary: 'Dar de alta un proveedor' })
@@ -96,6 +118,27 @@ export class PurchasingController {
   ): Promise<{ id: string; code: string }> {
     return unwrapOrThrow(
       await this.useCases.createSupplier({
+        name: body.name,
+        taxId: body.taxId || null,
+        email: body.email || null,
+        phone: body.phone || null,
+        contactName: body.contactName || null,
+        notes: body.notes || null,
+      }),
+    );
+  }
+
+  @Patch('suppliers/:id')
+  @RequirePermission('supplier:write')
+  @ApiOperation({ summary: 'Corregir la ficha de un proveedor' })
+  async updateSupplier(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(updateSupplierBodySchema))
+    body: z.infer<typeof updateSupplierBodySchema>,
+  ): Promise<{ id: string; code: string }> {
+    return unwrapOrThrow(
+      await this.useCases.updateSupplier({
+        supplierId: id,
         name: body.name,
         taxId: body.taxId || null,
         email: body.email || null,
