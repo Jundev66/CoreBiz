@@ -106,6 +106,9 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         DATA_DRIVER: DRIVER,
+        // El driver en memoria es un doble de prueba y exige pedirlo por su nombre.
+        // Esta suite es justamente quien tiene derecho a hacerlo.
+        ALLOW_MEMORY_DRIVER: '1',
         NODE_ENV: 'production',
         PORT: String(API_PORT),
         INTERNAL_API_SECRET: INTERNAL_SECRET,

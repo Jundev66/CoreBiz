@@ -4,6 +4,7 @@
   "globalEnv": [
     "NODE_ENV",
     "DATA_DRIVER",
+    "ALLOW_MEMORY_DRIVER",
     "DATABASE_URL",
     "DIRECT_URL",
     "DATABASE_MAX_CONNECTIONS",

@@ -73,7 +73,9 @@ jobs:
       # Compilar no basta: la inyeccion de dependencias de Nest se resuelve al
       # levantar, no al compilar. Un provider mal declarado pasa `tsc` sin una
       # queja y revienta en el arranque, que es exactamente lo que Render haria
-      # revertir. Se arranca en modo memoria para no necesitar Postgres.
+      # revertir. Se arranca con el driver de pruebas para no necesitar Postgres,
+      # y por eso hace falta el permiso explicito: fuera de la suite, el proceso
+      # se niega a levantar en memoria.
       - name: Arrancar y consultar el endpoint de salud
         run: |
           set -euo pipefail
@@ -93,6 +95,7 @@ jobs:
           exit 1
         env:
           DATA_DRIVER: memory
+          ALLOW_MEMORY_DRIVER: '1'
           PORT: '3001'
 
   unit:
@@ -246,14 +249,19 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @corebiz/e2e exec playwright install chromium --with-deps
 
-      # Las dos aplicaciones corren en modo memoria: sin Postgres y sin Docker, con
-      # datos sembrados de forma determinista. La suite no depende de ningun servicio,
+      # Las dos aplicaciones corren con el driver de pruebas: sin Postgres y sin Docker,
+      # con datos sembrados de forma determinista. La suite no depende de ningun servicio,
       # y que eso siga siendo cierto DESPUES de partir el sistema en dos procesos es la
       # comprobacion de que el hexagono aguanta el cambio de adaptador primario.
+      #
+      # Quien arranca los procesos de verdad es el `webServer` de Playwright, y es el que
+      # lleva el permiso del driver. Aqui las dos variables van juntas de todos modos: un
+      # par a medias es una invitacion a que alguien copie solo la primera.
       - name: Construir la API y la aplicacion
         run: pnpm --filter @corebiz/api build && pnpm --filter @corebiz/web exec next build
         env:
           DATA_DRIVER: memory
+          ALLOW_MEMORY_DRIVER: '1'
 
       - name: Generar escenarios BDD
         run: pnpm --filter @corebiz/e2e exec bddgen

@@ -17,8 +17,22 @@ const schema = z
     /** Render inyecta PORT y espera que se escuche AHI. No es negociable. */
     PORT: z.coerce.number().int().positive().default(3001),
 
-    /** `memory` levanta la API entera sin Postgres, igual que `pnpm dev:nodb`. */
+    /**
+     * `memory` levanta la API entera sin Postgres.
+     *
+     * Ya NO es una forma de usar el producto: existe solo como doble de prueba, para
+     * que la suite E2E y BDD corra sin Docker. Por eso exige `ALLOW_MEMORY_DRIVER`,
+     * que ponen la configuracion de Playwright y la de vitest, y nadie mas. Sin ese
+     * permiso explicito el proceso se niega a arrancar, en lugar de servir datos
+     * inventados haciendolos pasar por los de la empresa.
+     */
     DATA_DRIVER: z.enum(['postgres', 'memory']).default('postgres'),
+
+    /** Permiso explicito para el driver de pruebas. Solo lo pone la suite. */
+    ALLOW_MEMORY_DRIVER: z
+      .enum(['true', 'false', '1', '0'])
+      .default('false')
+      .transform((value) => value === 'true' || value === '1'),
 
     /** Pooler de Supabase en modo transaccion (6543). */
     DATABASE_URL: z.string().min(1).optional(),
@@ -82,8 +96,17 @@ const schema = z
       ctx.addIssue({
         code: 'custom',
         path: ['DATABASE_URL'],
+        message: 'Falta DATABASE_URL. Arranca la base de datos con `pnpm db:start`.',
+      });
+    }
+
+    // El driver de pruebas no se alcanza por descuido: hay que pedirlo por su nombre.
+    if (value.DATA_DRIVER === 'memory' && !value.ALLOW_MEMORY_DRIVER) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['DATA_DRIVER'],
         message:
-          'Falta DATABASE_URL. Arranca Postgres con `pnpm db:start` o usa DATA_DRIVER=memory.',
+          'DATA_DRIVER=memory es solo para la suite de pruebas. Arranca la base de datos con `pnpm db:start` y deja DATA_DRIVER=postgres.',
       });
     }
   });

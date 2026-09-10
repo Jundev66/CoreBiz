@@ -11,7 +11,6 @@
     "dev": "turbo run dev --filter=@corebiz/web --filter=@corebiz/api",
     "dev:web": "turbo run dev --filter=@corebiz/web",
     "dev:api": "turbo run dev --filter=@corebiz/api",
-    "dev:nodb": "cross-env DATA_DRIVER=memory turbo run dev --filter=@corebiz/web --filter=@corebiz/api",
     "build": "turbo run build",
     "start": "turbo run start --filter=@corebiz/web",
     "lint": "eslint .",

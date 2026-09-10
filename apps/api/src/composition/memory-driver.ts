@@ -24,7 +24,7 @@ import {
 } from '@corebiz/application';
 
 /**
- * Almacen en memoria para `pnpm dev:nodb`.
+ * Almacen en memoria para la suite de pruebas.
  *
  * Vive en `globalThis` a proposito: la recarga en caliente de Next recrea los modulos
  * en cada cambio, y sin esto los datos que acabas de introducir desaparecerian al
