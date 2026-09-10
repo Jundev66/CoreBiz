@@ -54,7 +54,14 @@ export async function listMemberships(url: string, userId: string): Promise<read
   }));
 }
 
-export type ProvisionError = 'ALREADY_OWNER' | 'INVALID_NAME' | 'INVALID_CURRENCY' | 'UNKNOWN';
+export type ProvisionError =
+  | 'ALREADY_OWNER'
+  | 'ALREADY_MEMBER'
+  | 'INVALID_NAME'
+  | 'INVALID_CURRENCY'
+  | 'INVALID_TAX_RATE'
+  | 'INVALID_EXCHANGE_RATE'
+  | 'UNKNOWN';
 
 export interface ProvisionResult {
   readonly ok: boolean;
@@ -62,18 +69,35 @@ export interface ProvisionResult {
   readonly error?: ProvisionError;
 }
 
+export interface ProvisionInput {
+  readonly name: string;
+  readonly baseCurrency?: 'USD' | 'VES';
+  readonly taxLabel?: string;
+  readonly taxRateBp?: number;
+  /**
+   * Tasa de cambio con la escala del dominio (8 decimales).
+   *
+   * Opcional porque quien opere solo en su moneda base no tiene ninguna que dar. Pero
+   * cuando NO llega, la empresa nace sin poder emitir una sola nota de entrega: el caso
+   * de uso exige tasa antes de abrir la transaccion. Por eso el formulario de alta la
+   * pide, en lugar de dejar que se descubra el primer dia de trabajo.
+   */
+  readonly exchangeRateScaled?: bigint;
+}
+
 /**
- * Crea la empresa del usuario recien registrado.
+ * Crea la empresa del usuario recien registrado, ya configurada.
  *
  * Devuelve un resultado en lugar de lanzar porque `ALREADY_OWNER` no es un fallo del
  * sistema: es lo que pasa cuando alguien pulsa dos veces el boton de registro, y la
  * pantalla tiene que saber distinguirlo de un error de verdad para no asustar a quien
- * acaba de crear su cuenta.
+ * acaba de crear su cuenta. `ALREADY_MEMBER`, en cambio, SI es una negativa: quien
+ * pertenece a la empresa de otro no puede montar la suya desde dentro.
  */
 export async function provisionTenant(
   url: string,
   userId: string,
-  input: { name: string; baseCurrency?: 'USD' | 'VES' },
+  input: ProvisionInput,
 ): Promise<ProvisionResult> {
   try {
     const rows = await asUser(
@@ -81,7 +105,14 @@ export async function provisionTenant(
       userId,
       (tx) =>
         tx.$queryRaw<{ tenant_id: string }[]>`
-        select app.provision_tenant(${input.name}, ${input.baseCurrency ?? 'USD'}) as tenant_id
+        select app.provision_tenant(
+          ${input.name},
+          ${input.baseCurrency ?? 'USD'},
+          ${input.taxLabel ?? 'Impuesto informativo'},
+          ${input.taxRateBp ?? 1600},
+          ${input.exchangeRateScaled ?? null},
+          null
+        ) as tenant_id
       `,
     );
 
@@ -91,10 +122,18 @@ export async function provisionTenant(
     // Los codigos viajan en el texto de la excepcion porque plpgsql no tiene errores
     // tipados. Se buscan en toda la cadena de causas: el cliente envuelve el error de
     // Postgres y el motivo real queda un nivel por debajo.
+    //
+    // ALREADY_OWNER va PRIMERO: el texto de una excepcion nombra un solo codigo, pero
+    // el orden deja escrito cual manda si algun dia se solapan.
     const text = messageChain(error);
     if (text.includes('ALREADY_OWNER')) return { ok: false, error: 'ALREADY_OWNER' };
+    if (text.includes('ALREADY_MEMBER')) return { ok: false, error: 'ALREADY_MEMBER' };
     if (text.includes('INVALID_NAME')) return { ok: false, error: 'INVALID_NAME' };
     if (text.includes('INVALID_CURRENCY')) return { ok: false, error: 'INVALID_CURRENCY' };
+    if (text.includes('INVALID_TAX_RATE')) return { ok: false, error: 'INVALID_TAX_RATE' };
+    if (text.includes('INVALID_EXCHANGE_RATE')) {
+      return { ok: false, error: 'INVALID_EXCHANGE_RATE' };
+    }
     return { ok: false, error: 'UNKNOWN' };
   }
 }

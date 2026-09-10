@@ -194,6 +194,88 @@ describe('Alta de empresa', () => {
     await dropUser(userId);
   });
 
+  it('un INVITADO a la empresa de otro no puede crearse la suya', async () => {
+    // Este era el agujero, y se comprobo con navegador antes de taparlo: la condicion
+    // solo miraba a los `owner`, asi que alguien traido como admin —o vendedor, o
+    // almacen— podia montarse su propia empresa desde dentro. A quien se trae para
+    // administrar el negocio de otro se le da acceso a ESE negocio, no una via de
+    // escape.
+    const dueno = await newUser();
+    const creada = await provisionTenant(TEST_DATABASE_URL, dueno, { name: 'Negocio Ajeno' });
+    expect(creada.ok).toBe(true);
+
+    await sql`
+      insert into public.memberships (tenant_id, user_id, role, status)
+      values (${creada.tenantId!}, ${userId}, 'admin', 'active')
+    `;
+
+    const intento = await provisionTenant(TEST_DATABASE_URL, userId, { name: 'Mi Propia' });
+
+    // Y NO es `ALREADY_OWNER`: ese codigo la interfaz lo trata como el doble envio del
+    // formulario y sigue hacia dentro. Colar por ahi una negativa de verdad dejaria a
+    // esta persona fuera y sin explicacion.
+    expect(intento).toMatchObject({ ok: false, error: 'ALREADY_MEMBER' });
+
+    const suyas = await sql`
+      select 1 from public.memberships where user_id = ${userId} and role = 'owner'
+    `;
+    expect(suyas).toHaveLength(0);
+
+    await dropUser(userId);
+    await dropUser(dueno);
+  });
+
+  it('la empresa nace CON tasa de cambio, si se da', async () => {
+    // Sin tasa no se emite una sola nota de entrega: el caso de uso lo comprueba antes
+    // de abrir la transaccion. Una empresa recien creada estaba rota hasta que alguien
+    // encontraba Ajustes.
+    const result = await provisionTenant(TEST_DATABASE_URL, userId, {
+      name: 'Con Tasa',
+      baseCurrency: 'USD',
+      taxLabel: 'Impuesto al valor',
+      taxRateBp: 1200,
+      exchangeRateScaled: 3_650_000_000n,
+    });
+    expect(result.ok).toBe(true);
+
+    const [row] = await sql<
+      {
+        exchange_rate_scaled: string;
+        exchange_rate_at: Date;
+        tax_rate_bp: number;
+        tax_label: string;
+      }[]
+    >`
+      select exchange_rate_scaled, exchange_rate_at, tax_rate_bp, tax_label
+        from public.tenants where id = ${result.tenantId!}
+    `;
+
+    expect(String(row!.exchange_rate_scaled)).toBe('3650000000');
+    expect(row!.tax_rate_bp).toBe(1200);
+    expect(row!.tax_label).toBe('Impuesto al valor');
+    // La FECHA de captura viaja con la tasa. Una tasa sin fecha se lee como la de hoy,
+    // que es justo lo que deja de ser al dia siguiente.
+    expect(row!.exchange_rate_at).not.toBeNull();
+
+    await dropUser(userId);
+  });
+
+  it('sin tasa, no se inventa una fecha de captura', async () => {
+    const result = await provisionTenant(TEST_DATABASE_URL, userId, { name: 'Sin Tasa' });
+    expect(result.ok).toBe(true);
+
+    const [row] = await sql<
+      { exchange_rate_scaled: string | null; exchange_rate_at: Date | null }[]
+    >`
+      select exchange_rate_scaled, exchange_rate_at from public.tenants where id = ${result.tenantId!}
+    `;
+
+    expect(row!.exchange_rate_scaled).toBeNull();
+    expect(row!.exchange_rate_at).toBeNull();
+
+    await dropUser(userId);
+  });
+
   it('rechaza un nombre demasiado corto sin dejar nada a medias', async () => {
     const result = await provisionTenant(TEST_DATABASE_URL, userId, { name: 'A' });
     expect(result).toMatchObject({ ok: false, error: 'INVALID_NAME' });

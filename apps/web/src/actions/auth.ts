@@ -7,6 +7,7 @@ import { RATE_LIMITS } from '@corebiz/application/ports';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
 import { clientFingerprint, hitRateLimit } from '@/auth/request-identity';
 import { provisionTenantViaApi } from '@/api/onboarding';
+import { signupConfig } from '@/demo/sandbox';
 
 /**
  * Server Actions de autenticacion.
@@ -146,6 +147,11 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
 // ─── Registro ────────────────────────────────────────────────────────────────
 
 export async function signUpAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  // Una Server Action se puede invocar directamente, asi que no basta con dejar de
+  // pintar el formulario. La API tambien lo comprueba; esta es la copia que da un
+  // mensaje en lugar de un 404.
+  if (!signupConfig.enabled()) return { status: 'error', errorKind: 'SignUpClosed' };
+
   const blocked = await consumeAttempt('signup');
   if (blocked !== null) return blocked;
 
@@ -185,20 +191,19 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   // Sin sesion inmediata significa que Supabase mando un correo de confirmacion.
   if (data.session === null) return { status: 'sent' };
 
-  // El token que acaba de devolver Supabase, no el de la cookie: la cookie todavia
-  // esta en la respuesta y no en la peticion, asi que leerla aqui seria una carrera.
-  const provisioned = await provisionTenantViaApi(
-    data.session.access_token,
-    parsed.data.businessName,
-  );
-
-  // `ALREADY_OWNER` no es un fallo: es el doble envio del formulario. Se sigue
-  // hacia dentro como si nada, que es lo que la persona esperaba que pasara.
-  if (!provisioned.ok && provisioned.error !== 'ALREADY_OWNER') {
-    return { status: 'error', errorKind: 'SignUpFailed' };
-  }
-
-  redirect('/');
+  /*
+   * La empresa YA NO se crea aqui: se manda al alta de negocio.
+   *
+   * Antes se creaba en este punto con el nombre y nada mas, y nacia sin tasa de
+   * cambio — sin la cual no se puede emitir una sola nota de entrega—. Habia ademas
+   * dos caminos para lo mismo: este y `/onboarding`, que existe porque el alta se
+   * parte en dos cuando Supabase exige confirmar el correo. Dos caminos que crean el
+   * mismo objeto acaban pidiendo cosas distintas.
+   *
+   * Ahora hay uno solo, y es el que pregunta por moneda, impuesto y tasa con la
+   * persona ya dentro. Registrarse sigue costando tres campos.
+   */
+  redirect('/onboarding');
 }
 
 /**
@@ -209,12 +214,25 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
  * crea entonces, con el nombre que se guardo en los metadatos o con el que se
  * escriba aqui.
  */
+const businessInput = z.object({
+  businessName: z.string().trim().min(2).max(80),
+  baseCurrency: z.enum(['USD', 'VES']).default('USD'),
+  taxLabel: z.string().trim().min(2).max(60).default('Impuesto informativo'),
+  /** Se teclea en porcentaje —«16»— y viaja en puntos basicos. */
+  taxRate: z.coerce.number().min(0).max(100).default(16),
+  exchangeRate: z.string().trim().max(32).default(''),
+});
+
 export async function createBusinessAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const parsed = z.object({ businessName: z.string().trim().min(2).max(80) }).safeParse({
+  const parsed = businessInput.safeParse({
     businessName: formData.get('businessName'),
+    baseCurrency: formData.get('baseCurrency') ?? undefined,
+    taxLabel: formData.get('taxLabel') ?? undefined,
+    taxRate: formData.get('taxRate') ?? undefined,
+    exchangeRate: formData.get('exchangeRate') ?? undefined,
   });
   if (!parsed.success) {
     return {
@@ -228,13 +246,26 @@ export async function createBusinessAction(
   const { data } = await supabase.auth.getSession();
   if (data.session === null) redirect('/login');
 
-  const provisioned = await provisionTenantViaApi(
-    data.session.access_token,
-    parsed.data.businessName,
-  );
+  const provisioned = await provisionTenantViaApi(data.session.access_token, {
+    name: parsed.data.businessName,
+    baseCurrency: parsed.data.baseCurrency,
+    taxLabel: parsed.data.taxLabel,
+    taxRateBp: Math.round(parsed.data.taxRate * 100),
+    ...(parsed.data.exchangeRate !== '' ? { exchangeRate: parsed.data.exchangeRate } : {}),
+  });
 
-  if (!provisioned.ok && provisioned.error !== 'ALREADY_OWNER') {
-    return { status: 'error', errorKind: 'SignUpFailed' };
+  if (!provisioned.ok) {
+    // `ALREADY_OWNER` no es un fallo: es el doble envio del formulario, y quien lo
+    // provoca ya tiene dentro lo que venia a crear.
+    if (provisioned.error === 'ALREADY_OWNER') redirect('/');
+
+    // `ALREADY_MEMBER` SI es una negativa, y tiene que verse. Quien fue invitado a la
+    // empresa de otro no puede montar la suya desde dentro; colarlo por el camino del
+    // doble envio lo dejaria fuera y sin explicacion.
+    return {
+      status: 'error',
+      errorKind: provisioned.error === 'ALREADY_MEMBER' ? 'AlreadyMember' : 'SignUpFailed',
+    };
   }
 
   redirect('/');

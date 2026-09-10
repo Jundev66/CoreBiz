@@ -251,7 +251,10 @@
       "businessHint": "This is the name printed on your delivery notes.",
       "checkEmail": "We sent you an email to confirm your account. Open it and you are in.",
       "haveAccount": "Already have an account?",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "closedTitle": "Sign-up is closed",
+      "closedBody": "This installation is shown with sample data. You can walk through the whole system with your own copy, without giving any details.",
+      "closedDemo": "Try the demo"
     },
     "forgot": {
       "title": "Recover access",
@@ -268,10 +271,11 @@
       "pending": "Saving…"
     },
     "onboarding": {
-      "title": "What is your business called?",
-      "subtitle": "This is the last thing we need to get you set up.",
+      "title": "Set up your business",
+      "subtitle": "Four details and you can start selling. All of them can be changed later in Settings.",
       "submit": "Get started",
-      "pending": "Setting up…"
+      "pending": "Setting up…",
+      "exchangeRateHint": "If you sell in two currencies, enter it now: without it no delivery notes can be issued. You can leave it blank and add it later."
     },
     "errors": {
       "InvalidCredentials": "That email and password do not match.",
@@ -285,7 +289,9 @@
       "Unauthenticated": "Your session expired. Please sign in again.",
       "NotFound": "That is no longer there.",
       "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
-      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
+      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds.",
+      "AlreadyMember": "You already belong to someone else’s business, so you cannot create your own.",
+      "SignUpClosed": "Sign-up is closed on this installation."
     },
     "fieldErrors": {
       "invalid": "{field} is not in a valid format.",

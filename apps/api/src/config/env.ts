@@ -43,6 +43,23 @@ const schema = z
      */
     INTERNAL_API_SECRET: z.string().min(16).optional(),
 
+    /**
+     * Con `false`, nadie puede crear una cuenta ni una empresa.
+     *
+     * Es un interruptor de ENTORNO y no un borrado, y esa es la decision: el flujo de
+     * alta —cuenta, empresa, correlativos, membresia de propietario— sigue entero,
+     * probado y desplegado. Lo que se cierra es la puerta, porque la demostracion se
+     * enseña con los datos del sembrador y una cuenta que alguien cree por curiosidad
+     * es un negocio vacio que nadie va a volver a mirar.
+     *
+     * Por defecto ABIERTO, como estaba: quien clone el repositorio y lo levante espera
+     * poder registrarse. Se cierra donde se enseña.
+     */
+    SIGNUP_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+
     /** Con `false`, /demo deja de entregar credenciales. El interruptor de coste. */
     DEMO_ENABLED: z
       .enum(['true', 'false'])

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { activeDriver } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
-import { demoConfig } from '@/demo/sandbox';
+import { demoConfig, signupConfig } from '@/demo/sandbox';
 import { DemoStart } from '@/ui/demo-start';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,12 +55,14 @@ export default async function DemoPage() {
 
       <DemoStart alreadyInside={alreadyInside} />
 
-      <p className="mt-6 text-sm text-[var(--color-muted)]">
-        {t('demo.orSignUp')}{' '}
-        <Link href="/signup" className="underline underline-offset-4">
-          {t('auth.signup.submit')}
-        </Link>
-      </p>
+      {signupConfig.enabled() && (
+        <p className="mt-6 text-sm text-[var(--color-muted)]">
+          {t('demo.orSignUp')}{' '}
+          <Link href="/signup" className="underline underline-offset-4">
+            {t('auth.signup.submit')}
+          </Link>
+        </p>
+      )}
 
       <p className="mt-10 text-xs text-[var(--color-muted)]">{t('legal.notice')}</p>
     </main>

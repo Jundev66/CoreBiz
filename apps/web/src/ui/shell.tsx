@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { signupConfig } from '@/demo/sandbox';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
@@ -132,7 +133,7 @@ async function AccountArea({
           lugar. Quien esta probando el sistema tiene una sesion de verdad que
           puede querer cerrar, y a la vez es la unica persona a la que tiene
           sentido ofrecerle empezar con su propio negocio. */}
-      {session.isDemo && (
+      {session.isDemo && signupConfig.enabled() && (
         <Link
           href="/signup"
           className="rounded-md border border-[var(--color-brand)] px-3 py-1.5 text-sm font-medium transition hover:bg-[var(--color-brand)]/10"

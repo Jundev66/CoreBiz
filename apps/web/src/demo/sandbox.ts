@@ -18,6 +18,21 @@ export const demoConfig = {
   enabled: () => process.env.DEMO_ENABLED !== 'false',
 } as const;
 
+/**
+ * El alta de cuentas, abierta o cerrada.
+ *
+ * Vive aqui al lado de la demostracion porque son las dos puertas de entrada del
+ * sistema y se manejan igual: una variable de entorno, valor por defecto ABIERTO, y la
+ * API con su propia comprobacion. Cerrar solo la pantalla no cierra nada — el endpoint
+ * se puede llamar directamente.
+ *
+ * Se cierra en la demostracion publica, no en el codigo: el flujo de alta sigue entero
+ * y probado. Lo que sobra ahi son negocios vacios que nadie va a volver a mirar.
+ */
+export const signupConfig = {
+  enabled: () => process.env.SIGNUP_ENABLED !== 'false',
+} as const;
+
 /*
  * Aqui vivian tambien `ttlHours`, `maxConcurrent` y `maxPerHour`. Se fueron a la API,
  * que es quien aprovisiona: tener los limites en el lado que NO los aplica es la forma

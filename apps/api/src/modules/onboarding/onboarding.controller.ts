@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, NotFoundException, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
+import { ExchangeRate } from '@corebiz/domain';
 import {
   acceptInvitation,
   previewInvitation,
@@ -12,11 +13,27 @@ import { ZodValidationPipe } from '../../http/zod-validation.pipe';
 import { IDENTITY } from '../../tokens';
 import type { VerifiedIdentity } from '../../auth/authenticated-request';
 import { databaseUrl } from '../../config/driver';
+import { loadEnv } from '../../config/env';
 
+/**
+ * Los datos con los que nace una empresa.
+ *
+ * Antes solo se pedia el nombre y la moneda. Faltaba la TASA, y su ausencia no era un
+ * detalle: `exchange_rate_scaled` quedaba en NULL y con eso no se emite una sola nota
+ * de entrega —el caso de uso lo comprueba antes de abrir la transaccion—. La empresa
+ * nacia rota y solo se arreglaba si alguien encontraba Ajustes.
+ *
+ * La tasa se acepta como TEXTO decimal y la convierte el mismo value object que usa el
+ * ajuste de la empresa. Asi lo que se admite al crearla es exactamente lo que sabra
+ * usar el primer documento.
+ */
 const createTenantSchema = z
   .object({
     name: z.string().trim().min(2, 'TooShort').max(120, 'TooLong'),
     baseCurrency: z.enum(['USD', 'VES']).optional(),
+    taxLabel: z.string().trim().min(2, 'TooShort').max(60, 'TooLong').optional(),
+    taxRateBp: z.coerce.number().int().min(0).max(10_000).optional(),
+    exchangeRate: z.string().trim().max(32).optional().or(z.literal('')),
   })
   .strict();
 
@@ -46,9 +63,34 @@ export class OnboardingController {
   async createTenant(
     @Body(new ZodValidationPipe(createTenantSchema)) body: z.infer<typeof createTenantSchema>,
   ): Promise<{ tenantId: string }> {
+    // Con el alta cerrada el endpoint NO EXISTE, en lugar de existir y negarse. Es la
+    // misma regla que /demo: una puerta que contesta "cerrado" sigue siendo una puerta
+    // que se puede probar. Aceptar invitaciones no se toca — quien fue invitado a una
+    // empresa que ya existe tiene que poder entrar.
+    if (!loadEnv().SIGNUP_ENABLED) throw new NotFoundException();
+
+    const baseCurrency = body.baseCurrency ?? 'USD';
+
+    let exchangeRateScaled: bigint | undefined;
+    if (body.exchangeRate !== undefined && body.exchangeRate.trim() !== '') {
+      // El value object valida y escala, igual que en Ajustes. Una expresion regular
+      // aqui aceptaria formas que el documento luego no sabria usar.
+      const parsed = ExchangeRate.of(
+        body.exchangeRate,
+        baseCurrency,
+        baseCurrency === 'USD' ? 'VES' : 'USD',
+        new Date(),
+      );
+      if (!parsed.ok) throw domainError('INVALID_EXCHANGE_RATE');
+      exchangeRateScaled = parsed.value.scaledRate;
+    }
+
     const result = await provisionTenant(databaseUrl(), this.identity.userId, {
       name: body.name,
-      ...(body.baseCurrency !== undefined ? { baseCurrency: body.baseCurrency } : {}),
+      baseCurrency,
+      ...(body.taxLabel !== undefined ? { taxLabel: body.taxLabel } : {}),
+      ...(body.taxRateBp !== undefined ? { taxRateBp: body.taxRateBp } : {}),
+      ...(exchangeRateScaled !== undefined ? { exchangeRateScaled } : {}),
     });
 
     if (!result.ok || result.tenantId === undefined) {

@@ -66,6 +66,11 @@ test.describe('Cuentas y sesion', () => {
     await page.getByLabel(/contraseña|password/i).fill('una-clave-larga-y-tranquila');
     await page.getByRole('button', { name: /crear|create/i }).click();
 
+    // Registrarse deja en el ALTA DE EMPRESA, no dentro. Es el unico sitio donde nace
+    // una empresa, y donde se le pone la tasa de cambio sin la cual no podria emitir.
+    await expect(page).toHaveURL(/\/onboarding/);
+    await page.getByLabel(/tasa|exchange/i).fill('36.50');
+    await page.getByRole('button', { name: /empezar|get started/i }).click();
     await expect(page).toHaveURL(/\/$/);
 
     await page.goto('/customers');

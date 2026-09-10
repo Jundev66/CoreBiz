@@ -28,6 +28,22 @@ export interface AuthFieldSpec {
   readonly hint?: string;
   readonly defaultValue?: string;
   readonly minLength?: number;
+  /**
+   * Con opciones, el campo se pinta como lista desplegable.
+   *
+   * Se anadio para el alta de empresa: la moneda base tiene dos valores posibles y
+   * escribirla a mano solo abre la puerta a teclear "usd " o "dolares" y recibir un
+   * error que no explica nada.
+   */
+  readonly options?: readonly { readonly value: string; readonly label: string }[];
+  /**
+   * Campos que se pueden dejar en blanco.
+   *
+   * Por defecto TODOS son obligatorios, y ese era el supuesto de este formulario
+   * cuando solo servia para acceder y registrarse. El alta de empresa rompe el
+   * supuesto: quien opere solo en su moneda base no tiene tasa de cambio que dar.
+   */
+  readonly optional?: boolean;
 }
 
 interface AuthFormProps {
@@ -99,20 +115,36 @@ function AuthField({ field, error }: { field: AuthFieldSpec; error: string | und
         {field.label}
       </label>
 
-      <input
-        id={field.name}
-        name={field.name}
-        type={field.type ?? 'text'}
-        // `required` y `minLength` aqui son ayuda al escribir, no la validacion:
-        // esa la hace el servidor, que es lo unico que no se puede saltar.
-        required
-        minLength={field.minLength}
-        autoComplete={field.autoComplete}
-        defaultValue={field.defaultValue}
-        aria-invalid={error !== undefined ? true : undefined}
-        aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
-        className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
-      />
+      {field.options !== undefined ? (
+        <select
+          id={field.name}
+          name={field.name}
+          defaultValue={field.defaultValue}
+          aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
+          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+        >
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={field.name}
+          name={field.name}
+          type={field.type ?? 'text'}
+          // `required` y `minLength` aqui son ayuda al escribir, no la validacion:
+          // esa la hace el servidor, que es lo unico que no se puede saltar.
+          required={field.optional !== true}
+          minLength={field.minLength}
+          autoComplete={field.autoComplete}
+          defaultValue={field.defaultValue}
+          aria-invalid={error !== undefined ? true : undefined}
+          aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
+          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+        />
+      )}
 
       {field.hint !== undefined && (
         <p id={`${field.name}-hint`} className="mt-1.5 text-xs text-[var(--color-muted)]">

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { activeDriver } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
+import { signupConfig } from '@/demo/sandbox';
 
 /**
  * Portada.
@@ -82,12 +83,14 @@ export default async function HomePage() {
             >
               {t('demo.start')}
             </Link>
-            <Link
-              href="/signup"
-              className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
-            >
-              {t('auth.signup.submit')}
-            </Link>
+            {signupConfig.enabled() && (
+              <Link
+                href="/signup"
+                className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
+              >
+                {t('auth.signup.submit')}
+              </Link>
+            )}
             <Link
               href="/login"
               className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"

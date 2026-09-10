@@ -34,12 +34,22 @@ async function outcome(res: Response): Promise<ProvisionOutcome> {
   return { ok: false, error: envelope?.errorKind ?? 'UNKNOWN' };
 }
 
-/** Crea la empresa de quien acaba de registrarse. */
+/** Con que datos nace una empresa. Todo salvo el nombre tiene un valor razonable. */
+export interface BusinessDraft {
+  readonly name: string;
+  readonly baseCurrency?: 'USD' | 'VES';
+  readonly taxLabel?: string;
+  readonly taxRateBp?: number;
+  /** Decimal en texto, como se teclea: "36,50". Lo valida y escala la API. */
+  readonly exchangeRate?: string;
+}
+
+/** Crea la empresa de quien acaba de registrarse, ya configurada. */
 export async function provisionTenantViaApi(
   token: string,
-  name: string,
+  business: BusinessDraft,
 ): Promise<ProvisionOutcome> {
-  return outcome(await post(token, '/v1/onboarding/tenants', { name }));
+  return outcome(await post(token, '/v1/onboarding/tenants', business));
 }
 
 /** Acepta una invitacion y entra en la empresa que invito. */

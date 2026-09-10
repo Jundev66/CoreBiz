@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { signupConfig } from '@/demo/sandbox';
 import { signInAction } from '@/actions/auth';
 import { AuthForm } from '@/ui/auth-form';
 
@@ -47,12 +48,16 @@ export default async function LoginPage() {
             {t('auth.login.forgot')}
           </Link>
         </p>
-        <p className="text-[var(--color-muted)]">
-          {t('auth.login.noAccount')}{' '}
-          <Link href="/signup" className="underline underline-offset-4">
-            {t('auth.login.createAccount')}
-          </Link>
-        </p>
+        {/* Ofrecer "crear una cuenta" con el alta cerrada es mandar a alguien a una
+            puerta que sabemos que no abre. */}
+        {signupConfig.enabled() && (
+          <p className="text-[var(--color-muted)]">
+            {t('auth.login.noAccount')}{' '}
+            <Link href="/signup" className="underline underline-offset-4">
+              {t('auth.login.createAccount')}
+            </Link>
+          </p>
+        )}
       </div>
 
       {/* La demostracion se ofrece aqui a proposito: quien llega desde un CV no

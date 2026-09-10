@@ -251,7 +251,10 @@
       "businessHint": "Es el nombre que aparecerá en tus notas de entrega.",
       "checkEmail": "Te enviamos un correo para confirmar tu cuenta. Ábrelo y ya podrás entrar.",
       "haveAccount": "¿Ya tienes cuenta?",
-      "signIn": "Entrar"
+      "signIn": "Entrar",
+      "closedTitle": "El registro está cerrado",
+      "closedBody": "Esta instalación se enseña con datos de ejemplo. Puedes recorrer el sistema entero con una copia propia, sin dar ningún dato.",
+      "closedDemo": "Probar la demostración"
     },
     "forgot": {
       "title": "Recuperar el acceso",
@@ -268,10 +271,11 @@
       "pending": "Guardando…"
     },
     "onboarding": {
-      "title": "¿Cómo se llama tu negocio?",
-      "subtitle": "Es lo último que necesitamos para dejarte todo listo.",
+      "title": "Configura tu negocio",
+      "subtitle": "Cuatro datos y ya puedes empezar a vender. Todos se cambian después en Ajustes.",
       "submit": "Empezar",
-      "pending": "Preparando…"
+      "pending": "Preparando…",
+      "exchangeRateHint": "Si vendes en dos monedas, escríbela ahora: sin ella no se pueden emitir notas. Puedes dejarla en blanco y ponerla más tarde."
     },
     "errors": {
       "InvalidCredentials": "El correo o la contraseña no coinciden.",
@@ -285,7 +289,9 @@
       "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
       "NotFound": "Eso ya no está.",
       "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
-      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
+      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos.",
+      "AlreadyMember": "Ya perteneces a la empresa de otra persona, así que no puedes crear una propia.",
+      "SignUpClosed": "El registro está cerrado en esta instalación."
     },
     "fieldErrors": {
       "invalid": "{field} no tiene un formato válido.",
