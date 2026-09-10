@@ -68,6 +68,33 @@ export async function issueDeliveryNoteAction(
   return { status: 'success', createdNumber: result.value.number };
 }
 
+/**
+ * Server Action: confirmar que el cliente recibio la mercancia.
+ *
+ * NO revalida `/products`, y la ausencia es deliberada: confirmar la entrega no mueve
+ * inventario. El stock salio al emitir la nota; aqui solo se anota que llego a su
+ * destino y quien firmo el recibo.
+ */
+export async function markDeliveredAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const deliveryNoteId = field(formData, 'deliveryNoteId');
+  const receivedBy = field(formData, 'receivedBy').trim();
+
+  const { markDelivered } = await apiForRequest();
+  const result = await markDelivered({ deliveryNoteId, receivedBy: receivedBy || null });
+
+  if (!result.ok) return toFormFailure(result.error);
+
+  revalidatePath('/delivery-notes');
+  revalidatePath(`/delivery-notes/${deliveryNoteId}`);
+  // Tambien la version imprimible: la linea de firma «Recibido por» pasa de estar en
+  // blanco a llevar el nombre, y es el sitio donde ese dato se usa de verdad.
+  revalidatePath(`/delivery-notes/${deliveryNoteId}/print`);
+  return { status: 'success' };
+}
+
 export async function voidDeliveryNoteAction(
   _prev: ActionState,
   formData: FormData,

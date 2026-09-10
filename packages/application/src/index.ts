@@ -12,6 +12,7 @@ export * from './adapters/memory/index';
 export * from './use-cases/customers/create-customer';
 export * from './use-cases/customers/set-customer-status';
 export * from './use-cases/sales/issue-delivery-note';
+export * from './use-cases/sales/mark-delivered';
 export * from './use-cases/sales/void-delivery-note';
 export * from './use-cases/products/create-product';
 export * from './use-cases/products/adjust-stock';

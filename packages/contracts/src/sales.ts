@@ -54,3 +54,22 @@ export const voidDeliveryNoteSchema = z
   .strict();
 
 export type VoidDeliveryNoteInput = z.infer<typeof voidDeliveryNoteSchema>;
+
+/**
+ * Confirmar la entrega de una nota ya emitida.
+ *
+ * `receivedBy` es OPCIONAL y es el punto del formulario: la nota impresa lleva una linea
+ * de firma que dice "Recibido por", y hasta ahora el sistema no guardaba ese dato en
+ * ninguna parte. Quien confirma la entrega suele tener delante el papel firmado, asi que
+ * es el momento natural de teclear quien lo recibio.
+ *
+ * Opcional porque no siempre se sabe: una entrega en mostrador puede no tener firmante, y
+ * exigir un nombre inventado seria peor que dejarlo vacio.
+ */
+export const markDeliveredSchema = z
+  .object({
+    receivedBy: z.string().trim().max(120, 'TooLong').optional().or(z.literal('')),
+  })
+  .strict();
+
+export type MarkDeliveredInput = z.infer<typeof markDeliveredSchema>;

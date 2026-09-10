@@ -404,6 +404,12 @@ export class DeliveryNote extends AggregateRoot<DeliveryNoteId> {
   get issuedAt(): Date | null {
     return this.props.issuedAt;
   }
+  get deliveredAt(): Date | null {
+    return this.props.deliveredAt;
+  }
+  get receivedBy(): string | null {
+    return this.props.receivedBy;
+  }
   get voidReason(): string | null {
     return this.props.voidReason;
   }

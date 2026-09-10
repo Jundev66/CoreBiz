@@ -130,6 +130,7 @@ export function httpReadModels(): ReadModels {
         return {
           ...note,
           issuedAt: toDateOrNull(note.issuedAt),
+          deliveredAt: toDateOrNull(note.deliveredAt),
           exchangeRateAt: toDate(note.exchangeRateAt),
         };
       },

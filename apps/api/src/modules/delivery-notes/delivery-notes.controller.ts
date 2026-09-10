@@ -13,7 +13,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type z } from 'zod';
-import { issueDeliveryNoteSchema, voidDeliveryNoteSchema } from '@corebiz/contracts';
+import {
+  issueDeliveryNoteSchema,
+  markDeliveredSchema,
+  voidDeliveryNoteSchema,
+} from '@corebiz/contracts';
 import type { DeliveryNoteListItem, DeliveryNoteView, Page } from '@corebiz/application';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { RequirePermission } from '../../auth/require-permission.decorator';
@@ -87,6 +91,34 @@ export class DeliveryNotesController {
         })),
         quoteId: body.quoteId || null,
         notes: body.notes || null,
+      }),
+    );
+  }
+
+  /**
+   * Confirmar la entrega.
+   *
+   * El unico endpoint de ventas que ALMACEN puede llamar. No es un descuido de la matriz
+   * de permisos: emitir es de ventas, anular es de quien manda, y confirmar que la
+   * mercancia llego es de quien la llevo.
+   *
+   * `receivedBy` es opcional a proposito. Una entrega en mostrador puede no tener a nadie
+   * que firme, y exigir un nombre solo conseguiria que se teclease uno inventado.
+   */
+  @Post(':id/deliver')
+  // 200 y no 201: confirmar la entrega no crea nada, cambia el estado de lo que ya existe.
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('delivery_note:deliver')
+  @ApiOperation({ summary: 'Confirmar que el cliente recibio la mercancia' })
+  async deliver(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(markDeliveredSchema))
+    body: z.infer<typeof markDeliveredSchema>,
+  ): Promise<unknown> {
+    return unwrapOrThrow(
+      await this.useCases.markDelivered({
+        deliveryNoteId: id,
+        receivedBy: body.receivedBy || null,
       }),
     );
   }

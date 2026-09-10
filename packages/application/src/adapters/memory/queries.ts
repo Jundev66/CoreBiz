@@ -258,6 +258,8 @@ class InMemoryDeliveryNoteQueries implements DeliveryNoteQueries {
       exchangeRate: note.exchangeRate.toCompactString(),
       exchangeRateAt: note.exchangeRate.capturedAt,
       taxLabel: note.taxLabel,
+      deliveredAt: note.deliveredAt,
+      receivedBy: note.receivedBy,
       voidReason: note.voidReason,
       lines: note.lines.map((line) => ({
         lineNo: line.lineNo,

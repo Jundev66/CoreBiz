@@ -155,6 +155,9 @@ export interface DeliveryNoteView {
   readonly exchangeRate: string;
   readonly exchangeRateAt: Date;
   readonly taxLabel: string;
+  /** Cuando se confirmo la entrega, y quien firmo el recibo. Nulos hasta que ocurre. */
+  readonly deliveredAt: Date | null;
+  readonly receivedBy: string | null;
   readonly voidReason: string | null;
   readonly lines: readonly DeliveryNoteLineView[];
   readonly subtotal: string;

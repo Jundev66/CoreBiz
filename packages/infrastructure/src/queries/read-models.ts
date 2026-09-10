@@ -405,6 +405,8 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
         exchangeRate: formatRate(note.exchange_rate_scaled),
         exchangeRateAt: note.exchange_rate_at,
         taxLabel: note.tax_label_snapshot,
+        deliveredAt: note.delivered_at,
+        receivedBy: note.received_by,
         voidReason: note.void_reason,
         lines: note.delivery_note_lines.map((line) => ({
           lineNo: line.line_no,

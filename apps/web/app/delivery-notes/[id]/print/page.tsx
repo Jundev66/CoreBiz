@@ -149,7 +149,9 @@ export default async function PrintDeliveryNotePage({
 
       <section className="mt-16 grid gap-12 sm:grid-cols-2">
         <SignatureLine label={t('deliveryNotes.deliveredBy')} />
-        <SignatureLine label={t('deliveryNotes.receivedBy')} />
+        {/* Si la entrega ya se confirmo, el nombre de quien firmo va IMPRESO sobre la
+            linea. El papel deja de pedir un dato que el sistema ya tiene. */}
+        <SignatureLine label={t('deliveryNotes.receivedBy')} name={note.receivedBy} />
       </section>
 
       {/*
@@ -197,10 +199,12 @@ function Row({
 }
 
 /** Linea de firma. Un albaran sin firma no prueba que nadie recibiera nada. */
-function SignatureLine({ label }: { label: string }) {
+function SignatureLine({ label, name }: { label: string; name?: string | null }) {
   return (
     <div>
-      <div className="h-12 border-b border-neutral-400" />
+      <div className="flex h-12 items-end border-b border-neutral-400">
+        {name ? <span className="pb-1 text-sm">{name}</span> : null}
+      </div>
       <p className="mt-2 text-xs uppercase tracking-wide text-neutral-500">{label}</p>
     </div>
   );

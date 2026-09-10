@@ -8,6 +8,7 @@ import {
   makeCreateSupplier,
   makeInviteUser,
   makeIssueDeliveryNote,
+  makeMarkDelivered,
   makeReceiveGoods,
   makeVoidGoodsReceipt,
   makeRemoveMember,
@@ -53,6 +54,10 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     adjustStock: makeAdjustStock(shared),
     setProductStatus: makeSetProductStatus(shared),
     issueDeliveryNote: makeIssueDeliveryNote(shared),
+    // Almacen puede confirmar la entrega aunque no pueda emitir ni anular: es el unico
+    // punto donde ese rol actua sobre un documento de venta, y es deliberado. Quien
+    // mueve las cajas es quien sabe que llegaron.
+    markDelivered: makeMarkDelivered(shared),
     voidDeliveryNote: makeVoidDeliveryNote(shared),
 
     // Administracion.

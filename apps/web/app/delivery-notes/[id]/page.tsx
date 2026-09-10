@@ -4,6 +4,7 @@ import { getTranslations, getFormatter } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
+import { MarkDeliveredForm } from '@/ui/mark-delivered-form';
 import { VoidNoteForm } from '@/ui/void-note-form';
 
 /**
@@ -82,6 +83,17 @@ export default async function DeliveryNoteDetailPage({
           </dd>
         </div>
       </dl>
+
+      {/* Quien recibio, cuando la entrega ya esta confirmada. Es el dato que cierra el
+          circulo con la linea de firma del papel, asi que se ve tambien en pantalla. */}
+      {note.receivedBy && note.deliveredAt && (
+        <p className="mb-6 rounded-md border border-[var(--color-line)] px-4 py-3 text-sm">
+          {t('deliveryNotes.deliveredTo', { name: note.receivedBy })}
+          <span className="ml-2 text-[var(--color-muted)]">
+            {format.dateTime(note.deliveredAt, { dateStyle: 'long' })}
+          </span>
+        </p>
+      )}
 
       {note.voidReason && (
         <p
@@ -164,6 +176,13 @@ export default async function DeliveryNoteDetailPage({
       <p className="mt-8 border-t border-[var(--color-line)] pt-4 text-center text-sm font-medium">
         {t('legal.nonFiscal')}
       </p>
+
+      {/* Confirmar la entrega solo se ofrece mientras la nota siga emitida. Es el unico
+          formulario de esta pantalla que ALMACEN puede ver: mover las cajas y confirmar
+          que llegaron es su trabajo, emitir y anular no. */}
+      {note.status === 'issued' && can(ctx.actor, 'delivery_note:deliver') && (
+        <MarkDeliveredForm deliveryNoteId={id} />
+      )}
 
       {/* Anular solo tiene sentido una vez, y solo con permiso para hacerlo. Ocultar el
           formulario NO es la medida de seguridad —el caso de uso comprueba lo mismo— pero

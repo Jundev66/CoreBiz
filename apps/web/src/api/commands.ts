@@ -7,6 +7,7 @@ import type {
   CreateSupplierInput,
   InviteUserInput,
   IssueDeliveryNoteInput,
+  MarkDeliveredInput,
   ReceiveGoodsInput,
   SetCustomerStatusInput,
   SetProductStatusInput,
@@ -87,6 +88,13 @@ export function httpCommands() {
         quoteId: orUndefined(input.quoteId),
         notes: orUndefined(input.notes),
       }),
+
+    markDelivered: (input: MarkDeliveredInput) =>
+      send<{ number: string }>(
+        'POST',
+        `/v1/delivery-notes/${encodeURIComponent(input.deliveryNoteId)}/deliver`,
+        { receivedBy: input.receivedBy ?? '' },
+      ),
 
     voidDeliveryNote: (input: VoidDeliveryNoteInput) =>
       send<{ number: string }>(
