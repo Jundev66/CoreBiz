@@ -403,6 +403,75 @@ export class Product extends AggregateRoot<ProductId> {
     return ok(undefined);
   }
 
+  /*
+   * ─── Editar la FICHA, nunca el SALDO ────────────────────────────────────────────
+   *
+   * Los metodos que siguen cambian lo que el producto ES. Ninguno puede llamar a
+   * `applyMovement` ni tocar `props.onHand`, y no es una recomendacion: el repositorio
+   * escribe `on_hand` desde el agregado en el mismo UPSERT con el que guarda la ficha,
+   * asi que un descuido aqui cambiaria el saldo del inventario Y no dejaria el asiento
+   * que lo explica. El libro mayor dejaria de cuadrar sin que nadie hubiera declarado
+   * una entrada ni una salida.
+   *
+   * Hay un test que lo comprueba de la unica forma que sirve: ejecuta TODOS estos
+   * metodos y afirma que `pullStockMovements()` sigue vacio y que `onHand` no cambio.
+   *
+   * El saldo solo se mueve por `addStock`, `removeStock`, `adjustStock` —que exige
+   * motivo—, `compensateStock` y `reverseStockEntry`. Cada uno deja su movimiento.
+   */
+
+  /** Cambia el coste de reposicion, o lo quita. No revaloriza lo que ya hay en el estante. */
+  changeCost(cost: Money | null): Result<void, ProductError> {
+    if (cost !== null && cost.isNegative) return err({ kind: 'OutOfRange', field: 'cost', min: 0 });
+    this.props = { ...this.props, cost };
+    return ok(undefined);
+  }
+
+  /**
+   * Fija el minimo por debajo del cual el producto se marca como bajo minimo, o lo quita.
+   *
+   * No compara contra el saldo actual a proposito: subir el minimo por encima de lo que
+   * hay es exactamente lo que hace alguien que quiere que el sistema le avise de que
+   * tiene que reponer.
+   */
+  setMinimumStock(minStock: Quantity | null): Result<void, ProductError> {
+    if (minStock !== null && minStock.isNegative) {
+      return err({ kind: 'OutOfRange', field: 'minStock', min: 0 });
+    }
+    this.props = { ...this.props, minStock };
+    return ok(undefined);
+  }
+
+  /**
+   * Datos de catalogo: descripcion, unidad de medida y si lleva impuesto.
+   *
+   * Misma regla que en `Customer.updateContact`: la clave que viene se aplica, la que no
+   * viene se queda. `in` y no `??`, porque `??` no distingue "no me lo has dado" de
+   * "quiero vaciarlo" — y una descripcion tiene que poder borrarse.
+   *
+   * `unit` NO admite vacio: un producto sin unidad de medida deja las cantidades sin
+   * significado en el papel. Si llega en blanco, se conserva la que tenia.
+   */
+  updateCatalogDetails(input: {
+    description?: string | null;
+    unit?: string;
+    taxable?: boolean;
+  }): Result<void, ProductError> {
+    const description =
+      'description' in input ? input.description?.trim() || null : this.props.description;
+
+    const unit = 'unit' in input ? input.unit?.trim() || this.props.unit : this.props.unit;
+
+    this.props = {
+      ...this.props,
+      description,
+      unit,
+      taxable:
+        'taxable' in input && input.taxable !== undefined ? input.taxable : this.props.taxable,
+    };
+    return ok(undefined);
+  }
+
   /**
    * Saca el producto del catalogo sin borrarlo.
    *

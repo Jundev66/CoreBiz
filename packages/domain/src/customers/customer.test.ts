@@ -177,3 +177,66 @@ describe('Customer — modificacion', () => {
     expect(restored.code).toBe(original.code);
   });
 });
+
+describe('Customer — el contacto se edita campo a campo', () => {
+  const conContacto = () =>
+    unwrap(
+      make({
+        email: 'viejo@x.com',
+        phone: '0212-5551234',
+        address: { line1: 'Av. Principal 12', city: 'Valencia', state: 'Carabobo' },
+      }),
+    );
+
+  it('la direccion SE PUEDE vaciar', () => {
+    const customer = conContacto();
+    expect(customer.updateContact({ address: null }).ok).toBe(true);
+    expect(customer.address).toBeNull();
+  });
+
+  it('omitir un campo lo deja como estaba, en vez de borrarlo', () => {
+    const customer = conContacto();
+
+    expect(customer.updateContact({ phone: '0414-9999999' }).ok).toBe(true);
+
+    expect(customer.phone).toBe('0414-9999999');
+    expect(customer.email).toBe('viejo@x.com');
+    expect(customer.address?.city).toBe('Valencia');
+  });
+
+  it('pasar null borra, y es distinto de omitir', () => {
+    const customer = conContacto();
+    expect(customer.updateContact({ email: null }).ok).toBe(true);
+    expect(customer.email).toBeNull();
+    expect(customer.phone).toBe('0212-5551234');
+  });
+
+  it('un email invalido no deja a medias el resto de los campos', () => {
+    const customer = conContacto();
+    expect(customer.updateContact({ email: 'roto', phone: '0414-0000000' }).ok).toBe(false);
+    expect(customer.phone).toBe('0212-5551234');
+  });
+});
+
+describe('Customer — identificador fiscal', () => {
+  it('se fija, se recorta y se puede quitar', () => {
+    const customer = unwrap(make());
+    expect(customer.setTaxId('  J-12345678-9  ').ok).toBe(true);
+    expect(customer.taxId).toBe('J-12345678-9');
+
+    expect(customer.setTaxId(null).ok).toBe(true);
+    expect(customer.taxId).toBeNull();
+  });
+
+  it('rechaza el que no cabe, y el rechazo no cambia nada', () => {
+    const customer = unwrap(make({ taxId: 'J-1' }));
+    expect(customer.setTaxId('J'.repeat(25)).ok).toBe(false);
+    expect(customer.taxId).toBe('J-1');
+  });
+
+  it('crear con un identificador que no cabe tambien se rechaza', () => {
+    // El limite estaba solo en el contrato Zod: un caso de uso invocado desde una
+    // importacion o una semilla lo saltaba entero.
+    expect(make({ taxId: 'J'.repeat(25) }).ok).toBe(false);
+  });
+});

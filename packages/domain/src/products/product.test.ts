@@ -258,3 +258,70 @@ function unwrap2(r: { ok: boolean }): undefined {
   if (!r.ok) throw new Error('se esperaba ok');
   return undefined;
 }
+
+describe('Product — editar la ficha no mueve el inventario', () => {
+  /**
+   * La garantia mecanica, y esta escrita de la unica forma que sirve: ejecutando
+   * TODOS los metodos de edicion y comprobando despues las dos cosas a la vez.
+   *
+   * Importa por como persiste el repositorio: `saveMany` escribe `on_hand` desde el
+   * agregado en el mismo UPSERT con el que guarda la ficha. Un descuido que llamara a
+   * un metodo de stock desde uno de edicion cambiaria el saldo Y dejaria el asiento
+   * que lo explica — o peor, lo cambiaria sin dejarlo. El libro mayor dejaria de
+   * cuadrar sin que nadie hubiera declarado una entrada ni una salida, y eso no lo ve
+   * nadie hasta que alguien cuenta el estante.
+   *
+   * Si manana se anade otro metodo de edicion, va en esta lista.
+   */
+  it('ningun metodo de edicion deja movimientos ni cambia el saldo', () => {
+    const p = unwrap(make({ initialStock: qty('100'), minStock: qty('5') }));
+    p.pullStockMovements();
+
+    const saldoAntes = p.onHand.toCompactString();
+
+    expect(p.rename('Harina premium 1kg').ok).toBe(true);
+    expect(p.changePrice(usd('3.10')).ok).toBe(true);
+    expect(p.changeCost(usd('1.80')).ok).toBe(true);
+    expect(p.changeCost(null).ok).toBe(true);
+    expect(p.setMinimumStock(qty('20')).ok).toBe(true);
+    expect(p.setMinimumStock(null).ok).toBe(true);
+    expect(
+      p.updateCatalogDetails({ description: 'Saco de 1 kg', unit: 'kg', taxable: false }).ok,
+    ).toBe(true);
+
+    expect(p.pullStockMovements()).toHaveLength(0);
+    expect(p.onHand.toCompactString()).toBe(saldoAntes);
+  });
+
+  it('el coste no admite negativos y el fallido no deja rastro', () => {
+    const p = unwrap(make());
+    expect(p.changeCost(usd('2.00')).ok).toBe(true);
+    expect(p.changeCost(usd('-1')).ok).toBe(false);
+    expect(p.snapshot().cost?.toString()).toBe('2.00');
+  });
+
+  it('la descripcion se puede vaciar; omitirla la conserva', () => {
+    const p = unwrap(make({ description: 'Bolsa de papel' }));
+
+    p.updateCatalogDetails({ unit: 'kg' });
+    expect(p.snapshot().description).toBe('Bolsa de papel');
+
+    p.updateCatalogDetails({ description: null });
+    expect(p.snapshot().description).toBeNull();
+  });
+
+  it('una unidad en blanco conserva la que tenia, en vez de dejar la cantidad sin sentido', () => {
+    const p = unwrap(make({ unit: 'kg' }));
+    p.updateCatalogDetails({ unit: '   ' });
+    expect(p.unit).toBe('kg');
+  });
+
+  it('subir el minimo por encima del saldo marca bajo minimo, que es para lo que sirve', () => {
+    const p = unwrap(make({ initialStock: qty('10') }));
+    expect(p.isBelowMinimum).toBe(false);
+
+    expect(p.setMinimumStock(qty('25')).ok).toBe(true);
+    expect(p.isBelowMinimum).toBe(true);
+    expect(p.onHand.toCompactString()).toBe('10');
+  });
+});

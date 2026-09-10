@@ -45,6 +45,14 @@ const NAME_MAX = 120;
 const CODE_MAX = 24;
 
 /**
+ * Mismo limite que declara el contrato Zod, repetido a proposito.
+ *
+ * El dominio no puede dar por hecho que alguien valido antes: un caso de uso invocado
+ * desde otro sitio —una importacion, una semilla, otro modulo— no pasa por el borde HTTP.
+ */
+const TAX_ID_MAX = 24;
+
+/**
  * Validacion de email deliberadamente permisiva.
  *
  * Las expresiones regulares "estrictas" de email rechazan direcciones perfectamente
@@ -82,6 +90,11 @@ export class Customer extends AggregateRoot<CustomerId> {
     if (code.length === 0) return err({ kind: 'Required', field: 'code' });
     if (code.length > CODE_MAX) return err({ kind: 'TooLong', field: 'code', max: CODE_MAX });
 
+    const taxId = input.taxId?.trim() || null;
+    if (taxId !== null && taxId.length > TAX_ID_MAX) {
+      return err({ kind: 'TooLong', field: 'taxId', max: TAX_ID_MAX });
+    }
+
     const email = input.email?.trim().toLowerCase() || null;
     if (email !== null && !EMAIL_SHAPE.test(email)) {
       return err({ kind: 'InvalidFormat', field: 'email', expected: 'usuario@dominio.com' });
@@ -95,7 +108,7 @@ export class Customer extends AggregateRoot<CustomerId> {
       tenantId: input.tenantId,
       code,
       name,
-      taxId: input.taxId?.trim() || null,
+      taxId,
       email,
       phone: input.phone?.trim() || null,
       address: input.address ?? null,
@@ -154,21 +167,50 @@ export class Customer extends AggregateRoot<CustomerId> {
     return ok(undefined);
   }
 
+  /**
+   * Cambia los datos de contacto.
+   *
+   * REGLA: el campo que viene se aplica; el que no viene se queda como estaba. Pasar
+   * `null` BORRA, y omitir no toca nada. La distincion la hace `in`, y no `??`, porque
+   * `??` no puede separar "no me lo has dado" de "quiero vaciarlo".
+   *
+   * Esto no era asi y las tres claves se comportaban de dos maneras distintas: `email`
+   * y `phone` se borraban al omitirlos —lo que convierte cualquier actualizacion parcial
+   * en una perdida de datos silenciosa— y `address` hacia `input.address ?? this.props.address`,
+   * asi que una direccion NO SE PODIA VACIAR NUNCA: quien se mudaba y dejaba el campo en
+   * blanco seguia teniendo impresa la direccion vieja en la siguiente nota de entrega.
+   */
   updateContact(input: {
     email?: string | null;
     phone?: string | null;
     address?: CustomerAddress | null;
   }): Result<void, CustomerError> {
-    const email = input.email?.trim().toLowerCase() || null;
+    const email = 'email' in input ? input.email?.trim().toLowerCase() || null : this.props.email;
     if (email !== null && !EMAIL_SHAPE.test(email)) {
       return err({ kind: 'InvalidFormat', field: 'email', expected: 'usuario@dominio.com' });
     }
     this.props = {
       ...this.props,
       email,
-      phone: input.phone?.trim() || null,
-      address: input.address ?? this.props.address,
+      phone: 'phone' in input ? input.phone?.trim() || null : this.props.phone,
+      address: 'address' in input ? input.address : this.props.address,
     };
+    return ok(undefined);
+  }
+
+  /**
+   * Cambia el identificador fiscal, o lo quita.
+   *
+   * El limite de 24 es el mismo que declara el contrato Zod, y esta repetido a proposito:
+   * el dominio no puede depender de que alguien haya validado antes. Sin el, la unica
+   * defensa vive en el borde HTTP y un caso de uso invocado desde otro sitio la salta.
+   */
+  setTaxId(taxId: string | null): Result<void, CustomerError> {
+    const trimmed = taxId?.trim() || null;
+    if (trimmed !== null && trimmed.length > TAX_ID_MAX) {
+      return err({ kind: 'TooLong', field: 'taxId', max: TAX_ID_MAX });
+    }
+    this.props = { ...this.props, taxId: trimmed };
     return ok(undefined);
   }
 

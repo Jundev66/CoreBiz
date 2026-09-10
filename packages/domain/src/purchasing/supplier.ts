@@ -33,6 +33,8 @@ export interface SupplierProps {
 const NAME_MIN = 2;
 const NAME_MAX = 120;
 const CODE_MAX = 24;
+/** El mismo limite que declara el contrato Zod y que aplica `Customer`. */
+const TAX_ID_MAX = 24;
 
 /** La misma forma permisiva que en `Customer`: la unica prueba real es enviar algo. */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -71,11 +73,16 @@ export class Supplier extends AggregateRoot<SupplierId> {
       return err({ kind: 'InvalidFormat', field: 'email', expected: 'usuario@dominio.com' });
     }
 
+    const taxId = input.taxId?.trim() || null;
+    if (taxId !== null && taxId.length > TAX_ID_MAX) {
+      return err({ kind: 'TooLong', field: 'taxId', max: TAX_ID_MAX });
+    }
+
     const supplier = new Supplier(input.id, {
       tenantId: input.tenantId,
       code,
       name,
-      taxId: input.taxId?.trim() || null,
+      taxId,
       email,
       phone: input.phone?.trim() || null,
       contactName: input.contactName?.trim() || null,
@@ -127,6 +134,56 @@ export class Supplier extends AggregateRoot<SupplierId> {
   }
   get snapshot(): SupplierProps {
     return this.props;
+  }
+
+  rename(name: string): Result<void, SupplierError> {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return err({ kind: 'Required', field: 'name' });
+    if (trimmed.length < NAME_MIN) return err({ kind: 'TooShort', field: 'name', min: NAME_MIN });
+    if (trimmed.length > NAME_MAX) return err({ kind: 'TooLong', field: 'name', max: NAME_MAX });
+    this.props = { ...this.props, name: trimmed };
+    return ok(undefined);
+  }
+
+  /**
+   * Cambia los datos de contacto.
+   *
+   * Misma regla y misma forma que `Customer.updateContact`, y la simetria es deliberada:
+   * son dos fichas de contacto y lo unico que las diferencia es de que lado del mostrador
+   * esta cada una. Que se comporten distinto obligaria a recordar cual es cual.
+   *
+   * La clave que viene se aplica, la que no viene se queda. `in` y no `??`, porque `??`
+   * no puede separar "no me lo has dado" de "quiero vaciarlo".
+   *
+   * El `code` no esta y no es un olvido: lo asigna el sistema al dar de alta.
+   */
+  updateContact(input: {
+    taxId?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactName?: string | null;
+    notes?: string | null;
+  }): Result<void, SupplierError> {
+    const email = 'email' in input ? input.email?.trim().toLowerCase() || null : this.props.email;
+    if (email !== null && !EMAIL_SHAPE.test(email)) {
+      return err({ kind: 'InvalidFormat', field: 'email', expected: 'usuario@dominio.com' });
+    }
+
+    const taxId = 'taxId' in input ? input.taxId?.trim() || null : this.props.taxId;
+    if (taxId !== null && taxId.length > TAX_ID_MAX) {
+      return err({ kind: 'TooLong', field: 'taxId', max: TAX_ID_MAX });
+    }
+
+    this.props = {
+      ...this.props,
+      taxId,
+      email,
+      phone: 'phone' in input ? input.phone?.trim() || null : this.props.phone,
+      contactName:
+        'contactName' in input ? input.contactName?.trim() || null : this.props.contactName,
+      notes: 'notes' in input ? input.notes?.trim() || null : this.props.notes,
+    };
+    return ok(undefined);
   }
 
   /**
