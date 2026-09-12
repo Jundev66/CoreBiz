@@ -23,7 +23,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run --project domain --project application --project api",
     "test:integration": "vitest run --project integration --project api-integration",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --project domain --project application --project api",
     "test:e2e": "pnpm --filter @corebiz/e2e test",
     "test:bdd": "pnpm --filter @corebiz/e2e test:bdd",
     "test:bdd:pg": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e test:bdd",
