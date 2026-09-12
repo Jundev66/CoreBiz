@@ -1,0 +1,25 @@
+# Keeps dependencies and CI actions patched now that the repository is public.
+#
+# Weekly and grouped, so a small project gets one pull request per ecosystem instead of a
+# stream of them. Security fixes are separate: GitHub opens those as soon as an advisory
+# appears, regardless of this schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Actions are pinned by commit SHA in the workflows; Dependabot bumps the SHA and keeps
+  # the version comment next to it up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
