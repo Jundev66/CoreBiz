@@ -10,6 +10,7 @@ import {
   makeCreateSupplier,
   makeUpdateSupplier,
   makeInviteUser,
+  makeRecordAuditExport,
   makeIssueDeliveryNote,
   makeMarkDelivered,
   makeReceiveGoods,
@@ -71,6 +72,7 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     removeMember: makeRemoveMember(shared),
     revokeInvitation: makeRevokeInvitation(shared),
     updateTenantSettings: makeUpdateTenantSettings(shared),
+    recordAuditExport: makeRecordAuditExport(shared),
 
     // Compras. El gate del modulo vive en el caso de uso, no en la ruta ni en el guard:
     // una Server Action se puede invocar directamente.

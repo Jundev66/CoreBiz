@@ -47,8 +47,12 @@ export function Toast({ message }: { message: string }) {
      * parametro ya cumplio su trabajo.
      */
     const url = new URL(window.location.href);
-    if (url.searchParams.has('creado')) {
-      url.searchParams.delete('creado');
+    // Los dos parametros que traen un aviso: `creado` tras un alta y `guardado` tras
+    // una correccion. Se limpian los dos en la misma pasada — si solo se limpiara uno,
+    // recargar la ficha que acaba de corregirse repetiria el aviso indefinidamente.
+    const avisos = ['creado', 'guardado'].filter((clave) => url.searchParams.has(clave));
+    if (avisos.length > 0) {
+      for (const clave of avisos) url.searchParams.delete(clave);
       const query = url.searchParams.toString();
       window.history.replaceState(
         null,

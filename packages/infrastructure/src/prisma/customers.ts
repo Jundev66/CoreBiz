@@ -3,6 +3,7 @@ import { Prisma } from '@corebiz/prisma-client';
 import type { CustomerRepository, ListCustomersFilter, Page } from '@corebiz/application';
 import { fromCustomer, toCustomer } from './mappers';
 import { decodeCursor, encodeCursor, escapeLikeWildcards, pageLimit } from './pagination';
+import { isRowKey } from './record-id';
 import type { Tx } from './session';
 
 /**
@@ -20,6 +21,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
   ) {}
 
   async findById(id: CustomerId): Promise<Customer | null> {
+    if (!isRowKey(id)) return null;
+
     const row = await this.tx.customers.findFirst({
       where: { tenant_id: this.tenantId, id },
     });

@@ -11,7 +11,7 @@ import { PrismaProductRepository } from './products';
 import { PrismaDeliveryNoteRepository } from './delivery-notes';
 import { PrismaDocumentSequences } from './sequences';
 import { PrismaUsageCounter } from './usage';
-import { PrismaAuditLogger } from './audit';
+import { PrismaAuditLogger, type AuditTrace } from './audit';
 import { PrismaPaymentQueries } from './payments';
 import {
   PrismaInvitationRepository,
@@ -26,6 +26,12 @@ export interface UnitOfWorkDeps {
   readonly ctx: TenantContext;
   readonly ids: IdGenerator;
   readonly clock: Clock;
+  /**
+   * Who is acting, for the audit log. Optional on purpose: a test or a script writes audit
+   * rows without an HTTP request to take it from, and a row with actor_id and no email is
+   * still true.
+   */
+  readonly trace?: AuditTrace;
 }
 
 /**
@@ -51,7 +57,7 @@ export class PrismaUnitOfWork implements UnitOfWork {
   constructor(private readonly deps: UnitOfWorkDeps) {}
 
   run<T>(fn: (repos: Repositories) => Promise<T>): Promise<T> {
-    const { prisma, ctx, ids, clock } = this.deps;
+    const { prisma, ctx, ids, clock, trace } = this.deps;
 
     return withTenant(prisma, ctx, (tx) =>
       fn({
@@ -61,7 +67,7 @@ export class PrismaUnitOfWork implements UnitOfWork {
         sequences: new PrismaDocumentSequences(tx, ctx.tenantId),
         payments: new PrismaPaymentQueries(),
         usage: new PrismaUsageCounter(tx, ctx.tenantId, clock),
-        audit: new PrismaAuditLogger(tx, ctx, ids, clock),
+        audit: new PrismaAuditLogger(tx, ctx, ids, clock, trace),
         invitations: new PrismaInvitationRepository(tx, ctx.tenantId),
         members: new PrismaMembershipRepository(tx, ctx.tenantId),
         settings: new PrismaTenantSettingsRepository(tx, ctx.tenantId),

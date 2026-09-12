@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Waking } from '@/ui/waking';
+import { safeInternalPath } from '@/auth/safe-redirect';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -33,11 +34,12 @@ export default async function WakingPage({
   const { next } = await searchParams;
 
   /*
-   * Solo se admite una ruta INTERNA. Sin esta comprobacion, `?next=https://otro.sitio`
-   * convertiria esta pantalla en un redirector abierto — el clasico que se usa para
-   * que un enlace de aspecto legitimo acabe en otro sitio.
+   * Only an INTERNAL path is accepted, and looking at the string is not enough: there was a
+   * `startsWith('/') && !startsWith('//')` here that `/\other-site` got past, because the
+   * browser treats a backslash as a slash and resolves it to another origin. The details
+   * are in `safeInternalPath`.
    */
-  const target = next !== undefined && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  const target = safeInternalPath(next);
 
   return (
     <div className="flex min-h-screen flex-col">

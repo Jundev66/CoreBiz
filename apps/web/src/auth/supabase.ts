@@ -65,7 +65,20 @@ export async function supabaseServer(): Promise<SupabaseClient> {
         setAll: (list) => {
           try {
             for (const { name, value, options } of list) {
-              store.set(name, value, { ...COOKIE_DEFAULTS, ...options });
+              /*
+               * OUR attributes go LAST, and the order is the control.
+               *
+               * It was the other way round — `{ ...COOKIE_DEFAULTS, ...options }` — which
+               * let the library override `httpOnly`, `secure` and `sameSite` with whatever
+               * its options carried. The most sensitive cookie in the system was at the
+               * mercy of a future `@supabase/ssr` release, with nothing to signal it.
+               * `maxAge` and `expires` do come from the library, which is what it should
+               * decide: how long it lasts, not who can read it.
+               *
+               * The middleware already used this order. Both places that write session
+               * cookies now agree.
+               */
+              store.set(name, value, { ...options, ...COOKIE_DEFAULTS });
             }
           } catch {
             // Server Component: las escribe el middleware en la respuesta.

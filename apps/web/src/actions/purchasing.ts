@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { parseSupplierForm } from '@corebiz/contracts';
+import { parseSupplierForm, parseSupplierUpdateForm } from '@corebiz/contracts';
 import { apiForRequest } from '@/api/session';
 import { toFormFailure } from '@/api/failure';
+import { formRejection } from './field-errors';
 
 /**
  * Server Actions de compras.
@@ -19,6 +20,15 @@ export interface PurchasingState {
   readonly status: 'idle' | 'success' | 'error';
   readonly errorKind?: string;
   readonly errorParams?: Readonly<Record<string, string | number>>;
+  /**
+   * Per-field errors, rendered next to their input.
+   *
+   * They were not declared while `formRejection` already returned them, so they travelled
+   * and nothing rendered them: a supplier value that was too long only said "Check the
+   * data" without pointing at which. A spread does not trigger excess-property checks, so
+   * nothing flagged the disconnect.
+   */
+  readonly fieldErrors?: Readonly<Record<string, string>>;
   readonly createdNumber?: string;
 }
 
@@ -41,7 +51,9 @@ export async function createSupplierAction(
   formData: FormData,
 ): Promise<PurchasingState> {
   const parsed = parseSupplierForm(formData);
-  if (!parsed.success) return { status: 'error', errorKind: 'InvalidFormat' };
+  if (!parsed.success) {
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection(parsed.error)) };
+  }
 
   const { createSupplier } = await apiForRequest();
   const result = await createSupplier({
@@ -62,6 +74,40 @@ export async function createSupplierAction(
   // El formulario de proveedores vive AL LADO de su listado, asi que "volver" es
   // quedarse: lo que cambia es que el aviso sale flotando y la lista ya trae el nuevo.
   redirect(`/purchases/suppliers?creado=${encodeURIComponent(result.value.code)}`);
+}
+
+/**
+ * Corregir la ficha de un proveedor.
+ *
+ * Vuelve al listado y no a una ficha, al reves que clientes y productos, por un motivo
+ * concreto: los proveedores NO tienen pantalla de detalle propia. Se administran desde
+ * su listado, asi que ahi es donde se comprueba que el cambio quedo bien.
+ */
+export async function updateSupplierAction(
+  _prev: PurchasingState,
+  formData: FormData,
+): Promise<PurchasingState> {
+  const parsed = parseSupplierUpdateForm(formData);
+  if (!parsed.success) {
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection(parsed.error)) };
+  }
+
+  const { updateSupplier } = await apiForRequest();
+  const result = await updateSupplier({
+    supplierId: parsed.data.supplierId,
+    name: parsed.data.name,
+    // Cadena vacia y no null: al corregir, un campo en blanco significa vaciarlo.
+    taxId: parsed.data.taxId ?? '',
+    email: parsed.data.email ?? '',
+    phone: parsed.data.phone ?? '',
+    contactName: parsed.data.contactName ?? '',
+    notes: parsed.data.notes ?? '',
+  });
+
+  if (!result.ok) return failure(result.error);
+
+  revalidatePath('/purchases/suppliers');
+  redirect(`/purchases/suppliers?guardado=${encodeURIComponent(result.value.code)}`);
 }
 
 /**
@@ -101,7 +147,7 @@ export async function receiveGoodsAction(
 ): Promise<PurchasingState> {
   const supplierId = formData.get('supplierId');
   if (typeof supplierId !== 'string' || supplierId === '') {
-    return { status: 'error', errorKind: 'InvalidFormat' };
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection()) };
   }
 
   const reference = formData.get('supplierReference');

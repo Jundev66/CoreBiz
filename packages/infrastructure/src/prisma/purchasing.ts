@@ -16,6 +16,7 @@ import type { Prisma } from '@corebiz/prisma-client';
 import type { Tx } from './session';
 import { estadoValido } from './mappers';
 import { decodeCursor, encodeCursor, escapeLikeWildcards, pageLimit } from './pagination';
+import { isRowKey } from './record-id';
 
 /**
  * Adaptadores de compras.
@@ -51,6 +52,8 @@ export class PrismaSupplierRepository implements SupplierRepository {
   ) {}
 
   async findById(id: SupplierId): Promise<Supplier | null> {
+    if (!isRowKey(id)) return null;
+
     const row = await this.tx.suppliers.findFirst({
       where: { tenant_id: this.tenantId, id },
     });
@@ -203,6 +206,8 @@ export class PrismaGoodsReceiptRepository implements GoodsReceiptRepository {
   }
 
   async findById(id: string): Promise<GoodsReceipt | null> {
+    if (!isRowKey(id)) return null;
+
     return this.loadOne(
       await this.tx.goods_receipts.findFirst({ where: { tenant_id: this.tenantId, id } }),
     );

@@ -13,12 +13,27 @@ import { apiBaseUrl } from './client';
  * cae a contar en memoria, y la purga se rinde y lo dice.
  */
 
-export class InternalCallFailed extends Error {}
+/**
+ * Why an internal call failed, because callers must treat the two very differently:
+ * `misconfigured` (secret missing, or rejected by the API) never fixes itself, while
+ * `unreachable` (timeout, Render asleep, a 5xx) usually does within a minute.
+ */
+export type InternalFailureReason = 'misconfigured' | 'unreachable';
+
+export class InternalCallFailed extends Error {
+  constructor(
+    message: string,
+    readonly reason: InternalFailureReason,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
+}
 
 export async function callInternal<T>(path: string, body?: unknown): Promise<T> {
   const secret = process.env.INTERNAL_API_SECRET;
   if (secret === undefined || secret === '') {
-    throw new InternalCallFailed('Falta INTERNAL_API_SECRET.');
+    throw new InternalCallFailed('Falta INTERNAL_API_SECRET.', 'misconfigured');
   }
 
   const res = await fetch(`${apiBaseUrl()}/internal${path}`, {
@@ -30,9 +45,16 @@ export async function callInternal<T>(path: string, body?: unknown): Promise<T> 
     // esta intentando entrar no puede esperar a que despierte un servicio dormido.
     signal: AbortSignal.timeout(5_000),
   }).catch((cause: unknown) => {
-    throw new InternalCallFailed(`La API no respondio a /internal${path}`, { cause });
+    throw new InternalCallFailed(`La API no respondio a /internal${path}`, 'unreachable', {
+      cause,
+    });
   });
 
-  if (!res.ok) throw new InternalCallFailed(`/internal${path} respondio ${res.status}`);
+  if (!res.ok) {
+    // The guard answers 404 when the secret is unset or wrong on the API side: that is a
+    // configuration mismatch between the two deployments, not a sleeping service.
+    const reason = [401, 403, 404].includes(res.status) ? 'misconfigured' : 'unreachable';
+    throw new InternalCallFailed(`/internal${path} respondio ${res.status}`, reason);
+  }
   return (await res.json()) as T;
 }

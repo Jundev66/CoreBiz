@@ -29,7 +29,7 @@
     "test:bdd:pg": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e test:bdd",
     "test:e2e:pg": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e exec playwright test",
     "approve": "supabase db reset && cross-env E2E_DRIVER=postgres pnpm --filter @corebiz/e2e exec playwright test specs/acceptance.spec.ts --reporter=list",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm arch && pnpm check:non-fiscal && pnpm check:prisma && pnpm check:i18n && pnpm test:unit",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm arch && pnpm check:non-fiscal && pnpm check:prisma && pnpm check:i18n && pnpm check:playbooks && pnpm test:unit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
@@ -40,7 +40,8 @@
     "db:pull": "pnpm --filter @corebiz/db db:pull",
     "db:generate": "pnpm --filter @corebiz/db db:generate",
     "check:prisma": "bash scripts/check-prisma-owns-nothing.sh",
-    "check:i18n": "bash scripts/check-i18n-parity.sh"
+    "check:i18n": "bash scripts/check-i18n-parity.sh",
+    "check:playbooks": "bash scripts/check-playbooks.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -57,5 +58,12 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.69.0",
     "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer": "^2.3.0",
+      "mysql2": "^3.23.1",
+      "deepmerge-ts": "^8.0.0"
+    }
   }
 }

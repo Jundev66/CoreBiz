@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
+import { noticeCode } from '@/ui/notice-code';
+import { NoAccess } from '@/ui/no-access';
+import { can } from '@corebiz/domain';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
 const STATUS_STYLES: Record<string, string> = {
@@ -17,8 +20,21 @@ export default async function DeliveryNotesPage({
 }) {
   const t = await getTranslations();
   const { creado } = await searchParams;
+  const createdCode = noticeCode(creado);
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
+
+  /*
+   * The role decides whether this is read, and it is decided BEFORE asking: a 403 from the
+   * API surfaces as an exception and took the whole screen down. See `@/ui/no-access`.
+   */
+  if (!can(ctx.actor, 'delivery_note:read')) {
+    return (
+      <Shell ctx={ctx} session={session} title={t('deliveryNotes.title')}>
+        <NoAccess />
+      </Shell>
+    );
+  }
 
   const page = await queries.deliveryNotes.list({ limit: 50 });
 
@@ -28,7 +44,9 @@ export default async function DeliveryNotesPage({
       session={session}
       title={t('deliveryNotes.title')}
       subtitle={t('deliveryNotes.subtitle')}
-      {...(creado !== undefined ? { toast: t('deliveryNotes.created', { number: creado }) } : {})}
+      {...(createdCode !== null
+        ? { toast: t('deliveryNotes.created', { number: createdCode }) }
+        : {})}
       action={
         <div className="flex items-end gap-6">
           <PrimaryLink href="/delivery-notes/new">{t('deliveryNotes.new')}</PrimaryLink>

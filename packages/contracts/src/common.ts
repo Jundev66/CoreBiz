@@ -23,11 +23,19 @@ export const uuidSchema = z.string().uuid();
  */
 export const recordIdSchema = z.string().trim().min(1, 'Required').max(64, 'TooLong');
 
-/** Importe tal y como lo escribe un usuario: acepta coma o punto decimal. */
+/**
+ * An amount as a user types it: accepts a comma or a dot as decimal separator.
+ *
+ * The message is `InvalidAmount` rather than a sentence because the message IS the
+ * translation key: the screen renders `t('errors.' + message)`. When it said
+ * `Importe invalido`, typing `1.500,00` into a credit limit — with a thousands separator,
+ * the natural way in Venezuela — left `errors.Importe invalido` raw under the field. See
+ * `apps/web/src/actions/field-errors.ts`.
+ */
 export const decimalStringSchema = z
   .string()
   .trim()
-  .regex(/^-?\d+([.,]\d+)?$/, 'Importe invalido');
+  .regex(/^-?\d+([.,]\d+)?$/, 'InvalidAmount');
 
 export const currencySchema = z.enum(['USD', 'VES']);
 

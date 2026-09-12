@@ -23,6 +23,12 @@ async function bootstrap(): Promise<void> {
   const env = loadEnv();
   const app = await NestFactory.create(AppModule, { bodyParser: true });
 
+  // Express announces itself in `X-Powered-By` by default. It stops nothing, but a public
+  // API has no reason to hand out its framework for free.
+  (app.getHttpAdapter().getInstance() as { disable(setting: string): void }).disable(
+    'x-powered-by',
+  );
+
   // Todo error sale con el mismo sobre `{ errorKind, errorParams }`, y lo inesperado
   // no cuenta que ha pasado: el mensaje de una excepcion de Postgres lleva dentro
   // nombres de tabla y a veces el valor que fallo.
@@ -38,11 +44,14 @@ async function bootstrap(): Promise<void> {
    */
 
   /*
-   * La documentacion no se publica en produccion. Un OpenAPI abierto de un ERP es
-   * un mapa gratuito de toda la superficie de escritura; en desarrollo es la mejor
-   * forma de ver la API entera de un vistazo.
+   * The docs are only published when asked for by name. An open OpenAPI document for an
+   * ERP is a free map of its entire write surface; in development it is the best way to
+   * see the whole API at a glance.
+   *
+   * The condition used to be `NODE_ENV !== 'production'`, which fails on the dangerous
+   * side: that value defaults to `development`. See `DOCS_ENABLED` in `config/env.ts`.
    */
-  if (env.NODE_ENV !== 'production') {
+  if (env.DOCS_ENABLED) {
     const document = SwaggerModule.createDocument(
       app,
       new DocumentBuilder()

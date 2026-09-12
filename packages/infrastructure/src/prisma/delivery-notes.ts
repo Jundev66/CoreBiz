@@ -3,6 +3,7 @@ import type { DeliveryNoteRepository, Page } from '@corebiz/application';
 import type { Prisma } from '@corebiz/prisma-client';
 import { fromDeliveryNote, fromDeliveryNoteLines, toDeliveryNote } from './mappers';
 import { pageLimit } from './pagination';
+import { isRowKey } from './record-id';
 import type { Tx } from './session';
 
 type LineRow = Prisma.delivery_note_linesGetPayload<object>;
@@ -14,6 +15,8 @@ export class PrismaDeliveryNoteRepository implements DeliveryNoteRepository {
   ) {}
 
   async findById(id: DeliveryNoteId): Promise<DeliveryNote | null> {
+    if (!isRowKey(id)) return null;
+
     const row = await this.tx.delivery_notes.findFirst({
       where: { tenant_id: this.tenantId, id },
     });

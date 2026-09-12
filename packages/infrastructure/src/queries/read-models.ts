@@ -23,6 +23,7 @@ import type {
 } from '@corebiz/application';
 import type { PrismaClient } from '@corebiz/prisma-client';
 import { decodeCursor, encodeCursor, escapeLikeWildcards, pageLimit } from '../prisma/pagination';
+import { isRowKey } from '../prisma/record-id';
 import { prismaAdminQueries } from './administration';
 import { prismaPurchasingQueries } from './purchasing';
 import { readOnly } from '../prisma/session';
@@ -154,6 +155,10 @@ class PrismaCustomerQueries implements CustomerQueries {
    * sobre la empresa de otro.
    */
   byId(id: string): Promise<CustomerDetail | null> {
+    // Text that cannot be a key does not exist, and asking would cost a 500: see
+    // `prisma/record-id.ts`.
+    if (!isRowKey(id)) return Promise.resolve(null);
+
     return readOnly(this.prisma, this.ctx, async (tx) => {
       const row = await tx.customers.findFirst({
         where: { tenant_id: this.ctx.tenantId, id },
@@ -271,6 +276,8 @@ class PrismaProductQueries implements ProductQueries {
   }
 
   byId(id: string): Promise<ProductDetail | null> {
+    if (!isRowKey(id)) return Promise.resolve(null);
+
     return readOnly(this.prisma, this.ctx, async (tx) => {
       const p = await tx.products.findFirst({ where: { tenant_id: this.ctx.tenantId, id } });
       if (p === null) return null;
@@ -304,6 +311,8 @@ class PrismaProductQueries implements ProductQueries {
    * pantalla existe precisamente para poder detectar eso.
    */
   movements(productId: string, limit = 50): Promise<readonly StockMovementItem[]> {
+    if (!isRowKey(productId)) return Promise.resolve([]);
+
     return readOnly(this.prisma, this.ctx, async (tx) => {
       const rows = await tx.stock_movements.findMany({
         where: { tenant_id: this.ctx.tenantId, product_id: productId },
@@ -401,6 +410,8 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
   }
 
   findById(id: string): Promise<DeliveryNoteView | null> {
+    if (!isRowKey(id)) return Promise.resolve(null);
+
     return readOnly(this.prisma, this.ctx, async (tx) => {
       const note = await tx.delivery_notes.findFirst({
         where: { tenant_id: this.ctx.tenantId, id },

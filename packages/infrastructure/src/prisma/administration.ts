@@ -8,6 +8,7 @@ import type {
   TenantSettingsUpdate,
 } from '@corebiz/application';
 import type { Prisma } from '@corebiz/prisma-client';
+import { isRowKey } from './record-id';
 import type { Tx } from './session';
 
 /**
@@ -93,6 +94,9 @@ export class PrismaInvitationRepository implements InvitationRepository {
   }
 
   async revoke(id: string): Promise<boolean> {
+    // An impossible id has nothing to revoke: see `record-id.ts`.
+    if (!isRowKey(id)) return false;
+
     // `updateMany` y contar lo afectado, en lugar de comprobar antes con una lectura: una
     // sola sentencia dice si habia algo vivo que revocar, sin dejar hueco para que otra
     // transaccion lo revoque en medio.
@@ -146,6 +150,8 @@ export class PrismaMembershipRepository implements MembershipRepository {
   }
 
   async findByUserId(userId: UserId): Promise<MemberRecord | null> {
+    if (!isRowKey(userId)) return null;
+
     const row = await this.tx.memberships.findFirst({
       where: { tenant_id: this.tenantId, user_id: userId },
     });

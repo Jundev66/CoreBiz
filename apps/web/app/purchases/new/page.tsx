@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { GoodsReceiptForm } from '@/ui/goods-receipt-form';
+import { notFound } from 'next/navigation';
+import { can } from '@corebiz/domain';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -19,6 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NewGoodsReceiptPage() {
   const t = await getTranslations();
   const { ctx, session, queries } = await apiForRequest();
+
+  if (!can(ctx.actor, 'purchase:receive')) notFound();
 
   const [suppliers, products] = await Promise.all([
     queries.purchasing.supplierOptions(),

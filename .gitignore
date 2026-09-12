@@ -10,9 +10,12 @@ build/
 *.tsbuildinfo
 
 # entorno  — NUNCA commitear secretos
-.env
-.env.local
-.env.*.local
+#
+# The pattern is `.env*` with an explicit exception, not the usual list
+# (`.env`, `.env.local`, `.env.*.local`): that list misses `.env.production` and
+# `.env.staging`, precisely the ones that would hold real secrets. A list has to be
+# remembered and extended; a wildcard with an exception does not.
+.env*
 !.env.example
 
 # tests
@@ -20,8 +23,15 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
-.playwright-cache/
 e2e/.features-gen/
+
+# Playwright CLI sessions: snapshots of the app's accessibility tree, one per command.
+# They regenerate on their own and are not source.
+#
+# The previous rule said `.playwright-cache/`, which does not exist in this project and
+# therefore covered nothing. This is the real directory, created at the root or inside
+# `e2e/` depending on where it is invoked from.
+.playwright-cli/
 
 # supabase local
 supabase/.temp/

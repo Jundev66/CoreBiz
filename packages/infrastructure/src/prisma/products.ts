@@ -3,6 +3,7 @@ import type { IdGenerator, Page, ProductRepository } from '@corebiz/application'
 import { Prisma } from '@corebiz/prisma-client';
 import { fromProduct, toProduct, type StockMovementInsert } from './mappers';
 import { escapeLikeWildcards, pageLimit } from './pagination';
+import { isRowKey, onlyRowKeys } from './record-id';
 import type { Tx } from './session';
 
 export class PrismaProductRepository implements ProductRepository {
@@ -12,7 +13,49 @@ export class PrismaProductRepository implements ProductRepository {
     private readonly ids: IdGenerator,
   ) {}
 
+  /**
+   * Locks these products' rows until the end of the transaction.
+   *
+   * THIS IS WHAT PREVENTS SELLING THE SAME UNIT TWICE, and it had to be added because it
+   * was missing: two simultaneous notes of four units against a stock of five were BOTH
+   * issued, and the stock ledger ended with two -4 movements, both with a resulting balance
+   * of 1. Eight units left the warehouse and the system said four.
+   *
+   * The reason is that the balance is not incremented in the database: it is computed in
+   * the aggregate and written as an absolute value (`on_hand = excluded.on_hand`, below).
+   * Under the default isolation — READ COMMITTED — both transactions read five, both
+   * compute one, and the second overwrites the first. The table's `on_hand >= 0` does not
+   * catch it, because one is greater than zero.
+   *
+   * A `select ... for update` before reading closes it: the second transaction waits, and
+   * once in it re-reads the committed row — one, not five — so the domain rejects it with
+   * insufficient stock, which is correct.
+   *
+   * `order by id` is not decorative: always locking in the same order is what stops two
+   * notes with the same products in a different order from waiting on each other.
+   *
+   * It lives in this repository and not in the read models on purpose: this is only
+   * entered to WRITE, inside `withTenant`. A list that just renders a table must not lock
+   * anything.
+   */
+  private async lockForUpdate(ids: readonly ProductId[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    await this.tx.$queryRaw`
+      select 1
+        from public.products
+       where tenant_id = ${this.tenantId}::uuid
+         and id in (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))})
+       order by id
+         for update
+    `;
+  }
+
   async findById(id: ProductId): Promise<Product | null> {
+    if (!isRowKey(id)) return null;
+
+    await this.lockForUpdate([id]);
+
     const row = await this.tx.products.findFirst({
       where: { tenant_id: this.tenantId, id },
     });
@@ -37,10 +80,17 @@ export class PrismaProductRepository implements ProductRepository {
    * el sistema.
    */
   async findManyByIds(ids: readonly ProductId[]): Promise<Product[]> {
-    if (ids.length === 0) return [];
+    // Ids that cannot be keys are dropped before touching the database: see
+    // `record-id.ts`. The use case already notices "asked for five, got four", so an
+    // impossible id ends as a missing-product error instead of a 500.
+    const keys = onlyRowKeys(ids);
+    if (keys.length === 0) return [];
+
+    // All at once and in order, before reading: see `lockForUpdate`.
+    await this.lockForUpdate(keys);
 
     const rows = await this.tx.products.findMany({
-      where: { tenant_id: this.tenantId, id: { in: [...ids] } },
+      where: { tenant_id: this.tenantId, id: { in: keys } },
     });
 
     return rows.map(toProduct);

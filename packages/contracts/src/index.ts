@@ -11,3 +11,4 @@ export * from './products';
 export * from './sales';
 export * from './purchasing';
 export * from './administration';
+export * from './support';

@@ -213,6 +213,14 @@ export class AdministrationController {
     const header = ['fecha', 'actor', 'accion', 'entidad', 'identificador', 'detalle'];
     const stamp = new Date().toISOString().slice(0, 10);
 
+    // The filters as applied, so the audit row says whether a slice or the whole history
+    // was taken.
+    const filters: Record<string, string> = {
+      ...(query.action !== undefined ? { action: query.action } : {}),
+      ...(query.from !== undefined ? { from: query.from.toISOString() } : {}),
+      ...(query.to !== undefined ? { to: query.to.toISOString() } : {}),
+    };
+
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',
@@ -221,6 +229,22 @@ export class AdministrationController {
     // Un export de auditoria no se cachea en ningun sitio: lleva quien hizo que y
     // cuando, y ademas cambia cada vez.
     res.setHeader('Cache-Control', 'no-store');
+
+    /*
+     * Taking the log away gets logged, and it is recorded BEFORE returning it: if the row
+     * were written afterwards, a disconnect halfway through the download would leave the
+     * data out and the trace nowhere.
+     *
+     * The result is discarded on purpose. The route decorator already required the
+     * permission, so a `Forbidden` here could only mean the two checks drifted apart — and
+     * even then there is no point refusing a CSV that is already built. What must not go
+     * unnoticed is an INFRASTRUCTURE failure: that propagates as an exception and becomes a
+     * 500 with its reference.
+     */
+    await this.useCases.recordAuditExport({
+      rowCount: rows.length,
+      ...(Object.keys(filters).length > 0 ? { filters: filters } : {}),
+    });
 
     // CRLF y no LF: es lo que espera Excel al abrir un CSV en Windows, que es donde
     // se va a abrir esto.

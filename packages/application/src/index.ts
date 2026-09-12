@@ -21,6 +21,7 @@ export * from './use-cases/products/adjust-stock';
 export * from './use-cases/products/set-product-status';
 export * from './use-cases/administration/invite-user';
 export * from './use-cases/administration/manage-team';
+export * from './use-cases/administration/record-audit-export';
 export * from './use-cases/administration/update-tenant-settings';
 export * from './use-cases/purchasing/create-supplier';
 export * from './use-cases/purchasing/update-supplier';

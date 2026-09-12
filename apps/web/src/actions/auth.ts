@@ -7,6 +7,8 @@ import { RATE_LIMITS } from '@corebiz/application/ports';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
 import { clientFingerprint, hitRateLimit } from '@/auth/request-identity';
 import { provisionTenantViaApi } from '@/api/onboarding';
+import { forgetFailure } from '@/api/last-error';
+import { clearRecovery, hasRecovery } from '@/auth/recovery';
 import { signupConfig } from '@/demo/sandbox';
 
 /**
@@ -323,9 +325,17 @@ export async function updatePasswordAction(
   const { data } = await supabase.auth.getUser();
   if (data.user === null) return { status: 'error', errorKind: 'ResetLinkExpired' };
 
+  // A session alone is not enough: it must be THIS user's session, fresh from the recovery
+  // email. Without this, any signed-in session — a stolen cookie, a shared computer left
+  // open — could set a new password without knowing the old one.
+  if (!(await hasRecovery(data.user.id))) {
+    return { status: 'error', errorKind: 'ResetLinkExpired' };
+  }
+
   const { error } = await supabase.auth.updateUser({ password: parsed.data });
   if (error !== null) return { status: 'error', errorKind: 'SignUpFailed' };
 
+  await clearRecovery();
   redirect('/');
 }
 
@@ -351,6 +361,11 @@ export async function signOutAction(): Promise<void> {
   const store = await cookies();
   store.delete(ACTIVE_TENANT_COOKIE);
 
+  // The last error leaves with the session. The cookie belongs to the BROWSER, not the
+  // person: on the shared counter computer, whoever signs in next would find the help panel
+  // explaining in detail what went wrong for the previous user.
+  await forgetFailure();
+
   redirect('/login');
 }
 
@@ -368,6 +383,10 @@ export async function switchTenantAction(formData: FormData): Promise<void> {
     secure: process.env.NODE_ENV === 'production',
     path: '/',
   });
+
+  // And the last error stays in the company where it happened: explained inside another
+  // one, it would talk about a customer or a note that does not exist there.
+  await forgetFailure();
 
   redirect('/');
 }

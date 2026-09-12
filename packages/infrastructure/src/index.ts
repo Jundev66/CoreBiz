@@ -12,7 +12,7 @@ export { PrismaProductRepository } from './prisma/products';
 export { PrismaDeliveryNoteRepository } from './prisma/delivery-notes';
 export { PrismaDocumentSequences } from './prisma/sequences';
 export { PrismaUsageCounter } from './prisma/usage';
-export { PrismaAuditLogger } from './prisma/audit';
+export { PrismaAuditLogger, type AuditTrace } from './prisma/audit';
 export { PrismaPaymentQueries } from './prisma/payments';
 export { prismaReadModels } from './queries/read-models';
 export {

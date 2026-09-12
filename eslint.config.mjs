@@ -216,6 +216,14 @@ export default tseslint.config(
     },
   },
 
+  // `pnpm check` guardians. Here the console is not leftover debugging: it is the
+  // program's OUTPUT. A script that verifies something and cannot say what it verified
+  // is useless, and using only `console.error` would send success messages to stderr.
+  {
+    files: ['scripts/**/*.mjs'],
+    rules: { 'no-console': 'off' },
+  },
+
   // Config de dependency-cruiser: CommonJS, y sus strings son patrones de expresion
   // regular donde `\.` es intencionado, no un escape sobrante.
   {

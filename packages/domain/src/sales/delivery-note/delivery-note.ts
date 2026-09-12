@@ -181,6 +181,24 @@ export class DeliveryNote extends AggregateRoot<DeliveryNoteId> {
       }
 
       const unitPrice = input_.unitPrice ?? input_.product.price;
+
+      /*
+       * The price cannot be negative, and this check was missing.
+       *
+       * `Money` allows negative amounts on purpose — it needs them to subtract — so a `-5`
+       * typed into a line reached this point intact. With the in-memory adapter the note
+       * was issued, deducted stock and ended with a NEGATIVE total; on Postgres a table
+       * constraint stopped it, i.e. an ordinary typo ended in a 500.
+       *
+       * The two adapters answering differently was the worst part, because the one the
+       * default suite uses is the one that does not fail.
+       *
+       * Zero is allowed: a free or sample line is legitimate.
+       */
+      if (unitPrice.isNegative) {
+        return err({ kind: 'OutOfRange', field: `lines[${lineNo}].unitPrice`, min: 0 });
+      }
+
       if (unitPrice.currency !== input.currency) {
         return err({ kind: 'InvalidFormat', field: 'currency', expected: input.currency });
       }

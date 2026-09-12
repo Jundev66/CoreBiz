@@ -182,4 +182,74 @@ describe('PrismaUnitOfWork', () => {
     expect(before).toBe('PRE-000001');
     expect(after).toBe('PRE-000002');
   });
+
+  describe('the audit row says WHO, not only what', () => {
+    /*
+     * The three columns existed since the first migration, are filtered on and exported,
+     * and NOTHING WROTE THEM: filtering by actor email could never match and the CSV
+     * "actor" column was always empty. This test keeps them from going blank again — the
+     * trace is optional in the port, so forgetting it breaks nothing.
+     *
+     * What each value is worth is written in `AuditTrace`: the email comes from the verified
+     * token and the web tier forwards the other two. This only checks they reach the row.
+     */
+    async function lastRow(tenant: TestTenant) {
+      const rows = await testSql()<
+        { actor_email: string | null; ip_hash: string | null; user_agent: string | null }[]
+      >`
+        select actor_email, ip_hash, user_agent
+          from public.audit_log
+         where tenant_id = ${tenant.tenantId}::uuid
+         order by occurred_at desc
+         limit 1
+      `;
+      return rows[0];
+    }
+
+    it('writes email, origin hash and agent when it receives them', async () => {
+      const uow = new PrismaUnitOfWork({
+        prisma,
+        ctx: alpha.ctx,
+        ids: testIds,
+        clock: systemClock,
+        trace: {
+          actorEmail: 'quien@corebiz.local',
+          ipHash: 'a'.repeat(32),
+          // Longer than the cap, to check it is truncated rather than failing.
+          userAgent: `Mozilla/5.0 ${'x'.repeat(600)}`,
+        },
+      });
+
+      await uow.run((repos) =>
+        repos.audit.record({
+          action: 'customer.created',
+          entityType: 'customer',
+          entityId: alpha.tenantId,
+        }),
+      );
+
+      const row = await lastRow(alpha);
+      expect(row?.actor_email).toBe('quien@corebiz.local');
+      expect(row?.ip_hash).toBe('a'.repeat(32));
+      expect(row?.user_agent).toHaveLength(400);
+    });
+
+    it('writes NULL without a trace, not the string "undefined"', async () => {
+      // A script or a test writes audit rows without an HTTP request to take anything from,
+      // and a row with actor_id and no email is still true. What must not remain is made-up
+      // text in a column that is later filtered on.
+      await unitOfWork(beta).run((repos) =>
+        repos.audit.record({
+          action: 'stock.adjusted',
+          entityType: 'product',
+          entityId: beta.tenantId,
+        }),
+      );
+
+      const row = await lastRow(beta);
+      expect(row?.actor_email).toBeNull();
+      expect(row?.ip_hash).toBeNull();
+      expect(row?.user_agent).toBeNull();
+    });
+  });
 });

@@ -1,42 +1,13 @@
 import 'server-only';
-import { createHash } from 'node:crypto';
-import { headers } from 'next/headers';
 import { callInternal, InternalCallFailed } from '@/api/internal';
 
-/**
- * De quien viene esta peticion, sin llegar a saberlo.
- *
- * La IP se usa para limitar intentos, no para identificar a nadie, asi que nunca
- * se guarda en claro: se guarda un hash con una sal que rota cada dia. Eso
- * conserva lo unico que hace falta —dos peticiones del mismo origen dan el mismo
- * valor dentro de la misma ventana— y hace que el rastro deje de ser util pasadas
- * veinticuatro horas.
- *
- * La sal incluye un secreto de despliegue ademas de la fecha: sin el, cualquiera
- * con la tabla delante podria recorrer el espacio de IPv4 y deshacer los hashes,
- * que es corto de sobra para un ataque de diccionario.
- *
- * El hash SE CALCULA AQUI y no en la API, aunque el contador viva alla. Es el unico
- * sitio donde `x-forwarded-for` es de fiar: en Vercel la pone la plataforma y no es
- * falsificable desde fuera. Calculado al otro lado del cable, la cabecera vendria de
- * nuestro propio servidor y contaria lo que le dijeramos.
+/*
+ * The origin hash moved to `./fingerprint` and is re-exported here so existing importers
+ * keep working. The move breaks a CYCLE: the API client also needs the hash — it sends it
+ * as a header for audit rows — and this file imports `@/api/internal`, which imports the
+ * client. A module depending only on `node:crypto` and request headers cannot be in a cycle.
  */
-function dailySalt(): string {
-  const day = new Date().toISOString().slice(0, 10);
-  return `${process.env.REQUEST_HASH_SECRET ?? 'corebiz-sal-local'}:${day}`;
-}
-
-export async function clientFingerprint(): Promise<string> {
-  const store = await headers();
-
-  // `x-forwarded-for` puede traer una cadena de proxies; el primero es el
-  // cliente. En Vercel la cabecera la pone la plataforma y no es falsificable
-  // desde fuera; en otro despliegue habria que confiar solo en el proxy propio.
-  const forwarded = store.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const ip = forwarded ?? store.get('x-real-ip') ?? 'desconocida';
-
-  return createHash('sha256').update(`${dailySalt()}:${ip}`).digest('hex').slice(0, 32);
-}
+export { clientFingerprint } from './fingerprint';
 
 export interface RateLimitDecision {
   readonly allowed: boolean;
@@ -66,6 +37,20 @@ export async function hitRateLimit(
     return await callInternal<RateLimitDecision>('/rate-limits', { bucket, limit, windowSeconds });
   } catch (error) {
     if (error instanceof InternalCallFailed) {
+      /*
+       * Open only when the API is merely UNREACHABLE (see above). A MISCONFIGURED secret
+       * in production — unset on Vercel, or different from Render's — used to fail open
+       * too, which silently turned off every login, signup and reset limit with nothing
+       * but a warning in the log. That never fixes itself, so it fails closed instead:
+       * sign-in stops working loudly and someone looks at the configuration.
+       */
+      if (error.reason === 'misconfigured' && process.env.NODE_ENV === 'production') {
+        console.error(
+          '[rate-limit] internal secret missing or rejected; attempt refused:',
+          error.message,
+        );
+        return { allowed: false, retryAfterSeconds: 60 };
+      }
       console.warn('[rate-limit] la API no respondio; se admite el intento:', error.message);
       return { allowed: true };
     }

@@ -240,6 +240,17 @@ describe('Modulo de administracion', () => {
       if (!result.ok) expect(result.error.kind).toBe('OnlyOwnerGrantsOwnership');
     });
 
+    it('an admin cannot demote an owner', async () => {
+      const admin = makeChangeMemberRole({
+        uow,
+        ctx: makeTestContext({ actor: { userId: OTHER, role: 'admin' } }),
+      });
+      const result = await admin({ userId: OWNER, role: 'sales' });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.kind).toBe('OnlyOwnerManagesOwners');
+    });
+
     it('rechaza un rol que no existe', async () => {
       const change = makeChangeMemberRole({ uow, ctx: makeTestContext() });
       const result = await change({ userId: OTHER, role: 'superusuario' });
@@ -285,6 +296,17 @@ describe('Modulo de administracion', () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error.kind).toBe('CannotRemoveSelf');
+    });
+
+    it('an admin cannot remove an owner', async () => {
+      const admin = makeRemoveMember({
+        uow,
+        ctx: makeTestContext({ actor: { userId: OTHER, role: 'admin' } }),
+      });
+      const result = await admin(OWNER);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.kind).toBe('OnlyOwnerManagesOwners');
     });
   });
 

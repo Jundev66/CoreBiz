@@ -73,25 +73,25 @@ begin
   end if;
 
   -- ─────────────────────────────────────────────────────────────────────────
-  -- Cuenta de acceso
+  -- Template owner account
   --
-  -- Contrasena: `corebiz-demo`. Sirve para entrar de verdad por la pantalla de
-  -- acceso, no solo para que la fila exista. `email_confirmed_at` va relleno:
-  -- sin el, GoTrue rechaza el acceso pidiendo una confirmacion que en local
-  -- nadie va a abrir, y la cuenta quedaria inaccesible por un correo que no
-  -- existe.
+  -- The demo tenant needs an owner, and this file is PUBLIC and is also what production
+  -- runs (docs/DEPLOY.md, section 3.b). So the account gets a random password nobody
+  -- knows and NO email identity, which GoTrue requires to sign in: in production it cannot
+  -- be used to log in at all. It used to ship with a password written right here, which
+  -- handed owner control of the template every visitor sandbox is copied from to anyone
+  -- reading the repository.
   --
-  -- El identificador coincide con DEMO_USER_ID del composition root, igual que
-  -- el del tenant coincide con DEMO_TENANT_ID. Es lo que permite que quien llega
-  -- sin cuenta vea la aplicacion funcionando.
+  -- Development gets the known password (`corebiz-demo`) and the identity from
+  -- `seed.local.sql`, which only the local Supabase CLI loads.
+  --
+  -- The id matches DEMO_USER_ID in the composition root, as the tenant's matches
+  -- DEMO_TENANT_ID.
+  --
+  -- The four token columns are EMPTY STRINGS, not NULL: GoTrue reads them into non-null
+  -- text variables, and with NULL every login fails with "Database error querying schema",
+  -- which names neither the column nor the table.
   -- ─────────────────────────────────────────────────────────────────────────
-  --
-  -- Las cuatro columnas de token van a CADENA VACIA y no se dejan en NULL, que
-  -- es lo que Postgres pondria. GoTrue las lee en variables de texto que no
-  -- admiten nulo, asi que con NULL el acceso falla entero con un
-  -- "Database error querying schema" que no menciona ni la columna ni la tabla.
-  -- Es media hora de depuracion por cuatro cadenas vacias.
-  --
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
@@ -100,24 +100,13 @@ begin
   ) values (
     '00000000-0000-0000-0000-000000000000', v_owner, 'authenticated', 'authenticated',
     'demo@corebiz.local',
-    extensions.crypt('corebiz-demo', extensions.gen_salt('bf')),
+    extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')),
     now(), now() - interval '120 days', now(),
     '', '', '', '',
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"name":"Ana Rodriguez"}'::jsonb
   )
   on conflict (id) do nothing;
-
-  -- Sin esta fila, GoTrue no reconoce que la cuenta tiene un metodo de acceso
-  -- por correo y contrasena: el usuario existe y aun asi no puede entrar.
-  insert into auth.identities (
-    provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-  ) values (
-    v_owner::text, v_owner,
-    jsonb_build_object('sub', v_owner::text, 'email', 'demo@corebiz.local', 'email_verified', true),
-    'email', now(), now() - interval '120 days', now()
-  )
-  on conflict (provider_id, provider) do nothing;
 
   -- ─────────────────────────────────────────────────────────────────────────
   -- Tenant y pertenencia

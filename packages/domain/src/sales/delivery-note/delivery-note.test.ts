@@ -128,6 +128,23 @@ describe('DeliveryNote — emision', () => {
     expect(issue([{ product: product(), quantity: qty('1'), discountBp: 10_000 }]).ok).toBe(true);
   });
 
+  it('rejects a negative line price and accepts zero', () => {
+    /*
+     * `Money` allows negative amounts on purpose — it needs them to subtract — and the sign
+     * was not checked here, so a mistyped `-5` issued a note with a NEGATIVE total that
+     * also deducted stock. On Postgres a table constraint stopped it, i.e. the same mistake
+     * ended in a 500.
+     *
+     * `Money.of('-5')` is still valid; what is rejected is using it as a price.
+     */
+    expect(issue([{ product: product(), quantity: qty('1'), unitPrice: usd('-5') }]).ok).toBe(
+      false,
+    );
+
+    // Zero is fine: a free or sample line is legitimate.
+    expect(issue([{ product: product(), quantity: qty('1'), unitPrice: usd('0') }]).ok).toBe(true);
+  });
+
   it('congela nombre y unidad del producto en la linea', () => {
     const p = product();
     const note = unwrap(issue([{ product: p, quantity: qty('1') }]));

@@ -3,10 +3,14 @@ import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { BackLink } from '@/ui/primitives';
 import { ProductForm } from '@/ui/product-form';
+import { notFound } from 'next/navigation';
+import { can } from '@corebiz/domain';
 
 export default async function NewProductPage() {
   const t = await getTranslations();
   const { ctx, session } = await apiForRequest();
+
+  if (!can(ctx.actor, 'product:write')) notFound();
 
   return (
     <Shell

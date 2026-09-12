@@ -28,8 +28,76 @@ import { activeDriver } from '@/api/session';
  * lo que diga de mas es reconocimiento gratis para quien esta mirando.
  */
 
-/** Nunca se cachea: un estado de salud cacheado no es un estado de salud. */
+/** The RESPONSE is never cached: a cached health status is not a health status. */
 export const dynamic = 'force-dynamic';
+
+/**
+ * How long a completed check is worth, and why this does not contradict the line above.
+ *
+ * The route is PUBLIC and waits up to 45 seconds for Render to wake up. Together that makes
+ * it an amplifier: every anonymous request holds a Vercel function for that long, and the
+ * free quota is drained by a `curl` loop from a single machine. No attack is needed; a
+ * misconfigured monitor is enough.
+ *
+ * The attempt limiter cannot solve it: it lives in the API, which is exactly the piece that
+ * may be asleep — it would mean asking permission to check whether it answers from the
+ * thing that does not answer. And `hitRateLimit` fails OPEN on purpose.
+ *
+ * What can be done is not repeating the work. Within the window the route answers with the
+ * last thing it learned and does not ask again; and concurrent requests share ONE in-flight
+ * check instead of each opening its own. A burst of a thousand requests costs as much as one.
+ *
+ * The header is still `no-store`, and that is not a contradiction: what is reused is the
+ * check, not the response. Nothing along the way stores an "ok" to serve later; a monitor
+ * polling every minute sees fresh data, and only whoever asks ten times in ten seconds gets
+ * the same value twice. The memory is per process, so on Vercel the ceiling is per
+ * instance: not a global limit, but no instance can be used as a lever.
+ */
+const CACHE_MS = 10_000;
+
+interface Probe {
+  readonly at: number;
+  readonly ok: boolean;
+  readonly status: number | null;
+}
+
+/*
+ * On `globalThis` rather than a module-level `let`: in development Next reloads the module
+ * on every change, and a module variable would silently reset on each reload. Same pattern
+ * the database pool uses.
+ */
+const holder = globalThis as typeof globalThis & {
+  __corebizHealth?: { last: Probe | null; inFlight: Promise<Probe> | null };
+};
+holder.__corebizHealth ??= { last: null, inFlight: null };
+
+async function probe(): Promise<Probe> {
+  const state = holder.__corebizHealth as {
+    last: Probe | null;
+    inFlight: Promise<Probe> | null;
+  };
+
+  const recent = state.last;
+  if (recent !== null && Date.now() - recent.at < CACHE_MS) return recent;
+  if (state.inFlight !== null) return state.inFlight;
+
+  const pending = fetch(`${apiBaseUrl()}/health`, {
+    cache: 'no-store',
+    // Generoso: la API puede estar despertando. Un monitor que se rinde antes de
+    // que arranque reporta caidas que no existen y acaba ignorandose.
+    signal: AbortSignal.timeout(45_000),
+  })
+    .then((res): Probe => ({ at: Date.now(), ok: res.ok, status: res.status }))
+    .catch((): Probe => ({ at: Date.now(), ok: false, status: null }))
+    .then((result) => {
+      state.last = result;
+      state.inFlight = null;
+      return result;
+    });
+
+  state.inFlight = pending;
+  return pending;
+}
 
 export async function GET(): Promise<Response> {
   const started = Date.now();
@@ -41,14 +109,9 @@ export async function GET(): Promise<Response> {
     return json({ status: 'ok', driver, api: 'skipped' }, 200);
   }
 
-  const upstream = await fetch(`${apiBaseUrl()}/health`, {
-    cache: 'no-store',
-    // Generoso: la API puede estar despertando. Un monitor que se rinde antes de
-    // que arranque reporta caidas que no existen y acaba ignorandose.
-    signal: AbortSignal.timeout(45_000),
-  }).catch(() => null);
+  const upstream = await probe();
 
-  if (upstream !== null && upstream.ok) {
+  if (upstream.ok) {
     return json({ status: 'ok', driver, api: 'reachable', latencyMs: Date.now() - started }, 200);
   }
 
@@ -59,7 +122,7 @@ export async function GET(): Promise<Response> {
     JSON.stringify({
       level: 'error',
       event: 'health.api_unreachable',
-      status: upstream?.status ?? null,
+      status: upstream.status,
       at: new Date().toISOString(),
     }),
   );

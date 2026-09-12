@@ -3,6 +3,8 @@ import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { BackLink } from '@/ui/primitives';
 import { CustomerForm } from '@/ui/customer-form';
+import { notFound } from 'next/navigation';
+import { can } from '@corebiz/domain';
 
 /**
  * Alta de cliente.
@@ -15,6 +17,11 @@ import { CustomerForm } from '@/ui/customer-form';
 export default async function NewCustomerPage() {
   const t = await getTranslations();
   const { ctx, session } = await apiForRequest();
+
+  // 404 rather than a notice, like the edit screen: a route this role cannot use does not
+  // exist for it. Filling in a form only for the action to reject it at the end is worse
+  // than not offering it.
+  if (!can(ctx.actor, 'customer:write')) notFound();
 
   return (
     <Shell

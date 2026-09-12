@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { parseCustomerForm } from '@corebiz/contracts';
+import { parseCustomerForm, parseCustomerUpdateForm } from '@corebiz/contracts';
 import { apiForRequest } from '@/api/session';
 import { toFormFailure } from '@/api/failure';
+import { formRejection } from './field-errors';
 
 /**
  * Server Action: crear un cliente.
@@ -36,14 +37,12 @@ export async function createCustomerAction(
   //    correcta; que sea valido para el NEGOCIO lo decide el dominio.
   const parsed = parseCustomerForm(formData);
   if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      const field = issue.path[0];
-      if (typeof field === 'string' && !(field in fieldErrors)) {
-        fieldErrors[field] = issue.message;
-      }
-    }
-    return { status: 'error', errorKind: 'InvalidFormat', fieldErrors };
+    /*
+     * The rejection is handled once, in one place: `formRejection` clears the panel's stale
+     * explanation and decides whether there are field errors to render. The reasons are in
+     * `./field-errors`.
+     */
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection(parsed.error)) };
   }
 
   const { createCustomer } = await apiForRequest();
@@ -77,6 +76,51 @@ export async function createCustomerAction(
    * venga despues se ejecuta. No hay `return` que escribir.
    */
   redirect(`/customers?creado=${encodeURIComponent(result.value.code)}`);
+}
+
+/**
+ * Server Action: corregir un cliente.
+ *
+ * Vuelve a la FICHA y no al listado, al reves que el alta, y la diferencia no es
+ * capricho: quien crea un cliente quiere verlo aparecer en la lista; quien corrige un
+ * telefono quiere comprobar que quedo bien escrito. Devolverlo al listado le obligaria
+ * a volver a entrar para mirar.
+ */
+export async function updateCustomerAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = parseCustomerUpdateForm(formData);
+  if (!parsed.success) {
+    /*
+     * The rejection is handled once, in one place: `formRejection` clears the panel's stale
+     * explanation and decides whether there are field errors to render. The reasons are in
+     * `./field-errors`.
+     */
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection(parsed.error)) };
+  }
+
+  const { updateCustomer } = await apiForRequest();
+
+  const result = await updateCustomer({
+    customerId: parsed.data.customerId,
+    name: parsed.data.name,
+    // Sin `|| null`: aqui la cadena vacia significa VACIALO, y el comando la reenvia
+    // tal cual. Convertirla a null y omitirla dejaria el valor viejo puesto.
+    taxId: parsed.data.taxId ?? '',
+    email: parsed.data.email ?? '',
+    phone: parsed.data.phone ?? '',
+    creditLimit: parsed.data.creditLimit ?? '',
+    addressLine1: parsed.data.addressLine1 ?? '',
+    addressCity: parsed.data.addressCity ?? '',
+    addressState: parsed.data.addressState ?? '',
+  });
+
+  if (!result.ok) return toFormFailure(result.error);
+
+  revalidatePath('/customers');
+  revalidatePath(`/customers/${parsed.data.customerId}`);
+  redirect(`/customers/${encodeURIComponent(parsed.data.customerId)}?guardado=1`);
 }
 
 /**

@@ -1,6 +1,8 @@
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/auth.middleware';
+import { WriteThrottleGuard } from './auth/write-throttle.guard';
 import { CompositionModule } from './composition/composition.module';
 import { HealthModule } from './health/health.module';
 import { AdministrationModule } from './modules/administration/administration.module';
@@ -38,6 +40,8 @@ import { SessionModule } from './modules/session/session.module';
     DemoModule,
     InternalModule,
   ],
+  // Global and singleton on purpose: see the note in `WriteThrottleGuard`.
+  providers: [{ provide: APP_GUARD, useClass: WriteThrottleGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
@@ -59,8 +63,15 @@ export class AppModule implements NestModule {
         'docs',
         'docs/(.*)',
         'docs-json',
-        // La demostracion entrega credenciales a quien no tiene ninguna: exigir
-        // sesion aqui haria imposible obtenerla. La protege el limitador por origen.
+        // The demo hands credentials to someone who has none: requiring a USER session
+        // here would make them impossible to obtain. It is not left without a credential,
+        // though: the same shared secret as the internal routes protects it
+        // (`InternalSecretGuard` on the controller), because the caller is always
+        // `apps/web`.
+        //
+        // This used to say "the per-origin limiter" protected it, which was not true on the
+        // public wire: the limiter bucket was built from a value that came IN THE BODY, so
+        // calling Render directly and rotating it skipped the limit entirely.
         'v1/demo/(.*)',
         // Los internos no llevan sesion de usuario porque se invocan ANTES de que
         // exista una: el limitador protege el propio acceso. Los guarda un secreto

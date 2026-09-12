@@ -49,6 +49,11 @@ export const RATE_LIMITS = {
   passwordReset: { limit: 5, windowSeconds: 3_600 },
   /** Provision de un sandbox de demostracion: una por IP y hora. */
   demoSandbox: { limit: 1, windowSeconds: 3_600 },
+  /**
+   * Writes through the API, per verified user. The window lives here; the limit comes
+   * from `API_WRITES_PER_HOUR` so a deployment can tune it without a release.
+   */
+  apiWrites: { limit: 600, windowSeconds: 3_600 },
 } as const satisfies Record<string, { limit: number; windowSeconds: number }>;
 
 export type RateLimitPolicy = keyof typeof RATE_LIMITS;

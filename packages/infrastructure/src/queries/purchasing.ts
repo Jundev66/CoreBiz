@@ -14,6 +14,7 @@ import type {
 import { readOnly } from '../prisma/session';
 import { quantity } from './format';
 import { decodeCursor, encodeCursor, escapeLikeWildcards, pageLimit } from '../prisma/pagination';
+import { isRowKey } from '../prisma/record-id';
 
 /**
  * Lado de LECTURA de compras.
@@ -98,6 +99,8 @@ class PrismaPurchasingQueries implements PurchasingQueries {
   }
 
   supplierById(id: string): Promise<SupplierDetail | null> {
+    if (!isRowKey(id)) return Promise.resolve(null);
+
     return readOnly(this.prisma, this.ctx, async (tx) => {
       // Acotado por tenant y no solo por id: pedir la ficha de otro comercio tiene que
       // responder "no existe", no "no puedes".
@@ -175,6 +178,8 @@ class PrismaPurchasingQueries implements PurchasingQueries {
    * agrupacion a cambio de ahorrar un viaje que dura microsegundos.
    */
   receiptById(id: string): Promise<GoodsReceiptView | null> {
+    if (!isRowKey(id)) return Promise.resolve(null);
+
     const currency = this.ctx.settings.baseCurrency;
 
     return readOnly(this.prisma, this.ctx, async (tx) => {

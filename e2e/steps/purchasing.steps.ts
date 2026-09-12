@@ -149,3 +149,47 @@ Then(
     await expect(row).toContainText('1.00');
   },
 );
+
+/*
+ * Corregir un proveedor.
+ *
+ * Empieza y acaba en el listado porque un proveedor NO tiene ficha propia: cabe entero
+ * en su fila, y una pantalla de detalle que repitiera esas cuatro columnas seria un clic
+ * de mas para ver lo que ya se esta viendo.
+ */
+
+When('I register a supplier just for this scenario', async ({ page, world }) => {
+  world.lastCode = `Distribuidora ${uniqueCode()}`;
+
+  await page.goto('/purchases/suppliers');
+  const form = page.getByRole('complementary', { name: /new supplier/i });
+  await form.getByLabel(/name/i).fill(world.lastCode);
+  await form.getByRole('button', { name: /save/i }).click();
+
+  await expect(page.getByRole('cell', { name: world.lastCode }).first()).toBeVisible();
+});
+
+When('I correct its contact person', async ({ page, world }) => {
+  world.correctedName = `Contacto ${uniqueCode()}`;
+
+  const row = page.getByRole('row').filter({ hasText: world.lastCode ?? '' });
+  await row.getByRole('link', { name: /^edit$|^editar$/i }).click();
+
+  // Wait for the EDIT screen before touching any field. The suppliers list has its own
+  // "new supplier" form with the same "Contact person" field, and the Edit link navigates
+  // on the client: filling right after the click typed into the list's form, the edit
+  // form then saved with the contact still empty, and the scenario failed looking like a
+  // persistence bug.
+  await page.waitForURL(/\/purchases\/suppliers\/[^/]+\/edit$/);
+  const contact = page.getByLabel(/contact/i);
+  await contact.fill(world.correctedName);
+  await expect(contact).toHaveValue(world.correctedName);
+
+  await page.getByRole('button', { name: /save/i }).click();
+  await page.waitForURL(/\/purchases\/suppliers(\?|$)/);
+});
+
+Then('the supplier list shows the new contact person', async ({ page, world }) => {
+  const row = page.getByRole('row').filter({ hasText: world.lastCode ?? '' });
+  await expect(row).toContainText(world.correctedName ?? '');
+});

@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
+import { noticeCode } from '@/ui/notice-code';
+import { NoAccess } from '@/ui/no-access';
+import { can } from '@corebiz/domain';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -24,8 +27,21 @@ export default async function PurchasesPage({
 }) {
   const t = await getTranslations();
   const { creado } = await searchParams;
+  const createdCode = noticeCode(creado);
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
+
+  /*
+   * The role decides whether this is read, and it is decided BEFORE asking: a 403 from the
+   * API surfaces as an exception and took the whole screen down. See `@/ui/no-access`.
+   */
+  if (!can(ctx.actor, 'purchase:read')) {
+    return (
+      <Shell ctx={ctx} session={session} title={t('purchases.title')}>
+        <NoAccess />
+      </Shell>
+    );
+  }
 
   const page = await queries.purchasing.receipts({ limit: 50 });
 
@@ -33,7 +49,9 @@ export default async function PurchasesPage({
     <Shell
       ctx={ctx}
       session={session}
-      {...(creado !== undefined ? { toast: t('purchases.received_ok', { number: creado }) } : {})}
+      {...(createdCode !== null
+        ? { toast: t('purchases.received_ok', { number: createdCode }) }
+        : {})}
       title={t('purchases.title')}
       subtitle={t('purchases.subtitle')}
       action={

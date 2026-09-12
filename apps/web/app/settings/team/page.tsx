@@ -6,6 +6,8 @@ import { SettingsNav } from '@/ui/settings-nav';
 import { InviteForm } from '@/ui/invite-form';
 import { MemberRow } from '@/ui/member-row';
 import { revokeInvitationAction } from '@/actions/administration';
+import { NoAccess } from '@/ui/no-access';
+import { can } from '@corebiz/domain';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -29,6 +31,20 @@ export default async function TeamPage() {
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
 
+  /*
+   * Without `user:read` the team is not requested: the list of colleagues is exactly what
+   * the API denies with a 403, and that 403 took the screen down. Three of the five roles
+   * got here from the settings tab; the tab is no longer rendered for them.
+   */
+  if (!can(ctx.actor, 'user:read')) {
+    return (
+      <Shell ctx={ctx} session={session} title={t('settings.title')}>
+        <SettingsNav current="team" actor={ctx.actor} />
+        <NoAccess />
+      </Shell>
+    );
+  }
+
   const [team, invitations] = await Promise.all([
     queries.admin.team(),
     queries.admin.pendingInvitations(),
@@ -42,7 +58,7 @@ export default async function TeamPage() {
       title={t('settings.title')}
       subtitle={t('settings.subtitle')}
     >
-      <SettingsNav current="team" />
+      <SettingsNav current="team" actor={ctx.actor} />
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-10">

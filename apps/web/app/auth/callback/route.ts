@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/auth/supabase';
+import { safeInternalPath } from '@/auth/safe-redirect';
+import { markRecovery } from '@/auth/recovery';
 
 /**
  * El regreso desde un enlace de correo.
@@ -32,20 +34,26 @@ export async function GET(request: Request): Promise<never> {
   const code = url.searchParams.get('code');
   const destino = url.searchParams.get('next');
 
-  // Solo rutas internas. Sin esta comprobación, `?next=https://otro.sitio` convertiría
-  // el enlace de un correo nuestro en un redirector abierto, que es exactamente la
-  // pieza que le falta a un phishing para parecer legítimo.
-  const siguiente =
-    destino !== null && destino.startsWith('/') && !destino.startsWith('//') ? destino : '/';
+  // Internal paths only. The previous check — starts with a slash and the second character
+  // is not one — was bypassed by `/\other-site`, and this is the worst possible place for
+  // an open redirect: the link comes from OUR email, exactly what phishing needs to look
+  // legitimate. See `safeInternalPath`.
+  const siguiente = safeInternalPath(destino);
 
   if (code === null) redirect('/login');
 
   const supabase = await supabaseServer();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   // Un código caducado, ya usado o de otro navegador. Se manda a pedir otro en lugar de
   // dejar a la persona en un formulario que va a rechazarla.
   if (error !== null) redirect('/forgot-password?caducado=1');
+
+  // A recovery link lands on the new-password form. Mark THIS user as coming from the email,
+  // so the password change can require it: see `@/auth/recovery`.
+  if (siguiente === '/reset-password' && data.user !== null) {
+    await markRecovery(data.user.id);
+  }
 
   redirect(siguiente);
 }

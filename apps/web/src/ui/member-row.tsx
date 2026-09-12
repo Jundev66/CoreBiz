@@ -37,7 +37,17 @@ export function MemberRow({ member, canManage }: { member: MemberRowData; canMan
   const [roleState, changeRole, changing] = useActionState(changeMemberRoleAction, INITIAL);
   const [removeState, remove, removing] = useActionState(removeMemberAction, INITIAL);
 
-  const error = roleState.errorKind ?? removeState.errorKind;
+  /*
+   * The WHOLE failed state, not just its key.
+   *
+   * The translation needs the parameters, and taking them from one state while the key
+   * comes from the other would mix two different errors. With `Unexpected` it matters more
+   * than it seems: when it carries an incident reference the key becomes
+   * `UnexpectedWithIncident`, whose text REQUIRES `{incidentId}` — and next-intl, facing a
+   * missing parameter, neither leaves a gap nor throws: it renders the raw key path.
+   */
+  const failed = roleState.errorKind !== undefined ? roleState : removeState;
+  const error = failed.errorKind;
 
   return (
     <tr className="border-b border-[var(--color-line)] last:border-0 align-top">
@@ -50,7 +60,7 @@ export function MemberRow({ member, canManage }: { member: MemberRowData; canMan
         )}
         {error !== undefined && (
           <p role="alert" className="mt-1 text-xs text-[var(--color-danger-ink)]">
-            {t(`settings.errors.${error}`)}
+            {t(`settings.errors.${error}`, failed.errorParams ?? {})}
           </p>
         )}
       </td>

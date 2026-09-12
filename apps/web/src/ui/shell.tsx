@@ -11,7 +11,9 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
+import { canOpen } from '@/auth/module-access';
 import { Toast } from '@/ui/toast';
+import { AssistantPanel } from '@/ui/assistant-panel';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
@@ -84,6 +86,17 @@ export async function Shell({
    * en un menu de seis hacen que el sistema parezca un tercio vacio. Lo que se ensena
    * es el ciclo completo —comprar, tener existencias, vender— y ese esta entero.
    */
+  /*
+   * And it shows what THIS ROLE can open.
+   *
+   * It used to offer all seven to everyone, and three of them answered with the server
+   * error page depending on who clicked: warehouse on "Customers", read-only on "Reports",
+   * sales on "Purchases". A menu that breaks the app when clicked is worse than a short one.
+   *
+   * Hiding the entry is NOT the control: the use case enforces the limit, and every screen
+   * checks again before reading (`NoAccess`). This only keeps people from getting there
+   * through the menu itself.
+   */
   const nav = [
     { href: '/', label: t('nav.home'), Icon: LayoutDashboard, exacto: true },
     { href: '/customers', label: t('nav.customers'), Icon: Users },
@@ -92,7 +105,7 @@ export async function Shell({
     { href: '/purchases', label: t('nav.purchases'), Icon: Truck },
     { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
     { href: '/settings', label: t('nav.settings'), Icon: Settings },
-  ];
+  ].filter(({ href }) => canOpen(ctx.actor, href));
 
   const estaAqui = (href: string, exacto?: boolean): boolean =>
     exacto === true
@@ -102,6 +115,17 @@ export async function Shell({
   return (
     <div className="min-h-screen lg:flex">
       {toast !== undefined && <Toast message={toast} />}
+
+      {/*
+       * Help lives in the FRAME rather than on each screen, like the "done" toast: it
+       * belongs to the system, not to a list. Being here also keeps it out of (auth) and
+       * the print screen, which do not mount Shell — exactly what is wanted: at the front
+       * door there is nothing to explain yet, and on paper a help button is wasted ink.
+       *
+       * It sits at z-40 and the toast at z-50 on purpose. If both overlap, the toast is the
+       * one in a hurry: it leaves by itself after six seconds, and this does not.
+       */}
+      <AssistantPanel />
 
       <aside className="border-b border-[var(--color-line)] bg-[var(--color-surface)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-b-0">
         <div className="px-5 py-4 lg:px-6 lg:py-6">

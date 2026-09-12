@@ -6,7 +6,7 @@ import { signIn, POSTGRES } from '../session';
  *
  * Los escenarios BDD comprueban REGLAS —que despachar veinte quita veinte, que un
  * codigo duplicado se rechaza— y lo hacen en profundidad sobre unas pocas
- * pantallas. Este archivo comprueba lo contrario: ANCHURA. Que las veintinueve
+ * pantallas. Este archivo comprueba lo contrario: ANCHURA. Que las treinta y dos
  * rutas de la aplicacion abren, responden 200, traen su encabezado y no rompen
  * nada por el camino.
  *
@@ -187,6 +187,13 @@ test.describe('Aprobacion del sistema', () => {
       await expect(page).toHaveURL(new RegExp(`/customers${ID_SEGMENT.source}`));
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
+      // Y su pantalla de correccion, que tambien lleva identificador. Se llega
+      // pulsando el enlace y no escribiendo la URL: si el enlace desapareciera, esto
+      // fallaria por el motivo correcto.
+      await page.getByRole('link', { name: /^edit$|^editar$/i }).click();
+      await expect(page).toHaveURL(/\/customers\/[^/]+\/edit$/);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
       // Ficha de producto, con su libro de movimientos.
       await page.goto('/products');
       await page
@@ -198,6 +205,21 @@ test.describe('Aprobacion del sistema', () => {
       await expect(
         page.getByRole('heading', { name: /stock movements|movimientos de inventario/i }),
       ).toBeVisible();
+
+      await page.getByRole('link', { name: /^edit$|^editar$/i }).click();
+      await expect(page).toHaveURL(/\/products\/[^/]+\/edit$/);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+      // La correccion de un proveedor, que se alcanza desde la FILA de su listado:
+      // un proveedor cabe entero en su fila y no tiene ficha propia.
+      await page.goto('/purchases/suppliers');
+      await page
+        .getByRole('table')
+        .getByRole('link', { name: /^edit$|^editar$/i })
+        .first()
+        .click();
+      await expect(page).toHaveURL(/\/purchases\/suppliers\/[^/]+\/edit$/);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
       // Nota de entrega y su version imprimible.
       await page.goto('/delivery-notes');

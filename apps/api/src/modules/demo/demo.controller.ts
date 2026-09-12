@@ -1,8 +1,17 @@
-import { Body, Controller, HttpCode, HttpStatus, NotFoundException, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { RATE_LIMITS } from '@corebiz/application';
 import { postgresRateLimiter, provisionDemoSandbox } from '@corebiz/infrastructure';
+import { InternalSecretGuard } from '../../auth/internal-secret.guard';
 import { loadEnv } from '../../config/env';
 import { activeDriver, databaseUrl } from '../../config/driver';
 import { domainError } from '../../http/api-error';
@@ -44,16 +53,29 @@ export interface DemoCredentials {
 /**
  * La puerta de la demostracion.
  *
- * NO lleva autenticacion, y no puede llevarla: existe justamente para dar credenciales
- * a quien todavia no tiene ninguna. Lo que la protege es el limitador por origen.
+ * It carries no USER session, and cannot: it exists precisely to hand credentials to
+ * someone who has none yet.
  *
- * Es POST y nunca un GET, y esa es la decision que mas protege el presupuesto: un GET
+ * It does carry a credential, though. `InternalSecretGuard` requires the secret shared by
+ * both deployments, like the internal endpoints, because the caller is always `apps/web`
+ * and never a browser.
+ *
+ * It was needed, and the reason deserves to stay written: the limiter below counts by
+ * `ipHash`, a value that arrives IN THE BODY. That is trustworthy when Vercel computes it —
+ * the platform sets `x-forwarded-for` there — but the API is public on Render, so without a
+ * credential anyone could call it directly, rotate that value on every request and skip
+ * the limit entirely. Only the global cap was left standing. Provisioning in bursts means
+ * GoTrue accounts and database copies: an attack on the free quota, the asset the threat
+ * model ranks first.
+ *
+ * Es POST y nunca un GET, y esa es la otra decision que protege el presupuesto: un GET
  * que provisiona lo dispara cualquier rastreador, cualquier previsualizacion de enlace
  * de un chat y cualquier antivirus de correo. Publicar el enlace en una red social
  * crearia decenas de cuentas y de copias de la base antes de que lo abriese una
  * persona.
  */
 @ApiTags('demostracion')
+@UseGuards(InternalSecretGuard)
 @Controller('v1/demo')
 export class DemoController {
   @Post('sandboxes')
@@ -88,6 +110,7 @@ export class DemoController {
       ipHash: body.ipHash,
       ttlHours: env.DEMO_TTL_HOURS,
       maxConcurrent: env.DEMO_MAX_CONCURRENT,
+      maxReadonlyPerHour: env.DEMO_MAX_READONLY_PER_HOUR,
     });
 
     if (!result.ok) throw domainError('Unavailable');

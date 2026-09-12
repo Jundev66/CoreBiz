@@ -5,7 +5,7 @@ import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { setCustomerStatusAction } from '@/actions/customers';
 import { Shell } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { BackLink, SecondaryLink } from '@/ui/primitives';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,10 +21,21 @@ export async function generateMetadata(): Promise<Metadata> {
  * y eso ya es informacion sobre la empresa de al lado. Recorriendo identificadores
  * se podria contar cuantos clientes tiene la competencia sin ver ni uno.
  */
-export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ guardado?: string }>;
+}) {
   const t = await getTranslations();
   const { id } = await params;
+  const { guardado } = await searchParams;
   const { ctx, session, queries } = await apiForRequest();
+
+  // Without `customer:read` this record does not exist for the requester — the same answer
+  // the API gives, so the screen does not depend on the 403 never arriving.
+  if (!can(ctx.actor, 'customer:read')) notFound();
 
   const customer = await queries.customers.byId(id);
   if (customer === null) notFound();
@@ -35,6 +46,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       session={session}
       title={customer.name}
       subtitle={customer.code}
+      {...(guardado !== undefined ? { toast: t('common.saved') } : {})}
       action={
         <div className="flex flex-wrap items-center gap-3">
           <BackLink href="/customers">{t('customers.title')}</BackLink>
@@ -43,6 +55,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             activeLabel={t('status.active')}
             archivedLabel={t('status.archived')}
           />
+          {can(ctx.actor, 'customer:write') && (
+            <SecondaryLink href={`/customers/${customer.id}/edit`}>
+              {t('common.edit')}
+            </SecondaryLink>
+          )}
           {can(ctx.actor, 'customer:write') && (
             <StatusToggle
               action={setCustomerStatusAction}

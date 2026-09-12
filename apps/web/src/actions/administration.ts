@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { z } from 'zod';
 import { apiForRequest } from '@/api/session';
 import { toFormFailure } from '@/api/failure';
+import { formRejection } from './field-errors';
 
 /**
  * Server Actions del modulo de administracion.
@@ -42,7 +43,9 @@ export async function inviteUserAction(_prev: AdminState, formData: FormData): P
     email: formData.get('email'),
     role: formData.get('role'),
   });
-  if (!parsed.success) return { status: 'error', errorKind: 'InvalidFormat' };
+  if (!parsed.success) {
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection()) };
+  }
 
   const { inviteUser } = await apiForRequest();
   const result = await inviteUser(parsed.data);
@@ -82,7 +85,7 @@ export async function changeMemberRoleAction(
   const userId = formData.get('userId');
   const role = formData.get('role');
   if (typeof userId !== 'string' || typeof role !== 'string') {
-    return { status: 'error', errorKind: 'InvalidFormat' };
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection()) };
   }
 
   const { changeMemberRole } = await apiForRequest();
@@ -99,7 +102,9 @@ export async function removeMemberAction(
   formData: FormData,
 ): Promise<AdminState> {
   const userId = formData.get('userId');
-  if (typeof userId !== 'string') return { status: 'error', errorKind: 'InvalidFormat' };
+  if (typeof userId !== 'string') {
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection()) };
+  }
 
   const { removeMember } = await apiForRequest();
   const result = await removeMember(userId);
@@ -134,7 +139,9 @@ export async function updateTenantSettingsAction(
     baseCurrency: formData.get('baseCurrency') ?? undefined,
     exchangeRate: formData.get('exchangeRate') ?? undefined,
   });
-  if (!parsed.success) return { status: 'error', errorKind: 'InvalidFormat' };
+  if (!parsed.success) {
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection()) };
+  }
 
   let taxRateBp: number | undefined;
   if (parsed.data.taxRatePercent !== undefined && parsed.data.taxRatePercent !== '') {

@@ -3,6 +3,8 @@ import { cookies, headers as requestHeadersOf } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { err, ok, type Result } from '@corebiz/domain';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
+import { forgetFailure, rememberFailure } from '@/api/last-error';
+import { clientFingerprint } from '@/auth/fingerprint';
 
 /**
  * El cliente HTTP contra la API.
@@ -89,8 +91,25 @@ async function headers(): Promise<Record<string, string>> {
   const tenant = store.get(ACTIVE_TENANT_COOKIE)?.value;
   const demoRole = store.get(DEMO_ROLE_COOKIE)?.value;
 
+  /*
+   * Who is acting, for audit rows. Both headers are ALWAYS sent, even though only writes
+   * leave a trace: telling reads from writes here would spread across the client a
+   * decision that belongs to the API.
+   *
+   * The hash is COMPUTED HERE and not there, which is why it travels as a header: this is
+   * the only place where `x-forwarded-for` can be trusted, because on Vercel the platform
+   * sets it. Computed on the other side of the wire, the header would come from our own
+   * server and the value would be the same for everyone.
+   *
+   * The agent is what the browser says about itself, forwarded as is. What the API can
+   * believe of each value is written down in `AuditTrace`.
+   */
+  const userAgent = (await requestHeadersOf()).get('user-agent');
+
   return {
     'content-type': 'application/json',
+    'x-corebiz-fingerprint': await clientFingerprint(),
+    ...(userAgent !== null ? { 'x-corebiz-agent': userAgent } : {}),
     ...(await authorization()),
     ...(tenant !== undefined ? { 'x-corebiz-tenant': tenant } : {}),
     /*
@@ -128,6 +147,27 @@ export interface ApiErrorBody {
   readonly errorKind: string;
   readonly errorParams?: Readonly<Record<string, string | number>>;
   readonly fieldErrors?: Readonly<Record<string, string>>;
+}
+
+/**
+ * The header where the API puts the reference for what it could not explain.
+ *
+ * Declared here rather than imported from `apps/api`: the web cannot depend on server
+ * code, and the contract between them is HTTP. If it changes there, it changes here —
+ * like the other header names in this file.
+ */
+const INCIDENT_HEADER = 'x-corebiz-incident';
+
+/**
+ * The incident reference, ready to append to an `Error` message.
+ *
+ * Read from the header rather than the body because `get()` and `getOrNull()` DISCARD a
+ * failure's body: nothing survives a broken read except this exception's text, and
+ * without the reference that text leads nowhere.
+ */
+function incidentSuffix(res: Response): string {
+  const incidentId = res.headers.get(INCIDENT_HEADER);
+  return incidentId === null ? '' : ` [${incidentId}]`;
 }
 
 export class ApiUnavailableError extends Error {}
@@ -193,7 +233,9 @@ export async function get<T>(path: string): Promise<T> {
   if (res.status === 401) redirect('/login');
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
-    throw new Error(`GET ${path} respondio ${res.status} (${body?.errorKind ?? 'sin clave'})`);
+    throw new Error(
+      `GET ${path} respondio ${res.status} (${body?.errorKind ?? 'sin clave'})${incidentSuffix(res)}`,
+    );
   }
 
   return (await res.json()) as T;
@@ -210,7 +252,7 @@ export async function getOrNull<T>(path: string): Promise<T | null> {
   // 404 aqui NO es un fallo: es "no existe, o no es tuyo", y desde fuera no se
   // distingue a proposito. La pantalla lo trata igual que antes trataba un null.
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GET ${path} respondio ${res.status}`);
+  if (!res.ok) throw new Error(`GET ${path} respondio ${res.status}${incidentSuffix(res)}`);
 
   return (await res.json()) as T;
 }
@@ -234,6 +276,23 @@ export interface ApiFailure {
 }
 
 /**
+ * An unexpected failure that ALREADY carries a reference is told with a different key.
+ *
+ * The temptation is to keep `Unexpected` and add `{incidentId}` to its message. That does
+ * not work: `Unexpected` is ALSO what is answered when the envelope could not be read — a
+ * proxy 502, a truncated response, the API half awake — and there are no parameters then.
+ * next-intl does not throw on a missing parameter: it warns and renders the key PATH. The
+ * notice would look fine when the API answers, and when it does not — exactly when an
+ * understandable text is needed most — the person would read
+ * `errors.UnexpectedWithIncident` raw inside a red box.
+ *
+ * Two keys, and each always receives what it needs.
+ */
+function kindWithIncident(kind: string, params: Readonly<Record<string, string | number>>): string {
+  return kind === 'Unexpected' && 'incidentId' in params ? 'UnexpectedWithIncident' : kind;
+}
+
+/**
  * Una escritura.
  *
  * Devuelve un `Result` y no lanza ante un error de negocio, para que las Server
@@ -254,13 +313,17 @@ export async function send<T>(
 
   if (!res.ok) {
     const envelope = (await res.json().catch(() => null)) as ApiErrorBody | null;
-    return err({
-      kind: envelope?.errorKind ?? 'Unexpected',
-      params: envelope?.errorParams ?? {},
+    const params = envelope?.errorParams ?? {};
+    const failure: ApiFailure = {
+      kind: kindWithIncident(envelope?.errorKind ?? 'Unexpected', params),
+      params,
       ...(envelope?.fieldErrors !== undefined ? { fieldErrors: envelope.fieldErrors } : {}),
-    });
+    };
+    await rememberFailure(failure.kind, failure.params['incidentId'] ?? null);
+    return err(failure);
   }
 
+  await forgetFailure();
   if (res.status === 204) return ok(undefined as T);
   return ok((await res.json()) as T);
 }

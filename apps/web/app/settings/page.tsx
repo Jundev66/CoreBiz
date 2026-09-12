@@ -23,7 +23,7 @@ export default async function SettingsPage() {
       title={t('settings.title')}
       subtitle={t('settings.subtitle')}
     >
-      <SettingsNav current="business" />
+      <SettingsNav current="business" actor={ctx.actor} />
 
       <div className="max-w-2xl">
         <section aria-labelledby="business-heading">

@@ -73,7 +73,7 @@ export interface DemoCredentials {
 }
 
 export type ProvisionDemoResult =
-  ({ ok: true } & DemoCredentials) | { ok: false; reason: 'failed' };
+  ({ ok: true } & DemoCredentials) | { ok: false; reason: 'failed' | 'full' };
 
 export interface ProvisionDemoOptions {
   readonly templateTenantId: string;
@@ -81,6 +81,8 @@ export interface ProvisionDemoOptions {
   readonly ttlHours: number;
   readonly maxConcurrent: number;
   readonly budgetBytes?: number;
+  /** Read-only seats allowed per hour once capacity is exhausted. Unbounded when absent. */
+  readonly maxReadonlyPerHour?: number;
 }
 
 /**
@@ -138,6 +140,19 @@ export async function provisionDemoSandbox(
   // enlace de un CV es el peor resultado posible del proyecto entero, porque el
   // momento en que se abre es justo el que no se repite.
   const readonly = capacity.mode !== 'normal' || capacity.activeSandboxes >= options.maxConcurrent;
+
+  // Degraded mode still costs an account, an identity, a membership and a session per
+  // call. Without a ceiling, rotating addresses kept creating them forever.
+  if (readonly && options.maxReadonlyPerHour !== undefined) {
+    const seats = await getPrisma(url).$queryRaw<{ n: number }[]>`
+      select count(*)::int as n
+        from public.demo_sessions
+       where kind = 'viewer' and created_at > now() - interval '1 hour'
+    `;
+    if (Number(seats[0]?.n ?? 0) >= options.maxReadonlyPerHour) {
+      return { ok: false, reason: 'full' };
+    }
+  }
 
   const email = demoEmail();
   const password = demoPassword();

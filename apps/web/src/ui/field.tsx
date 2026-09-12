@@ -57,6 +57,24 @@ export function Field({
   const hintId = `${name}-hint`;
   const errorId = `${name}-error`;
 
+  /*
+   * The error's translation key, with a safety net.
+   *
+   * The incoming message IS the key — `Required`, `TooLong`, `InvalidAmount` — chosen by
+   * `fieldErrorsOf` (`@/actions/field-errors`), which only produces catalogue keys. This is
+   * the second line of defence: if something untranslated ever arrives, the field says
+   * "has an invalid format" in the viewer's language instead of rendering
+   * `errors.Too big: expected string to have <=24 characters`.
+   *
+   * next-intl does NOT throw on a missing key: it reports it through `onError` and returns
+   * the key path, which is exactly the text that ends up on screen. Verified against
+   * `use-intl@4.14.2`.
+   */
+  const errorKey =
+    error === undefined || t.has(`errors.${error}`) === false
+      ? 'errors.InvalidFormat'
+      : `errors.${error}`;
+
   // Se describe con la pista Y con el error cuando hay las dos: quedarse solo con el
   // error le quitaria a quien no ve la pantalla la explicacion de que se espera ahi.
   const describedBy = [hint !== undefined ? hintId : null, error ? errorId : null]
@@ -97,7 +115,7 @@ export function Field({
       )}
       {error && (
         <p id={errorId} className="mt-1.5 text-xs text-[var(--color-danger-ink)]">
-          {t(`errors.${error}`, { field: label })}
+          {t(errorKey, { field: label })}
         </p>
       )}
     </div>

@@ -47,12 +47,17 @@ async function dropSandboxes(): Promise<void> {
 describe('Sandbox de demostracion', () => {
   beforeEach(dropSandboxes);
 
-  const clone = (overrides: { maxConcurrent?: number; template?: string } = {}) =>
+  const clone = (
+    overrides: { maxConcurrent?: number; template?: string; maxReadonlyPerHour?: number } = {},
+  ) =>
     provisionDemoSandbox(TEST_DATABASE_URL, {
       templateTenantId: overrides.template ?? TEMPLATE,
       ipHash: 'hash-de-prueba',
       ttlHours: 24,
       maxConcurrent: overrides.maxConcurrent ?? 50,
+      ...(overrides.maxReadonlyPerHour !== undefined
+        ? { maxReadonlyPerHour: overrides.maxReadonlyPerHour }
+        : {}),
     });
 
   it('clona la plantilla entera y el libro mayor sigue cuadrando', async () => {
@@ -244,6 +249,16 @@ describe('Sandbox de demostracion', () => {
     // Y no ha costado una copia de la base: sigue habiendo un solo sandbox.
     const capacidad = await demoCapacity(TEST_DATABASE_URL);
     expect(capacidad.activeSandboxes).toBe(1);
+  });
+
+  it('stops handing out read-only seats past the hourly ceiling', async () => {
+    // Degraded mode used to create a user, identity, membership and session on every call
+    // with nothing ever refusing, so the ceiling is what bounds it.
+    const first = await clone({ maxConcurrent: 0, maxReadonlyPerHour: 1 });
+    expect(first.ok && first.readonly).toBe(true);
+
+    const second = await clone({ maxConcurrent: 0, maxReadonlyPerHour: 1 });
+    expect(second).toEqual({ ok: false, reason: 'full' });
   });
 
   it('un sandbox caducado deja de estar vivo y la purga se lo lleva con su cuenta', async () => {

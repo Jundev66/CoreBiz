@@ -32,6 +32,9 @@ on:
     - cron: '17 6 */2 * *'
   workflow_dispatch:
 
+# It only calls a public URL; the token needs nothing.
+permissions: {}
+
 jobs:
   ping:
     name: Mantener Supabase despierto

@@ -4,10 +4,16 @@ import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
 import { BackLink } from '@/ui/primitives';
 import { DeliveryNoteForm } from '@/ui/delivery-note-form';
+import { notFound } from 'next/navigation';
+import { can } from '@corebiz/domain';
 
 export default async function NewDeliveryNotePage() {
   const t = await getTranslations();
   const { ctx, session, queries } = await apiForRequest();
+
+  // Before reading: the customer list requires `customer:read`, which warehouse lacks, and
+  // that 403 broke the issue screen. Whoever can issue can always read customers.
+  if (!can(ctx.actor, 'delivery_note:issue')) notFound();
 
   const [customers, products] = await Promise.all([
     queries.customers.options(),

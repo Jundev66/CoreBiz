@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { activeDriver, apiForRequest } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
 import { signupConfig } from '@/demo/sandbox';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
@@ -24,6 +24,12 @@ import { Card, Stat, SectionTitle, SecondaryLink } from '@/ui/primitives';
  * publica tiene que poder verse siempre.
  */
 export default async function HomePage() {
+  // The memory driver has no Supabase and no sign-in: the API resolves a fixed demo
+  // identity, and every other screen already works with it. Treating the root as signed
+  // out there showed the public landing page instead of the dashboard, which is what the
+  // smoke test caught.
+  if (activeDriver() === 'memory') return <Panel />;
+
   const user = supabaseIsConfigured() ? await currentUser() : null;
   return user === null ? <Presentacion /> : <Panel />;
 }

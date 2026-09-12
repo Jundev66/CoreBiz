@@ -12,6 +12,9 @@ import type {
   SetCustomerStatusInput,
   SetProductStatusInput,
   SetSupplierStatusInput,
+  UpdateCustomerInput,
+  UpdateProductInput,
+  UpdateSupplierInput,
   UpdateTenantSettingsInput,
   VoidDeliveryNoteInput,
   VoidGoodsReceiptInput,
@@ -50,6 +53,25 @@ export function httpCommands() {
         addressState: orUndefined(input.addressState),
       }),
 
+    updateCustomer: (input: UpdateCustomerInput) =>
+      send<{ id: string; code: string }>(
+        'PATCH',
+        `/v1/customers/${encodeURIComponent(input.customerId)}`,
+        {
+          name: input.name,
+          // `orUndefined` NO se usa aqui, y es la diferencia con el alta: al crear, un
+          // campo vacio significa "no lo se todavia" y se omite. Al corregir significa
+          // "vacialo", y omitirlo dejaria el valor viejo puesto para siempre.
+          taxId: input.taxId ?? '',
+          email: input.email ?? '',
+          phone: input.phone ?? '',
+          creditLimit: input.creditLimit ?? '',
+          addressLine1: input.addressLine1 ?? '',
+          addressCity: input.addressCity ?? '',
+          addressState: input.addressState ?? '',
+        },
+      ),
+
     setCustomerStatus: (input: SetCustomerStatusInput) =>
       send<{ archived: boolean }>(
         'PATCH',
@@ -69,6 +91,21 @@ export function httpCommands() {
         taxable: input.taxable,
         trackStock: input.trackStock,
       }),
+
+    updateProduct: (input: UpdateProductInput) =>
+      send<{ id: string; sku: string }>(
+        'PATCH',
+        `/v1/products/${encodeURIComponent(input.productId)}`,
+        {
+          name: input.name,
+          price: input.price,
+          unit: input.unit ?? '',
+          cost: input.cost ?? '',
+          minStock: input.minStock ?? '',
+          description: input.description ?? '',
+          taxable: input.taxable,
+        },
+      ),
 
     setProductStatus: (input: SetProductStatusInput) =>
       send<{ archived: boolean }>(
@@ -145,6 +182,20 @@ export function httpCommands() {
         contactName: orUndefined(input.contactName),
         notes: orUndefined(input.notes),
       }),
+
+    updateSupplier: (input: UpdateSupplierInput) =>
+      send<{ id: string; code: string }>(
+        'PATCH',
+        `/v1/purchasing/suppliers/${encodeURIComponent(input.supplierId)}`,
+        {
+          name: input.name,
+          taxId: input.taxId ?? '',
+          email: input.email ?? '',
+          phone: input.phone ?? '',
+          contactName: input.contactName ?? '',
+          notes: input.notes ?? '',
+        },
+      ),
 
     setSupplierStatus: (input: SetSupplierStatusInput) =>
       send<{ archived: boolean }>(

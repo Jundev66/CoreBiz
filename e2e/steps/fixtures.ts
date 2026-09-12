@@ -21,6 +21,10 @@ export interface CustomerWorld {
    * "el primero de la lista" puede ser el documento de otro escenario. Lo fue.
    */
   lastNumber?: string;
+  /** Codigo asignado por el sistema, para comprobar que corregir NO lo cambia. */
+  assignedCode?: string;
+  /** Nombre con el que quedo un registro tras corregirlo. */
+  correctedName?: string;
 }
 
 export const test = base.extend<{ world: CustomerWorld }>({

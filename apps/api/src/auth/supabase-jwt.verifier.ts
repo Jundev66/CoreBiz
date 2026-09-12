@@ -48,6 +48,21 @@ export class SupabaseJwtVerifier {
         issuer: this.issuer,
         audience: 'authenticated',
         clockTolerance: 5,
+        /*
+         * The algorithm is declared, not inferred.
+         *
+         * Without this line the protection already existed, but by accident: `jose` always
+         * rejects `alg: none`, and a JWKS only serves asymmetric keys, so a token signed
+         * with HS256 using the public key as the secret fails on key import. We were safe
+         * because of a library property rather than a decision of ours — and the threat
+         * model already claimed "(ES256)" as if the decision had been made.
+         *
+         * Both asymmetric algorithms Supabase can issue are listed. The local JWKS publishes
+         * ES256 (EC P-256), but a project created with RSA keys signs with RS256, and
+         * pinning only one would break that deployment with no useful hint. What matters is
+         * that the list contains neither `none` nor any HMAC.
+         */
+        algorithms: ['ES256', 'RS256'],
       });
 
       if (typeof payload.sub !== 'string' || payload.sub === '') {

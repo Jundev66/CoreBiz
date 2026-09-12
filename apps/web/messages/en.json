@@ -33,13 +33,33 @@
     "archive": "Archive",
     "restore": "Bring back to the list",
     "archivedNotice": "This customer is archived: it does not show in the list and cannot be picked when issuing a note. Its earlier documents are untouched.",
-    "showArchived": "Also show archived"
+    "showArchived": "Also show archived",
+    "edit": "Edit customer"
+  },
+  "crash": {
+    "title": "Something broke on our side",
+    "lead": "This is not something you did: the page could not load and the failure has been recorded. You can try again.",
+    "reference": "Reference",
+    "retry": "Try again",
+    "home": "Go to start"
+  },
+  "notFound": {
+    "title": "We could not find this page",
+    "lead": "The link may be incomplete, or what you are looking for may not be available.",
+    "home": "Go to start"
+  },
+  "noAccess": {
+    "title": "This is outside your access",
+    "lead": "Your role in this company does not include this part of the system. If you need it, ask whoever administers it."
   },
   "errors": {
     "Forbidden": "You do not have permission to do this.",
+    "FeatureNotAvailable": "That part of the system isn't included in your plan.",
+    "QuotaExceeded": "You've reached your plan's limit: {current} of {limit}.",
     "Required": "The {field} field is required.",
     "TooShort": "The {field} field is too short.",
     "TooLong": "The {field} field is too long.",
+    "InvalidAmount": "The {field} field must be an amount like 1500.00 — no thousands separator.",
     "InvalidFormat": "The {field} field has an invalid format.",
     "InvalidCreditLimit": "The credit limit is not a valid amount.",
     "unexpected": "An unexpected error occurred.",
@@ -58,12 +78,20 @@
     "InvalidStock": "The inventory quantity is not valid.",
     "OutOfRange": "The {field} field is out of range.",
     "StockNotTracked": "This product does not track stock, so there is nothing to adjust.",
+    "InvalidTransition": "This note is no longer in the state this action needs. Reload the page: someone probably changed it before you did.",
     "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+    "UnexpectedWithIncident": "Something broke on our side. Try again; if you contact us, give us this reference: {incidentId}",
     "InvalidRequest": "We could not read that request. Reload the page and try again.",
     "Unauthenticated": "Your session expired. Please sign in again.",
-    "NotFound": "That is no longer there.",
+    "NotFound": "We couldn't find what you asked for.",
+    "NoActiveTenant": "Your account doesn't belong to a business yet.",
     "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
-    "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
+    "ApiUnavailable": "The server is not responding right now. Try again in a few seconds.",
+    "CreditLimitBelowBalance": "The limit ({requested}) cannot be below the outstanding balance ({balance}).",
+    "InvalidUnitPrice": "One of the prices in this document isn't a valid amount.",
+    "DiscountOutOfRange": "The discount is out of range: it has to be between 0% and 100%.",
+    "PayloadTooLarge": "What you tried to send is too big.",
+    "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again."
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
@@ -104,7 +132,9 @@
     "saving": "Saving…",
     "view": "View",
     "notSet": "—",
-    "close": "Close"
+    "close": "Close",
+    "edit": "Edit",
+    "saved": "Changes saved"
   },
   "products": {
     "title": "Products",
@@ -153,7 +183,9 @@
       "out": "Dispatched",
       "adjust": "Adjustment",
       "void_compensation": "Returned by void"
-    }
+    },
+    "edit": "Edit product",
+    "description": "Description"
   },
   "deliveryNotes": {
     "title": "Delivery notes",
@@ -275,7 +307,7 @@
       "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
       "InvalidRequest": "We could not read that request. Reload the page and try again.",
       "Unauthenticated": "Your session expired. Please sign in again.",
-      "NotFound": "That is no longer there.",
+      "NotFound": "We couldn't find what you asked for.",
       "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
       "ApiUnavailable": "The server is not responding right now. Try again in a few seconds.",
       "AlreadyMember": "You already belong to someone else’s business, so you cannot create your own.",
@@ -333,6 +365,8 @@
     },
     "errors": {
       "Forbidden": "You do not have permission to do this.",
+      "FeatureNotAvailable": "That part of the system isn't included in your plan.",
+      "QuotaExceeded": "You've reached your plan's limit: {current} of {limit}.",
       "InvalidFormat": "Check the details.",
       "InvalidTaxRate": "That tax percentage is not valid.",
       "InvalidCurrency": "That currency is not supported.",
@@ -345,15 +379,20 @@
       "UnknownRole": "That role does not exist.",
       "MemberNotFound": "That person is no longer in the business.",
       "OnlyOwnerGrantsOwnership": "Only the owner can appoint another owner.",
+      "OnlyOwnerManagesOwners": "Only an owner can change another owner's role or remove them from the team.",
       "LastOwner": "The business needs at least one owner.",
       "CannotRemoveSelf": "You cannot remove yourself.",
       "InvitationNotFound": "That invitation is no longer active.",
       "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+      "UnexpectedWithIncident": "Something broke on our side. Try again; if you contact us, give us this reference: {incidentId}",
       "InvalidRequest": "We could not read that request. Reload the page and try again.",
       "Unauthenticated": "Your session expired. Please sign in again.",
-      "NotFound": "That is no longer there.",
+      "NotFound": "We couldn't find what you asked for.",
+      "NoActiveTenant": "Your account doesn't belong to a business yet.",
       "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
-      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
+      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds.",
+      "PayloadTooLarge": "What you tried to send is too big.",
+      "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again."
     },
     "team": {
       "heading": "People",
@@ -433,6 +472,8 @@
     "voidSoldWarning": "If what arrived with this receipt has already been sold, the system will refuse to void it: you cannot un-receive something that already left.",
     "errors": {
       "Forbidden": "You do not have permission to do this.",
+      "FeatureNotAvailable": "That part of the system isn't included in your plan.",
+      "QuotaExceeded": "You've reached your plan's limit: {current} of {limit}.",
       "InvalidFormat": "Check the details.",
       "SupplierNotFound": "That supplier does not exist.",
       "ProductNotFound": "One of the products does not exist.",
@@ -448,11 +489,16 @@
       "AlreadyVoided": "This delivery was already voided.",
       "InsufficientStock": "There is not enough stock of {sku}.",
       "Unexpected": "Something broke on our side. Try again; if it keeps happening, let us know.",
+      "UnexpectedWithIncident": "Something broke on our side. Try again; if you contact us, give us this reference: {incidentId}",
       "InvalidRequest": "We could not read that request. Reload the page and try again.",
       "Unauthenticated": "Your session expired. Please sign in again.",
-      "NotFound": "That is no longer there.",
+      "NotFound": "We couldn't find what you asked for.",
+      "NoActiveTenant": "Your account doesn't belong to a business yet.",
       "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
-      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds."
+      "ApiUnavailable": "The server is not responding right now. Try again in a few seconds.",
+      "GoodsReceiptNotFound": "That purchase receipt is no longer there.",
+      "PayloadTooLarge": "What you tried to send is too big.",
+      "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again."
     },
     "detail": "Goods receipt details",
     "supplierReference": "Supplier document",
@@ -479,7 +525,9 @@
     "archive": "Archive",
     "restore": "Bring back to the list",
     "showArchived": "Also show archived",
-    "state": "State"
+    "state": "State",
+    "edit": "Edit supplier",
+    "notes": "Notes"
   },
   "status": {
     "active": "Active",
@@ -493,5 +541,199 @@
     "ready": "Ready. Taking you in…",
     "stuck": "This is taking longer than usual. You can wait a bit more or try again.",
     "retry": "Try again"
+  },
+  "assistant": {
+    "title": "Help",
+    "idle": "When something won't let you continue, open this: it tells you why, and what you can do.",
+    "noPlaybook": "I can't explain the last failure yet. If it happens again, let us know.",
+    "whatHappened": "What happened",
+    "whatToDo": "What you can do",
+    "goTo": "Go to the screen",
+    "breakdown": "Something broke on our side. It's nothing you did wrong, and nothing you can fix from here.",
+    "breakdownWithReference": "Give us this reference when you contact us: it lets us find exactly what broke.",
+    "breakdownNoReference": "No reference came through, so tell us what you were doing when it happened.",
+    "reference": "Reference",
+    "playbooks": {
+      "Forbidden": {
+        "what": "Your role doesn't include this action. CoreBiz decides by role, not by screen: a button can be visible and the action still be denied.",
+        "do": "Ask an owner or an admin to do it, or to change your role from Settings › Team."
+      },
+      "QuotaExceeded": {
+        "what": "You've reached the ceiling your plan allows for this resource.",
+        "do": "Archive what you no longer use — archiving deletes nothing and past documents stay intact — or talk to whoever manages the account."
+      },
+      "FeatureNotAvailable": {
+        "what": "That module isn't active for your business.",
+        "do": "There's nothing you can change from here. Talk to whoever manages the account."
+      },
+      "OnlyOwnerGrantsOwnership": {
+        "what": "Only an owner can appoint another owner. This is the rule that stops an admin from promoting themselves.",
+        "do": "Ask a current owner to make the change."
+      },
+      "OnlyOwnerManagesOwners": {
+        "what": "Only another owner can demote or remove an owner of the company. This stops an admin from taking control away from whoever created it.",
+        "do": "Ask a current owner to make the change."
+      },
+      "LastOwner": {
+        "what": "This is the last remaining owner, and nobody can administer a business with no owner.",
+        "do": "Appoint another owner first; then you can change or remove this one."
+      },
+      "CannotRemoveSelf": {
+        "what": "You can't remove yourself from the team.",
+        "do": "Ask another owner or admin to do it."
+      },
+      "CannotInviteOwner": {
+        "what": "You can't invite someone directly as an owner.",
+        "do": "Invite them with another role; once they are in, an owner can promote them."
+      },
+      "AlreadyMember": {
+        "what": "That person is already on your team.",
+        "do": "Find them in the member list; if you want to change their role, that is where you do it."
+      },
+      "AlreadyInvited": {
+        "what": "There is already an active invitation for that address and it has not expired yet.",
+        "do": "Wait for them to accept it, or revoke the previous one before sending another."
+      },
+      "UnknownRole": {
+        "what": "The role that arrived is not one of the five that exist. This usually means a stale page.",
+        "do": "Reload the page and pick the role from the list."
+      },
+      "MemberNotFound": {
+        "what": "That person is no longer on the team. Someone may have removed them while your page was open.",
+        "do": "Reload the team list."
+      },
+      "InvitationNotFound": {
+        "what": "That invitation is no longer active: it was accepted, revoked, or it expired.",
+        "do": "Send a new one from Settings › Team."
+      },
+      "CustomerNotFound": {
+        "what": "That customer doesn't exist, or it is archived, or the link is stale.",
+        "do": "Look for it in the list and tick \"show archived\" if you think it was there."
+      },
+      "ProductNotFound": {
+        "what": "That product doesn't exist, or it is archived, or the link is stale.",
+        "do": "Look for it in the catalogue and tick \"show archived\" if you think it was there."
+      },
+      "DeliveryNoteNotFound": {
+        "what": "That delivery note doesn't exist, or the link is stale.",
+        "do": "Look for it in the note list."
+      },
+      "SupplierNotFound": {
+        "what": "That supplier doesn't exist, or it is archived, or the link is stale.",
+        "do": "Look for it in the supplier list."
+      },
+      "NotFound": {
+        "what": "We couldn't find what you asked for. It may not exist, or the link may be mistyped.",
+        "do": "Go back to the list and look for it from there."
+      },
+      "InsufficientStock": {
+        "what": "There are fewer units than you are trying to take out. Stock is not allowed to go negative.",
+        "do": "Record the purchase receipt first, or adjust stock from the product page."
+      },
+      "StockNotTracked": {
+        "what": "This product doesn't track stock, so there is nothing to move.",
+        "do": "If you want it to, turn tracking on from its page."
+      },
+      "DuplicateSku": {
+        "what": "Another product already uses that SKU. The SKU is the one code you assign yourself, and it has to be unique.",
+        "do": "Use a different one, or find the product that already has it."
+      },
+      "DuplicateProduct": {
+        "what": "The same product appears twice in this document.",
+        "do": "Merge the two lines into one with the quantities added up."
+      },
+      "CreditLimitExceeded": {
+        "what": "This would put the customer over the credit they have been granted.",
+        "do": "Collect part of what is outstanding, or raise their limit from their page."
+      },
+      "CreditLimitBelowBalance": {
+        "what": "You can't set the credit limit below what the customer already owes.",
+        "do": "Collect first, or set a limit equal to or above the outstanding balance."
+      },
+      "InvalidCreditLimit": {
+        "what": "That credit limit isn't a valid amount.",
+        "do": "Write it with digits and a decimal separator only, without a currency symbol."
+      },
+      "NoExchangeRate": {
+        "what": "Your business works in two currencies and no exchange rate is set, so the total cannot be worked out.",
+        "do": "Set it in Settings before issuing the document."
+      },
+      "NoLines": {
+        "what": "A document with no lines says nothing, so it is not saved.",
+        "do": "Add at least one product."
+      },
+      "InvalidTransition": {
+        "what": "The note is no longer in the state this action needs. It almost always means your page is stale and someone changed it before you.",
+        "do": "Reload it and see what state it is in now."
+      },
+      "AlreadyVoided": {
+        "what": "That receipt was already voided. Voiding it twice would return the stock twice.",
+        "do": "Reload the page to see how it ended up."
+      },
+      "InvalidQuantity": {
+        "what": "That quantity isn't valid: it has to be greater than zero, and it can't have more decimals than the product allows.",
+        "do": "Fix it and try again."
+      },
+      "InvalidPrice": {
+        "what": "That price isn't valid.",
+        "do": "Write it with digits and a decimal separator only, without a currency symbol."
+      },
+      "InvalidCost": {
+        "what": "That cost isn't valid.",
+        "do": "Write it with digits and a decimal separator only, without a currency symbol."
+      },
+      "InvalidStock": {
+        "what": "That stock quantity isn't valid.",
+        "do": "Use a number, with a minus sign if what you are recording is an outflow."
+      },
+      "InvalidEmail": {
+        "what": "That email address doesn't look like an address.",
+        "do": "Check it: the usual causes are a stray space or a missing at sign."
+      },
+      "InvalidTaxRate": {
+        "what": "That tax rate isn't valid.",
+        "do": "Write it as a percentage, between 0 and 100."
+      },
+      "InvalidCurrency": {
+        "what": "That currency isn't one the system recognises.",
+        "do": "Pick one from the list in Settings."
+      },
+      "InvalidExchangeRate": {
+        "what": "That exchange rate isn't valid: it has to be greater than zero.",
+        "do": "Fix it in Settings."
+      },
+      "Unauthenticated": {
+        "what": "Your session expired. This happens when a tab has been open for a long time.",
+        "do": "Sign in again; anything you were typing is lost, so copy it first if you can."
+      },
+      "NoActiveTenant": {
+        "what": "Your account exists but doesn't belong to a business yet.",
+        "do": "Create your own, or ask someone to invite you to theirs."
+      },
+      "TooManyAttempts": {
+        "what": "You have made too many attempts in a row and the system is waiting before it accepts another. This is the protection against password guessing.",
+        "do": "Wait a minute and try again. Change nothing in the meantime."
+      },
+      "InvalidRequest": {
+        "what": "The request arrived in a shape the server does not understand. It is almost always a stale tab talking to a newer version.",
+        "do": "Reload the page and try again."
+      },
+      "PayloadTooLarge": {
+        "what": "What you tried to send is too big.",
+        "do": "If it is a document with many lines, split it in two."
+      },
+      "GoodsReceiptNotFound": {
+        "what": "That purchase receipt doesn't exist, or the link is stale.",
+        "do": "Look for it in the purchases list."
+      },
+      "InvalidUnitPrice": {
+        "what": "One of the prices in this document can't be read as an amount.",
+        "do": "Check the lines: write prices with digits and a decimal separator only, without a currency symbol."
+      },
+      "DiscountOutOfRange": {
+        "what": "That discount is outside the range a document accepts: between 0% and 100%.",
+        "do": "Fix it on the line that carries it."
+      }
+    }
   }
 }

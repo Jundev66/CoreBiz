@@ -7,6 +7,7 @@ import { Shell, TableFrame, Empty } from '@/ui/shell';
 import { SupplierForm } from '@/ui/supplier-form';
 import { StatusBadge, StatusToggle } from '@/ui/detail';
 import { setSupplierStatusAction } from '@/actions/purchasing';
+import { noticeCode } from '@/ui/notice-code';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -23,10 +24,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SuppliersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archivados?: string; creado?: string }>;
+  searchParams: Promise<{ archivados?: string; creado?: string; guardado?: string }>;
 }) {
   const t = await getTranslations();
-  const { archivados, creado } = await searchParams;
+  const { archivados, creado, guardado } = await searchParams;
+  const createdCode = noticeCode(creado);
   const { ctx, session, queries } = await apiForRequest();
 
   // Quien no puede escribir proveedores ve el listado y nada mas. Ocultar el formulario
@@ -45,7 +47,8 @@ export default async function SuppliersPage({
       session={session}
       title={t('suppliers.title')}
       subtitle={t('suppliers.subtitle')}
-      {...(creado !== undefined ? { toast: t('suppliers.created', { code: creado }) } : {})}
+      {...(createdCode !== null ? { toast: t('suppliers.created', { code: createdCode }) } : {})}
+      {...(guardado !== undefined ? { toast: t('common.saved') } : {})}
     >
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-labelledby="suppliers-list">
@@ -114,6 +117,14 @@ export default async function SuppliersPage({
                           activeLabel={t('status.active')}
                           archivedLabel={t('status.archived')}
                         />
+                        {puedeEscribir && (
+                          <Link
+                            href={`/purchases/suppliers/${supplier.id}/edit`}
+                            className="rounded-[var(--radius-control)] border border-[var(--color-line-strong)] px-2.5 py-1 text-xs font-medium transition hover:bg-[var(--color-subtle)]"
+                          >
+                            {t('common.edit')}
+                          </Link>
+                        )}
                         {puedeEscribir && (
                           <StatusToggle
                             action={setSupplierStatusAction}

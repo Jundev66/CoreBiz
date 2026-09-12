@@ -78,6 +78,21 @@ pnpm dlx supabase link --project-ref TU_REF
 pnpm dlx supabase db push
 ```
 
+### Ajustes de Auth obligatorios
+
+El repositorio no los puede comprobar: viven en el panel de Supabase y hay que ponerlos a
+mano antes de publicar el enlace.
+
+- **Authentication → Sign In / Providers → Email**: confirmación de correo **activada**.
+- **Authentication → Policies**: contraseña mínima de **8** caracteres y comprobación de
+  contraseñas filtradas activada.
+- **Authentication → Sign In / Providers**: inicio de sesión **anónimo desactivado**.
+- **Authentication → Sessions**: caducidad del token de acceso en **600 segundos**. La
+  revocación de cuentas depende de ello (ver `docs/THREAT_MODEL.md`).
+- Si no quieres altas abiertas, `SIGNUP_ENABLED=false` en Render **y** en Vercel, y además
+  desactiva «Allow new users to sign up» en el panel: la variable cierra la aplicación,
+  no Supabase Auth.
+
 ## 3. Extensiones de base de datos
 
 En el editor SQL de Supabase:
@@ -108,6 +123,18 @@ decir, la demostración entera, que es la razón de ser del enlace del currícul
 Pega el contenido de `supabase/seed.sql` en el **editor SQL** de Supabase y ejecútalo una
 vez.
 
+Solo ese archivo. **Nunca `supabase/seed.local.sql`**: es la semilla de desarrollo y le da a
+la cuenta dueña de la plantilla una contraseña que está publicada en el repositorio.
+
+Lo que deja `seed.sql` en producción, y por qué es seguro con el repositorio público:
+
+- La cuenta `demo@corebiz.local` existe —la plantilla necesita un dueño— pero con una
+  contraseña aleatoria que nadie conoce y sin identidad de correo: **no se puede entrar con
+  ella**.
+- La plantilla queda **bloqueada en la base** (`demo_template_locked`, activo por defecto):
+  ningún usuario puede escribir en ella, ni siquiera su dueño. Solo la clonan y la leen las
+  funciones de la demostración.
+
 > ⚠️ **Nunca `supabase db reset --linked`.** Eso borra la base de producción entera.
 
 ## 4. Render — la API
@@ -133,11 +160,11 @@ donde `x-forwarded-for` es de fiar. A la API solo le llega el hash.
 
 `INTERNAL_API_SECRET` lo genera Render solo. **Cópialo**: hace falta idéntico en Vercel.
 
-4. Cuando termine el despliegue, anota la URL (`https://corebiz-api.onrender.com`) y
+4. Cuando termine el despliegue, anota la URL (`https://tu-api.onrender.com`) y
    compruébala:
 
 ```bash
-curl https://corebiz-api.onrender.com/health
+curl https://tu-api.onrender.com/health
 ```
 
 Debe responder `{"status":"ok","driver":"postgres","database":"reachable"}`. Si dice
@@ -165,10 +192,16 @@ Debe responder `{"status":"ok","driver":"postgres","database":"reachable"}`. Si 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key                          | —        |
 | `NEXT_PUBLIC_SITE_URL`          | `https://tu-app.vercel.app`       | —        |
 | `CRON_SECRET`                   | `openssl rand -base64 32`         | ✅       |
+| `REQUEST_HASH_SECRET`           | `openssl rand -base64 32`         | ✅       |
 
 **`DATABASE_URL` NO va aquí.** Que Vercel no tenga acceso a la base de datos es la
 prueba observable de que la interfaz dejó de hablar con Postgres. Si la pones "por si
 acaso", nadie se dará cuenta de que algo volvió a usarla.
+
+`REQUEST_HASH_SECRET` es **obligatorio**: sin él la web responde con error en vez de
+arrancar con la sal de desarrollo, que está en el repositorio y haría reversibles los
+hashes de IP. Lo mismo con `INTERNAL_API_SECRET`: si falta o no coincide con el de Render,
+el acceso se niega en vez de quedarse sin límite de intentos.
 
 `CRON_SECRET` protege `/api/cron/purge`, que reenvía la orden de purga a la API. Si se
 deja vacío, el endpoint responde 404 en lugar de abrirse: uno que borra y se abre cuando
@@ -222,7 +255,7 @@ vez. Ver [ADR 009](adr/009-api-dedicada-en-nestjs.md).
 curl https://tu-proyecto.vercel.app/api/health
 
 # Y la API por su cuenta, para saber cuál de las dos falla si algo falla.
-curl https://corebiz-api.onrender.com/health
+curl https://tu-api.onrender.com/health
 ```
 
 Los dos deben responder `200`, y el segundo con `database: "reachable"` — es decir,
@@ -239,7 +272,7 @@ Luego, a mano:
 - [ ] Dos cuentas en dos navegadores no ven los datos de la otra, ni forzando ids en la URL.
 - [ ] **Con el token de una cuenta, llamar a la API directamente tampoco alcanza los
       datos de la otra.** Es una comprobación nueva: antes no había una API que atacar.
-- [ ] `https://corebiz-api.onrender.com/docs` responde **404** en producción.
+- [ ] `https://tu-api.onrender.com/docs` responde **404** en producción.
 - [ ] El workflow de keepalive se ejecuta correctamente (lánzalo a mano una vez).
 
 ---

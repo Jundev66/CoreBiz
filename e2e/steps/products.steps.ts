@@ -76,3 +76,35 @@ async function openAdjustForm(page: Page, sku: string): Promise<void> {
     page.getByRole('heading', { name: /adjust stock|ajustar inventario/i }),
   ).toBeVisible();
 }
+
+/*
+ * Corregir la ficha de un producto.
+ *
+ * El escenario que lo usa afirma DESPUES que el saldo no cambio, y ese es el criterio
+ * que protege toda la funcion de edicion: el repositorio escribe el saldo desde el
+ * agregado en la misma sentencia con la que guarda la ficha, asi que un descuido
+ * cambiaria el inventario sin dejar el asiento que lo explica.
+ */
+
+When('I correct the price of {string} to {float}', async ({ page }, sku: string, price: number) => {
+  await page.goto('/products');
+  const row = page.getByRole('row').filter({ hasText: sku });
+  await row.getByRole('link', { name: /view|ver/i }).click();
+
+  await page.getByRole('link', { name: /^edit$|^editar$/i }).click();
+  await page.getByLabel(/^price|^precio/i).fill(String(price));
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // Corregir devuelve a la ficha del producto, no al catalogo.
+  await page.waitForURL(/\/products\/[^/]+(\?|$)/);
+});
+
+Then('the price of {string} shows as {float}', async ({ page }, sku: string, price: number) => {
+  await page.goto('/products');
+  const row = page.getByRole('row').filter({ hasText: sku });
+  // Se busca en la fila entera y no en una celda por indice: el precio se pinta con el
+  // simbolo de moneda y con coma o punto segun el idioma, asi que se compara el numero
+  // por sus dos escrituras posibles.
+  const escrito = String(price);
+  await expect(row).toContainText(new RegExp(escrito.replace('.', '[.,]')));
+});

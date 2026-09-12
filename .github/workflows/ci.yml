@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Least privilege for the automatic token. The workflow only reads the code; gitleaks
+# also reads pull request commits. Nothing here needs to write to the repository.
+permissions:
+  contents: read
+  pull-requests: read
+
 # Un push nuevo sobre la misma rama cancela la corrida anterior: no tiene sentido
 # gastar minutos verificando un commit que ya quedo atras.
 concurrency:
@@ -152,6 +158,11 @@ jobs:
       # por buena y el fallo espera a que alguien abra esa pantalla en ese idioma.
       - name: Verificar la paridad de los dos idiomas
         run: bash scripts/check-i18n-parity.sh
+      # The assistant explains errors by reading the support catalogue. An undeclared new
+      # error key raises no error: the panel simply goes quiet, on the one screen people
+      # turn to when they do not know what to do.
+      - name: Check the support catalogue
+        run: bash scripts/check-playbooks.sh
 
   integration:
     name: Persistencia y matriz de aislamiento RLS

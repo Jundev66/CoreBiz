@@ -14,6 +14,24 @@ const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
+    /**
+     * Whether to publish the OpenAPI document, and by default NO.
+     *
+     * It used to be decided by `NODE_ENV !== 'production'`, which fails on the dangerous
+     * side: `NODE_ENV` defaults to `development`, and the `docs` route is permanently
+     * excluded from the auth middleware. A service created by hand on Render — copying only
+     * the start command, as `docs/DEPLOY.md` allows — would publish the whole `/docs-json`
+     * without a session, and nothing would turn red.
+     *
+     * An open OpenAPI document for an ERP is a free map of its entire write surface. So now
+     * it has to be asked for by name, and forgetting it leaves it closed, which is the right
+     * way to fail.
+     */
+    DOCS_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+
     /** Render inyecta PORT y espera que se escuche AHI. No es negociable. */
     PORT: z.coerce.number().int().positive().default(3001),
 
@@ -90,6 +108,16 @@ const schema = z
      * demostracion hace lo que promete.
      */
     DEMO_MAX_PER_HOUR: z.coerce.number().int().positive().default(1),
+    /**
+     * Read-only demo seats handed out per hour once sandbox capacity is exhausted.
+     *
+     * Degraded mode used to create an account, identity, membership and session on EVERY
+     * request with nothing ever refusing, so rotating addresses kept filling auth tables.
+     * Past this ceiling `/demo` answers "unavailable" instead.
+     */
+    DEMO_MAX_READONLY_PER_HOUR: z.coerce.number().int().positive().default(60),
+    /** Writes per verified user per hour through the API. See `WriteThrottleGuard`. */
+    API_WRITES_PER_HOUR: z.coerce.number().int().positive().default(600),
   })
   .superRefine((value, ctx) => {
     if (value.DATA_DRIVER === 'postgres' && value.DATABASE_URL === undefined) {

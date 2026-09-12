@@ -113,3 +113,48 @@ Then('I should see a validation error on the name field', async ({ page }) => {
   const field = page.getByLabel('Name', { exact: false });
   await expect(field).toHaveAttribute('aria-invalid', 'true');
 });
+
+/*
+ * Corregir un cliente.
+ *
+ * El codigo se lee de la ficha ANTES de corregir y se vuelve a leer despues. Es el
+ * criterio que de verdad importa: corregir no puede cambiarlo, porque es la unica
+ * referencia estable que tiene el cliente en los documentos ya emitidos.
+ */
+
+When('I note the code the system gave it', async ({ page, world }) => {
+  // El codigo esta en el subtitulo de la ficha, en su formato canonico.
+  const texto = await page.locator('main').innerText();
+  const encontrado = /CLT\d{8}/.exec(texto);
+  expect(encontrado, 'la ficha deberia enseñar el codigo asignado').not.toBeNull();
+  // Se afirma antes de asignar: con `exactOptionalPropertyTypes`, guardar un
+  // `undefined` no es lo mismo que no guardar nada, y el paso siguiente compararia
+  // contra la cadena vacia dando por bueno cualquier codigo.
+  world.assignedCode = encontrado?.[0] ?? '';
+});
+
+When('I correct the customer name and phone', async ({ page, world }) => {
+  world.correctedName = `${world.lastCode ?? ''} Corregido`;
+
+  await page.getByRole('link', { name: /^edit$|^editar$/i }).click();
+
+  const nombre = page.getByLabel('Name', { exact: false });
+  await nombre.fill(world.correctedName);
+  await page.getByLabel('Phone', { exact: false }).fill('0414-5550001');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // Corregir devuelve a la FICHA, no al listado: quien arregla un telefono quiere
+  // comprobar que quedo bien escrito.
+  await page.waitForURL(/\/customers\/[^/]+(\?|$)/);
+});
+
+Then('I should see the corrected details on the record', async ({ page, world }) => {
+  await expect(
+    page.getByRole('heading', { name: world.correctedName ?? '', level: 1 }),
+  ).toBeVisible();
+  await expect(page.locator('main')).toContainText('0414-5550001');
+});
+
+Then('the code is still the one it was given', async ({ page, world }) => {
+  await expect(page.locator('main')).toContainText(world.assignedCode ?? '');
+});

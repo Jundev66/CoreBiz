@@ -53,3 +53,14 @@ Feature: Customer directory
     Then I should not see that customer
     When I show the archived customers
     Then I should see that customer
+
+  # Correcting, not re-registering. Before this existed, fixing a mistyped phone number
+  # meant archiving the customer and creating another one — which is born with a NEW
+  # code and leaves the delivery notes already issued pointing at a dead record.
+  Scenario: Correcting a customer's details keeps the code it was given
+    When I register a customer just for this scenario
+    And I open its details
+    And I note the code the system gave it
+    And I correct the customer name and phone
+    Then I should see the corrected details on the record
+    And the code is still the one it was given

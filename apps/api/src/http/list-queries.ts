@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { paginationSchema } from '@corebiz/contracts';
+import { RESOURCES } from '@corebiz/domain';
 
 /**
  * Esquemas de los parametros de consulta de los listados.
@@ -73,17 +74,26 @@ export const auditExportQuerySchema = z
 
 export const usageQuerySchema = z
   .object({
-    /** `?resources=customers,products`: una sola llamada para pintar varias cuotas. */
+    /**
+     * `?resources=customers,products`: una sola llamada para pintar varias cuotas.
+     *
+     * Bounded, because every listed resource becomes its own database query run in
+     * parallel: with no bound, one request with thousands of names starved the shared
+     * connection pool for every company. Only known resources, at most as many as exist,
+     * and a short raw string so nothing large is even split.
+     */
     resources: z
       .string()
       .trim()
       .min(1)
+      .max(200)
       .transform((raw) =>
         raw
           .split(',')
           .map((item) => item.trim())
           .filter((item) => item !== ''),
-      ),
+      )
+      .pipe(z.array(z.enum(RESOURCES)).min(1).max(RESOURCES.length)),
   })
   .strict();
 

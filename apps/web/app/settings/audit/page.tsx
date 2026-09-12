@@ -4,6 +4,7 @@ import { getTranslations, getFormatter } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
 import { SettingsNav } from '@/ui/settings-nav';
+import { dayParam, textParam } from '@/ui/filter-params';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -31,21 +32,28 @@ export default async function AuditPage({
   const format = await getFormatter();
   const { ctx, session, queries } = await apiForRequest();
 
-  const params = await searchParams;
+  /*
+   * Filters are sanitised BEFORE use, and not out of zeal: they are untrusted input that
+   * ends in `.toISOString()` three layers down. An impossible date is dropped instead of
+   * breaking the screen — see `@/ui/filter-params`.
+   */
+  const rawParams = await searchParams;
+  const filters = {
+    action: textParam(rawParams.action),
+    from: dayParam(rawParams.from),
+    to: dayParam(rawParams.to),
+  };
+
   const canRead = ctx.actor.role === 'owner' || ctx.actor.role === 'admin';
 
   const [page, actions] = canRead
     ? await Promise.all([
         queries.admin.auditLog({
-          ...(params.action !== undefined && params.action !== '' ? { action: params.action } : {}),
-          ...(params.from !== undefined && params.from !== ''
-            ? { from: new Date(params.from) }
-            : {}),
+          ...(filters.action !== null ? { action: filters.action } : {}),
+          ...(filters.from !== null ? { from: new Date(`${filters.from}T00:00:00.000Z`) } : {}),
           // Hasta el FINAL del dia elegido. Sin esto, filtrar "hasta hoy" no
           // devuelve nada de hoy, que es lo que casi siempre se busca.
-          ...(params.to !== undefined && params.to !== ''
-            ? { to: new Date(`${params.to}T23:59:59.999Z`) }
-            : {}),
+          ...(filters.to !== null ? { to: new Date(`${filters.to}T23:59:59.999Z`) } : {}),
           limit: 100,
         }),
         queries.admin.auditActions(),
@@ -59,7 +67,7 @@ export default async function AuditPage({
       title={t('settings.title')}
       subtitle={t('settings.subtitle')}
     >
-      <SettingsNav current="audit" />
+      <SettingsNav current="audit" actor={ctx.actor} />
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -70,7 +78,7 @@ export default async function AuditPage({
         </div>
 
         <a
-          href={`/api/audit/export?${exportQuery(params)}`}
+          href={`/api/audit/export?${exportQuery(filters)}`}
           className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
         >
           {t('settings.audit.export')}
@@ -92,7 +100,7 @@ export default async function AuditPage({
               <select
                 id="action"
                 name="action"
-                defaultValue={params.action ?? ''}
+                defaultValue={filters.action ?? ''}
                 className="mt-1.5 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               >
                 <option value="">{t('settings.audit.allActions')}</option>
@@ -104,8 +112,8 @@ export default async function AuditPage({
               </select>
             </div>
 
-            <DateField name="from" label={t('settings.audit.from')} value={params.from} />
-            <DateField name="to" label={t('settings.audit.to')} value={params.to} />
+            <DateField name="from" label={t('settings.audit.from')} value={filters.from} />
+            <DateField name="to" label={t('settings.audit.to')} value={filters.to} />
 
             <button
               type="submit"
@@ -114,7 +122,7 @@ export default async function AuditPage({
               {t('settings.audit.filter')}
             </button>
 
-            {(params.action ?? params.from ?? params.to) !== undefined && (
+            {(filters.action ?? filters.from ?? filters.to) !== null && (
               <Link href="/settings/audit" className="text-sm underline underline-offset-4">
                 {t('settings.audit.clear')}
               </Link>
@@ -173,10 +181,10 @@ export default async function AuditPage({
  * viendo. Un boton que descarga el historico entero cuando en pantalla hay tres
  * filas filtradas es una sorpresa desagradable a mitad de una auditoria.
  */
-function exportQuery(params: Record<string, string | undefined>): string {
+function exportQuery(params: Record<string, string | null>): string {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== '') query.set(key, value);
+    if (value !== null && value !== '') query.set(key, value);
   }
   return query.toString();
 }
@@ -188,15 +196,7 @@ function summarize(summary: Readonly<Record<string, unknown>>): string {
     .join(' · ');
 }
 
-function DateField({
-  name,
-  label,
-  value,
-}: {
-  name: string;
-  label: string;
-  value: string | undefined;
-}) {
+function DateField({ name, label, value }: { name: string; label: string; value: string | null }) {
   return (
     <div>
       <label htmlFor={name} className="block text-sm font-medium">

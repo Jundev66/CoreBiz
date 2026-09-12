@@ -7,6 +7,7 @@ import type {
   UnitOfWork,
 } from '@corebiz/application';
 import { PrismaUnitOfWork } from './prisma/unit-of-work';
+import type { AuditTrace } from './prisma/audit';
 import { readOnly } from './prisma/session';
 import { prismaReadModels } from './queries/read-models';
 
@@ -23,6 +24,8 @@ export interface PostgresRuntimeDeps {
   readonly ctx: TenantContext;
   readonly ids: IdGenerator;
   readonly clock: Clock;
+  /** Verified email, IP hash and user agent, for audit rows. */
+  readonly trace?: AuditTrace;
 }
 
 export interface PostgresRuntime {
@@ -34,7 +37,13 @@ export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
   const prisma = getPrisma(deps.url);
 
   return {
-    uow: new PrismaUnitOfWork({ prisma, ctx: deps.ctx, ids: deps.ids, clock: deps.clock }),
+    uow: new PrismaUnitOfWork({
+      prisma,
+      ctx: deps.ctx,
+      ids: deps.ids,
+      clock: deps.clock,
+      ...(deps.trace !== undefined ? { trace: deps.trace } : {}),
+    }),
     queries: prismaReadModels(prisma, deps.ctx, deps.clock),
   };
 }

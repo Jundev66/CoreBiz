@@ -2,9 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { parseProductUpdateForm } from '@corebiz/contracts';
 import { apiForRequest } from '@/api/session';
 import { toFormFailure } from '@/api/failure';
+import { rememberFailure } from '@/api/last-error';
 import type { ActionState } from './customers';
+import { formRejection } from './field-errors';
 
 /**
  * Server Actions de ventas e inventario.
@@ -88,9 +91,14 @@ export async function issueDeliveryNoteAction(
   const lines = parseLines(formData);
 
   if (customerId === '') {
+    // Recorded here too: this rejection does NOT go through `send()`, so without this line
+    // the help panel would stay silent on the most common error of the screen. See
+    // `api/last-error.ts`.
+    await rememberFailure('Required');
     return { status: 'error', errorKind: 'Required', errorParams: { field: 'customerId' } };
   }
   if (lines.length === 0) {
+    await rememberFailure('NoLines');
     return { status: 'error', errorKind: 'NoLines' };
   }
 
@@ -182,6 +190,48 @@ export async function createProductAction(
   // Vuelta al catalogo con el SKU en la URL: es donde se comprueba que el producto
   // quedo como se queria, y donde se le ajusta el stock si hace falta.
   redirect(`/products?creado=${encodeURIComponent(result.value.sku)}`);
+}
+
+/**
+ * Server Action: corregir la ficha de un producto.
+ *
+ * NO toca el inventario, y no depende de que este archivo se acuerde: el esquema no
+ * acepta el saldo, el caso de uso comprueba que no cambio, y el dominio garantiza que
+ * ninguno de los metodos que se invocan deja un movimiento pendiente. Para cuadrar el
+ * saldo esta `adjustStockAction`, que exige un motivo.
+ *
+ * Vuelve a la ficha, no al catalogo: quien corrige un precio quiere verlo corregido.
+ */
+export async function updateProductAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = parseProductUpdateForm(formData);
+  if (!parsed.success) {
+    return { status: 'error', errorKind: 'InvalidFormat', ...(await formRejection(parsed.error)) };
+  }
+
+  const { updateProduct } = await apiForRequest();
+
+  const result = await updateProduct({
+    productId: parsed.data.productId,
+    name: parsed.data.name,
+    price: parsed.data.price,
+    // Cadena vacia y no null: aqui significa VACIALO. La excepcion es `unit`, que el
+    // dominio conserva si llega en blanco — un producto sin unidad deja las cantidades
+    // del papel sin significado.
+    unit: parsed.data.unit ?? '',
+    cost: parsed.data.cost ?? '',
+    minStock: parsed.data.minStock ?? '',
+    description: parsed.data.description ?? '',
+    taxable: parsed.data.taxable ?? true,
+  });
+
+  if (!result.ok) return toFormFailure(result.error);
+
+  revalidatePath('/products');
+  revalidatePath(`/products/${parsed.data.productId}`);
+  redirect(`/products/${encodeURIComponent(parsed.data.productId)}?guardado=1`);
 }
 
 /**

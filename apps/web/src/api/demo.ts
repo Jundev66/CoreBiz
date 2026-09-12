@@ -4,9 +4,17 @@ import { apiBaseUrl, type ApiErrorBody } from './client';
 /**
  * Pide un sandbox de demostracion.
  *
- * No usa el cliente normal porque este endpoint NO lleva sesion: existe justamente
- * para dar credenciales a quien todavia no tiene ninguna. Lo que lo protege es el
- * limitador por origen, que corre al otro lado en la misma llamada.
+ * It does not use the regular client because this endpoint carries NO user session: it
+ * exists precisely to hand credentials to someone who has none yet.
+ *
+ * What protects it is the SECRET SHARED by both deployments, like the internal endpoints.
+ * It was needed: the limiter on the other side counts by an `ipHash` that travels in the
+ * body, and the API is public on Render, so without a credential anyone could call it
+ * directly, rotate that value and provision sandboxes in bursts — accounts and database
+ * copies — against the free quota.
+ *
+ * `ipHash` still travels in the body and is now trustworthy: it is computed here, where
+ * Vercel sets `x-forwarded-for` and the client does not.
  */
 
 export type DemoStartResult =
@@ -24,9 +32,15 @@ export type DemoStartResult =
     };
 
 export async function startDemoSandbox(ipHash: string): Promise<DemoStartResult> {
+  const secret = process.env.INTERNAL_API_SECRET;
+
+  // Without the secret the API answers 404 on this route. Say "unavailable" right here
+  // instead of spending a fifty-second call to find out.
+  if (secret === undefined || secret === '') return { ok: false, errorKind: 'Unavailable' };
+
   const res = await fetch(`${apiBaseUrl()}/v1/demo/sandboxes`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${secret}` },
     body: JSON.stringify({ ipHash }),
     cache: 'no-store',
     /*

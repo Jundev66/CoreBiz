@@ -36,7 +36,9 @@ enabled = true
 
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql"]
+# seed.local.sql is local-only: known demo password and an unlocked template. Production
+# runs seed.sql alone (docs/DEPLOY.md).
+sql_paths = ["./seed.sql", "./seed.local.sql"]
 
 [studio]
 enabled = true

@@ -1,6 +1,8 @@
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
+import { NoAccess } from '@/ui/no-access';
+import { can } from '@corebiz/domain';
 
 /**
  * Reportes.
@@ -11,6 +13,21 @@ import { Shell, TableFrame } from '@/ui/shell';
 export default async function ReportsPage() {
   const t = await getTranslations();
   const { ctx, session, queries } = await apiForRequest();
+
+  /*
+   * Without `report:read` you get a notice, not a breakdown.
+   *
+   * The most visible case of the problem: warehouse and read-only had "Reports" in the menu
+   * and clicking it gave the server error page. The entry is no longer shown to them
+   * (`@/auth/module-access`) and whoever arrives through the URL gets this.
+   */
+  if (!can(ctx.actor, 'report:read')) {
+    return (
+      <Shell ctx={ctx} session={session} title={t('reports.title')}>
+        <NoAccess />
+      </Shell>
+    );
+  }
 
   // Una sola llamada: contra Postgres son agregados que la base de datos calcula
   // sin traer las filas. La version anterior se bajaba quinientas notas y

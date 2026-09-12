@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { can, type Actor, type Permission } from '@corebiz/domain';
 
 /**
  * Navegacion entre las tres pantallas de ajustes.
@@ -13,34 +14,43 @@ import { getTranslations } from 'next-intl/server';
  */
 export type SettingsSection = 'business' | 'team' | 'audit';
 
-const SECTIONS: readonly { id: SettingsSection; href: string }[] = [
+/**
+ * `permission` is what is needed for the tab to lead somewhere.
+ *
+ * "Team" and "Audit" only exist for whoever can read them: without this, three of the five
+ * roles had two tabs there that answered with an error. "Business" needs no permission
+ * because it reads nothing from the API — it renders what the session context carries.
+ */
+const SECTIONS: readonly { id: SettingsSection; href: string; permission?: Permission }[] = [
   { id: 'business', href: '/settings' },
-  { id: 'team', href: '/settings/team' },
-  { id: 'audit', href: '/settings/audit' },
+  { id: 'team', href: '/settings/team', permission: 'user:read' },
+  { id: 'audit', href: '/settings/audit', permission: 'audit:read' },
 ];
 
-export async function SettingsNav({ current }: { current: SettingsSection }) {
+export async function SettingsNav({ current, actor }: { current: SettingsSection; actor: Actor }) {
   const t = await getTranslations();
 
   return (
     <nav aria-label={t('settings.title')} className="mb-8 flex flex-wrap gap-2">
-      {SECTIONS.map((section) => {
-        const active = section.id === current;
-        return (
-          <Link
-            key={section.id}
-            href={section.href}
-            aria-current={active ? 'page' : undefined}
-            className={
-              active
-                ? 'rounded-md bg-[var(--color-brand)] px-3 py-1.5 text-sm font-medium text-[var(--color-brand-ink)]'
-                : 'rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]'
-            }
-          >
-            {t(`settings.tabs.${section.id}`)}
-          </Link>
-        );
-      })}
+      {SECTIONS.filter(({ permission }) => permission === undefined || can(actor, permission)).map(
+        (section) => {
+          const active = section.id === current;
+          return (
+            <Link
+              key={section.id}
+              href={section.href}
+              aria-current={active ? 'page' : undefined}
+              className={
+                active
+                  ? 'rounded-md bg-[var(--color-brand)] px-3 py-1.5 text-sm font-medium text-[var(--color-brand-ink)]'
+                  : 'rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]'
+              }
+            >
+              {t(`settings.tabs.${section.id}`)}
+            </Link>
+          );
+        },
+      )}
     </nav>
   );
 }

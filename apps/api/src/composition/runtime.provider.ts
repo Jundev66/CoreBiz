@@ -1,4 +1,5 @@
 import { Scope, type FactoryProvider } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 import { uuidv7 } from 'uuidv7';
 import {
   systemClock,
@@ -6,14 +7,37 @@ import {
   type TenantContext,
   type UnitOfWork,
 } from '@corebiz/application';
-import { postgresRuntime } from '@corebiz/infrastructure';
+import { postgresRuntime, type AuditTrace } from '@corebiz/infrastructure';
 import { RUNTIME, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
 import { getMemoryUnitOfWork, memoryReadModels } from './memory-driver';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface Runtime {
   readonly uow: UnitOfWork;
   readonly queries: ReadModels;
+}
+
+/**
+ * Who is acting, for audit rows.
+ *
+ * The email comes from `req.auth`, the ALREADY VERIFIED token — not from a header. The
+ * other two do arrive as headers, set by the web tier: the IP hash is computed there
+ * because it is the only place where `x-forwarded-for` cannot be forged, and the agent is
+ * what the browser says about itself. What that is worth, and what it is not, is written
+ * down in `AuditTrace`.
+ */
+function traceOf(req: AuthenticatedRequest): AuditTrace {
+  const header = (name: string): string | null => {
+    const value = req.header(name);
+    return value === undefined || value === '' ? null : value;
+  };
+
+  return {
+    actorEmail: req.auth?.email ?? null,
+    ipHash: header('x-corebiz-fingerprint'),
+    userAgent: header('x-corebiz-agent'),
+  };
 }
 
 /**
@@ -36,8 +60,8 @@ export interface Runtime {
 export const runtimeProvider: FactoryProvider = {
   provide: RUNTIME,
   scope: Scope.REQUEST,
-  inject: [TENANT_CONTEXT],
-  useFactory: (ctx: TenantContext): Runtime =>
+  inject: [TENANT_CONTEXT, REQUEST],
+  useFactory: (ctx: TenantContext, req: AuthenticatedRequest): Runtime =>
     activeDriver() === 'memory'
       ? {
           uow: getMemoryUnitOfWork(ctx.tenantId),
@@ -48,5 +72,6 @@ export const runtimeProvider: FactoryProvider = {
           ctx,
           ids: { next: () => uuidv7() },
           clock: systemClock,
+          trace: traceOf(req),
         }),
 };

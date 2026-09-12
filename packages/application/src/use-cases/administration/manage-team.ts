@@ -37,6 +37,7 @@ export type ChangeMemberRoleError =
   | { kind: 'UnknownRole'; raw: string }
   | { kind: 'MemberNotFound' }
   | { kind: 'OnlyOwnerGrantsOwnership' }
+  | { kind: 'OnlyOwnerManagesOwners' }
   | { kind: 'LastOwner' };
 
 export interface ManageTeamDeps {
@@ -71,6 +72,12 @@ export function makeChangeMemberRole(deps: ManageTeamDeps) {
       const member = await repos.members.findByUserId(input.userId as UserId);
       if (member === null) return err({ kind: 'MemberNotFound' });
 
+      // Only an owner changes or removes an owner. The last-owner trigger only protects the
+      // LAST one: without this an admin could demote or remove every co-owner but one.
+      if (member.role === 'owner' && deps.ctx.actor.role !== 'owner') {
+        return err({ kind: 'OnlyOwnerManagesOwners' });
+      }
+
       // Cambiar el rol al que ya tiene no es un error, pero tampoco es un cambio:
       // registrarlo en la auditoria solo ensuciaria el rastro.
       if (member.role === role) {
@@ -102,6 +109,7 @@ export type RemoveMemberError =
   | { kind: 'Forbidden' }
   | { kind: 'MemberNotFound' }
   | { kind: 'CannotRemoveSelf' }
+  | { kind: 'OnlyOwnerManagesOwners' }
   | { kind: 'LastOwner' };
 
 export function makeRemoveMember(deps: ManageTeamDeps) {
@@ -122,6 +130,12 @@ export function makeRemoveMember(deps: ManageTeamDeps) {
     return deps.uow.run(async (repos) => {
       const member = await repos.members.findByUserId(userId as UserId);
       if (member === null) return err({ kind: 'MemberNotFound' });
+
+      // Only an owner changes or removes an owner. The last-owner trigger only protects the
+      // LAST one: without this an admin could demote or remove every co-owner but one.
+      if (member.role === 'owner' && deps.ctx.actor.role !== 'owner') {
+        return err({ kind: 'OnlyOwnerManagesOwners' });
+      }
 
       try {
         await repos.members.remove(userId as UserId);

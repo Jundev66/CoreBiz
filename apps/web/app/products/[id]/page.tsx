@@ -5,7 +5,7 @@ import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { setProductStatusAction } from '@/actions/sales';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { BackLink, SecondaryLink } from '@/ui/primitives';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
 import { StockAdjustForm } from '@/ui/stock-adjust-form';
 
@@ -26,10 +26,17 @@ export async function generateMetadata(): Promise<Metadata> {
  * corregir el saldo es una tarea que empieza mirando el historico —"¿por que dice
  * ocho si veo cinco?"— y tenerlos en pantallas distintas partia esa tarea en dos.
  */
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProductDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ guardado?: string }>;
+}) {
   const t = await getTranslations();
   const format = await getFormatter();
   const { id } = await params;
+  const { guardado } = await searchParams;
   const { ctx, session, queries } = await apiForRequest();
 
   const product = await queries.products.byId(id);
@@ -44,6 +51,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       session={session}
       title={product.name}
       subtitle={product.sku}
+      {...(guardado !== undefined ? { toast: t('common.saved') } : {})}
       action={
         <div className="flex flex-wrap items-center gap-3">
           <BackLink href="/products">{t('products.title')}</BackLink>
@@ -52,6 +60,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             activeLabel={t('status.active')}
             archivedLabel={t('status.archived')}
           />
+          {canWrite && (
+            <SecondaryLink href={`/products/${product.id}/edit`}>{t('common.edit')}</SecondaryLink>
+          )}
           {canWrite && (
             <StatusToggle
               action={setProductStatusAction}

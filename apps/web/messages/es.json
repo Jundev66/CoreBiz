@@ -33,13 +33,33 @@
     "archive": "Archivar",
     "restore": "Devolver a la lista",
     "archivedNotice": "Este cliente está archivado: no aparece en la lista ni se puede elegir al emitir una nota. Sus documentos anteriores siguen intactos.",
-    "showArchived": "Ver también los archivados"
+    "showArchived": "Ver también los archivados",
+    "edit": "Corregir cliente"
+  },
+  "crash": {
+    "title": "Algo se ha roto por nuestra parte",
+    "lead": "No es nada que hayas hecho mal: la pantalla no ha podido cargar y el fallo ya ha quedado registrado. Puedes volver a intentarlo.",
+    "reference": "Referencia",
+    "retry": "Volver a intentarlo",
+    "home": "Ir al inicio"
+  },
+  "notFound": {
+    "title": "No encontramos esta página",
+    "lead": "Puede que el enlace esté incompleto o que lo que buscas no esté disponible.",
+    "home": "Ir al inicio"
+  },
+  "noAccess": {
+    "title": "Esto no está en tu alcance",
+    "lead": "Tu rol en esta empresa no incluye esta parte del sistema. Si necesitas verla, pídeselo a quien la administra."
   },
   "errors": {
     "Forbidden": "No tienes permiso para hacer esto.",
+    "FeatureNotAvailable": "Esa parte del sistema no está incluida en tu plan.",
+    "QuotaExceeded": "Has alcanzado el límite de tu plan: {current} de {limit}.",
     "Required": "El campo {field} es obligatorio.",
     "TooShort": "El campo {field} es demasiado corto.",
     "TooLong": "El campo {field} es demasiado largo.",
+    "InvalidAmount": "El campo {field} tiene que ser un importe como 1500,00 — sin separador de miles.",
     "InvalidFormat": "El campo {field} no tiene un formato válido.",
     "InvalidCreditLimit": "El límite de crédito no es un monto válido.",
     "unexpected": "Ocurrió un error inesperado.",
@@ -58,12 +78,20 @@
     "InvalidStock": "La cantidad de inventario no es válida.",
     "OutOfRange": "El campo {field} está fuera de rango.",
     "StockNotTracked": "Este producto no lleva control de inventario, así que no hay nada que ajustar.",
+    "InvalidTransition": "Esa nota ya no está en el estado que hace falta para esto. Vuelve a cargar la página: es probable que alguien la haya cambiado antes que tú.",
     "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+    "UnexpectedWithIncident": "Algo falló por nuestra parte. Vuelve a intentarlo; si nos escribes, danos esta referencia: {incidentId}",
     "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
     "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
-    "NotFound": "Eso ya no está.",
+    "NotFound": "No encontramos lo que pediste.",
+    "NoActiveTenant": "Tu cuenta todavía no pertenece a ninguna empresa.",
     "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
-    "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
+    "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos.",
+    "CreditLimitBelowBalance": "El limite ({requested}) no puede quedar por debajo del saldo pendiente ({balance}).",
+    "InvalidUnitPrice": "Uno de los precios del documento no es un importe válido.",
+    "DiscountOutOfRange": "El descuento está fuera de rango: tiene que estar entre 0 % y 100 %.",
+    "PayloadTooLarge": "Lo que intentaste enviar es demasiado grande.",
+    "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo."
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
@@ -104,7 +132,9 @@
     "saving": "Guardando…",
     "view": "Ver",
     "notSet": "—",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "edit": "Editar",
+    "saved": "Cambios guardados"
   },
   "products": {
     "title": "Productos",
@@ -153,7 +183,9 @@
       "out": "Salida",
       "adjust": "Ajuste",
       "void_compensation": "Devolución por anulación"
-    }
+    },
+    "edit": "Corregir producto",
+    "description": "Descripcion"
   },
   "deliveryNotes": {
     "title": "Notas de entrega",
@@ -275,7 +307,7 @@
       "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
       "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
       "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
-      "NotFound": "Eso ya no está.",
+      "NotFound": "No encontramos lo que pediste.",
       "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
       "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos.",
       "AlreadyMember": "Ya perteneces a la empresa de otra persona, así que no puedes crear una propia.",
@@ -333,6 +365,8 @@
     },
     "errors": {
       "Forbidden": "No tienes permiso para hacer esto.",
+      "FeatureNotAvailable": "Esa parte del sistema no está incluida en tu plan.",
+      "QuotaExceeded": "Has alcanzado el límite de tu plan: {current} de {limit}.",
       "InvalidFormat": "Revisa los datos.",
       "InvalidTaxRate": "El porcentaje del impuesto no es válido.",
       "InvalidCurrency": "Esa moneda no está soportada.",
@@ -345,15 +379,20 @@
       "UnknownRole": "Ese rol no existe.",
       "MemberNotFound": "Esa persona ya no está en la empresa.",
       "OnlyOwnerGrantsOwnership": "Solo el dueño puede nombrar a otro dueño.",
+      "OnlyOwnerManagesOwners": "Solo un dueño puede cambiar el rol de otro dueño o sacarlo del equipo.",
       "LastOwner": "La empresa necesita al menos un dueño.",
       "CannotRemoveSelf": "No puedes quitarte a ti mismo.",
       "InvitationNotFound": "Esa invitación ya no está activa.",
       "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+      "UnexpectedWithIncident": "Algo falló por nuestra parte. Vuelve a intentarlo; si nos escribes, danos esta referencia: {incidentId}",
       "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
       "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
-      "NotFound": "Eso ya no está.",
+      "NotFound": "No encontramos lo que pediste.",
+      "NoActiveTenant": "Tu cuenta todavía no pertenece a ninguna empresa.",
       "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
-      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
+      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos.",
+      "PayloadTooLarge": "Lo que intentaste enviar es demasiado grande.",
+      "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo."
     },
     "team": {
       "heading": "Personas",
@@ -433,6 +472,8 @@
     "voidSoldWarning": "Si lo que llegó con esta recepción ya se vendió, el sistema no dejará anularla: no se puede dar por no llegado algo que ya salió.",
     "errors": {
       "Forbidden": "No tienes permiso para hacer esto.",
+      "FeatureNotAvailable": "Esa parte del sistema no está incluida en tu plan.",
+      "QuotaExceeded": "Has alcanzado el límite de tu plan: {current} de {limit}.",
       "InvalidFormat": "Revisa los datos.",
       "SupplierNotFound": "El proveedor no existe.",
       "ProductNotFound": "Uno de los productos no existe.",
@@ -448,11 +489,16 @@
       "AlreadyVoided": "Esta entrada ya estaba anulada.",
       "InsufficientStock": "No hay suficiente inventario de {sku}.",
       "Unexpected": "Algo falló por nuestra parte. Vuelve a intentarlo; si sigue pasando, avísanos.",
+      "UnexpectedWithIncident": "Algo falló por nuestra parte. Vuelve a intentarlo; si nos escribes, danos esta referencia: {incidentId}",
       "InvalidRequest": "No pudimos entender la petición. Vuelve a cargar la página e inténtalo de nuevo.",
       "Unauthenticated": "Tu sesión caducó. Vuelve a entrar.",
-      "NotFound": "Eso ya no está.",
+      "NotFound": "No encontramos lo que pediste.",
+      "NoActiveTenant": "Tu cuenta todavía no pertenece a ninguna empresa.",
       "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
-      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos."
+      "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos.",
+      "GoodsReceiptNotFound": "Esa entrada de compra ya no está.",
+      "PayloadTooLarge": "Lo que intentaste enviar es demasiado grande.",
+      "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo."
     },
     "detail": "Detalle de la recepción",
     "supplierReference": "Documento del proveedor",
@@ -479,7 +525,9 @@
     "archive": "Archivar",
     "restore": "Devolver a la lista",
     "showArchived": "Ver también los archivados",
-    "state": "Estado"
+    "state": "Estado",
+    "edit": "Corregir proveedor",
+    "notes": "Notas"
   },
   "status": {
     "active": "Activo",
@@ -493,5 +541,199 @@
     "ready": "Listo. Entrando…",
     "stuck": "Está tardando más de lo normal. Puedes esperar un poco más o volver a intentarlo.",
     "retry": "Reintentar"
+  },
+  "assistant": {
+    "title": "Ayuda",
+    "idle": "Cuando algo no te deje continuar, ábreme: te digo por qué y qué puedes hacer.",
+    "noPlaybook": "Lo último que falló no lo sé explicar todavía. Si vuelve a pasar, avísanos.",
+    "whatHappened": "Qué ha pasado",
+    "whatToDo": "Qué puedes hacer",
+    "goTo": "Ir a la pantalla",
+    "breakdown": "Se ha roto algo por nuestra parte. No es nada que hayas hecho mal ni que puedas arreglar desde aquí.",
+    "breakdownWithReference": "Danos esta referencia cuando nos escribas: con ella encontramos exactamente lo que falló.",
+    "breakdownNoReference": "No llegó ninguna referencia, así que cuéntanos qué estabas haciendo cuando pasó.",
+    "reference": "Referencia",
+    "playbooks": {
+      "Forbidden": {
+        "what": "Tu rol no incluye esta acción. CoreBiz decide por rol, no por pantalla: un botón puede estar a la vista y la acción seguir prohibida.",
+        "do": "Pide a un propietario o administrador que la haga, o que cambie tu rol desde Ajustes › Equipo."
+      },
+      "QuotaExceeded": {
+        "what": "Has llegado al tope que tu plan permite para este recurso.",
+        "do": "Archiva lo que ya no uses —archivar no borra nada y los documentos anteriores siguen intactos— o habla con quien lleva la cuenta."
+      },
+      "FeatureNotAvailable": {
+        "what": "Ese módulo no está activo para tu empresa.",
+        "do": "No hay nada que puedas cambiar desde aquí. Habla con quien lleva la cuenta."
+      },
+      "OnlyOwnerGrantsOwnership": {
+        "what": "Solo un propietario puede nombrar a otro propietario. Es la regla que impide que un administrador se ascienda a sí mismo.",
+        "do": "Pide a un propietario actual que haga el cambio."
+      },
+      "OnlyOwnerManagesOwners": {
+        "what": "A un dueño de la empresa solo puede degradarlo o sacarlo otro dueño. Así un administrador no puede quitarle el control a quien la creó.",
+        "do": "Pide a un dueño actual que haga el cambio."
+      },
+      "LastOwner": {
+        "what": "Es el único propietario que queda, y una empresa sin propietario no la puede administrar nadie.",
+        "do": "Nombra antes a otro propietario; después podrás cambiar o quitar a este."
+      },
+      "CannotRemoveSelf": {
+        "what": "No puedes quitarte a ti mismo del equipo.",
+        "do": "Pide a otro propietario o administrador que lo haga."
+      },
+      "CannotInviteOwner": {
+        "what": "No se puede invitar a alguien directamente como propietario.",
+        "do": "Invítale con otro rol y, una vez dentro, un propietario puede ascenderle."
+      },
+      "AlreadyMember": {
+        "what": "Esa persona ya forma parte de tu equipo.",
+        "do": "Búscala en la lista de miembros; si lo que quieres es cambiarle el rol, se hace desde ahí."
+      },
+      "AlreadyInvited": {
+        "what": "Ya hay una invitación activa para ese correo y todavía no ha caducado.",
+        "do": "Espera a que la acepte, o revoca la anterior antes de mandar otra."
+      },
+      "UnknownRole": {
+        "what": "El rol que llegó no es ninguno de los cinco que existen. Suele pasar con una pantalla vieja.",
+        "do": "Vuelve a cargar la página y elige el rol de la lista."
+      },
+      "MemberNotFound": {
+        "what": "Esa persona ya no está en el equipo. Puede que alguien la haya quitado mientras tenías la pantalla abierta.",
+        "do": "Vuelve a cargar la lista del equipo."
+      },
+      "InvitationNotFound": {
+        "what": "Esa invitación ya no está activa: o se aceptó, o se revocó, o caducó.",
+        "do": "Manda una nueva desde Ajustes › Equipo."
+      },
+      "CustomerNotFound": {
+        "what": "Ese cliente no existe, o está archivado, o el enlace es antiguo.",
+        "do": "Búscalo en la lista y marca «ver también los archivados» si crees que estaba."
+      },
+      "ProductNotFound": {
+        "what": "Ese producto no existe, o está archivado, o el enlace es antiguo.",
+        "do": "Búscalo en el catálogo y marca «ver también los archivados» si crees que estaba."
+      },
+      "DeliveryNoteNotFound": {
+        "what": "Esa nota de entrega no existe, o el enlace es antiguo.",
+        "do": "Búscala en la lista de notas."
+      },
+      "SupplierNotFound": {
+        "what": "Ese proveedor no existe, o está archivado, o el enlace es antiguo.",
+        "do": "Búscalo en la lista de proveedores."
+      },
+      "NotFound": {
+        "what": "No encontramos lo que pediste. Puede que no exista, o que el enlace esté mal escrito.",
+        "do": "Vuelve a la lista y búscalo desde allí."
+      },
+      "InsufficientStock": {
+        "what": "No hay tantas unidades como estás intentando sacar. El inventario no puede quedar en negativo.",
+        "do": "Registra primero la entrada de compra, o ajusta el inventario desde la ficha del producto."
+      },
+      "StockNotTracked": {
+        "what": "Este producto no lleva control de inventario, así que no hay existencias que mover.",
+        "do": "Si quieres que las lleve, actívalo en su ficha."
+      },
+      "DuplicateSku": {
+        "what": "Ya hay otro producto con ese SKU. El SKU es lo único que asignas tú, y tiene que ser único.",
+        "do": "Usa otro, o busca el producto que ya lo tiene."
+      },
+      "DuplicateProduct": {
+        "what": "El mismo producto aparece dos veces en el documento.",
+        "do": "Junta las dos líneas en una sola con la cantidad sumada."
+      },
+      "CreditLimitExceeded": {
+        "what": "Esta operación dejaría al cliente por encima del crédito que tiene concedido.",
+        "do": "Cobra parte de lo pendiente, o sube su límite desde su ficha."
+      },
+      "CreditLimitBelowBalance": {
+        "what": "No puedes dejar el límite de crédito por debajo de lo que el cliente ya debe.",
+        "do": "Cobra primero, o pon un límite igual o mayor que el saldo pendiente."
+      },
+      "InvalidCreditLimit": {
+        "what": "Ese límite de crédito no es un importe válido.",
+        "do": "Escríbelo solo con cifras y un separador decimal, sin símbolo de moneda."
+      },
+      "NoExchangeRate": {
+        "what": "Tu empresa trabaja con dos monedas y no hay tasa de cambio configurada, así que no se puede calcular el total.",
+        "do": "Configúrala en Ajustes antes de emitir el documento."
+      },
+      "NoLines": {
+        "what": "Un documento sin líneas no dice nada, así que no se guarda.",
+        "do": "Añade al menos un producto."
+      },
+      "InvalidTransition": {
+        "what": "La nota ya no está en el estado que esta acción necesita. Casi siempre significa que tu pantalla está vieja y alguien la cambió antes que tú.",
+        "do": "Vuelve a cargarla y mira en qué estado está ahora."
+      },
+      "AlreadyVoided": {
+        "what": "Esa entrada ya estaba anulada. Anularla dos veces devolvería el inventario dos veces.",
+        "do": "Vuelve a cargar la página para ver cómo quedó."
+      },
+      "InvalidQuantity": {
+        "what": "Esa cantidad no es válida: tiene que ser mayor que cero y no admite más decimales de los que el producto permite.",
+        "do": "Corrígela y vuelve a intentarlo."
+      },
+      "InvalidPrice": {
+        "what": "Ese precio no es válido.",
+        "do": "Escríbelo solo con cifras y un separador decimal, sin símbolo de moneda."
+      },
+      "InvalidCost": {
+        "what": "Ese costo no es válido.",
+        "do": "Escríbelo solo con cifras y un separador decimal, sin símbolo de moneda."
+      },
+      "InvalidStock": {
+        "what": "Esa cantidad de inventario no es válida.",
+        "do": "Usa un número, con signo negativo si lo que registras es una salida."
+      },
+      "InvalidEmail": {
+        "what": "Esa dirección de correo no tiene forma de dirección.",
+        "do": "Revísala: lo más habitual es un espacio de sobra o una arroba que falta."
+      },
+      "InvalidTaxRate": {
+        "what": "Ese porcentaje de impuesto no es válido.",
+        "do": "Escríbelo como porcentaje, entre 0 y 100."
+      },
+      "InvalidCurrency": {
+        "what": "Esa moneda no es una de las que el sistema reconoce.",
+        "do": "Elige una de la lista en Ajustes."
+      },
+      "InvalidExchangeRate": {
+        "what": "Esa tasa de cambio no es válida: tiene que ser mayor que cero.",
+        "do": "Corrígela en Ajustes."
+      },
+      "Unauthenticated": {
+        "what": "Tu sesión caducó. Pasa cuando la pestaña lleva mucho rato abierta.",
+        "do": "Vuelve a entrar; lo que estabas escribiendo se pierde, así que cópialo antes si puedes."
+      },
+      "NoActiveTenant": {
+        "what": "Tu cuenta existe pero todavía no pertenece a ninguna empresa.",
+        "do": "Crea la tuya, o pide a alguien que te invite a la suya."
+      },
+      "TooManyAttempts": {
+        "what": "Has hecho demasiados intentos seguidos y el sistema está esperando antes de aceptar otro. Es la protección contra quien prueba contraseñas a lo bruto.",
+        "do": "Espera un minuto y vuelve a intentarlo. No cambies nada mientras tanto."
+      },
+      "InvalidRequest": {
+        "what": "La petición llegó con una forma que el servidor no entiende. Casi siempre es una pestaña vieja hablando con una versión nueva.",
+        "do": "Vuelve a cargar la página e inténtalo otra vez."
+      },
+      "PayloadTooLarge": {
+        "what": "Lo que intentaste enviar es demasiado grande.",
+        "do": "Si es un documento con muchas líneas, pártelo en dos."
+      },
+      "GoodsReceiptNotFound": {
+        "what": "Esa entrada de compra no existe, o el enlace es antiguo.",
+        "do": "Búscala en la lista de compras."
+      },
+      "InvalidUnitPrice": {
+        "what": "Uno de los precios del documento no se puede leer como un importe.",
+        "do": "Revisa las líneas: escribe los precios solo con cifras y un separador decimal, sin símbolo de moneda."
+      },
+      "DiscountOutOfRange": {
+        "what": "Ese descuento está fuera del rango que admite un documento: entre 0 % y 100 %.",
+        "do": "Corrígelo en la línea que lo lleva."
+      }
+    }
   }
 }

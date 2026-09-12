@@ -31,6 +31,7 @@ export interface ApiErrorBody {
 const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   Forbidden: 403,
   OnlyOwnerGrantsOwnership: 403,
+  OnlyOwnerManagesOwners: 403,
   LastOwner: 403,
 
   // Tambien 403, y con el `kind` intacto: es lo que permite a la interfaz ofrecer

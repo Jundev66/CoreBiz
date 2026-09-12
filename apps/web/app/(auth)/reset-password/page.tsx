@@ -16,8 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * la contrasena anterior: quien llega ya demostro que controla el buzon, que es
  * justo lo que hace falta cuando la anterior se olvido.
  *
- * La accion vuelve a comprobar que existe esa sesion. Sin esa comprobacion, la
- * Server Action seria un cambiador de contrasenas abierto a cualquiera.
+ * The action checks that the session came from the recovery email for this very user
+ * (`@/auth/recovery`), not merely that a session exists: otherwise any signed-in session
+ * could set a new password without knowing the old one.
  */
 export default async function ResetPasswordPage() {
   const t = await getTranslations();

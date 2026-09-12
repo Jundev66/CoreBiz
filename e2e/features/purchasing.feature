@@ -37,3 +37,12 @@ Feature: Buying goods and putting them into stock
     And there is at least one supplier
     When I record a delivery with no lines
     Then I should see an error saying the delivery needs at least one product
+
+  # A supplier has no detail page of its own — it fits in its row — so correcting one
+  # starts from the list and comes back to it. An archived supplier can be corrected
+  # too: archiving hides, it does not freeze, and fixing the phone number of somebody
+  # you stopped buying from is exactly what is needed the day you call them again.
+  Scenario: Correcting a supplier's contact details
+    When I register a supplier just for this scenario
+    And I correct its contact person
+    Then the supplier list shows the new contact person

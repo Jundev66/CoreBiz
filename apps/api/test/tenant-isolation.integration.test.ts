@@ -190,3 +190,190 @@ describe('las cabeceras de demostracion no escalan privilegios', () => {
     expect(rebajado.actor?.role).toBe('viewer');
   });
 });
+
+describe("another company's id answers 404, never 403", () => {
+  /*
+   * The threat model requires it: a 403 would confirm the resource exists, and with ids
+   * that circulate — in a pasted link, a screenshot, whatever someone dictates to the
+   * assistant — that is enough to learn another company has a customer or a note with it.
+   *
+   * Tested against the running API and not only the read model: between them sit the
+   * controller, which picks the status code, and the envelope, where a name could slip in.
+   *
+   * The demo seed has no goods receipts, so that case goes the other way round: one is
+   * seeded in the isolated company and the demo asks for it.
+   */
+  const PROVEEDOR_AISLADO = '22222222-2222-4222-8222-2222222222aa';
+  const RECEPCION_AISLADA = '22222222-2222-4222-8222-2222222222bb';
+  const MARCA_AISLADA = 'Proveedor Aislado de la Matriz HTTP';
+
+  const deDemo: Record<
+    'cliente' | 'producto' | 'nota' | 'proveedor',
+    { id: string; texto: string }
+  > = {} as never;
+
+  beforeAll(async () => {
+    const primera = async (tabla: string, texto: string) => {
+      const filas = await sql.unsafe<{ id: string; texto: string }[]>(
+        `select id::text as id, ${texto} as texto from public.${tabla} where tenant_id = $1 limit 1`,
+        [DEMO_TENANT],
+      );
+      const fila = filas[0];
+      // If the seed changed and stopped providing the row, the 404 below would pass for
+      // the wrong reason. Better to fail here and say so.
+      expect(fila, `the demo seed should provide ${tabla}`).toBeDefined();
+      return fila as { id: string; texto: string };
+    };
+
+    deDemo.cliente = await primera('customers', 'name');
+    deDemo.producto = await primera('products', 'name');
+    deDemo.nota = await primera('delivery_notes', 'number');
+    deDemo.proveedor = await primera('suppliers', 'name');
+
+    await sql`
+      insert into public.suppliers (id, tenant_id, code, name)
+      values (${PROVEEDOR_AISLADO}, ${OTHER_TENANT}, 'PRV-HTTP', ${MARCA_AISLADA})
+      on conflict (id) do nothing`;
+    await sql`
+      insert into public.goods_receipts (
+        id, tenant_id, number, supplier_id, status, currency, total_minor, received_at
+      ) values (
+        ${RECEPCION_AISLADA}, ${OTHER_TENANT}, 'RM-HTTP-001', ${PROVEEDOR_AISLADO},
+        'received', 'USD', 1000, now()
+      )
+      on conflict (id) do nothing`;
+  });
+
+  async function pedir(
+    ruta: string,
+    token: string,
+    headers: Record<string, string> = {},
+  ): Promise<{ status: number; texto: string }> {
+    const res = await fetch(`${baseUrl}${ruta}`, {
+      headers: { authorization: `Bearer ${token}`, ...headers },
+    });
+    return { status: res.status, texto: await res.text() };
+  }
+
+  async function esAjeno(ruta: string, token: string, kind: string, marca: string) {
+    const { status, texto } = await pedir(ruta, token);
+
+    expect(status).toBe(404);
+    // The specific key rather than a generic `NotFound`: a 404 for a missing route would
+    // also be 404, and this test would pass without ever reaching the controller.
+    expect(JSON.parse(texto)).toMatchObject({ errorKind: kind });
+    expect(texto).not.toContain(marca);
+  }
+
+  it('control: the owning company DOES get its customer through the same route', async () => {
+    const { status, texto } = await pedir(`/v1/customers/${deDemo.cliente.id}`, tokenDemo);
+    expect(status).toBe(200);
+    expect(texto).toContain(deDemo.cliente.texto);
+  });
+
+  it('customer', async () => {
+    await esAjeno(
+      `/v1/customers/${deDemo.cliente.id}`,
+      tokenOther,
+      'CustomerNotFound',
+      deDemo.cliente.texto,
+    );
+  });
+
+  it('product', async () => {
+    await esAjeno(
+      `/v1/products/${deDemo.producto.id}`,
+      tokenOther,
+      'ProductNotFound',
+      deDemo.producto.texto,
+    );
+  });
+
+  it('delivery note', async () => {
+    await esAjeno(
+      `/v1/delivery-notes/${deDemo.nota.id}`,
+      tokenOther,
+      'DeliveryNoteNotFound',
+      deDemo.nota.texto,
+    );
+  });
+
+  it('supplier', async () => {
+    await esAjeno(
+      `/v1/purchasing/suppliers/${deDemo.proveedor.id}`,
+      tokenOther,
+      'SupplierNotFound',
+      deDemo.proveedor.texto,
+    );
+  });
+
+  it('goods receipt', async () => {
+    await esAjeno(
+      `/v1/purchasing/receipts/${RECEPCION_AISLADA}`,
+      tokenDemo,
+      'GoodsReceiptNotFound',
+      MARCA_AISLADA,
+    );
+  });
+
+  it("requesting the resource's company by header does not change the answer", async () => {
+    const { status, texto } = await pedir(`/v1/customers/${deDemo.cliente.id}`, tokenOther, {
+      'x-corebiz-tenant': DEMO_TENANT,
+    });
+
+    expect(status).toBe(404);
+    expect(texto).not.toContain(deDemo.cliente.texto);
+  });
+  describe('and an impossible id answers 404, not a server error', () => {
+    /*
+     * SAME RULE, DIFFERENT CAUSE. Here the id does not belong to another company: it cannot
+     * belong to any. On Postgres it reached the database as `uuid` and failed with
+     * `22P02 invalid input syntax`, so `/customers/abc` gave a 500 with an incident
+     * reference — and in memory mode it gave 404, so the default suite never saw it.
+     *
+     * Checked over HTTP because that is where it matters: the controller deliberately does
+     * not validate the route parameter (see `recordIdSchema`), so the adapter's check is
+     * the only thing between this and a 500.
+     */
+    const IMPOSSIBLE = ['abc', '00000000-0000-0000-0000-0000000c001', 'null', 'a'.repeat(80)];
+
+    it.each(IMPOSSIBLE)('GET /v1/customers/%j', async (id) => {
+      const { status, texto } = await pedir(`/v1/customers/${encodeURIComponent(id)}`, tokenDemo);
+      expect(status).toBe(404);
+      expect(JSON.parse(texto)).toMatchObject({ errorKind: 'CustomerNotFound' });
+    });
+
+    it.each(IMPOSSIBLE)('GET /v1/products/%j', async (id) => {
+      const { status, texto } = await pedir(`/v1/products/${encodeURIComponent(id)}`, tokenDemo);
+      expect(status).toBe(404);
+      expect(JSON.parse(texto)).toMatchObject({ errorKind: 'ProductNotFound' });
+    });
+
+    it.each(IMPOSSIBLE)('GET /v1/delivery-notes/%j', async (id) => {
+      const { status, texto } = await pedir(
+        `/v1/delivery-notes/${encodeURIComponent(id)}`,
+        tokenDemo,
+      );
+      expect(status).toBe(404);
+      expect(JSON.parse(texto)).toMatchObject({ errorKind: 'DeliveryNoteNotFound' });
+    });
+
+    it.each(IMPOSSIBLE)('GET /v1/purchasing/suppliers/%j', async (id) => {
+      const { status, texto } = await pedir(
+        `/v1/purchasing/suppliers/${encodeURIComponent(id)}`,
+        tokenDemo,
+      );
+      expect(status).toBe(404);
+      expect(JSON.parse(texto)).toMatchObject({ errorKind: 'SupplierNotFound' });
+    });
+
+    it.each(IMPOSSIBLE)('GET /v1/purchasing/receipts/%j', async (id) => {
+      const { status, texto } = await pedir(
+        `/v1/purchasing/receipts/${encodeURIComponent(id)}`,
+        tokenDemo,
+      );
+      expect(status).toBe(404);
+      expect(JSON.parse(texto)).toMatchObject({ errorKind: 'GoodsReceiptNotFound' });
+    });
+  });
+});
