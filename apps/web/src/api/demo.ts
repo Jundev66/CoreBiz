@@ -9,7 +9,7 @@ import { apiBaseUrl, type ApiErrorBody } from './client';
  *
  * What protects it is the SECRET SHARED by both deployments, like the internal endpoints.
  * It was needed: the limiter on the other side counts by an `ipHash` that travels in the
- * body, and the API is public on Render, so without a credential anyone could call it
+ * body, and the API has its own public URL, so without a credential anyone could call it
  * directly, rotate that value and provision sandboxes in bursts — accounts and database
  * copies — against the free quota.
  *
@@ -44,11 +44,9 @@ export async function startDemoSandbox(ipHash: string): Promise<DemoStartResult>
     body: JSON.stringify({ ipHash }),
     cache: 'no-store',
     /*
-     * El plazo mas largo de toda la aplicacion, y con motivo: esta llamada puede
-     * encontrarse la API dormida —el plan gratuito de Render la duerme a los quince
-     * minutos— y ademas clona la base de demostracion entera. Es justo la peticion
-     * que no puede rendirse pronto, porque es la que abre quien llega desde el
-     * curriculum.
+     * The longest timeout in the application, for a reason: this call may hit a cold API
+     * and it also clones the whole demo database. It is exactly the request that cannot
+     * give up early, because it is the one opened by whoever arrives from the résumé.
      */
     signal: AbortSignal.timeout(50_000),
   }).catch(() => null);

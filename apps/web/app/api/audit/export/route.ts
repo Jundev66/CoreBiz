@@ -14,11 +14,11 @@ import { cookies } from 'next/headers';
  * gratuito podía pedir `GET /v1/administration/audit?limit=5000` y armar el mismo CSV
  * a mano. Un gate delante de la puerta no sirve si hay otra puerta.
  *
- * Sigue siendo una ruta de Next y no un enlace directo a la API por la misma razón que
- * el resto: el token vive en una cookie `httpOnly` y no sale de aquí. Si el navegador
- * descargara desde Render, o habría que poner el token en la URL —donde queda escrito
- * en logs e historiales— o abrir CORS, que es admitir que el navegador habla con la
- * API. Ninguna de las dos.
+ * It is still a Next route and not a direct link to the API for the same reason as the
+ * rest: the token lives in an `httpOnly` cookie and never leaves here. If the browser
+ * downloaded from the API, either the token would go in the URL — where it ends up written
+ * in logs and histories — or CORS would open, which admits the browser talks to the API.
+ * Neither.
  */
 
 export const dynamic = 'force-dynamic';

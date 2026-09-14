@@ -16,7 +16,7 @@ import { apiBaseUrl } from './client';
 /**
  * Why an internal call failed, because callers must treat the two very differently:
  * `misconfigured` (secret missing, or rejected by the API) never fixes itself, while
- * `unreachable` (timeout, Render asleep, a 5xx) usually does within a minute.
+ * `unreachable` (timeout, a cold start, a 5xx) usually does within a minute.
  */
 export type InternalFailureReason = 'misconfigured' | 'unreachable';
 

@@ -37,9 +37,9 @@ export class InsightsController {
   /**
    * Consumo actual de varios recursos en UNA llamada.
    *
-   * Se acepta una lista y no un recurso por peticion porque la cabecera pinta varias
-   * cuotas a la vez: con un endpoint por recurso, cada pantalla haria tres o cuatro
-   * viajes a Render solo para dibujar la barra de uso.
+   * A list is accepted rather than one resource per request because the header paints
+   * several quotas at once: with one endpoint per resource, each screen would make three or
+   * four trips to the API just to draw the usage bar.
    */
   @Get('usage')
   @RequirePermission('report:read')

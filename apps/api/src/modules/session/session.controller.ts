@@ -10,10 +10,9 @@ import { type SessionDto } from './session.dto';
 /**
  * Quien soy, donde estoy y con que limites.
  *
- * Es la unica llamada que hace toda pantalla, asi que devuelve de una vez lo que antes
- * eran `ctx` y `session` de `forRequest()`. Sin esto, cada pagina tendria que pedir la
- * empresa activa, la lista de empresas y el plan por separado: tres viajes a Render
- * para pintar la cabecera.
+ * It is the one call every screen makes, so it returns at once what used to be `ctx` and
+ * `session` from `forRequest()`. Without it, each page would ask for the active company,
+ * the company list and the plan separately: three trips to the API to paint the header.
  */
 @ApiTags('sesion')
 @ApiBearerAuth()

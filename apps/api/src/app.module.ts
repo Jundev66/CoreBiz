@@ -48,7 +48,8 @@ export class AppModule implements NestModule {
     /*
      * La autenticacion se aplica a todo MENOS a lo que no puede tenerla:
      *
-     *  - `health` lo consultan Render y un monitor externo, y ninguno tiene sesion.
+     *  - `health` is queried by the web's health route and an external monitor, neither
+     *    of which has a session.
      *  - `docs` es la documentacion, que ademas no se publica en produccion.
      *
      * La lista es de exclusiones y no de inclusiones a proposito: con una lista de
@@ -71,7 +72,7 @@ export class AppModule implements NestModule {
         //
         // This used to say "the per-origin limiter" protected it, which was not true on the
         // public wire: the limiter bucket was built from a value that came IN THE BODY, so
-        // calling Render directly and rotating it skipped the limit entirely.
+        // calling the API directly and rotating it skipped the limit entirely.
         'v1/demo/(.*)',
         // Los internos no llevan sesion de usuario porque se invocan ANTES de que
         // exista una: el limitador protege el propio acceso. Los guarda un secreto

@@ -19,12 +19,11 @@ import { clientFingerprint } from '@/auth/fingerprint';
 export const DEMO_ROLE_COOKIE = 'corebiz_demo_role';
 
 /**
- * Cuanto se espera a la API antes de rendirse.
+ * How long to wait for the API before giving up.
  *
- * Generoso a proposito: el plan gratuito de Render DUERME el servicio tras 15 minutos
- * sin trafico y tarda cerca de un minuto en despertar. Un timeout corto convertiria
- * ese arranque en frio en un error para el primer visitante del dia, que es
- * exactamente quien no hay que perder.
+ * Generous on purpose: a cold API function plus a Supabase project that was idle can take
+ * several seconds. A short timeout would turn that cold start into an error for the first
+ * visitor of the day, who is exactly the one not to lose.
  */
 const REQUEST_TIMEOUT_MS = 25_000;
 
@@ -175,13 +174,12 @@ export class ApiUnavailableError extends Error {}
 /**
  * Manda a la pantalla de espera, conservando a donde queria ir.
  *
- * El plan gratuito de Render DUERME el servicio tras quince minutos sin trafico y
- * tarda cerca de un minuto en despertar. Es un coste asumido —el proyecto se despliega
- * gratis a proposito— y lo que no se puede hacer es esconderlo: un error 500 delante
- * de quien abre el enlace de un curriculum es el peor resultado posible, y un spinner
- * mudo durante un minuto no es mucho mejor.
+ * The API can be slow to answer after idling (a cold function, a database waking up). It is
+ * a cost accepted by deploying for free, and hiding it is not an option: a 500 in front of
+ * whoever opens a résumé link is the worst possible outcome, and a silent spinner is not
+ * much better.
  *
- * Asi que se le cuenta lo que pasa y cuanto falta, y se le devuelve donde estaba.
+ * So they are told what is happening and sent back where they were.
  */
 async function redirectToWakeScreen(): Promise<never> {
   const path = (await requestHeadersOf()).get('x-corebiz-path') ?? '/';

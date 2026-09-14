@@ -5,9 +5,9 @@ import { PrismaClient } from '@corebiz/prisma-client';
  * El cliente de Prisma, con su pool.
  *
  * Prisma 7 ya no lleva el motor en Rust: se le entrega un adaptador de driver ya
- * conectado. Eso es lo que hace viable el despliegue en el plan gratuito de Render, donde
- * el motor habria costado unos 150-200 MB de los 512 disponibles y ademas se habria
- * pagado su arranque en cada despertar del servicio.
+ * conectado.
+ *
+ * No Rust engine also means a lighter function bundle and a faster cold start on Vercel.
  */
 
 /**

@@ -15,10 +15,10 @@ export class HealthController {
   constructor(@Inject(HealthService) private readonly health: HealthService) {}
 
   /**
-   * No lleva autenticacion a proposito: lo consultan Render y un monitor externo,
-   * y ninguno de los dos tiene sesion. Lo que devuelve no dice NADA del interior
-   * —ni version, ni cadena de conexion, ni el error de Postgres— porque un
-   * endpoint abierto que describe la infraestructura es reconocimiento gratis.
+   * No authentication on purpose: the web's health route and an external monitor query it,
+   * and neither has a session. What it returns says NOTHING about the inside — no version,
+   * no connection string, no Postgres error — because an open endpoint that describes the
+   * infrastructure is free reconnaissance.
    */
   @Get()
   @HttpCode(HttpStatus.OK)

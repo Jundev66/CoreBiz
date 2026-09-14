@@ -27,10 +27,10 @@ import { get, getOrNull } from './client';
 /**
  * El lado de LECTURA, servido por HTTP.
  *
- * Implementa `ReadModels`, el MISMO puerto que cumplen el adaptador Drizzle y el de
- * memoria. Que se pueda hacer eso es lo que reduce esta migracion a cambiar una linea
- * por pantalla: las 29 paginas siguen escribiendo `queries.customers.list(...)` y no
- * saben —ni tienen por que— si eso acaba en una consulta SQL o en un viaje a Render.
+ * Implements `ReadModels`, the SAME port the database and memory adapters fulfil. That is
+ * what reduced the migration to one line per screen: the 29 pages still write
+ * `queries.customers.list(...)` and neither know nor need to know whether it ends in a SQL
+ * query or a trip to the API.
  *
  * Es tambien la prueba de que el puerto estaba bien dibujado. Un puerto que hubiera
  * filtrado detalles de la base de datos no se podria cumplir por HTTP.

@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
 /**
- * El entorno se valida AL ARRANCAR, no la primera vez que alguien lo lee.
+ * The environment is validated AT STARTUP, not the first time someone reads it.
  *
- * La alternativa —leer `process.env` donde haga falta— convierte una variable mal
- * puesta en un fallo que aparece a los diez minutos, en la peticion de un visitante
- * y con un mensaje que habla de otra cosa. Aqui el proceso se niega a levantar y
- * dice exactamente que falta. En Render eso es la diferencia entre un despliegue
- * que revierte solo y uno que queda "verde" sirviendo errores.
+ * The alternative — reading `process.env` wherever needed — turns a misconfigured variable
+ * into a failure that shows up ten minutes later, in a visitor's request and with a message
+ * about something else. Here the application refuses to build and says exactly what is
+ * missing, both in the long-lived process and in the Vercel function.
  */
 
 const schema = z
@@ -19,9 +18,8 @@ const schema = z
      *
      * It used to be decided by `NODE_ENV !== 'production'`, which fails on the dangerous
      * side: `NODE_ENV` defaults to `development`, and the `docs` route is permanently
-     * excluded from the auth middleware. A service created by hand on Render — copying only
-     * the start command, as `docs/DEPLOY.md` allows — would publish the whole `/docs-json`
-     * without a session, and nothing would turn red.
+     * excluded from the auth middleware. A deployment that forgot `NODE_ENV` would publish the
+     * whole `/docs-json` without a session, and nothing would turn red.
      *
      * An open OpenAPI document for an ERP is a free map of its entire write surface. So now
      * it has to be asked for by name, and forgetting it leaves it closed, which is the right
@@ -32,7 +30,7 @@ const schema = z
       .default('false')
       .transform((v) => v === 'true'),
 
-    /** Render inyecta PORT y espera que se escuche AHI. No es negociable. */
+    /** Port of the long-lived process (`main.ts`). The Vercel function ignores it. */
     PORT: z.coerce.number().int().positive().default(3001),
 
     /**
@@ -56,10 +54,10 @@ const schema = z
     DATABASE_URL: z.string().min(1).optional(),
 
     /**
-     * Uno es lo correcto en serverless, donde cada invocacion es un proceso nuevo.
-     * Aqui NO: la API es un proceso de larga vida y con el pool en uno cada
-     * transaccion retiene la unica conexion mientras dura, asi que todo lo demas
-     * espera en fila. El mismo fallo esta documentado en el addendum de ADR 004.
+     * Pool size per process. Never one: with a single connection each transaction holds it
+     * for its whole duration and everything else queues (the addendum of ADR 004). Ten for
+     * the long-lived process; three on Vercel, where Fluid compute serves concurrent
+     * requests per instance and several instances share the free pooler (ADR 011).
      */
     DATABASE_MAX_CONNECTIONS: z.coerce.number().int().positive().default(10),
 

@@ -226,8 +226,11 @@ export default tseslint.config(
 
   // Config de dependency-cruiser: CommonJS, y sus strings son patrones de expresion
   // regular donde `\.` es intencionado, no un escape sobrante.
+  //
+  // The Vercel entry point of the API is CommonJS too, as a `.js` file because that is what
+  // the platform detects as a function (see `apps/api/api/index.js`).
   {
-    files: ['**/*.cjs'],
+    files: ['**/*.cjs', 'apps/api/api/**/*.js'],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: {
       sourceType: 'commonjs',
@@ -241,6 +244,8 @@ export default tseslint.config(
       // mismo bloque sustituye al del spread en lugar de fusionarse con el.
       ...tseslint.configs.disableTypeChecked.rules,
       'no-useless-escape': 'off',
+      // CommonJS loads modules with `require`; that is the whole point of these files.
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 

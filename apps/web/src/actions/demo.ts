@@ -39,12 +39,11 @@ export async function startDemoAction(_prev: DemoState, _formData: FormData): Pr
   if (!demoConfig.enabled()) redirect('/login');
 
   /*
-   * Si la API esta dormida, NO se espera aqui.
+   * If the API is not answering, do NOT wait here.
    *
-   * Aprovisionar un visitante clona la base de demostracion entera y ya es lento con
-   * la API caliente. Sumarle el minuto que tarda Render en despertar se pasa del
-   * limite de una funcion de Vercel, y entonces quien abre el enlace del curriculum no
-   * ve una espera: ve un 504.
+   * Provisioning a visitor clones the whole demo database, which is already slow with a
+   * warm API. Adding a cold start on top can exceed a Vercel function's time limit, and
+   * then whoever opens the résumé link does not see a wait: they see a 504.
    *
    * Asi que se parte en dos: se le manda a la pantalla de espera, que le cuenta lo que
    * pasa y le trae de vuelta aqui con la API ya caliente. Es el unico sitio donde la

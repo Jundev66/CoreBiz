@@ -1,26 +1,36 @@
 # Despliegue
 
-Guía para poner CoreBiz en producción con coste **$0**. Del repositorio vacío a una URL
-viva en unos 40 minutos.
+Guía para poner CoreBiz en producción con coste **$0**, usando **Vercel y Supabase**.
 
-CoreBiz son **dos despliegues**: la interfaz (Next.js) en Vercel y la API (NestJS) en
-Render, con Postgres y Auth en Supabase. El motivo está en
-[ADR 009](adr/009-api-dedicada-en-nestjs.md); lo que hay que saber aquí es que las
-variables de entorno se reparten entre las dos plataformas y que **hay un secreto que
-tiene que ser el mismo en ambas**.
+CoreBiz son **dos proyectos de Vercel** sobre el mismo repositorio: la interfaz (Next.js,
+`apps/web`) y la API (NestJS, `apps/api`), con Postgres y Auth en Supabase. Por qué dos
+procesos está en [ADR 009](adr/009-api-dedicada-en-nestjs.md); por qué los dos en Vercel, en
+[ADR 011](adr/011-api-en-vercel.md). Lo que hay que saber aquí es que las variables se
+reparten entre los dos proyectos y que **hay un secreto que tiene que ser el mismo en ambos**.
 
 ---
 
 ## Antes de empezar
 
-Tres cuentas gratuitas, sin tarjeta:
+Dos cuentas gratuitas, sin tarjeta:
 
-| Servicio                         | Para qué                | Nota importante                                                                                 |
-| -------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
-| [GitHub](https://github.com)     | Repositorio y CI        | **Público**. En privado, este CI (~10 min por push) agota los 2.000 min/mes en unos 200 pushes. |
-| [Supabase](https://supabase.com) | Postgres, Auth, Storage | Crea el proyecto en la **misma región** que la función de Vercel.                               |
-| [Vercel](https://vercel.com)     | La interfaz             | Plan Hobby: uso personal **no comercial**.                                                      |
-| [Render](https://render.com)     | La API                  | Plan gratuito: **duerme a los 15 min** sin tráfico. Está contemplado, ver §6.                   |
+| Servicio                         | Para qué                           | Nota importante                                                                                 |
+| -------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [GitHub](https://github.com)     | Repositorio y CI                   | **Público**. En privado, este CI (~10 min por push) agota los 2.000 min/mes en unos 200 pushes. |
+| [Supabase](https://supabase.com) | Postgres, Auth                     | Región **us-east-1**, la misma que las funciones de Vercel (`iad1`).                            |
+| [Vercel](https://vercel.com)     | La interfaz y la API (2 proyectos) | Plan Hobby: uso personal **no comercial**.                                                      |
+
+### Secretos: dónde viven y dónde no
+
+- Ningún secreto se escribe en el repositorio, en un issue ni en un chat. Se generan con
+  `openssl rand -base64 32` y se pegan **directamente** en el panel o por stdin a
+  `vercel env add NOMBRE production --sensitive`.
+- La copia que haya que conservar (la contraseña de la base) va a un gestor de contraseñas,
+  no a un fichero dentro del repositorio.
+- Las variables se crean **solo en el entorno Production**. Los despliegues de preview —los
+  de pull requests, también los de forks de un repositorio público— se quedan sin acceso a
+  la base.
+- `.vercel/` está en `.gitignore`: `vercel pull` escribe ahí las variables descargadas.
 
 ---
 
@@ -30,250 +40,201 @@ Tres cuentas gratuitas, sin tarjeta:
 gh repo create corebiz --public --source=. --push
 ```
 
-O crea el repositorio en la web y añade el remoto a mano. El repositorio es público a
-propósito: es lo que hace que el proyecto sirva como carta de presentación, y ningún
-secreto vive en él (ver `.env.example`).
+El repositorio es público a propósito: es lo que hace que el proyecto sirva como carta de
+presentación, y ningún secreto vive en él (ver `.env.example`).
 
 ## 2. Supabase
 
-1. Crea el proyecto. Anota la contraseña de base de datos: **no se puede recuperar**.
-2. Elige la región más cercana a tu público y recuérdala para el paso 4.
-3. En **Settings → Database**, copia las dos cadenas de conexión:
-   - **Transaction pooler**, puerto `6543` → `DATABASE_URL`
-   - **Direct connection**, puerto `5432` → `DIRECT_URL`
-4. En **Settings → API**, copia `URL` y `anon key`.
+1. Crea el proyecto en **us-east-1**. Anota la contraseña de base de datos en tu gestor:
+   **no se puede recuperar**.
+2. En **Connect**, copia las cadenas del pooler:
+   - **Transaction pooler**, puerto `6543` → `DATABASE_URL` de la API
+   - **Session pooler**, puerto `5432` → solo para aplicar extensiones y la semilla
+3. En **Settings → API Keys**, copia la clave **anon / publishable**. Es pública por diseño:
+   RLS es lo que protege los datos.
 
-5. En **Authentication → Sessions**, baja el **TTL del access token a 10 minutos**.
-
-   No es un ajuste opcional. La API verifica la firma de los tokens **localmente**
-   contra el JWKS del proyecto, en lugar de preguntar a Supabase en cada petición —eso
-   ahorra un viaje de red por request, que sobre Render se nota—. El precio es que
-   revocar una _cuenta_ tarda lo que le quede de vida al token. Con 10 minutos ese
-   margen es aceptable, y el coste para el usuario es cero porque el middleware de Next
-   refresca el token de forma transparente.
-
-   Revocar un _acceso a una empresa_ sigue siendo inmediato: el contexto consulta las
-   pertenencias en cada petición, y sin fila no hay acceso.
-
-   > Esto **requiere claves de firma asimétricas**, que es lo que traen los proyectos
-   > nuevos. Compruébalo abriendo `https://TU-PROYECTO.supabase.co/auth/v1/.well-known/jwks.json`:
-   > si devuelve una clave `ES256`, todo correcto. Con el secreto HS256 compartido
-   > habría que poner en Render una clave capaz de **emitir** tokens, no solo de
-   > verificarlos, y eso es peor que el viaje de red que se quería ahorrar.
-
-> La `service_role key` **no se usa en este proyecto y no hay que copiarla**. Bypasea Row
-> Level Security por completo, y todo lo que necesitaría —crear una empresa, aceptar una
-> invitación, provisionar una demostración— entra por funciones `SECURITY DEFINER`
-> acotadas. Una clave capaz de saltarse el aislamiento entre empresas es la última que
-> conviene tener dando vueltas por variables de entorno.
-
-6. En **Authentication → URL Configuration**, pon el dominio de Vercel en **Site URL** y
-   añádelo también a **Redirect URLs**. Sin esto, los enlaces de recuperación de
-   contraseña y de invitación llegan apuntando a `localhost`.
-
-Aplica el esquema:
-
-```bash
-pnpm dlx supabase link --project-ref TU_REF
-pnpm dlx supabase db push
-```
+> La `service_role` / secret key **no se usa en este proyecto y no hay que copiarla**.
+> Bypasea Row Level Security por completo, y todo lo que necesitaría —crear una empresa,
+> aceptar una invitación, provisionar una demostración— entra por funciones
+> `SECURITY DEFINER` acotadas.
 
 ### Ajustes de Auth obligatorios
 
-El repositorio no los puede comprobar: viven en el panel de Supabase y hay que ponerlos a
-mano antes de publicar el enlace.
+Viven en el panel y el repositorio no los puede comprobar.
 
+- **Authentication → Sessions**: caducidad del access token en **600 segundos**. La API
+  verifica la firma **localmente** contra el JWKS, así que revocar una cuenta tarda lo que
+  le quede de vida al token (ver `docs/THREAT_MODEL.md`). Revocar el acceso a una empresa
+  sigue siendo inmediato.
 - **Authentication → Sign In / Providers → Email**: confirmación de correo **activada**.
-- **Authentication → Policies**: contraseña mínima de **8** caracteres y comprobación de
-  contraseñas filtradas activada.
+- **Authentication → Policies**: contraseña mínima de **8** y comprobación de contraseñas
+  filtradas.
 - **Authentication → Sign In / Providers**: inicio de sesión **anónimo desactivado**.
-- **Authentication → Sessions**: caducidad del token de acceso en **600 segundos**. La
-  revocación de cuentas depende de ello (ver `docs/THREAT_MODEL.md`).
-- Si no quieres altas abiertas, `SIGNUP_ENABLED=false` en Render **y** en Vercel, y además
-  desactiva «Allow new users to sign up» en el panel: la variable cierra la aplicación,
-  no Supabase Auth.
+- **Altas cerradas**: desactiva «Allow new users to sign up» **y** pon `SIGNUP_ENABLED=false`
+  en los dos proyectos de Vercel. La variable cierra la aplicación, no Supabase Auth.
+- **Authentication → URL Configuration**: el dominio de la web en **Site URL** y en
+  **Redirect URLs**. Sin esto, los enlaces de recuperación e invitación apuntan a `localhost`.
 
-## 3. Extensiones de base de datos
+> Comprueba las claves asimétricas abriendo
+> `https://TU-PROYECTO.supabase.co/auth/v1/.well-known/jwks.json`: debe devolver una clave
+> `ES256`. Con el secreto HS256 compartido habría que dar a la API una clave capaz de
+> **emitir** tokens.
 
-En el editor SQL de Supabase:
+> ⚠️ **No uses `supabase config push`.** `supabase/config.toml` es la configuración
+> **local** (Site URL en localhost, sin confirmación de correo, tokens de una hora) y la
+> subiría tal cual.
+
+## 3. Extensiones y esquema
+
+Con la cadena del **session pooler**, en el editor SQL o con `psql`:
 
 ```sql
 -- Purga de sandboxes cada 10 minutos, DENTRO de Postgres.
--- Vercel Hobby solo admite crons diarios, así que esta tarea no puede vivir allí.
 create extension if not exists pg_cron;
 
--- `with schema extensions` no es opcional. Todas las funciones del proyecto llevan
--- `set search_path = ''` y las invocan por su nombre completo —`extensions.crypt(...)`,
--- `extensions.uuid_generate_v5(...)`— así que una copia instalada en `public` no
--- serviría de nada: la llamada seguiría buscándolas donde no están.
+-- `with schema extensions` no es opcional: todas las funciones llevan `set search_path = ''`
+-- y las invocan por su nombre completo (`extensions.crypt(...)`).
 create extension if not exists "uuid-ossp" with schema extensions;
 create extension if not exists pgcrypto with schema extensions;
 ```
 
-Si se te olvida alguna, `supabase db push` te lo dirá: hay una migración que lo comprueba
-y falla con el nombre de la que falta. Está ahí porque sin ella el despliegue termina en
-verde y el sistema revienta la primera vez que alguien se registra.
-
-## 3.b Sembrar los datos de demostración
-
-`supabase db push` aplica las migraciones pero **no ejecuta `supabase/seed.sql`**. Sin esa
-semilla no existe el tenant plantilla, y `/demo` falla con `NOT_A_DEMO_TEMPLATE` — es
-decir, la demostración entera, que es la razón de ser del enlace del currículum.
-
-Pega el contenido de `supabase/seed.sql` en el **editor SQL** de Supabase y ejecútalo una
-vez.
-
-Solo ese archivo. **Nunca `supabase/seed.local.sql`**: es la semilla de desarrollo y le da a
-la cuenta dueña de la plantilla una contraseña que está publicada en el repositorio.
-
-Lo que deja `seed.sql` en producción, y por qué es seguro con el repositorio público:
-
-- La cuenta `demo@corebiz.local` existe —la plantilla necesita un dueño— pero con una
-  contraseña aleatoria que nadie conoce y sin identidad de correo: **no se puede entrar con
-  ella**.
-- La plantilla queda **bloqueada en la base** (`demo_template_locked`, activo por defecto):
-  ningún usuario puede escribir en ella, ni siquiera su dueño. Solo la clonan y la leen las
-  funciones de la demostración.
-
-> ⚠️ **Nunca `supabase db reset --linked`.** Eso borra la base de producción entera.
-
-## 4. Render — la API
-
-1. **New → Blueprint** y apunta al repositorio. Render lee `render.yaml` de la raíz y
-   crea el servicio con su build, su arranque y su health check ya configurados.
-
-   Si prefieres hacerlo a mano: **New → Web Service**, runtime Node, y copia de
-   `render.yaml` el `buildCommand`, el `startCommand` y `healthCheckPath`.
-
-2. **Region**: la **misma que Supabase**. Sin esto cada consulta cruza medio mundo y se
-   pagan entre 150 y 300 ms **por consulta**, sobre pantallas que hacen cuatro.
-
-3. Variables de entorno (las marcadas `sync: false` en `render.yaml`):
-
-| Variable       | Valor                                                  |
-| -------------- | ------------------------------------------------------ |
-| `DATABASE_URL` | pooler de Supabase, puerto 6543                        |
-| `SUPABASE_URL` | `https://TU-PROYECTO.supabase.co` (sin `NEXT_PUBLIC_`) |
-
-`REQUEST_HASH_SECRET` **no va aquí**: la IP se hashea en Vercel, que es el único sitio
-donde `x-forwarded-for` es de fiar. A la API solo le llega el hash.
-
-`INTERNAL_API_SECRET` lo genera Render solo. **Cópialo**: hace falta idéntico en Vercel.
-
-4. Cuando termine el despliegue, anota la URL (`https://tu-api.onrender.com`) y
-   compruébala:
+Aplica las migraciones:
 
 ```bash
-curl https://tu-api.onrender.com/health
+pnpm exec supabase link --project-ref TU_REF
+pnpm exec supabase db push
+```
+
+Si falta una extensión, una migración lo comprueba y falla nombrándola.
+
+### Sembrar la demostración
+
+`supabase db push` **no** ejecuta la semilla. Sin ella no existe el tenant plantilla y `/demo`
+falla con `NOT_A_DEMO_TEMPLATE`. Ejecuta **solo** `supabase/seed.sql`:
+
+```bash
+psql "CADENA_DEL_SESSION_POOLER" -v ON_ERROR_STOP=1 -f supabase/seed.sql
+```
+
+> ⚠️ **Nunca `supabase/seed.local.sql`**, y por eso tampoco `supabase db push --include-seed`:
+> `config.toml` siembra los dos ficheros, y el local le da a la cuenta de la plantilla una
+> contraseña publicada en el repositorio.
+
+> ⚠️ **Nunca `supabase db reset --linked`.** Borra la base de producción entera.
+
+Lo que deja `seed.sql` en producción es seguro con el repositorio público: la cuenta
+`demo@corebiz.local` tiene una contraseña aleatoria que nadie conoce y ninguna identidad de
+correo, y la plantilla queda **bloqueada en la base** (`demo_template_locked`).
+
+## 4. Vercel — la API (`corebiz-api`)
+
+1. **Add New → Project**, importa el repositorio y pon **Root Directory = `apps/api`**. El
+   resto lo dice `apps/api/vercel.json`: sin framework, `pnpm build` (`tsc` + `tsc-alias`),
+   todas las rutas hacia la función `api/index.js`, región `iad1` y 60 s de duración.
+2. Variables de entorno, **solo Production**:
+
+| Variable                   | Valor                             | Sensible |
+| -------------------------- | --------------------------------- | -------- |
+| `NODE_ENV`                 | `production`                      | —        |
+| `DATA_DRIVER`              | `postgres`                        | —        |
+| `DATABASE_URL`             | transaction pooler, puerto 6543   | ✅       |
+| `DATABASE_MAX_CONNECTIONS` | `3`                               | —        |
+| `SUPABASE_URL`             | `https://TU-PROYECTO.supabase.co` | —        |
+| `INTERNAL_API_SECRET`      | `openssl rand -base64 32`         | ✅       |
+| `SIGNUP_ENABLED`           | `false`                           | —        |
+| `DEMO_ENABLED`             | `true`                            | —        |
+| `DEMO_TTL_HOURS`           | `24`                              | —        |
+| `DEMO_MAX_CONCURRENT`      | `50`                              | —        |
+| `DEMO_MAX_PER_HOUR`        | `1`                               | —        |
+
+`DATABASE_MAX_CONNECTIONS` es **3** y no 1 ni 10: con Fluid compute una instancia atiende
+peticiones concurrentes (con 1 esperarían en fila) y puede haber varias instancias (con 10
+cada una se agotaría el pooler gratuito). `DOCS_ENABLED` **no se pone**: sin ella, el
+OpenAPI no se publica.
+
+`REQUEST_HASH_SECRET` **no va aquí**: la IP se hashea en la web, que es donde
+`x-forwarded-for` es de fiar. A la API solo le llega el hash.
+
+3. Comprueba:
+
+```bash
+curl https://corebiz-api.vercel.app/health
 ```
 
 Debe responder `{"status":"ok","driver":"postgres","database":"reachable"}`. Si dice
-`unreachable`, la `DATABASE_URL` es incorrecta o la región no coincide.
+`unreachable`, revisa `DATABASE_URL` y los registros de la función.
 
-> La documentación OpenAPI **no se publica en producción**, a propósito. Un mapa
-> completo de la superficie de escritura de un ERP es reconocimiento gratis. En
-> desarrollo está en `/docs`.
+## 5. Vercel — la interfaz (`corebiz-web`)
 
-## 5. Vercel — la interfaz
+1. **Add New → Project**, el mismo repositorio, **Root Directory = `apps/web`**, dejando
+   marcado incluir archivos de fuera del directorio raíz. En la raíz del repositorio no hay
+   dependencia de `next`, así que sin esto Vercel despliega un sitio estático vacío.
+2. Variables de entorno, **solo Production**:
 
-1. **Add New → Project** e importa el repositorio. Vercel detecta pnpm y Next solo.
-2. **Root Directory**: ponlo en **`apps/web`**, y deja marcada la opción de incluir
-   archivos de fuera del directorio raíz. En la raíz del repositorio no hay ninguna
-   dependencia de `next` —está en `apps/web/package.json`— así que Vercel no detecta el
-   framework y despliega un sitio estático vacío. Ahí es también donde vive
-   `vercel.json`, con el cron de respaldo de la purga.
-3. Variables de entorno (**Settings → Environment Variables**):
+| Variable                        | Valor                                   | Sensible |
+| ------------------------------- | --------------------------------------- | -------- |
+| `API_BASE_URL`                  | `https://corebiz-api.vercel.app`        | —        |
+| `INTERNAL_API_SECRET`           | **el mismo valor que en `corebiz-api`** | ✅       |
+| `NEXT_PUBLIC_SUPABASE_URL`      | `https://TU-PROYECTO.supabase.co`       | —        |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clave anon / publishable                | —        |
+| `NEXT_PUBLIC_SITE_URL`          | `https://corebiz-web.vercel.app`        | —        |
+| `CRON_SECRET`                   | `openssl rand -base64 32`               | ✅       |
+| `REQUEST_HASH_SECRET`           | `openssl rand -base64 32`               | ✅       |
+| `SIGNUP_ENABLED`                | `false`                                 | —        |
+| `DEMO_ENABLED`                  | `true`                                  | —        |
 
-| Variable                        | Valor                             | Sensible |
-| ------------------------------- | --------------------------------- | -------- |
-| `API_BASE_URL`                  | la URL de Render, sin barra final | —        |
-| `INTERNAL_API_SECRET`           | **el mismo valor que en Render**  | ✅       |
-| `NEXT_PUBLIC_SUPABASE_URL`      | URL del proyecto                  | —        |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key                          | —        |
-| `NEXT_PUBLIC_SITE_URL`          | `https://tu-app.vercel.app`       | —        |
-| `CRON_SECRET`                   | `openssl rand -base64 32`         | ✅       |
-| `REQUEST_HASH_SECRET`           | `openssl rand -base64 32`         | ✅       |
-
-**`DATABASE_URL` NO va aquí.** Que Vercel no tenga acceso a la base de datos es la
-prueba observable de que la interfaz dejó de hablar con Postgres. Si la pones "por si
-acaso", nadie se dará cuenta de que algo volvió a usarla.
+**`DATABASE_URL` NO va aquí.** Que la interfaz no tenga acceso a la base de datos es la
+prueba observable de que dejó de hablar con Postgres.
 
 `REQUEST_HASH_SECRET` es **obligatorio**: sin él la web responde con error en vez de
-arrancar con la sal de desarrollo, que está en el repositorio y haría reversibles los
-hashes de IP. Lo mismo con `INTERNAL_API_SECRET`: si falta o no coincide con el de Render,
-el acceso se niega en vez de quedarse sin límite de intentos.
+arrancar con la sal de desarrollo, que está en el repositorio. Lo mismo con
+`INTERNAL_API_SECRET`: si falta o no coincide con el de la API, el acceso se niega.
 
-`CRON_SECRET` protege `/api/cron/purge`, que reenvía la orden de purga a la API. Si se
-deja vacío, el endpoint responde 404 en lugar de abrirse: uno que borra y se abre cuando
-falta configuración es la peor de las dos opciones. Vercel manda ese secreto en la
-cabecera `Authorization` de sus crons automáticamente.
-
-4. **Region**: en **Settings → Functions**, la misma que Render y Supabase. Las tres
-   piezas hablan entre sí en cada petición; repartirlas por el mundo suma tres viajes.
+`CRON_SECRET` protege `/api/cron/purge`. Si falta, el endpoint responde 404 en lugar de
+abrirse. Vercel lo manda solo en la cabecera `Authorization` de sus crons.
 
 ## 6. Mantener el proyecto vivo ⚠️
 
-**Este paso no es opcional.** Supabase **pausa los proyectos del plan gratuito tras 7
-días sin actividad de base de datos**. Si alguien abre el enlace de tu CV el día ocho,
-ve un error — el peor fallo posible para lo que este proyecto pretende ser.
+**Este paso no es opcional.** Supabase **pausa los proyectos gratuitos tras 7 días sin
+actividad de base de datos**.
 
-**a) Workflow de GitHub** (ya incluido en `.github/workflows/keepalive.yml`)
+**a) Workflow de GitHub** (`.github/workflows/keepalive.yml`)
 
-En **Settings → Secrets and variables → Actions → Variables**, añade:
+```bash
+gh variable set APP_URL --body https://corebiz-web.vercel.app
+gh workflow run keepalive.yml
+```
 
-| Variable  | Valor                            |
-| --------- | -------------------------------- |
-| `APP_URL` | `https://tu-proyecto.vercel.app` |
+**b) Monitor externo, también obligatorio**
 
-**b) Monitor externo — también obligatorio**
-
-GitHub **deshabilita los workflows programados tras 60 días sin commits**. Si dejas el
-proyecto quieto un par de meses, el keepalive se apaga solo y Supabase se pausa después.
-
-Registra `https://tu-proyecto.vercel.app/api/health` en [cron-job.org](https://cron-job.org)
-o [UptimeRobot](https://uptimerobot.com), ambos gratuitos, con intervalo de 6 horas.
-
-Esa única URL recorre la cadena entera —Vercel → Render → Postgres— así que despierta
-las dos piezas que se duermen. **Pon el timeout del monitor en 60 s o más**: si la API
-llevaba rato dormida, la primera respuesta tarda.
-
-**c) Lo que NO se hace: mantener Render despierto**
-
-Sería tentador poner un ping cada 10 minutos para que el servicio no se duerma nunca.
-No se hace, y conviene saber por qué: el plan gratuito da **750 horas-instancia al
-mes** y sostener un servicio 24/7 son ~730. Cabría, sin ningún margen, y cualquier
-redespliegue o segunda instancia se saldría del plan.
-
-La decisión es la contraria: **aceptar el arranque en frío y contarlo**. Quien lo
-encuentra ve `/waking-up`, que explica qué pasa, cuánto lleva y que solo ocurre una
-vez. Ver [ADR 009](adr/009-api-dedicada-en-nestjs.md).
+GitHub **deshabilita los workflows programados tras 60 días sin commits**. Registra
+`https://corebiz-web.vercel.app/api/health` en [cron-job.org](https://cron-job.org) o
+[UptimeRobot](https://uptimerobot.com) cada 6 horas, con timeout de 60 s. Esa URL recorre la
+cadena entera: web → API → Postgres.
 
 ## 7. Comprobar
 
 ```bash
-# La cadena entera: Vercel pregunta a Render, y Render a Postgres.
-curl https://tu-proyecto.vercel.app/api/health
+# La cadena entera: la web pregunta a la API, y la API a Postgres.
+curl https://corebiz-web.vercel.app/api/health
 
-# Y la API por su cuenta, para saber cuál de las dos falla si algo falla.
-curl https://tu-api.onrender.com/health
+# La API por su cuenta, para saber cuál de las dos falla.
+curl https://corebiz-api.vercel.app/health
 ```
-
-Los dos deben responder `200`, y el segundo con `database: "reachable"` — es decir,
-habiendo tocado la base de verdad y no solo el proceso Node.
 
 Luego, a mano:
 
-- [ ] La portada carga en menos de 2 s **con la API caliente**.
-- [ ] Con la API dormida, `/demo` lleva a la pantalla de espera y **vuelve sola** a
-      `/demo` cuando despierta. No a un error, y no a la portada.
-- [ ] El listado de clientes muestra datos.
-- [ ] La cuota del plan aparece en la cabecera del listado.
+- [ ] La portada carga en menos de 2 s.
+- [ ] `/demo` entrega una copia propia y el listado de clientes muestra datos.
 - [ ] El aviso _"Documento no fiscal"_ está presente.
-- [ ] Dos cuentas en dos navegadores no ven los datos de la otra, ni forzando ids en la URL.
-- [ ] **Con el token de una cuenta, llamar a la API directamente tampoco alcanza los
-      datos de la otra.** Es una comprobación nueva: antes no había una API que atacar.
-- [ ] `https://tu-api.onrender.com/docs` responde **404** en producción.
-- [ ] El workflow de keepalive se ejecuta correctamente (lánzalo a mano una vez).
+- [ ] El registro dice que las altas están cerradas y ofrece la demostración.
+- [ ] Dos visitantes de la demo en dos navegadores no ven los datos del otro, ni forzando ids.
+- [ ] **Con el token de uno, llamar a la API directamente tampoco alcanza los datos del otro.**
+- [ ] `https://corebiz-api.vercel.app/docs` y `/docs-json` responden **404**.
+- [ ] `/internal/cron/purge` sin el secreto responde **404**.
+- [ ] Ni el HTML ni el JavaScript servidos contienen `INTERNAL_API_SECRET`, `DATABASE_URL`
+      ni `postgres://`.
+- [ ] El workflow de keepalive se ejecuta correctamente.
 
 ---
 
@@ -283,18 +244,15 @@ Luego, a mano:
 | -------------------------- | ------------------------------------------------------------- | ------------- |
 | Tamaño de la base de datos | Supabase → Database                                           | 350 MB de 500 |
 | Egress                     | Supabase → Usage                                              | 4 GB de 5     |
-| Invocaciones de función    | Vercel → Usage                                                | 800 K de 1 M  |
-| Horas de instancia         | Render → Usage                                                | 600 h de 750  |
+| Uso de funciones           | Vercel → Usage, en **los dos** proyectos                      | 80 % del plan |
 | Sandboxes activos          | `select count(*) from demo_sessions where expires_at > now()` | 50            |
 
-El circuit breaker degrada la aplicación automáticamente antes de llegar al límite: en
-lugar de caer, deja de crear sandboxes y sirve una demo compartida de solo lectura. Un
-visitante siempre ve algo funcionando, nunca un error de cuota.
+El circuit breaker degrada la aplicación antes de llegar al límite: deja de crear sandboxes y
+sirve una demo compartida de solo lectura.
 
 ## Si algún día quisieras cobrar por esto
 
-El plan Hobby de Vercel prohíbe el uso comercial. La migración serían **Vercel Pro**
-($20/mes), **Render Starter** ($7/mes, que además **no duerme** y hace innecesaria la
-pantalla de espera) y **Supabase Pro** ($25/mes), sin tocar código: lo único acoplado a
-Vercel es `next.config.ts`, la API es un proceso Node corriente que corre en cualquier
-sitio, y las tareas programadas ya viven en `pg_cron`, dentro de Postgres.
+El plan Hobby de Vercel prohíbe el uso comercial. La migración sería **Vercel Pro** y
+**Supabase Pro**, sin tocar código. Lo acoplado a Vercel es `next.config.ts`,
+`apps/api/src/serverless.ts` y los `vercel.json`; `apps/api/src/main.ts` arranca la API como
+proceso Node en cualquier sitio, y las tareas programadas viven en `pg_cron`.

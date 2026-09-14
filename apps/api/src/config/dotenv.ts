@@ -11,8 +11,8 @@ import { dirname, join, resolve } from 'node:path';
  * Un error de configuracion disfrazado de arranque en frio es de los peores: no se
  * arregla esperando, y la pantalla te invita justo a eso.
  *
- * En produccion NO se llama. Render y Vercel inyectan el entorno ellos mismos, y leer un
- * fichero alli seria darle a un despliegue una fuente de configuracion que nadie audita.
+ * Not called in production. Vercel injects the environment itself, and reading a file there
+ * would give a deployment a configuration source nobody audits.
  *
  * Las variables que YA existen en el proceso ganan: `loadEnvFile` de Node no pisa lo que
  * hay. Eso es lo que permite que `DATA_DRIVER=memory pnpm dev` siga funcionando aunque

@@ -48,9 +48,8 @@ export class InternalController {
   /**
    * Purga de sandboxes caducados.
    *
-   * Es un RESPALDO. La purga de verdad corre cada diez minutos dentro de Postgres con
-   * `pg_cron`, donde no depende de que este servicio este despierto — y en el plan
-   * gratuito de Render eso pasa quince minutos despues de la ultima visita.
+   * It is a BACKUP. The real purge runs every ten minutes inside Postgres with `pg_cron`,
+   * where it does not depend on anything outside the database being up.
    */
   @Post('cron/purge')
   async purge(): Promise<{ purged: number }> {
