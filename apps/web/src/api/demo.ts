@@ -24,6 +24,7 @@ export type DemoStartResult =
       readonly password: string;
       readonly hoursLeft: number;
       readonly readonly: boolean;
+      readonly readonlyReason: 'busy' | 'limit' | null;
     }
   | {
       readonly ok: false;
@@ -59,8 +60,9 @@ export async function startDemoSandbox(ipHash: string): Promise<DemoStartResult>
       password: string;
       hoursLeft: number;
       readonly: boolean;
+      readonlyReason?: 'busy' | 'limit' | null;
     };
-    return { ok: true, ...body };
+    return { ok: true, ...body, readonlyReason: body.readonlyReason ?? null };
   }
 
   const envelope = (await res.json().catch(() => null)) as ApiErrorBody | null;

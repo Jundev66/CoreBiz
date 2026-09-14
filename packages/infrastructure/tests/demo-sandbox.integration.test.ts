@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  countRecentDemoSandboxes,
   demoCapacity,
   demoSandboxIsAlive,
   provisionDemoSandbox,
@@ -48,17 +49,59 @@ describe('Sandbox de demostracion', () => {
   beforeEach(dropSandboxes);
 
   const clone = (
-    overrides: { maxConcurrent?: number; template?: string; maxReadonlyPerHour?: number } = {},
+    overrides: {
+      maxConcurrent?: number;
+      template?: string;
+      maxReadonlyPerHour?: number;
+      ipHash?: string;
+      forceReadonly?: boolean;
+    } = {},
   ) =>
     provisionDemoSandbox(TEST_DATABASE_URL, {
       templateTenantId: overrides.template ?? TEMPLATE,
-      ipHash: 'hash-de-prueba',
+      ipHash: overrides.ipHash ?? 'hash-de-prueba',
       ttlHours: 24,
       maxConcurrent: overrides.maxConcurrent ?? 50,
       ...(overrides.maxReadonlyPerHour !== undefined
         ? { maxReadonlyPerHour: overrides.maxReadonlyPerHour }
         : {}),
+      ...(overrides.forceReadonly !== undefined ? { forceReadonly: overrides.forceReadonly } : {}),
     });
+
+  it('counts real copies per origin and overall, never read-only seats', async () => {
+    // The quota is about database COPIES. Counting clicks locked a whole office network
+    // out after a single test run; counting viewer seats would do the same once degraded.
+    expect((await clone()).ok).toBe(true);
+    expect((await clone({ ipHash: 'otro-origen' })).ok).toBe(true);
+    const seat = await clone({ maxConcurrent: 0 });
+    expect(seat.ok && seat.readonly).toBe(true);
+
+    const hour = 3_600;
+    expect(
+      await countRecentDemoSandboxes(TEST_DATABASE_URL, {
+        ipHash: 'hash-de-prueba',
+        sinceSeconds: hour,
+      }),
+    ).toBe(1);
+    expect(await countRecentDemoSandboxes(TEST_DATABASE_URL, { sinceSeconds: hour })).toBe(2);
+
+    await sql`update public.demo_sessions set created_at = now() - interval '2 hours'`;
+    expect(await countRecentDemoSandboxes(TEST_DATABASE_URL, { sinceSeconds: hour })).toBe(0);
+  });
+
+  it('a forced read-only seat says the quota was the reason, not capacity', async () => {
+    const forced = await clone({ forceReadonly: true });
+    expect(forced.ok).toBe(true);
+    if (!forced.ok) return;
+
+    expect(forced.readonly).toBe(true);
+    expect(forced.readonlyReason).toBe('limit');
+    expect(forced.tenantId).toBe(TEMPLATE);
+    expect((await demoCapacity(TEST_DATABASE_URL)).activeSandboxes).toBe(0);
+
+    const own = await clone();
+    expect(own.ok && own.readonlyReason).toBe(null);
+  });
 
   it('clona la plantilla entera y el libro mayor sigue cuadrando', async () => {
     const result = await clone();

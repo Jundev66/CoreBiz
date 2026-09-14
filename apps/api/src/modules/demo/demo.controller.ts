@@ -10,7 +10,11 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { RATE_LIMITS } from '@corebiz/application';
-import { postgresRateLimiter, provisionDemoSandbox } from '@corebiz/infrastructure';
+import {
+  countRecentDemoSandboxes,
+  postgresRateLimiter,
+  provisionDemoSandbox,
+} from '@corebiz/infrastructure';
 import { InternalSecretGuard } from '../../auth/internal-secret.guard';
 import { loadEnv } from '../../config/env';
 import { activeDriver, databaseUrl } from '../../config/driver';
@@ -48,6 +52,8 @@ export interface DemoCredentials {
   readonly password: string;
   readonly hoursLeft: number;
   readonly readonly: boolean;
+  /** Why the seat is read-only: `busy` (capacity) or `limit` (hourly copy quota). */
+  readonly readonlyReason: 'busy' | 'limit' | null;
 }
 
 /**
@@ -60,13 +66,12 @@ export interface DemoCredentials {
  * both deployments, like the internal endpoints, because the caller is always `apps/web`
  * and never a browser.
  *
- * It was needed, and the reason deserves to stay written: the limiter below counts by
+ * It was needed, and the reason deserves to stay written: the quotas below count by
  * `ipHash`, a value that arrives IN THE BODY. That is trustworthy when Vercel computes it —
  * the platform sets `x-forwarded-for` there — but the API has its own public URL, so without a
  * credential anyone could call it directly, rotate that value on every request and skip
- * the limit entirely. Only the global cap was left standing. Provisioning in bursts means
- * GoTrue accounts and database copies: an attack on the free quota, the asset the threat
- * model ranks first.
+ * the per-origin quota entirely. Provisioning in bursts means GoTrue accounts and database
+ * copies: an attack on the free quota, the asset the threat model ranks first.
  *
  * Es POST y nunca un GET, y esa es la otra decision que protege el presupuesto: un GET
  * que provisiona lo dispara cualquier rastreador, cualquier previsualizacion de enlace
@@ -94,23 +99,45 @@ export class DemoController {
       throw domainError('Unavailable');
     }
 
-    const limiter = postgresRateLimiter(databaseUrl());
-    const decision = await limiter.hit(
-      `demoSandbox:${body.ipHash ?? 'anonimo'}`,
-      env.DEMO_MAX_PER_HOUR,
-      RATE_LIMITS.demoSandbox.windowSeconds,
-    );
+    const url = databaseUrl();
+    const hour = RATE_LIMITS.demoSandbox.windowSeconds;
 
-    if (!decision.allowed) {
-      throw domainError('TooManyAttempts', { retryAfter: decision.retryAfterSeconds ?? 0 });
+    /*
+     * The quota counts COPIES that exist, not clicks.
+     *
+     * It used to record a hit before anything was created, failures included, with a limit of
+     * one: a single test from an office network left every recruiter behind that address
+     * facing "you already created a demo" — about a demo they never had. Now an origin gets
+     * its own copies up to `DEMO_MAX_PER_HOUR`, everyone together up to
+     * `DEMO_MAX_SANDBOXES_PER_HOUR`, and past either the visitor still gets in, read-only.
+     */
+    const [fromOrigin, overall] = await Promise.all([
+      countRecentDemoSandboxes(url, { ipHash: body.ipHash, sinceSeconds: hour }),
+      countRecentDemoSandboxes(url, { sinceSeconds: hour }),
+    ]);
+    const quotaReached =
+      fromOrigin >= env.DEMO_MAX_PER_HOUR || overall >= env.DEMO_MAX_SANDBOXES_PER_HOUR;
+
+    if (quotaReached) {
+      // Read-only seats are cheap but not free (an account, an identity, a session), so an
+      // origin gets a bounded number of them. Only past that is the visitor told to wait.
+      const decision = await postgresRateLimiter(url).hit(
+        `demoViewer:${body.ipHash ?? 'anonimo'}`,
+        RATE_LIMITS.demoViewer.limit,
+        RATE_LIMITS.demoViewer.windowSeconds,
+      );
+      if (!decision.allowed) {
+        throw domainError('TooManyAttempts', { retryAfter: decision.retryAfterSeconds ?? 0 });
+      }
     }
 
-    const result = await provisionDemoSandbox(databaseUrl(), {
+    const result = await provisionDemoSandbox(url, {
       templateTenantId: DEMO_TEMPLATE_TENANT_ID,
       ipHash: body.ipHash,
       ttlHours: env.DEMO_TTL_HOURS,
       maxConcurrent: env.DEMO_MAX_CONCURRENT,
       maxReadonlyPerHour: env.DEMO_MAX_READONLY_PER_HOUR,
+      forceReadonly: quotaReached,
     });
 
     if (!result.ok) throw domainError('Unavailable');
@@ -126,6 +153,12 @@ export class DemoController {
        * porque el momento en que se abre es justo el que no se repite.
        */
       readonly: result.readonly,
+      readonlyReason:
+        result.readonlyReason === 'capacity'
+          ? 'busy'
+          : result.readonlyReason === 'limit'
+            ? 'limit'
+            : null,
     };
   }
 }

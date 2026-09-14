@@ -105,7 +105,7 @@
     "pointExpires": "The account and everything you record are deleted after 24 hours.",
     "start": "Open the demo",
     "orSignUp": "Would you rather start with your real business?",
-    "rateLimited": "You created a demo recently. Try again in a while, or use the one you already have.",
+    "rateLimited": "Many demos were opened from your network in the last hour. Try again in {minutes} min.",
     "pointCredentials": "We give you a username and a password: you sign in like an employee would.",
     "starting": "Preparing your copy...",
     "credentialsTitle": "Your account is ready",
@@ -117,7 +117,11 @@
     "sessionNotice": "You are trying CoreBiz. This account and its data are deleted in {hours} hours.",
     "sessionNoticeSoon": "You are trying CoreBiz. This account and its data are deleted in less than an hour.",
     "createAccount": "Create my account",
-    "templateNotice": "You are in the sample shop. It is the copy cloned for every visitor, so whatever you record here will be seen by the next ones."
+    "templateNotice": "You are in the sample shop. It is the copy cloned for every visitor, so whatever you record here will be seen by the next ones.",
+    "readonlyLimit": "Your network already created several copies in the last hour, so you are in read-only mode: you can see everything, but not save changes. In a while you can get your own copy.",
+    "expiredTitle": "Your demo has ended",
+    "expiredBody": "That copy has expired. Sign out and start a new one: it takes a few seconds.",
+    "restart": "Start a new demo"
   },
   "common": {
     "save": "Save",

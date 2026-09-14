@@ -70,6 +70,15 @@ export interface DemoCredentials {
    * peor que uno que explica su limite.
    */
   readonly readonly: boolean;
+  /**
+   * Why the visitor got a read-only seat, or null with their own copy.
+   *
+   * `capacity`: the space budget or the live-sandbox cap was reached. `limit`: the caller
+   * forced it because this origin (or everyone, this hour) already created enough copies.
+   * The screen explains each one differently: "the service is busy" is a lie when the real
+   * reason is that the visitor's own network used its quota.
+   */
+  readonly readonlyReason: 'capacity' | 'limit' | null;
 }
 
 export type ProvisionDemoResult =
@@ -83,6 +92,53 @@ export interface ProvisionDemoOptions {
   readonly budgetBytes?: number;
   /** Read-only seats allowed per hour once capacity is exhausted. Unbounded when absent. */
   readonly maxReadonlyPerHour?: number;
+  /**
+   * Hand out a read-only seat even with room for a copy. The caller sets it when the
+   * hourly copy quota (per origin or overall) is used up: degrade instead of refusing.
+   */
+  readonly forceReadonly?: boolean;
+}
+
+/**
+ * Real sandbox COPIES created in the last `sinceSeconds`, per origin or overall.
+ *
+ * It counts `demo_sessions` rows of kind `sandbox`, not attempts. The previous limit
+ * recorded every click before anything was created — failures and rejected tries included —
+ * so one test from an office network locked everybody behind it out of the demo for an
+ * hour, with a message promising "the demo you already have" that did not exist.
+ *
+ * Read-only seats (`viewer`) are excluded: they cost one row, not a database copy.
+ *
+ * `ipHash: undefined` counts every origin; `null` counts the rows stored without one.
+ * Counting and creating are not atomic, so two simultaneous requests can overshoot by one;
+ * the live-sandbox cap and the space breaker are the hard limits.
+ */
+export async function countRecentDemoSandboxes(
+  url: string,
+  options: { readonly ipHash?: string | null; readonly sinceSeconds: number },
+): Promise<number> {
+  const prisma = getPrisma(url);
+  const since = options.sinceSeconds;
+
+  const rows =
+    options.ipHash === undefined
+      ? await prisma.$queryRaw<{ n: number }[]>`
+          select count(*)::int as n from public.demo_sessions
+           where kind = 'sandbox' and created_at > now() - make_interval(secs => ${since})
+        `
+      : options.ipHash === null
+        ? await prisma.$queryRaw<{ n: number }[]>`
+            select count(*)::int as n from public.demo_sessions
+             where kind = 'sandbox' and ip_hash is null
+               and created_at > now() - make_interval(secs => ${since})
+          `
+        : await prisma.$queryRaw<{ n: number }[]>`
+            select count(*)::int as n from public.demo_sessions
+             where kind = 'sandbox' and ip_hash = ${options.ipHash}
+               and created_at > now() - make_interval(secs => ${since})
+          `;
+
+  return Number(rows[0]?.n ?? 0);
 }
 
 /**
@@ -139,7 +195,10 @@ export async function provisionDemoSandbox(
   // plantilla compartida, que cuesta una fila. Devolver "vuelve mas tarde" en el
   // enlace de un CV es el peor resultado posible del proyecto entero, porque el
   // momento en que se abre es justo el que no se repite.
-  const readonly = capacity.mode !== 'normal' || capacity.activeSandboxes >= options.maxConcurrent;
+  const overCapacity =
+    capacity.mode !== 'normal' || capacity.activeSandboxes >= options.maxConcurrent;
+  const readonly = overCapacity || options.forceReadonly === true;
+  const readonlyReason = overCapacity ? 'capacity' : readonly ? 'limit' : null;
 
   // Degraded mode still costs an account, an identity, a membership and a session per
   // call. Without a ceiling, rotating addresses kept creating them forever.
@@ -176,6 +235,7 @@ export async function provisionDemoSandbox(
       password,
       expiresAt: new Date(Date.now() + options.ttlHours * 60 * 60 * 1000),
       readonly,
+      readonlyReason,
     };
   } catch {
     return { ok: false, reason: 'failed' };

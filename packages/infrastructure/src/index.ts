@@ -49,6 +49,7 @@ export { prismaPurchasingQueries } from './queries/purchasing';
 export { databaseIsReachable } from './prisma/health';
 export {
   demoCapacity,
+  countRecentDemoSandboxes,
   provisionDemoSandbox,
   demoSandboxIsAlive,
   purgeExpiredDemos,

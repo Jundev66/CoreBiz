@@ -2,7 +2,10 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import { startDemoAction, type DemoState } from '@/actions/demo';
+import { restartDemoAction, startDemoAction, type DemoState } from '@/actions/demo';
+
+/** `none`: no session. `active`: already inside. `expired`: a demo whose copy is gone. */
+export type DemoSessionState = 'none' | 'active' | 'expired';
 
 /**
  * El boton que crea el visitante, y la pantalla que le entrega sus credenciales.
@@ -19,13 +22,13 @@ import { startDemoAction, type DemoState } from '@/actions/demo';
 
 const INITIAL: DemoState = { status: 'idle' };
 
-export function DemoStart({ alreadyInside }: { alreadyInside: boolean }) {
+export function DemoStart({ session }: { session: DemoSessionState }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(startDemoAction, INITIAL);
 
   // El estado de la accion manda sobre lo que diga el servidor, y ese orden es
   // el que hace que esta pantalla funcione: cuando la accion termina, la sesion
-  // ya existe, asi que `alreadyInside` llega en true en el mismo render. Si se
+  // ya existe, asi que `session` llega como `active` en el mismo render. Si se
   // comprobara primero, las credenciales recien creadas no se verian nunca.
   if (state.status === 'ready') {
     return (
@@ -56,7 +59,7 @@ export function DemoStart({ alreadyInside }: { alreadyInside: boolean }) {
             role="status"
             className="mt-4 rounded-md border border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-4 py-3 text-sm"
           >
-            {t('demo.readonlyNotice')}
+            {state.readonlyReason === 'limit' ? t('demo.readonlyLimit') : t('demo.readonlyNotice')}
           </p>
         )}
 
@@ -70,7 +73,27 @@ export function DemoStart({ alreadyInside }: { alreadyInside: boolean }) {
     );
   }
 
-  if (alreadyInside) {
+  if (session === 'expired') {
+    return (
+      <form action={restartDemoAction} className="mt-8">
+        <div
+          role="status"
+          className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-5"
+        >
+          <h2 className="text-base font-medium">{t('demo.expiredTitle')}</h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">{t('demo.expiredBody')}</p>
+        </div>
+        <button
+          type="submit"
+          className="mt-6 w-full rounded-md bg-[var(--color-brand)] px-5 py-3 text-base font-medium text-[var(--color-brand-ink)]"
+        >
+          {t('demo.restart')}
+        </button>
+      </form>
+    );
+  }
+
+  if (session === 'active') {
     return (
       <a
         href="/customers"
@@ -88,7 +111,12 @@ export function DemoStart({ alreadyInside }: { alreadyInside: boolean }) {
           role="alert"
           className="mb-4 rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
         >
-          {state.errorKind === 'TooManyAttempts' ? t('demo.rateLimited') : t('demo.unavailable')}
+          {state.errorKind === 'TooManyAttempts'
+            ? t('demo.rateLimited', {
+                // At least one minute: "try again in 0 min" reads like a broken counter.
+                minutes: Math.max(1, Math.ceil((state.retryAfter ?? 3_600) / 60)),
+              })
+            : t('demo.unavailable')}
         </p>
       )}
 
