@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "pnpm build && node -e \"require('fs').mkdirSync('public',{recursive:true})\"",
+  "buildCommand": "pnpm build",
   "outputDirectory": "public",
   "regions": ["iad1"],
   "functions": {
