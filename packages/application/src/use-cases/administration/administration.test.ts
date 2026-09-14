@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { asId, type TenantId, type UserId } from '@corebiz/domain';
 import {
   InMemoryMembershipRepository,
@@ -36,8 +36,17 @@ describe('Modulo de administracion', () => {
   }
 
   beforeEach(() => {
+    // The use cases read `fixedClock(NOW)`, but the in-memory invitation repository decides
+    // what is still live with the system clock. Without freezing it, invitations created
+    // "on" NOW expired for real seven days later and this suite started failing by itself
+    // on 2026-09-13.
+    vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
     stores = createSalesStores();
     uow = new InMemoryUnitOfWork(stores, stores.usage, TENANT);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const invite = (ctx = makeTestContext()) =>
