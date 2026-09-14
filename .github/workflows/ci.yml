@@ -82,10 +82,14 @@ jobs:
       #
       # Production does not run `main.js` but the Vercel entry point, so that one is
       # started too, exactly as the platform loads it.
+      #
+      # `--no-experimental-require-module` imitates Vercel's runtime, which cannot `require()`
+      # an ES module. Without it Node 22 loads ESM-only dependencies silently here and the
+      # deployed function fails with ERR_REQUIRE_ESM (it happened with jose 6).
       - name: La funcion de Vercel responde
         run: |
           set -euo pipefail
-          node -e "
+          node --no-experimental-require-module -e "
             const http = require('http');
             const server = http.createServer(require('./apps/api/api/index.js')).listen(0, '127.0.0.1', async () => {
               const res = await fetch('http://127.0.0.1:' + server.address().port + '/health');
