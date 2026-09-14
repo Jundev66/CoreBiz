@@ -47,8 +47,16 @@ export const RATE_LIMITS = {
   signup: { limit: 3, windowSeconds: 3_600 },
   /** Recuperacion: cada intento manda un correo, asi que se limita por hora. */
   passwordReset: { limit: 5, windowSeconds: 3_600 },
-  /** Provision de un sandbox de demostracion: una por IP y hora. */
-  demoSandbox: { limit: 1, windowSeconds: 3_600 },
+  /**
+   * Demo sandbox COPIES per origin per hour. Counted from `demo_sessions`, not from hits:
+   * the deployed value comes from `DEMO_MAX_PER_HOUR`; this is the default it mirrors.
+   */
+  demoSandbox: { limit: 3, windowSeconds: 3_600 },
+  /**
+   * Read-only demo seats per origin per hour, handed out once that origin's copy quota is
+   * used up. Past it, and only then, the visitor is asked to come back later.
+   */
+  demoViewer: { limit: 10, windowSeconds: 3_600 },
   /**
    * Writes through the API, per verified user. The window lives here; the limit comes
    * from `API_WRITES_PER_HOUR` so a deployment can tune it without a release.

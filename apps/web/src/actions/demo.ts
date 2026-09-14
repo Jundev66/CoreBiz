@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
+import { forgetFailure } from '@/api/last-error';
 import { clientFingerprint } from '@/auth/request-identity';
 import { apiIsAwake } from '@/api/client';
 import { startDemoSandbox } from '@/api/demo';
@@ -29,8 +30,25 @@ export type DemoState =
       /** Horas que le quedan de vida. En horas y no en fecha absoluta a proposito. */
       hoursLeft: number;
       readonly: boolean;
+      /** `busy`: no room for another copy. `limit`: this network used its hourly copies. */
+      readonlyReason: 'busy' | 'limit' | null;
     }
   | { status: 'error'; errorKind: 'TooManyAttempts' | 'Unavailable'; retryAfter?: number };
+
+/**
+ * Leaves an expired demo and goes back to the start button.
+ *
+ * Same sign-out as `signOutAction` — this session only, active company and last error
+ * cleared — but it returns to `/demo` instead of `/login`: whoever's copy expired wants
+ * another one, not a sign-in form for an account that is about to be deleted.
+ */
+export async function restartDemoAction(): Promise<void> {
+  const supabase = await supabaseServer();
+  await supabase.auth.signOut({ scope: 'local' });
+  (await cookies()).delete(ACTIVE_TENANT_COOKIE);
+  await forgetFailure();
+  redirect('/demo');
+}
 
 export async function startDemoAction(_prev: DemoState, _formData: FormData): Promise<DemoState> {
   // La misma variable que cierra la puerta en el resto del sistema. Se comprueba
@@ -100,5 +118,6 @@ export async function startDemoAction(_prev: DemoState, _formData: FormData): Pr
     password: result.password,
     hoursLeft: result.hoursLeft,
     readonly: result.readonly,
+    readonlyReason: result.readonlyReason,
   };
 }

@@ -105,7 +105,7 @@
     "pointExpires": "La cuenta y todo lo que registres se borran a las 24 horas.",
     "start": "Entrar a la demostración",
     "orSignUp": "¿Prefieres empezar con tu negocio de verdad?",
-    "rateLimited": "Ya creaste una demostración hace poco. Vuelve a intentarlo dentro de un rato, o entra con la que ya tienes.",
+    "rateLimited": "Desde tu red ya se abrieron muchas demostraciones en la última hora. Vuelve a intentarlo en {minutes} min.",
     "pointCredentials": "Te damos un usuario y una contraseña: entras como entraría un empleado.",
     "starting": "Preparando tu copia…",
     "credentialsTitle": "Ya tienes cuenta",
@@ -117,7 +117,11 @@
     "sessionNotice": "Estás probando CoreBiz. Esta cuenta y sus datos se borran en {hours} horas.",
     "sessionNoticeSoon": "Estás probando CoreBiz. Esta cuenta y sus datos se borran en menos de una hora.",
     "createAccount": "Crear mi cuenta",
-    "templateNotice": "Estás en el comercio de ejemplo. Es la copia que se clona para cada visitante, así que lo que registres aquí lo verán los siguientes."
+    "templateNotice": "Estás en el comercio de ejemplo. Es la copia que se clona para cada visitante, así que lo que registres aquí lo verán los siguientes.",
+    "readonlyLimit": "Desde tu red ya se crearon varias copias en la última hora, así que entras en modo consulta: puedes verlo todo, pero no guardar cambios. En un rato podrás tener tu propia copia.",
+    "expiredTitle": "Tu demostración terminó",
+    "expiredBody": "Esa copia ya caducó. Cierra la sesión y empieza una nueva: tarda unos segundos.",
+    "restart": "Empezar una nueva demostración"
   },
   "common": {
     "save": "Guardar",

@@ -133,20 +133,21 @@ correo, y la plantilla queda **bloqueada en la base** (`demo_template_locked`).
    todas las rutas hacia la función `api/index.js`, región `iad1` y 60 s de duración.
 2. Variables de entorno, **solo Production**:
 
-| Variable                   | Valor                                                           | Sensible |
-| -------------------------- | --------------------------------------------------------------- | -------- |
-| `NODE_ENV`                 | `production`                                                    | —        |
-| `DATA_DRIVER`              | `postgres`                                                      | —        |
-| `DATABASE_URL`             | transaction pooler, puerto 6543                                 | ✅       |
-| `DATABASE_MAX_CONNECTIONS` | `3`                                                             | —        |
-| `DATABASE_CA_CERT`         | CA raíz de Supabase en PEM (pública; Settings → Database → SSL) | —        |
-| `SUPABASE_URL`             | `https://TU-PROYECTO.supabase.co`                               | —        |
-| `INTERNAL_API_SECRET`      | `openssl rand -base64 32`                                       | ✅       |
-| `SIGNUP_ENABLED`           | `false`                                                         | —        |
-| `DEMO_ENABLED`             | `true`                                                          | —        |
-| `DEMO_TTL_HOURS`           | `24`                                                            | —        |
-| `DEMO_MAX_CONCURRENT`      | `50`                                                            | —        |
-| `DEMO_MAX_PER_HOUR`        | `1`                                                             | —        |
+| Variable                      | Valor                                                           | Sensible |
+| ----------------------------- | --------------------------------------------------------------- | -------- |
+| `NODE_ENV`                    | `production`                                                    | —        |
+| `DATA_DRIVER`                 | `postgres`                                                      | —        |
+| `DATABASE_URL`                | transaction pooler, puerto 6543                                 | ✅       |
+| `DATABASE_MAX_CONNECTIONS`    | `3`                                                             | —        |
+| `DATABASE_CA_CERT`            | CA raíz de Supabase en PEM (pública; Settings → Database → SSL) | —        |
+| `SUPABASE_URL`                | `https://TU-PROYECTO.supabase.co`                               | —        |
+| `INTERNAL_API_SECRET`         | `openssl rand -base64 32`                                       | ✅       |
+| `SIGNUP_ENABLED`              | `false`                                                         | —        |
+| `DEMO_ENABLED`                | `true`                                                          | —        |
+| `DEMO_TTL_HOURS`              | `24`                                                            | —        |
+| `DEMO_MAX_CONCURRENT`         | `50`                                                            | —        |
+| `DEMO_MAX_PER_HOUR`           | `3` (copias propias por red y hora)                             | —        |
+| `DEMO_MAX_SANDBOXES_PER_HOUR` | `30` (copias por hora entre todos)                              | —        |
 
 `DATABASE_MAX_CONNECTIONS` es **3** y no 1 ni 10: con Fluid compute una instancia atiende
 peticiones concurrentes (con 1 esperarían en fila) y puede haber varias instancias (con 10

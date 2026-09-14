@@ -99,13 +99,18 @@ const schema = z
     /** Cincuenta sandboxes de ~20 MB son el 6 % de los 500 MB del plan gratuito. */
     DEMO_MAX_CONCURRENT: z.coerce.number().int().positive().default(50),
     /**
-     * Visitantes por origen y hora. Uno en produccion: cada uno cuesta una cuenta
-     * nueva y una copia entera de la base de demostracion. Se sube solo para la suite
-     * E2E, que abre varios visitantes desde la MISMA maquina para comprobar que sus
-     * sandboxes estan aislados — y ese es justo el test que demuestra que la
-     * demostracion hace lo que promete.
+     * Sandbox COPIES per origin per hour (each costs an account and a full copy of the demo
+     * database). Three, not one: an office behind one public address is several recruiters,
+     * and the old value of one — counted per click — locked all of them out. Past it the
+     * visitor gets a read-only seat instead of an error. The E2E suite raises it because it
+     * opens several visitors from the SAME machine to prove their sandboxes are isolated.
      */
-    DEMO_MAX_PER_HOUR: z.coerce.number().int().positive().default(1),
+    DEMO_MAX_PER_HOUR: z.coerce.number().int().positive().default(3),
+    /**
+     * Sandbox copies per hour across ALL origins. The per-origin quota alone is beaten by
+     * rotating addresses; this bounds copies per hour for everyone, below the live cap.
+     */
+    DEMO_MAX_SANDBOXES_PER_HOUR: z.coerce.number().int().positive().default(30),
     /**
      * Read-only demo seats handed out per hour once sandbox capacity is exhausted.
      *
