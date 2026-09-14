@@ -1,4 +1,9 @@
 import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+// `jose` is pinned to 5.x ON PURPOSE. The API compiles to CommonJS, and jose 6 ships only
+// as an ES module: Node 22.21 loads it through `require(esm)`, but Vercel's function runtime
+// does not, and the whole API failed on load with ERR_REQUIRE_ESM. jose 5 publishes a
+// CommonJS build with the same API used here. The CI `api` job loads the handler with
+// `--no-experimental-require-module`, so a bump back to 6 breaks there, not in production.
 import { createRemoteJWKSet, errors, jwtVerify } from 'jose';
 import { loadEnv } from '../config/env';
 import type { VerifiedIdentity } from './authenticated-request';
