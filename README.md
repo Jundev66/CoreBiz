@@ -32,8 +32,8 @@ interfaz en Next.js que la consume **desde el servidor** —el token nunca llega
 navegador—. El núcleo (dominio y casos de uso) no sabe que existe ninguno de los dos, y
 esa es la parte que merece mirarse: cambiar el adaptador primario no obligó a tocarlo.
 
-Pensado para desplegarse en Vercel, Render y Supabase, los tres en plan gratuito, con un
-coste de infraestructura de **$0**. El recorrido completo está en
+Pensado para desplegarse en Vercel (la web y la API, como dos proyectos) y Supabase, los dos
+en plan gratuito, con un coste de infraestructura de **$0**. El recorrido completo está en
 [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
@@ -123,6 +123,7 @@ Las decisiones con su contexto y sus alternativas descartadas están en [`docs/a
 10. [Prisma en lugar de Drizzle, y por que](docs/adr/010-prisma-en-lugar-de-drizzle.md)
     — supersede el rechazo de NestJS que hacía la 001, y **dice el motivo real** en lugar
     de disfrazarlo de necesidad técnica.
+11. [La API se despliega en Vercel, no en Render](docs/adr/011-api-en-vercel.md)
 
 El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
@@ -131,8 +132,8 @@ El análisis STRIDE completo, con los riesgos aceptados de forma consciente, est
 
 El ciclo de venta funciona sobre Postgres real, con las políticas RLS ejecutándose en cada
 push y con autenticación de verdad. Lo que queda ya no es fundacional: el **despliegue**, que
-es lo único que no se puede hacer desde el repositorio porque necesita cuentas de Supabase,
-Vercel y Render. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
+es lo único que no se puede hacer desde el repositorio porque necesita cuentas de Supabase y
+Vercel. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
 orden y por qué ese orden, incluyendo el estado honesto de cada capa.
 
 ### La migración a NestJS no cambió ni un test

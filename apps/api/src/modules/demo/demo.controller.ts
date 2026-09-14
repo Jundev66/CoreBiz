@@ -62,7 +62,7 @@ export interface DemoCredentials {
  *
  * It was needed, and the reason deserves to stay written: the limiter below counts by
  * `ipHash`, a value that arrives IN THE BODY. That is trustworthy when Vercel computes it —
- * the platform sets `x-forwarded-for` there — but the API is public on Render, so without a
+ * the platform sets `x-forwarded-for` there — but the API has its own public URL, so without a
  * credential anyone could call it directly, rotate that value on every request and skip
  * the limit entirely. Only the global cap was left standing. Provisioning in bursts means
  * GoTrue accounts and database copies: an attack on the free quota, the asset the threat

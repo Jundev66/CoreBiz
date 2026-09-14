@@ -17,7 +17,7 @@ Para el grafo exhaustivo, `pnpm arch:graph` lo regenera en
 flowchart RL
   subgraph despliegues["Dos procesos, dos despliegues"]
     web["apps/web<br/><small>Next.js · Vercel<br/>solo transporte</small>"]
-    api["apps/api<br/><small>NestJS · Render<br/>adaptador primario</small>"]
+    api["apps/api<br/><small>NestJS · Vercel<br/>adaptador primario</small>"]
   end
 
   subgraph adaptadores["Adaptadores — conocen el mundo exterior"]

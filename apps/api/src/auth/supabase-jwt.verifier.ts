@@ -13,9 +13,9 @@ import type { VerifiedIdentity } from './authenticated-request';
  * aqui no ocurre — la firma se verifica criptograficamente contra la clave publica
  * del proyecto, que es exactamente la garantia que la ADR pedia.
  *
- * Lo que se gana a cambio: `getUser()` es un viaje de red a Supabase POR PETICION, y
- * esta API vive en Render, detras de un salto de red que ya existe. Sumar otro a cada
- * consulta se nota, y se nota mas cuando el servicio acaba de despertar.
+ * What is gained in exchange: `getUser()` is a network trip to Supabase PER REQUEST, and
+ * this API already sits one network hop away from the web. Adding another to every query
+ * shows, and shows more on a cold start.
  *
  * Lo que se paga, dicho sin adornos: la revocacion de CUENTA deja de ser inmediata y
  * pasa a tardar lo que le quede de vida al token. Por eso el TTL del access token

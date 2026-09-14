@@ -5,11 +5,11 @@ import { AppModule } from '../src/app.module';
 import { resetEnv } from '../src/config/env';
 
 /**
- * Que la aplicacion entera SE PUEDA MONTAR.
+ * That the whole application CAN BE MOUNTED.
  *
- * Parece trivial y es el test que mas veces ha estado en rojo. La inyeccion de Nest se
- * resuelve al arrancar, no al compilar: un provider mal declarado pasa `tsc` sin una
- * queja y revienta al levantar, que es lo que Render haria revertir.
+ * It looks trivial and it is the test that has been red most often. Nest resolves injection
+ * at startup, not at compile time: a badly declared provider passes `tsc` silently and blows
+ * up on start, and the Vercel function would then answer 503 to every request.
  *
  * Y hay un fallo peor que este test es lo unico que atrapa. `tsc` —que construye el
  * artefacto de produccion— emite `design:paramtypes`; esbuild —que es lo que usa

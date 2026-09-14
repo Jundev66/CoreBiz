@@ -25,11 +25,10 @@ export type Tx = Prisma.TransactionClient & { readonly [CON_CONTEXTO]: true };
 /**
  * Los limites de la transaccion, explicitos.
  *
- * Prisma trae 2 s de espera y 5 s de duracion por defecto; el driver anterior no tenia
- * ninguno. Emitir una nota de entrega toca cinco tablas, y contra una base en otra region
- * —o con el servicio recien despertado en Render— cinco segundos se agotan: la
- * transaccion revierte con P2028 y quien estaba vendiendo ve un error en una operacion
- * que era correcta.
+ * Prisma defaults to a 2 s wait and a 5 s duration; the previous driver had neither.
+ * Issuing a delivery note touches five tables, and against a database in another region —
+ * or right after a cold start — five seconds run out: the transaction rolls back with
+ * P2028 and whoever was selling sees an error on an operation that was correct.
  */
 const LIMITES = { maxWait: 5_000, timeout: 20_000 } as const;
 

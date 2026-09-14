@@ -100,10 +100,10 @@ interface SessionResponse {
 /**
  * Monta el contenedor para el request en curso.
  *
- * `cache()` de React, y no la deduplicacion de `fetch` de Next, que NO aplica con
- * `cache: 'no-store'`. Sin esto, una pagina que llama aqui en su propio Server
- * Component y otra vez dentro de `<Shell>` pediria la sesion dos veces por render:
- * dos viajes a Render para pintar la misma cabecera.
+ * React's `cache()`, not Next's `fetch` deduplication, which does NOT apply with
+ * `cache: 'no-store'`. Without it, a page that calls this in its own Server Component and
+ * again inside `<Shell>` would ask for the session twice per render: two trips to the API
+ * to paint the same header.
  */
 export const apiForRequest = cache(async (_tenantSlug?: string) => {
   const response = await get<SessionResponse>('/v1/session');

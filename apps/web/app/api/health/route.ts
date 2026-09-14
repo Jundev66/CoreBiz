@@ -12,16 +12,15 @@ import { activeDriver } from '@/api/session';
  *      proyecto pausado convierte el enlace del CV en un error. Por eso esta
  *      ruta llega HASTA la base de datos: un 200 que no consulta nada mantiene
  *      viva la funcion de Vercel y deja dormirse a Postgres, que es justo lo
- *      contrario de lo que hace falta. Ahora ademas despierta a Render de paso.
+ *      contrario de lo que hace falta. (It also warms the API function on the way.)
  *
  *   2. Quien depura un despliegue. Por eso dice QUE falla, no solo que algo
  *      falla.
  *
- * Desde que la persistencia vive en la API, esta ruta ya no habla con Postgres:
- * pregunta a `GET /health` de la API, que si lo hace. La cadena que se comprueba es
- * por tanto la real —Vercel, Render y Supabase, en ese orden— y no una parte de ella.
- * Un 200 aqui significa que las tres piezas estan vivas, que es lo unico que el
- * monitor externo necesita saber.
+ * Since persistence lives in the API, this route no longer talks to Postgres: it asks the
+ * API's `GET /health`, which does. The chain checked is therefore the real one — web, API
+ * and Supabase, in that order — and not part of it. A 200 here means all three pieces are
+ * alive, which is all the external monitor needs to know.
  *
  * Lo que NO devuelve: version del framework, cadenas de conexion, nombres de
  * host, conteos de filas. Un endpoint de salud es publico por definicion, y todo
@@ -34,7 +33,7 @@ export const dynamic = 'force-dynamic';
 /**
  * How long a completed check is worth, and why this does not contradict the line above.
  *
- * The route is PUBLIC and waits up to 45 seconds for Render to wake up. Together that makes
+ * The route is PUBLIC and waits up to 45 seconds for the API to answer. Together that makes
  * it an amplifier: every anonymous request holds a Vercel function for that long, and the
  * free quota is drained by a `curl` loop from a single machine. No attack is needed; a
  * misconfigured monitor is enough.

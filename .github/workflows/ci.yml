@@ -68,20 +68,36 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      # El artefacto que corre en Render es este, no el codigo fuente. Los paquetes
-      # del monorepo se consumen como TypeScript crudo y Node no sabe cargarlos:
-      # `tsc` los compila dentro de dist/ y `tsc-alias` reescribe los `require`
-      # para que apunten ahi. Si ese puente se rompe, se rompe AQUI y no en el
-      # primer arranque de produccion.
+      # This artifact is what Vercel runs, not the source. The monorepo packages are
+      # consumed as raw TypeScript and Node cannot load them: `tsc` compiles them into
+      # dist/ and `tsc-alias` rewrites the `require` calls to point there. If that bridge
+      # breaks, it breaks HERE and not on the first production start.
       - name: Compilar
         run: pnpm --filter @corebiz/api build
 
-      # Compilar no basta: la inyeccion de dependencias de Nest se resuelve al
-      # levantar, no al compilar. Un provider mal declarado pasa `tsc` sin una
-      # queja y revienta en el arranque, que es exactamente lo que Render haria
-      # revertir. Se arranca con el driver de pruebas para no necesitar Postgres,
-      # y por eso hace falta el permiso explicito: fuera de la suite, el proceso
-      # se niega a levantar en memoria.
+      # Compiling is not enough: Nest resolves dependency injection at startup, not at
+      # compile time. A badly declared provider passes `tsc` silently and blows up on
+      # start. It runs with the test driver so no Postgres is needed, which is why the
+      # explicit permission is required: outside the suite the process refuses memory.
+      #
+      # Production does not run `main.js` but the Vercel entry point, so that one is
+      # started too, exactly as the platform loads it.
+      - name: La funcion de Vercel responde
+        run: |
+          set -euo pipefail
+          node -e "
+            const http = require('http');
+            const server = http.createServer(require('./apps/api/api/index.js')).listen(0, '127.0.0.1', async () => {
+              const res = await fetch('http://127.0.0.1:' + server.address().port + '/health');
+              console.log('health:', res.status);
+              server.close();
+              process.exit(res.status === 200 ? 0 : 1);
+            });
+          "
+        env:
+          DATA_DRIVER: memory
+          ALLOW_MEMORY_DRIVER: '1'
+
       - name: Arrancar y consultar el endpoint de salud
         run: |
           set -euo pipefail

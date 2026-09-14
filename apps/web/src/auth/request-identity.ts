@@ -21,12 +21,11 @@ export interface RateLimitDecision {
  * limita nada cuando hay varias instancias sirviendo, y en Vercel cada invocacion
  * puede ser un proceso nuevo.
  *
- * SI LA API NO CONTESTA, se admite el intento. Es una decision incomoda y es la
- * correcta: fallar cerrado dejaria el formulario de acceso inutilizable durante el
- * arranque en frio de Render —un minuto en el que nadie podria entrar— para evitar
- * unos pocos intentos de mas en esa misma ventana. El limite protege de la fuerza
- * bruta, no de una avalancha, y una fuerza bruta que necesita que la API este caida
- * para pasar tiene un minuto al dia para intentarlo.
+ * IF THE API DOES NOT ANSWER, the attempt is allowed. It is an uncomfortable decision and
+ * the right one: failing closed would make the sign-in form unusable during a cold start
+ * or a transient outage to avoid a few extra attempts in that same window. The limit
+ * protects against brute force, not a flood, and a brute force that needs the API to be
+ * down to get through gets only those moments to try.
  */
 export async function hitRateLimit(
   bucket: string,
@@ -39,7 +38,7 @@ export async function hitRateLimit(
     if (error instanceof InternalCallFailed) {
       /*
        * Open only when the API is merely UNREACHABLE (see above). A MISCONFIGURED secret
-       * in production — unset on Vercel, or different from Render's — used to fail open
+       * in production — unset, or different between the two Vercel projects — used to fail open
        * too, which silently turned off every login, signup and reset limit with nothing
        * but a warning in the log. That never fixes itself, so it fails closed instead:
        * sign-in stops working loudly and someone looks at the configuration.

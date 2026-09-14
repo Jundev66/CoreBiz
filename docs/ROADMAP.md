@@ -39,7 +39,7 @@ Lo verificado, no lo aspiracional.
 | Edición de registros          | ⛔ Solo alta y archivado. Los mutadores existen en el dominio y no se usan |
 | Paginación navegable          | ⛔ Keyset en clientes y proveedores; el resto sirve un `LIMIT` fijo        |
 | Cobros, presupuestos, órdenes | ⛔ Fuera de alcance. Ya no se anuncian en el menú                          |
-| Despliegue                    | 🚧 `render.yaml` y la guía completa; falta ejecutarla en cuentas reales    |
+| Despliegue                    | 🚧 Dos proyectos de Vercel y Supabase; guía completa, ejecutándose         |
 
 **La lectura honesta:** el sistema corre sobre Postgres con las políticas RLS ejecutándose en CI,
 tiene sesiones reales con su alta, su recuperación y su limitación de intentos, y los 20 escenarios
@@ -51,7 +51,7 @@ su criterio de aceptación: 73 pruebas E2E en verde en memoria y 83 contra Postg
 mismos ficheros de siempre.
 
 Lo único que queda es ejecutar el despliegue, y es lo único que no se puede hacer desde el
-repositorio: necesita cuentas de Supabase, Vercel y Render.
+repositorio: necesita cuentas de Supabase y Vercel ([ADR 011](adr/011-api-en-vercel.md)).
 
 Dicho sin adornos: **el sistema está terminado como sistema y sin desplegar como producto.**
 
@@ -374,15 +374,13 @@ El recorrido está escrito en [`DEPLOY.md`](DEPLOY.md). Lo que hay que recordar:
 - [ ] **TTL del access token a 10 minutos** en Supabase. No es cosmético: la API verifica la
       firma localmente contra el JWKS, así que revocar una cuenta tarda lo que le quede de
       vida al token. Requiere claves de firma asimétricas.
-- [ ] Render: la API por blueprint (`render.yaml`), en la **misma región** que Supabase.
-- [ ] Vercel: variables de entorno, con `CRON_SECRET` y `REQUEST_HASH_SECRET` marcadas como
-      sensibles y comparadas en tiempo constante.
-- [ ] `INTERNAL_API_SECRET` **idéntico** en Render y en Vercel. Es el único que comparten.
-- [ ] `DATABASE_URL` **NO** en Vercel. Que la interfaz no tenga acceso a la base es la prueba
-      observable de la separación; ponerla "por si acaso" la borra.
+- [ ] Vercel `corebiz-api`: la API desde `apps/api`, región `iad1`, la misma que Supabase.
+- [ ] Vercel `corebiz-web`: variables de entorno, con `CRON_SECRET` y `REQUEST_HASH_SECRET`
+      marcadas como sensibles y comparadas en tiempo constante.
+- [ ] `INTERNAL_API_SECRET` **idéntico** en los dos proyectos. Es el único que comparten.
+- [ ] `DATABASE_URL` **NO** en `corebiz-web`. Que la interfaz no tenga acceso a la base es la
+      prueba observable de la separación; ponerla "por si acaso" la borra.
 - [ ] Comprobar que `/docs` responde **404** en producción.
-- [ ] Comprobar el arranque en frío: con la API dormida, `/demo` lleva a la pantalla de espera
-      y **vuelve sola**. No a un error, y no a la portada.
 - [ ] **Keepalive funcionando y comprobado.** Supabase pausa el proyecto tras 7 días sin tráfico y el
       link del CV muere solo. GitHub Actions cada 2 días, **más un monitor externo**
       (cron-job.org o UptimeRobot) porque GitHub desactiva los workflows programados tras 60 días sin

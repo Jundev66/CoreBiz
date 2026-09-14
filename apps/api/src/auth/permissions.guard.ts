@@ -26,9 +26,9 @@ import { REQUIRED_PERMISSION } from './require-permission.decorator';
  * NO se registra como `APP_GUARD` global, y no es una omision. Un guard global con
  * `Scope.REQUEST` se instancia en TODAS las rutas, y al inyectar el contexto de tenant
  * arrastra consigo la resolucion de identidad — incluso en `/health`, que no tiene
- * sesion ni debe tenerla. Se comprobo: con el guard global, `/health` devolvia 500 y
- * Render habria revertido cada despliegue. Se aplica con `@UseGuards` en los
- * controllers que declaran permisos.
+ * sesion ni debe tenerla. Verified: with a global guard `/health` returned 500, and every
+ * health check and keepalive would have reported an outage. It is applied with
+ * `@UseGuards` on the controllers that declare permissions.
  */
 @Injectable({ scope: Scope.REQUEST })
 export class PermissionsGuard implements CanActivate {

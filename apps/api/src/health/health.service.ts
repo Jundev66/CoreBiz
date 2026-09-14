@@ -9,13 +9,12 @@ export interface HealthReport {
 }
 
 /**
- * Comprobacion de salud que TOCA la base de datos.
+ * Health check that TOUCHES the database.
  *
- * Un health que solo responde "el proceso vive" es peor que ninguno: pasa en verde
- * mientras la aplicacion no puede servir una sola pantalla. Render usa este endpoint
- * para decidir si un despliegue sale adelante, y el keepalive lo usa para que
- * Supabase no pause el proyecto por inactividad — las dos cosas necesitan que la
- * consulta llegue hasta Postgres.
+ * A health check that only answers "the process is alive" is worse than none: it stays
+ * green while the application cannot serve a single screen. The post-deploy check uses it
+ * to tell whether the chain works, and the keepalive uses it so Supabase does not pause the
+ * project for inactivity — both need the query to reach Postgres.
  */
 @Injectable()
 export class HealthService {

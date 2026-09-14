@@ -3,12 +3,11 @@ import { apiBaseUrl } from '@/api/client';
 /**
  * ¿Ya esta despierta la API?
  *
- * Lo consulta la pantalla de espera desde el navegador. Existe como ruta propia y no
- * se llama a la API directamente desde el cliente por dos razones, y la segunda es la
- * que manda: la primera es que la politica de seguridad de contenido no permite
- * conexiones a otro origen, y la segunda es que abrir `connect-src` hacia Render seria
- * admitir que el navegador habla con la API — y ese es justo el limite que sostiene
- * que el token viva en una cookie httpOnly (ADR 006).
+ * The wait screen queries it from the browser. It is its own route instead of calling the
+ * API from the client for two reasons, and the second is the one that matters: the content
+ * security policy does not allow connections to another origin, and opening `connect-src`
+ * to the API would admit that the browser talks to it — exactly the boundary that keeps the
+ * token in an httpOnly cookie (ADR 006).
  *
  * No devuelve nada de la respuesta de la API: solo si esta o no esta.
  */
@@ -18,8 +17,8 @@ export const dynamic = 'force-dynamic';
 /**
  * One probe shared by everyone asking at the same moment.
  *
- * The route is anonymous and each call was a fresh request to Render, so a `curl` loop
- * burned Vercel invocations and kept Render awake for free. Concurrent callers now share
+ * The route is anonymous and each call was a fresh request to the API, so a `curl` loop
+ * burned invocations in both Vercel projects for free. Concurrent callers now share
  * the in-flight request and reuse its answer for a few seconds — shorter than the wait
  * screen's own polling interval, so a real visitor never sees a stale "not yet".
  */

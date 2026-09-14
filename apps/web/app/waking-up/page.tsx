@@ -10,11 +10,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * La API estaba dormida.
+ * The API did not answer in time.
  *
- * El plan gratuito de Render apaga el servicio tras quince minutos sin trafico y tarda
- * cerca de un minuto en volver. Es el precio declarado de que esto se despliegue por
- * cero euros, y la decision fue ACEPTARLO y contarlo, no esconderlo.
+ * On Vercel a cold function plus a Supabase project that was idle takes seconds, not the
+ * minute Render's free plan used to take (ADR 011). It is still the declared price of
+ * deploying for free, and the decision is to ACCEPT it and say so, not hide it.
  *
  * Lo que esta pantalla hace bien, y por lo que existe en lugar de un spinner:
  *

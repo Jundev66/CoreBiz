@@ -18,10 +18,10 @@ import { fileURLToPath } from 'node:url';
  * no emite; hace falta la emision completa en frio, que es justo lo que ocurre la
  * primera vez que alguien clona el repositorio y escribe `pnpm dev`.
  *
- * La causa de fondo es `rootDir: "../.."` en `tsconfig.json`: la compilacion abarca
- * `packages/` entero y el vigilante de tsc-alias confunde el fichero de salida con su
- * fuente. El modo de UNA SOLA PASADA no tiene ese problema — es el que usa `pnpm build`
- * y el que produce el artefacto que corre en Render.
+ * The root cause is `rootDir: "../.."` in `tsconfig.json`: the build spans all of
+ * `packages/` and the tsc-alias watcher mistakes the output file for its source. The
+ * SINGLE-PASS mode does not have that problem — it is what `pnpm build` uses and what
+ * produces the artifact Vercel runs.
  *
  * Por que se espera al aviso de tsc en lugar de vigilar `dist`: probe a disparar la
  * pasada cuando cambiaban ficheros de `dist`, y algunos se alineaban ANTES de que tsc

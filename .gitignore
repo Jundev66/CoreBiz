@@ -60,3 +60,10 @@ pnpm-debug.log*
 
 # playwright-bdd genera estos specs a partir de los .feature
 e2e/.features-gen/
+
+# Vercel CLI: `vercel link` and `vercel pull` write project ids and PULLED ENVIRONMENT
+# VARIABLES here. Production secrets must never be one `git add .` away.
+.vercel/
+
+# Empty output directory the API build creates so Vercel accepts a functions-only project.
+apps/api/public/

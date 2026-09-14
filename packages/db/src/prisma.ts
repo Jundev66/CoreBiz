@@ -5,9 +5,9 @@ import { PrismaClient } from '@corebiz/prisma-client';
  * El cliente de Prisma, con su pool.
  *
  * Prisma 7 ya no lleva el motor en Rust: se le entrega un adaptador de driver ya
- * conectado. Eso es lo que hace viable el despliegue en el plan gratuito de Render, donde
- * el motor habria costado unos 150-200 MB de los 512 disponibles y ademas se habria
- * pagado su arranque en cada despertar del servicio.
+ * conectado.
+ *
+ * No Rust engine also means a lighter function bundle and a faster cold start on Vercel.
  */
 
 /**
@@ -42,6 +42,22 @@ function poolSize(): number {
   return Number.isFinite(raw) && raw >= 1 ? Math.trunc(raw) : 1;
 }
 
+/**
+ * TLS to the Supabase pooler, always VERIFIED.
+ *
+ * Supabase signs its Postgres certificates with its own root CA, which is not in Node's
+ * trust store, so `rejectUnauthorized: true` alone fails with SELF_SIGNED_CERT_IN_CHAIN.
+ * The fix is to trust THAT CA — public, downloadable from the dashboard — through
+ * `DATABASE_CA_CERT`, never to turn verification off: that would let anyone on the path
+ * impersonate the database and read its password.
+ *
+ * Literal `\n` sequences are accepted because some env var editors flatten a PEM to one line.
+ */
+function tlsOptions(): { rejectUnauthorized: true; ca?: string } {
+  const ca = process.env.DATABASE_CA_CERT?.replace(/\\n/g, '\n').trim();
+  return ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: true };
+}
+
 function esLocal(url: string): boolean {
   return url.includes('localhost') || url.includes('127.0.0.1');
 }
@@ -65,7 +81,7 @@ export function getPrisma(url: string): PrismaClient {
       max: poolSize(),
       idleTimeoutMillis: 20_000,
       connectionTimeoutMillis: 10_000,
-      ssl: esLocal(url) ? false : { rejectUnauthorized: true },
+      ssl: esLocal(url) ? false : tlsOptions(),
     });
 
     client = new PrismaClient({ adapter });
