@@ -3,6 +3,9 @@
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { AuthState } from '@/actions/auth';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
+import { CONTROL_BASE_CLASSES, ERROR_CLASSES, HINT_CLASSES, LABEL_CLASSES } from '@/ui/field';
 
 /**
  * Formulario de las pantallas de cuenta.
@@ -19,6 +22,9 @@ import type { AuthState } from '@/actions/auth';
  */
 
 const INITIAL: AuthState = { status: 'idle' };
+
+/** Account screens use a taller control: it is the whole screen, and it is thumbed. */
+const AUTH_CONTROL = `mt-1.5 h-11 ${CONTROL_BASE_CLASSES}`;
 
 export interface AuthFieldSpec {
   readonly name: string;
@@ -67,9 +73,9 @@ export function AuthForm({
 
   if (state.status === 'sent' && sentMessage !== undefined) {
     return (
-      <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
+      <Alert tone="success" role="status">
         {sentMessage}
-      </p>
+      </Alert>
     );
   }
 
@@ -80,21 +86,18 @@ export function AuthForm({
       ))}
 
       {state.status === 'error' && state.errorKind !== undefined && (
-        <p
-          role="alert"
-          className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-        >
+        <Alert tone="danger" role="alert">
           {t(`auth.errors.${state.errorKind}`, {
             // El limitador devuelve segundos; en pantalla se leen mejor minutos.
             minutes: Math.max(1, Math.ceil((state.retryAfter ?? 60) / 60)),
           })}
-        </p>
+        </Alert>
       )}
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-[var(--color-brand)] px-5 py-3 text-sm font-medium text-[var(--color-brand-ink)] transition disabled:opacity-60"
+        className={buttonClasses({ size: 'lg', block: true })}
       >
         {pending ? pendingLabel : submitLabel}
       </button>
@@ -111,8 +114,11 @@ function AuthField({ field, error }: { field: AuthFieldSpec; error: string | und
 
   return (
     <div>
-      <label htmlFor={field.name} className="block text-sm font-medium">
+      <label htmlFor={field.name} className={LABEL_CLASSES}>
         {field.label}
+        {field.optional === true && (
+          <span className="ml-1.5 text-xs font-normal text-muted">{t('common.optional')}</span>
+        )}
       </label>
 
       {field.options !== undefined ? (
@@ -121,7 +127,7 @@ function AuthField({ field, error }: { field: AuthFieldSpec; error: string | und
           name={field.name}
           defaultValue={field.defaultValue}
           aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
-          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+          className={AUTH_CONTROL}
         >
           {field.options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -142,18 +148,18 @@ function AuthField({ field, error }: { field: AuthFieldSpec; error: string | und
           defaultValue={field.defaultValue}
           aria-invalid={error !== undefined ? true : undefined}
           aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
-          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+          className={AUTH_CONTROL}
         />
       )}
 
       {field.hint !== undefined && (
-        <p id={`${field.name}-hint`} className="mt-1.5 text-xs text-[var(--color-muted)]">
+        <p id={`${field.name}-hint`} className={HINT_CLASSES}>
           {field.hint}
         </p>
       )}
 
       {error !== undefined && (
-        <p id={`${field.name}-error`} className="mt-1.5 text-xs text-[var(--color-danger-ink)]">
+        <p id={`${field.name}-error`} className={ERROR_CLASSES}>
           {t(`auth.fieldErrors.${error}`, { field: field.label })}
         </p>
       )}

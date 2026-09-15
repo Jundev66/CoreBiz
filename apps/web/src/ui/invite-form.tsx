@@ -3,6 +3,9 @@
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { inviteUserAction, type AdminState } from '@/actions/administration';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
+import { CONTROL_CLASSES, HINT_CLASSES, LABEL_CLASSES } from '@/ui/field';
 
 const INITIAL: AdminState = { status: 'idle' };
 
@@ -24,7 +27,7 @@ export function InviteForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div>
-        <label htmlFor="invite-email" className="block text-sm font-medium">
+        <label htmlFor="invite-email" className={LABEL_CLASSES}>
           {t('auth.email')}
         </label>
         <input
@@ -33,12 +36,12 @@ export function InviteForm() {
           type="email"
           required
           autoComplete="off"
-          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+          className={`mt-1.5 ${CONTROL_CLASSES}`}
         />
       </div>
 
       <div>
-        <label htmlFor="invite-role" className="block text-sm font-medium">
+        <label htmlFor="invite-role" className={LABEL_CLASSES}>
           {t('settings.team.role')}
         </label>
         <select
@@ -46,7 +49,7 @@ export function InviteForm() {
           name="role"
           defaultValue="sales"
           aria-describedby="invite-role-hint"
-          className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
+          className={`mt-1.5 ${CONTROL_CLASSES}`}
         >
           {ROLES.map((role) => (
             <option key={role} value={role}>
@@ -54,18 +57,15 @@ export function InviteForm() {
             </option>
           ))}
         </select>
-        <p id="invite-role-hint" className="mt-1.5 text-xs text-[var(--color-muted)]">
+        <p id="invite-role-hint" className={HINT_CLASSES}>
           {t('settings.team.roleHint')}
         </p>
       </div>
 
       {state.status === 'error' && state.errorKind !== undefined && (
-        <p
-          role="alert"
-          className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-        >
+        <Alert tone="danger" role="alert">
           {t(`settings.errors.${state.errorKind}`, state.errorParams ?? {})}
-        </p>
+        </Alert>
       )}
 
       {/*
@@ -80,24 +80,19 @@ export function InviteForm() {
         otro.
       */}
       {state.status === 'success' && state.invitationUrl !== undefined && (
-        <div role="status" className="rounded-md bg-[var(--color-brand)]/10 p-4 text-sm">
-          <p className="font-medium">{t('settings.team.inviteCreated')}</p>
-          <p className="mt-1 text-[var(--color-muted)]">{t('settings.team.inviteShare')}</p>
+        <Alert tone="success" role="status" title={t('settings.team.inviteCreated')}>
+          <p className="text-ink-soft">{t('settings.team.inviteShare')}</p>
           <input
             readOnly
             value={state.invitationUrl}
             aria-label={t('settings.team.inviteLink')}
             onFocus={(event) => event.currentTarget.select()}
-            className="mt-3 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 font-mono text-xs"
+            className="mt-3 h-10 w-full rounded-control border border-line-strong bg-surface px-3 font-mono text-xs text-ink focus:border-brand focus:ring-3 focus:ring-brand/15 focus:outline-none"
           />
-        </div>
+        </Alert>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-md bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-[var(--color-brand-ink)] disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className={buttonClasses({ block: true })}>
         {pending ? '…' : t('settings.team.invite')}
       </button>
     </form>

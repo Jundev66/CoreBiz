@@ -73,7 +73,7 @@ export function Toast({ message }: { message: string }) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3 text-sm shadow-lg"
+      className="fixed bottom-24 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 rounded-card border border-line bg-surface px-4 py-3 text-sm shadow-lg lg:bottom-6"
     >
       <div className="flex items-start gap-3">
         <Check

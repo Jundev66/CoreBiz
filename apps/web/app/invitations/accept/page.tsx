@@ -3,9 +3,12 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getTranslations, getFormatter } from 'next-intl/server';
+import { MailOpen } from 'lucide-react';
 import { accessTokenOrRedirect } from '@/api/client';
 import { acceptInvitationViaApi, previewInvitationViaApi } from '@/api/onboarding';
 import { currentUser, supabaseIsConfigured, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
+import { buttonClasses } from '@/ui/button';
+import { Logo } from '@/ui/logo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -49,7 +52,7 @@ export default async function AcceptInvitationPage({
   if (!supabaseIsConfigured()) {
     return (
       <Card title={t('invitation.title')}>
-        <p className="text-sm text-[var(--color-muted)]">{t('invitation.needsDatabase')}</p>
+        <p className="text-sm text-muted">{t('invitation.needsDatabase')}</p>
       </Card>
     );
   }
@@ -60,17 +63,17 @@ export default async function AcceptInvitationPage({
     const next = `/invitations/accept?token=${encodeURIComponent(token)}`;
     return (
       <Card title={t('invitation.title')}>
-        <p className="text-sm">{t('invitation.signInFirst')}</p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <p className="text-sm text-ink-soft">{t('invitation.signInFirst')}</p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Link
             href={`/signup?next=${encodeURIComponent(next)}`}
-            className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
+            className={buttonClasses({ className: 'sm:flex-1' })}
           >
             {t('auth.signup.submit')}
           </Link>
           <Link
             href={`/login?next=${encodeURIComponent(next)}`}
-            className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
+            className={buttonClasses({ variant: 'secondary', className: 'sm:flex-1' })}
           >
             {t('auth.login.submit')}
           </Link>
@@ -106,13 +109,20 @@ export default async function AcceptInvitationPage({
 
   return (
     <Card title={t('invitation.title')}>
-      <p className="text-sm">
-        {t('invitation.invitedTo', {
-          business: preview.tenantName,
-          role: t(`roles.${preview.role}`),
-        })}
-      </p>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">
+      <div className="flex items-start gap-3 rounded-control bg-brand-soft px-4 py-3">
+        <MailOpen
+          aria-hidden="true"
+          className="mt-0.5 size-4 shrink-0 text-brand"
+          strokeWidth={2}
+        />
+        <p className="text-sm text-ink">
+          {t('invitation.invitedTo', {
+            business: preview.tenantName,
+            role: t(`roles.${preview.role}`),
+          })}
+        </p>
+      </div>
+      <p className="mt-3 text-sm text-muted">
         {t('invitation.expires', {
           date: format.dateTime(preview.expiresAt, { dateStyle: 'medium' }),
         })}
@@ -120,10 +130,7 @@ export default async function AcceptInvitationPage({
 
       <form action={accept} className="mt-6">
         <input type="hidden" name="token" value={token} />
-        <button
-          type="submit"
-          className="w-full rounded-md bg-[var(--color-brand)] px-5 py-3 text-sm font-medium text-[var(--color-brand-ink)]"
-        >
+        <button type="submit" className={buttonClasses({ size: 'lg', block: true })}>
           {t('invitation.accept')}
         </button>
       </form>
@@ -135,25 +142,40 @@ async function Invalid() {
   const t = await getTranslations();
   return (
     <Card title={t('invitation.invalidTitle')}>
-      <p className="text-sm text-[var(--color-muted)]">{t('invitation.invalidBody')}</p>
-      <Link href="/" className="mt-6 inline-block text-sm underline underline-offset-4">
+      <p className="text-sm text-muted">{t('invitation.invalidBody')}</p>
+      <Link
+        href="/"
+        className={buttonClasses({ variant: 'secondary', block: true, className: 'mt-6' })}
+      >
         {t('common.back')}
       </Link>
     </Card>
   );
 }
 
+/** The account-screen frame: the same wash, logo and centred card as `(auth)/layout`. */
 async function Card({ title, children }: { title: string; children: React.ReactNode }) {
   const t = await getTranslations();
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
-      <Link href="/" className="mb-8 block text-center text-2xl font-semibold tracking-tight">
-        {t('app.name')}
-      </Link>
-      <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6 sm:p-8">
-        <h1 className="mb-4 text-2xl font-semibold tracking-tight">{title}</h1>
-        {children}
-      </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-linear-to-b from-brand-soft to-transparent"
+      />
+
+      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10 sm:px-6">
+        <Link href="/" className="mb-8 flex justify-center">
+          <Logo name={t('app.name')} size="lg" />
+        </Link>
+        <div className="rounded-2xl border border-line bg-surface p-6 shadow-md sm:p-8">
+          <h1 className="mb-4 text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+          {children}
+        </div>
+      </main>
+
+      <footer className="relative mx-auto w-full max-w-md px-6 pb-8">
+        <p className="text-center text-xs text-muted">{t('legal.notice')}</p>
+      </footer>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import { getTranslations } from 'next-intl/server';
+import { BarChart3, Boxes, FileText, TrendingUp, Wallet } from 'lucide-react';
 import { apiForRequest } from '@/api/session';
-import { Shell, TableFrame } from '@/ui/shell';
+import { Shell, TableFrame, Empty } from '@/ui/shell';
+import { Stat } from '@/ui/primitives';
+import { DesktopOnly, MobileList } from '@/ui/list';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
 
@@ -34,51 +37,106 @@ export default async function ReportsPage() {
   // quinientos productos para sumarlos en JavaScript.
   const report = await queries.reports.salesSummary();
 
+  const units = (value: number): string =>
+    value.toLocaleString('es-VE', { maximumFractionDigits: 3 });
+
   return (
     <Shell ctx={ctx} session={session} title={t('reports.title')} subtitle={t('reports.subtitle')}>
-      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t('reports.salesTotal')} value={`$ ${report.salesTotal}`} />
-        <Stat label={t('reports.documentsIssued')} value={String(report.documentCount)} />
-        <Stat label={t('reports.averageTicket')} value={`$ ${report.averageTicket}`} />
-        <Stat label={t('reports.stockValue')} value={`$ ${report.inventoryValue}`} />
-      </div>
+      <div className="space-y-8 lg:space-y-10">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <Stat label={t('reports.salesTotal')} value={`$ ${report.salesTotal}`} icon={Wallet} />
+          <Stat
+            label={t('reports.documentsIssued')}
+            value={String(report.documentCount)}
+            icon={FileText}
+          />
+          <Stat
+            label={t('reports.averageTicket')}
+            value={`$ ${report.averageTicket}`}
+            icon={TrendingUp}
+          />
+          <Stat label={t('reports.stockValue')} value={`$ ${report.inventoryValue}`} icon={Boxes} />
+        </div>
 
-      <h2 className="mb-4 text-lg font-semibold">{t('reports.topProducts')}</h2>
-      <TableFrame>
-        <thead>
-          <tr className="border-b border-[var(--color-line)] text-[var(--color-muted)]">
-            <th scope="col" className="px-4 py-3 font-medium">
-              {t('products.name')}
-            </th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">
-              {t('reports.units')}
-            </th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">
-              {t('deliveryNotes.total')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {report.bestSellers.map((row) => (
-            <tr key={row.name} className="border-b border-[var(--color-line)] last:border-0">
-              <td className="px-4 py-3">{row.name}</td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {row.units.toLocaleString('es-VE', { maximumFractionDigits: 3 })}
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">$ {row.revenue}</td>
-            </tr>
-          ))}
-        </tbody>
-      </TableFrame>
+        <section aria-labelledby="top-products">
+          <h2 id="top-products" className="mb-3 text-base font-semibold text-ink">
+            {t('reports.topProducts')}
+          </h2>
+
+          {report.bestSellers.length === 0 ? (
+            // No sales yet means no issued notes: that is the message that applies.
+            <Empty icon={BarChart3}>{t('reports.noSales')}</Empty>
+          ) : (
+            <>
+              <DesktopOnly>
+                <TableFrame>
+                  <thead>
+                    <tr className="border-b border-line bg-subtle/60">
+                      <th scope="col" className={TH}>
+                        {t('products.name')}
+                      </th>
+                      <th scope="col" className={`${TH} text-right`}>
+                        {t('reports.units')}
+                      </th>
+                      <th scope="col" className={`${TH} text-right`}>
+                        {t('deliveryNotes.total')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.bestSellers.map((row, index) => (
+                      <tr
+                        key={row.name}
+                        className="border-b border-line transition-colors last:border-0 hover:bg-subtle/40"
+                      >
+                        <td className="px-4 py-3 font-medium text-ink">
+                          <span
+                            aria-hidden="true"
+                            className="mr-3 inline-block w-5 text-right text-xs font-normal text-n-400 tabular-nums"
+                          >
+                            {index + 1}
+                          </span>
+                          {row.name}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
+                          {units(row.units)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums">
+                          $ {row.revenue}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </TableFrame>
+              </DesktopOnly>
+
+              <MobileList>
+                {report.bestSellers.map((row, index) => (
+                  <li key={row.name} className="flex min-h-14 items-center gap-3 px-4 py-3">
+                    <span
+                      aria-hidden="true"
+                      className="grid size-7 shrink-0 place-items-center rounded-pill bg-subtle text-xs font-medium text-muted tabular-nums"
+                    >
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium text-ink">{row.name}</p>
+                      <p className="mt-0.5 text-[13px] text-muted tabular-nums">
+                        {t('reports.units')}: {units(row.units)}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[15px] font-medium text-ink tabular-nums">
+                      $ {row.revenue}
+                    </p>
+                  </li>
+                ))}
+              </MobileList>
+            </>
+          )}
+        </section>
+      </div>
     </Shell>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-      <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
-    </div>
-  );
-}
+const TH = 'px-4 py-2.5 text-xs font-medium tracking-wide text-muted uppercase';

@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { Card } from '@/ui/primitives';
 import { ProductForm } from '@/ui/product-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,9 +37,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       session={session}
       title={t('products.edit')}
       subtitle={product.name}
-      action={<BackLink href={`/products/${id}`}>{t('products.detail')}</BackLink>}
+      back={{ href: `/products/${id}`, label: t('products.detail') }}
     >
-      <div className="max-w-2xl">
+      <Card className="max-w-2xl p-5 sm:p-6">
         <ProductForm
           product={{
             id: product.id,
@@ -53,7 +53,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
             taxable: product.taxable,
           }}
         />
-      </div>
+      </Card>
     </Shell>
   );
 }

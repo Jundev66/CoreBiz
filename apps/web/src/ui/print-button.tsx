@@ -1,5 +1,8 @@
 'use client';
 
+import { Printer } from 'lucide-react';
+import { buttonClasses } from '@/ui/button';
+
 /**
  * Abre el dialogo de impresion del navegador.
  *
@@ -12,14 +15,11 @@
 export function PrintButton({ label, hint }: { label: string; hint: string }) {
   return (
     <div className="text-right">
-      <button
-        type="button"
-        onClick={() => window.print()}
-        className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
-      >
+      <button type="button" onClick={() => window.print()} className={buttonClasses()}>
+        <Printer aria-hidden="true" className="size-4" strokeWidth={2} />
         {label}
       </button>
-      <p className="mt-1 text-xs text-[var(--color-muted)]">{hint}</p>
+      <p className="mt-1.5 text-xs text-muted">{hint}</p>
     </div>
   );
 }

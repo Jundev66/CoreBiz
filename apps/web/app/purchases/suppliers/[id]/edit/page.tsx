@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { Card } from '@/ui/primitives';
 import { SupplierForm } from '@/ui/supplier-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,9 +40,9 @@ export default async function EditSupplierPage({ params }: { params: Promise<{ i
       session={session}
       title={t('suppliers.edit')}
       subtitle={supplier.name}
-      action={<BackLink href="/purchases/suppliers">{t('suppliers.title')}</BackLink>}
+      back={{ href: '/purchases/suppliers', label: t('suppliers.title') }}
     >
-      <div className="max-w-2xl">
+      <Card className="max-w-2xl p-5 sm:p-6">
         <SupplierForm
           supplier={{
             id: supplier.id,
@@ -55,7 +55,7 @@ export default async function EditSupplierPage({ params }: { params: Promise<{ i
             notes: supplier.notes,
           }}
         />
-      </div>
+      </Card>
     </Shell>
   );
 }

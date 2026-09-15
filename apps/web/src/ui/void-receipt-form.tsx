@@ -1,8 +1,12 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Ban } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { voidGoodsReceiptAction, type PurchasingState } from '@/actions/purchasing';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
+import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 
 /**
  * Anular una recepcion de mercancia ya registrada.
@@ -32,43 +36,44 @@ export function VoidReceiptForm({ goodsReceiptId, number }: VoidReceiptFormProps
   return (
     <form
       action={formAction}
-      className="mt-8 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-5"
+      className="rounded-card border border-danger/25 bg-surface p-5 shadow-xs sm:p-6"
     >
-      <h2 className="text-base font-medium">{t('purchases.voidTitle')}</h2>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        {t('purchases.voidExplain', { number })}
-      </p>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">{t('purchases.voidSoldWarning')}</p>
+      <div className="flex items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-control bg-danger-soft text-danger-ink">
+          <Ban aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-ink">{t('purchases.voidTitle')}</h2>
+          <p className="mt-1 text-sm text-muted">{t('purchases.voidExplain', { number })}</p>
+        </div>
+      </div>
+
+      <Alert tone="warn" className="mt-4">
+        {t('purchases.voidSoldWarning')}
+      </Alert>
 
       <input type="hidden" name="goodsReceiptId" value={goodsReceiptId} />
 
-      <label className="mt-4 block text-sm">
-        <span className="mb-1 block font-medium">{t('purchases.voidReason')}</span>
+      <label className="mt-5 block">
+        <span className={LABEL_CLASSES}>{t('purchases.voidReason')}</span>
         <input
           name="reason"
           required
           maxLength={200}
           placeholder={t('purchases.voidReasonHint')}
           autoComplete="off"
-          className="w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2"
+          className={`mt-1.5 ${CONTROL_CLASSES}`}
         />
       </label>
 
       {state.status === 'error' && state.errorKind && (
-        <p
-          role="alert"
-          className="mt-4 rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-        >
+        <Alert tone="danger" role="alert" className="mt-4">
           {t(`purchases.errors.${state.errorKind}`, state.errorParams ?? {})}
-        </p>
+        </Alert>
       )}
 
-      <div className="mt-4">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md border border-[var(--color-danger)] px-4 py-2 text-sm font-medium text-[var(--color-danger-ink)] disabled:opacity-60"
-        >
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="submit" disabled={pending} className={buttonClasses({ variant: 'danger' })}>
           {pending ? t('common.saving') : t('purchases.voidSubmit')}
         </button>
       </div>

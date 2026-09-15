@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
+import { Card } from '@/ui/primitives';
 import { SettingsNav } from '@/ui/settings-nav';
 import { TenantSettingsForm } from '@/ui/tenant-settings-form';
 
@@ -25,15 +26,13 @@ export default async function SettingsPage() {
     >
       <SettingsNav current="business" actor={ctx.actor} />
 
-      <div className="max-w-2xl">
-        <section aria-labelledby="business-heading">
-          <h2 id="business-heading" className="mb-1 text-lg font-medium">
-            {t('settings.business.heading')}
-          </h2>
-          <p className="mb-6 text-sm text-[var(--color-muted)]">
-            {t('settings.business.description')}
-          </p>
+      <section aria-labelledby="business-heading" className="max-w-3xl">
+        <h2 id="business-heading" className="text-base font-semibold text-ink">
+          {t('settings.business.heading')}
+        </h2>
+        <p className="mt-1 mb-5 text-sm text-muted">{t('settings.business.description')}</p>
 
+        <Card className="p-5 sm:p-6">
           <TenantSettingsForm
             canWrite={canWrite}
             defaults={{
@@ -48,8 +47,8 @@ export default async function SettingsPage() {
                   : formatRate(ctx.settings.exchangeRateScaled),
             }}
           />
-        </section>
-      </div>
+        </Card>
+      </section>
     </Shell>
   );
 }

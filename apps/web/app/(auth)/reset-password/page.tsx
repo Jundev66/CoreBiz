@@ -25,8 +25,8 @@ export default async function ResetPasswordPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">{t('auth.reset.title')}</h1>
-      <p className="mt-2 mb-6 text-sm text-[var(--color-muted)]">{t('auth.reset.subtitle')}</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">{t('auth.reset.title')}</h1>
+      <p className="mt-1.5 mb-6 text-sm text-muted">{t('auth.reset.subtitle')}</p>
 
       <AuthForm
         action={updatePasswordAction}

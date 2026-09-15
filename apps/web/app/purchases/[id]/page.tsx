@@ -4,7 +4,8 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { Alert, Badge } from '@/ui/feedback';
+import { SectionTitle } from '@/ui/primitives';
 import { DetailList } from '@/ui/detail';
 import { VoidReceiptForm } from '@/ui/void-receipt-form';
 
@@ -40,85 +41,98 @@ export default async function GoodsReceiptDetailPage({
   // 404 y no 403: un 403 confirmaria que el documento existe en otra empresa.
   if (receipt === null) notFound();
 
+  const voided = receipt.status === 'voided';
+
   return (
     <Shell
       ctx={ctx}
       session={session}
       title={receipt.number}
       subtitle={receipt.supplierName}
-      action={<BackLink href="/purchases">{t('purchases.title')}</BackLink>}
+      back={{ href: '/purchases', label: t('purchases.title') }}
+      {...(voided
+        ? { action: <Badge tone="danger">{t('deliveryNotes.statuses.voided')}</Badge> }
+        : {})}
     >
-      {receipt.status === 'voided' && (
-        <p
-          role="status"
-          className="mb-6 rounded-md border border-[var(--color-danger)] bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-        >
+      {voided && (
+        <Alert tone="danger" role="status" className="mb-6">
           {t('purchases.voidedNotice', { reason: receipt.voidReason ?? '—' })}
-        </p>
+        </Alert>
       )}
 
-      <DetailList
-        rows={[
-          { label: t('purchases.number'), value: receipt.number, mono: true },
-          {
-            label: t('purchases.supplier'),
-            value: `${receipt.supplierCode} · ${receipt.supplierName}`,
-          },
-          {
-            label: t('purchases.received'),
-            value:
-              receipt.receivedAt === null
-                ? null
-                : format.dateTime(receipt.receivedAt, { dateStyle: 'medium', timeStyle: 'short' }),
-          },
-          { label: t('purchases.supplierReference'), value: receipt.supplierReference },
-          { label: t('purchases.notes'), value: receipt.notes },
-          { label: t('purchases.total'), value: `$ ${receipt.total}` },
-        ]}
-        emptyLabel={t('common.notSet')}
-      />
+      <div className="space-y-8">
+        <DetailList
+          rows={[
+            { label: t('purchases.number'), value: receipt.number, mono: true },
+            {
+              label: t('purchases.supplier'),
+              value: `${receipt.supplierCode} · ${receipt.supplierName}`,
+            },
+            {
+              label: t('purchases.received'),
+              value:
+                receipt.receivedAt === null
+                  ? null
+                  : format.dateTime(receipt.receivedAt, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    }),
+            },
+            { label: t('purchases.supplierReference'), value: receipt.supplierReference },
+            { label: t('purchases.notes'), value: receipt.notes },
+            { label: t('purchases.total'), value: `$ ${receipt.total}` },
+          ]}
+          emptyLabel={t('common.notSet')}
+        />
 
-      <section className="mt-8">
-        <h2 className="mb-4 text-lg font-medium">{t('purchases.lines')}</h2>
+        <section>
+          <SectionTitle>{t('purchases.lines')}</SectionTitle>
 
-        <TableFrame>
-          <thead>
-            <tr className="border-b border-[var(--color-line)] text-[var(--color-muted)]">
-              <th scope="col" className="px-4 py-3 font-medium">
-                {t('purchases.lineDescription')}
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                {t('purchases.lineQuantity')}
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                {t('purchases.lineUnitCost')}
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                {t('purchases.lineTotal')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {receipt.lines.map((line) => (
-              <tr key={line.lineNo} className="border-b border-[var(--color-line)] last:border-0">
-                <td className="px-4 py-3">{line.description}</td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {line.quantity} {line.unit}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">$ {line.unitCost}</td>
-                <td className="px-4 py-3 text-right tabular-nums">$ {line.lineTotal}</td>
+          <TableFrame>
+            <thead>
+              <tr className="border-b border-line bg-canvas text-xs text-muted">
+                <th scope="col" className="px-4 py-3 font-medium">
+                  {t('purchases.lineDescription')}
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  {t('purchases.lineQuantity')}
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  {t('purchases.lineUnitCost')}
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  {t('purchases.lineTotal')}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </TableFrame>
-      </section>
+            </thead>
+            <tbody>
+              {receipt.lines.map((line) => (
+                <tr key={line.lineNo} className="border-b border-line last:border-0">
+                  <td className="px-4 py-3 text-ink">{line.description}</td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap text-ink tabular-nums">
+                    {line.quantity} {line.unit}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap text-ink tabular-nums">
+                    $ {line.unitCost}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-ink tabular-nums">
+                    $ {line.lineTotal}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TableFrame>
+        </section>
 
-      {/* Anular solo se ofrece si la recepcion sigue viva Y quien mira puede hacerlo. El
-          caso de uso lo revalida igualmente: esto no es la seguridad, es no ensenar un
-          boton que va a decir que no. */}
-      {receipt.status !== 'voided' && can(ctx.actor, 'purchase:void') && (
-        <VoidReceiptForm goodsReceiptId={receipt.id} number={receipt.number} />
-      )}
+        {/* Anular solo se ofrece si la recepcion sigue viva Y quien mira puede hacerlo. El
+            caso de uso lo revalida igualmente: esto no es la seguridad, es no ensenar un
+            boton que va a decir que no. */}
+        {!voided && can(ctx.actor, 'purchase:void') && (
+          <div className="max-w-2xl">
+            <VoidReceiptForm goodsReceiptId={receipt.id} number={receipt.number} />
+          </div>
+        )}
+      </div>
     </Shell>
   );
 }

@@ -17,8 +17,8 @@ export default async function LoginPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">{t('auth.login.title')}</h1>
-      <p className="mt-2 mb-6 text-sm text-[var(--color-muted)]">{t('auth.login.subtitle')}</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">{t('auth.login.title')}</h1>
+      <p className="mt-1.5 mb-6 text-sm text-muted">{t('auth.login.subtitle')}</p>
 
       <AuthForm
         action={signInAction}
@@ -42,18 +42,18 @@ export default async function LoginPage() {
         ]}
       />
 
-      <div className="mt-6 space-y-2 text-sm">
+      <div className="mt-6 space-y-2 text-center text-sm">
         <p>
-          <Link href="/forgot-password" className="underline underline-offset-4">
+          <Link href="/forgot-password" className="font-medium text-brand hover:underline">
             {t('auth.login.forgot')}
           </Link>
         </p>
         {/* Ofrecer "crear una cuenta" con el alta cerrada es mandar a alguien a una
             puerta que sabemos que no abre. */}
         {signupConfig.enabled() && (
-          <p className="text-[var(--color-muted)]">
+          <p className="text-muted">
             {t('auth.login.noAccount')}{' '}
-            <Link href="/signup" className="underline underline-offset-4">
+            <Link href="/signup" className="font-medium text-brand hover:underline">
               {t('auth.login.createAccount')}
             </Link>
           </p>
@@ -63,9 +63,9 @@ export default async function LoginPage() {
       {/* La demostracion se ofrece aqui a proposito: quien llega desde un CV no
           quiere crear una cuenta para mirar, y esconder la puerta detras de un
           registro es la forma mas eficaz de que no la abra nadie. */}
-      <p className="mt-6 border-t border-[var(--color-line)] pt-6 text-sm text-[var(--color-muted)]">
+      <p className="mt-6 border-t border-line pt-6 text-center text-sm text-muted">
         {t('auth.login.demoHint')}{' '}
-        <Link href="/demo" className="underline underline-offset-4">
+        <Link href="/demo" className="font-medium text-brand hover:underline">
           {t('auth.login.demoLink')}
         </Link>
       </p>

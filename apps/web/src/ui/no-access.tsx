@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { Lock } from 'lucide-react';
 
 /**
  * What someone sees when their role does not reach this screen.
@@ -15,6 +16,9 @@ import { getTranslations } from 'next-intl/server';
  *
  * The text does not say WHAT is on the other side, and does say whom to ask, which is the
  * only actionable thing from here.
+ *
+ * It borrows the empty-state look (`Empty` in `@/ui/shell`) rather than an error's: nothing
+ * is broken, there is simply nothing here for this role.
  */
 export async function NoAccess() {
   const t = await getTranslations();
@@ -22,12 +26,13 @@ export async function NoAccess() {
   return (
     <div
       role="status"
-      className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-line-strong)] px-6 py-14 text-center"
+      className="flex flex-col items-center rounded-card border border-dashed border-line-strong bg-surface px-6 py-12 text-center"
     >
-      <p className="text-sm font-medium">{t('noAccess.title')}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-muted)]">
-        {t('noAccess.lead')}
-      </p>
+      <span className="grid size-11 place-items-center rounded-pill bg-subtle text-muted">
+        <Lock aria-hidden="true" className="size-5" strokeWidth={1.75} />
+      </span>
+      <p className="mt-3 text-sm font-medium text-ink">{t('noAccess.title')}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted">{t('noAccess.lead')}</p>
     </div>
   );
 }

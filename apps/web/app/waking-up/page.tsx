@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Waking } from '@/ui/waking';
+import { Logo } from '@/ui/logo';
 import { safeInternalPath } from '@/auth/safe-redirect';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,16 +43,21 @@ export default async function WakingPage({
   const target = safeInternalPath(next);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-12">
-        <Link href="/" className="mb-8 block text-center text-2xl font-semibold tracking-tight">
-          {t('app.name')}
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-linear-to-b from-brand-soft to-transparent"
+      />
+
+      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10 sm:px-6">
+        <Link href="/" className="mb-8 flex justify-center">
+          <Logo name={t('app.name')} size="lg" />
         </Link>
 
-        <div className="space-y-4 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6 sm:p-8">
-          <h1 className="text-lg font-semibold">{t('waking.title')}</h1>
-          <p className="text-sm text-[var(--color-muted)]">{t('waking.lead')}</p>
-          <p className="text-sm text-[var(--color-muted)]">{t('waking.explain')}</p>
+        <div className="space-y-4 rounded-2xl border border-line bg-surface p-6 shadow-md sm:p-8">
+          <h1 className="text-xl font-semibold tracking-tight text-ink">{t('waking.title')}</h1>
+          <p className="text-sm text-ink-soft">{t('waking.lead')}</p>
+          <p className="text-sm text-muted">{t('waking.explain')}</p>
 
           <Waking
             next={target}
@@ -65,8 +71,8 @@ export default async function WakingPage({
         </div>
       </main>
 
-      <footer className="mx-auto w-full max-w-md px-6 pb-8">
-        <p className="text-center text-xs text-[var(--color-muted)]">{t('legal.notice')}</p>
+      <footer className="relative mx-auto w-full max-w-md px-6 pb-8">
+        <p className="text-center text-xs text-muted">{t('legal.notice')}</p>
       </footer>
     </div>
   );

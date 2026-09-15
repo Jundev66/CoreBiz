@@ -35,6 +35,7 @@ export default async function NewGoodsReceiptPage() {
       session={session}
       title={t('purchases.new')}
       subtitle={t('purchases.newSubtitle')}
+      back={{ href: '/purchases', label: t('purchases.title') }}
     >
       <GoodsReceiptForm
         suppliers={suppliers.map((s) => ({ id: s.id, label: `${s.code} · ${s.name}` }))}
