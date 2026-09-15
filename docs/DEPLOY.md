@@ -48,7 +48,8 @@ presentación, y ningún secreto vive en él (ver `.env.example`).
 1. Crea el proyecto en **us-east-1**. Anota la contraseña de base de datos en tu gestor:
    **no se puede recuperar**.
 2. En **Connect**, copia las cadenas del pooler:
-   - **Transaction pooler**, puerto `6543` → `DATABASE_URL` de la API
+   - **Transaction pooler**, puerto `6543` → `DATABASE_URL` de la API, con el usuario
+     `corebiz_api` (ver «Contraseña del rol de la API»)
    - **Session pooler**, puerto `5432` → solo para aplicar extensiones y la semilla
 3. En **Settings → API Keys**, copia la clave **anon / publishable**. Es pública por diseño:
    RLS es lo que protege los datos.
@@ -111,6 +112,20 @@ pnpm exec supabase db push
 
 Si falta una extensión, una migración lo comprueba y falla nombrándola.
 
+### Contraseña del rol de la API
+
+La API **no** se conecta como `postgres`, que se salta Row Level Security: usa `corebiz_api`,
+que crea la migración `20260915120000_rol_api` sin contraseña. Dásela una vez, generada y
+guardada en tu gestor —nunca en el repositorio—, con la cadena del pooler como `postgres`:
+
+```sql
+alter role corebiz_api password 'CONTRASEÑA_GENERADA';  -- openssl rand -base64 32
+```
+
+`DATABASE_URL` de la API usa entonces `corebiz_api.TU_REF` como usuario. `postgres` queda solo
+para migraciones y la semilla. Comprobación rápida: conectado con esa cadena,
+`select rolbypassrls from pg_roles where rolname = current_user` devuelve `false`.
+
 ### Sembrar la demostración
 
 `supabase db push` **no** ejecuta la semilla. Sin ella no existe el tenant plantilla y `/demo`
@@ -141,7 +156,7 @@ correo, y la plantilla queda **bloqueada en la base** (`demo_template_locked`).
 | ----------------------------- | --------------------------------------------------------------- | -------- |
 | `NODE_ENV`                    | `production`                                                    | —        |
 | `DATA_DRIVER`                 | `postgres`                                                      | —        |
-| `DATABASE_URL`                | transaction pooler, puerto 6543                                 | ✅       |
+| `DATABASE_URL`                | transaction pooler, puerto 6543, usuario `corebiz_api.TU_REF`   | ✅       |
 | `DATABASE_MAX_CONNECTIONS`    | `3`                                                             | —        |
 | `DATABASE_CA_CERT`            | CA raíz de Supabase en PEM (pública; Settings → Database → SSL) | —        |
 | `SUPABASE_URL`                | `https://TU-PROYECTO.supabase.co`                               | —        |
