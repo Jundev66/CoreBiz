@@ -20,6 +20,6 @@
     "@prisma/adapter-pg": "7.10.0",
     "@types/node": "^26.4.1",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.11"
   }
 }
