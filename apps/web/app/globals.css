@@ -1,19 +1,20 @@
 @import 'tailwindcss';
 
 /**
- * Sistema de color, tipografia y elevacion.
+ * Colour, type and elevation system.
  *
- * Aqui habia once colores y nada mas: ni escala de grises, ni sombras, ni radios, ni
- * estados. El resultado era que cada boton y cada tarjeta repetian sus clases a mano y
- * se parecian entre si por casualidad, no por sistema.
+ * Two themes, one set of names. Screens only ever use the ROLE tokens below (`surface`,
+ * `ink`, `line`, `brand`…); the light theme defines them here and the dark theme redefines
+ * every one of them under `:root[data-theme='dark']`. The root layout writes `data-theme`
+ * from the `corebiz_theme` cookie, on the server, so there is no flash and no inline script.
  *
- * El tema es CLARO, y es una decision, no un descuido. Habia un modo oscuro resuelto
- * con una media query, y estaba a medias: `--color-warn` y `--color-danger` no tenian
- * variante, asi que los avisos se pintaban con tonos de tema claro sobre fondo oscuro.
- * Un modo oscuro de verdad —con conmutador y no a merced del sistema operativo— es un
- * trabajo propio; mientras tanto, un tema bien resuelto vale mas que dos a medias.
+ * An earlier dark mode was driven by a media query and was half done: status colours had
+ * no dark variant. The rule since then: a token that exists in one theme exists in both.
+ *
+ * `static` makes Tailwind emit every variable, including the ones only the dark block and
+ * the navigation scope reference.
  */
-@theme {
+@theme static {
   /* ── Neutros ───────────────────────────────────────────────────────────────
      Una sola familia, hue 260, de la superficie al texto. Tener la escala
      completa es lo que permite construir jerarquia sin inventar colores. */
@@ -36,20 +37,53 @@
      asi un cambio de paleta se hace en un sitio. */
   --color-ink: var(--color-n-900);
   --color-ink-soft: var(--color-n-700);
-  --color-muted: var(--color-n-500);
-  --color-line: var(--color-n-200);
-  --color-line-strong: var(--color-n-300);
+  /* 0.50 and not n-500: secondary text now also sits on the tinted canvas and on `subtle`
+     table headers, and needs 4.5:1 on the darkest of them. */
+  --color-muted: oklch(0.5 0.016 260);
+  --color-line: oklch(0.89 0.012 260);
+  --color-line-strong: oklch(0.82 0.014 260);
   --color-surface: oklch(1 0 0);
-  --color-canvas: var(--color-n-50);
-  --color-subtle: var(--color-n-100);
+  /* A grey-blue canvas, not near-white: white cards need something to stand out from. */
+  --color-canvas: oklch(0.955 0.012 260);
+  --color-subtle: oklch(0.935 0.014 260);
 
-  /* A single indigo accent. White on it clears 4.5:1, and it on `brand-soft` too, which is
-     what the active menu item and badges rely on. */
-  --color-brand: oklch(0.5 0.17 277);
-  --color-brand-hover: oklch(0.44 0.17 277);
-  --color-brand-soft: oklch(0.962 0.022 277);
-  --color-brand-line: oklch(0.87 0.05 277);
+  /* The indigo accent. White on it clears 4.5:1, and it on `brand-soft` too, which is what
+     badges and links on tinted rows rely on. */
+  --color-brand: oklch(0.5 0.19 275);
+  --color-brand-hover: oklch(0.44 0.19 275);
+  --color-brand-soft: oklch(0.93 0.045 275);
+  --color-brand-line: oklch(0.84 0.08 275);
   --color-brand-ink: oklch(0.99 0 0);
+
+  /* ── Navigation ──────────────────────────────────────────────────────────────
+     The module menu is a dark indigo band in both themes. Its subtree remaps the role
+     tokens (`[data-surface='nav']` below), so whatever sits in it — account, buttons,
+     the company select — reads as light-on-dark without its own classes. */
+  --color-nav: oklch(0.24 0.06 275);
+  --color-nav-raised: oklch(0.3 0.065 275);
+  --color-nav-line: oklch(0.36 0.06 275);
+  --color-nav-ink: oklch(0.96 0.01 275);
+  --color-nav-muted: oklch(0.8 0.03 275);
+
+  /* ── Module accents ──────────────────────────────────────────────────────────
+     Decorative only (icons and their chips): no text is ever written in them, so none of
+     them carries a contrast promise. `-bright` stays the same in both themes because it is
+     only used on the navigation, which is dark in both. */
+  --color-accent-sky: oklch(0.55 0.13 235);
+  --color-accent-sky-soft: oklch(0.94 0.035 235);
+  --color-accent-sky-bright: oklch(0.8 0.11 235);
+  --color-accent-emerald: oklch(0.55 0.12 160);
+  --color-accent-emerald-soft: oklch(0.94 0.04 160);
+  --color-accent-emerald-bright: oklch(0.82 0.12 160);
+  --color-accent-violet: oklch(0.53 0.17 300);
+  --color-accent-violet-soft: oklch(0.94 0.035 300);
+  --color-accent-violet-bright: oklch(0.8 0.11 300);
+  --color-accent-amber: oklch(0.62 0.14 70);
+  --color-accent-amber-soft: oklch(0.95 0.05 70);
+  --color-accent-amber-bright: oklch(0.84 0.13 70);
+  --color-accent-rose: oklch(0.56 0.18 15);
+  --color-accent-rose-soft: oklch(0.94 0.035 15);
+  --color-accent-rose-bright: oklch(0.8 0.11 15);
 
   /*
    * Los tonos de AVISO, PELIGRO y EXITO existen por duplicado: uno para rellenos y
@@ -88,10 +122,99 @@
   --radius-card: 0.875rem;
   --radius-pill: 9999px;
 
-  --shadow-xs: 0 1px 2px oklch(0.2 0.014 260 / 0.05);
-  --shadow-sm: 0 1px 2px oklch(0.2 0.014 260 / 0.06), 0 1px 3px oklch(0.2 0.014 260 / 0.08);
-  --shadow-md: 0 2px 4px oklch(0.2 0.014 260 / 0.05), 0 4px 12px oklch(0.2 0.014 260 / 0.08);
-  --shadow-lg: 0 8px 16px oklch(0.2 0.014 260 / 0.08), 0 16px 40px oklch(0.2 0.014 260 / 0.12);
+  --shadow-xs: 0 1px 2px oklch(0.2 0.014 260 / 0.07);
+  --shadow-sm: 0 1px 2px oklch(0.2 0.014 260 / 0.07), 0 2px 6px oklch(0.2 0.014 260 / 0.07);
+  --shadow-md: 0 2px 4px oklch(0.2 0.014 260 / 0.06), 0 6px 16px oklch(0.2 0.014 260 / 0.1);
+  --shadow-lg: 0 8px 16px oklch(0.2 0.014 260 / 0.1), 0 16px 40px oklch(0.2 0.014 260 / 0.14);
+}
+
+:root {
+  color-scheme: light;
+}
+
+/*
+ * The dark theme. Every role, status, brand, navigation and accent token again.
+ *
+ * Two inversions worth knowing: `brand` gets LIGHTER so it reads as text on dark surfaces,
+ * which is why `brand-ink` (text on a brand button) turns dark — white on a light indigo
+ * does not reach 4.5:1. And the `-ink` status tones get lighter than their fills for the
+ * same reason they exist at all: they are the ones used as small text.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-ink: oklch(0.96 0.006 260);
+  --color-ink-soft: oklch(0.86 0.01 260);
+  --color-muted: oklch(0.72 0.015 260);
+  --color-line: oklch(0.3 0.016 260);
+  --color-line-strong: oklch(0.38 0.018 260);
+  --color-surface: oklch(0.21 0.016 260);
+  --color-canvas: oklch(0.17 0.014 260);
+  --color-subtle: oklch(0.25 0.018 260);
+
+  --color-brand: oklch(0.7 0.15 275);
+  --color-brand-hover: oklch(0.76 0.13 275);
+  --color-brand-soft: oklch(0.3 0.07 275);
+  --color-brand-line: oklch(0.42 0.1 275);
+  --color-brand-ink: oklch(0.15 0.02 275);
+
+  --color-warn: oklch(0.78 0.14 75);
+  --color-warn-ink: oklch(0.84 0.12 75);
+  --color-warn-soft: oklch(0.3 0.06 75);
+  --color-danger: oklch(0.65 0.19 25);
+  --color-danger-ink: oklch(0.8 0.12 25);
+  --color-danger-soft: oklch(0.29 0.07 25);
+  --color-success: oklch(0.7 0.13 150);
+  --color-success-ink: oklch(0.82 0.12 150);
+  --color-success-soft: oklch(0.29 0.05 150);
+
+  /* Darker than the canvas, so the menu still reads as its own band. */
+  --color-nav: oklch(0.13 0.02 270);
+  --color-nav-raised: oklch(0.21 0.03 270);
+  --color-nav-line: oklch(0.27 0.03 270);
+  --color-nav-ink: oklch(0.96 0.006 260);
+  --color-nav-muted: oklch(0.78 0.02 270);
+
+  --color-accent-sky: oklch(0.8 0.11 235);
+  --color-accent-sky-soft: oklch(0.3 0.06 235);
+  --color-accent-emerald: oklch(0.82 0.12 160);
+  --color-accent-emerald-soft: oklch(0.3 0.055 160);
+  --color-accent-violet: oklch(0.8 0.11 300);
+  --color-accent-violet-soft: oklch(0.3 0.07 300);
+  --color-accent-amber: oklch(0.84 0.13 70);
+  --color-accent-amber-soft: oklch(0.31 0.06 70);
+  --color-accent-rose: oklch(0.8 0.11 15);
+  --color-accent-rose-soft: oklch(0.3 0.07 15);
+
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3), 0 2px 6px oklch(0 0 0 / 0.25);
+  --shadow-md: 0 2px 4px oklch(0 0 0 / 0.3), 0 6px 16px oklch(0 0 0 / 0.35);
+  --shadow-lg: 0 8px 16px oklch(0 0 0 / 0.35), 0 16px 40px oklch(0 0 0 / 0.45);
+}
+
+/*
+ * The navigation band remaps the roles for everything inside it.
+ *
+ * Custom properties are resolved where they are declared, so this block has to restate the
+ * roles themselves (redefining the `n-` scale here would change nothing) and the inherited
+ * text colour, which `body` computed from the page's `ink`. It points at `nav-*`, which each
+ * theme defines, so it is written once for both.
+ */
+[data-surface='nav'] {
+  --color-surface: var(--color-nav-raised);
+  --color-subtle: var(--color-nav-raised);
+  --color-ink: var(--color-nav-ink);
+  --color-ink-soft: var(--color-nav-ink);
+  --color-muted: var(--color-nav-muted);
+  --color-line: var(--color-nav-line);
+  --color-line-strong: var(--color-nav-line);
+  color: var(--color-ink);
+  color-scheme: dark;
+}
+
+/* The brand-coloured focus ring disappears on indigo: on the band it is the band's text colour. */
+[data-surface='nav'] :focus-visible {
+  outline-color: var(--color-nav-ink);
 }
 
 /* A phone shows no grey flash on every tap: feedback comes from the component's own

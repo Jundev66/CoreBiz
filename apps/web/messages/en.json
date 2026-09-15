@@ -254,6 +254,10 @@
     "units": "Units",
     "noSales": "No sales in this period yet."
   },
+  "theme": {
+    "toDark": "Dark mode",
+    "toLight": "Light mode"
+  },
   "auth": {
     "email": "Email address",
     "password": "Password",

@@ -44,21 +44,29 @@ export default async function DashboardPage() {
     <Screen title={t('home.title')} subtitle={t('home.subtitle')}>
       {resumen !== null && (
         <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:mb-10 lg:grid-cols-4">
-          <Stat label={t('reports.salesTotal')} value={`$ ${resumen.salesTotal}`} icon={Wallet} />
+          <Stat
+            label={t('reports.salesTotal')}
+            value={`$ ${resumen.salesTotal}`}
+            icon={Wallet}
+            tone="emerald"
+          />
           <Stat
             label={t('reports.documentsIssued')}
             value={String(resumen.documentCount)}
             icon={FileText}
+            tone="violet"
           />
           <Stat
             label={t('reports.averageTicket')}
             value={`$ ${resumen.averageTicket}`}
             icon={TrendingUp}
+            tone="sky"
           />
           <Stat
             label={t('reports.stockValue')}
             value={`$ ${resumen.inventoryValue}`}
             icon={Boxes}
+            tone="amber"
           />
         </div>
       )}
