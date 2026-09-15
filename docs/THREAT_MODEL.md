@@ -25,7 +25,7 @@ no cuando ocurre un incidente.
   Navegador  ──┐  nada de aquí es de fiar
                │
       ╔════════▼═══════════════════════════════════════════╗
-      ║ Vercel Edge — middleware, CSP, rate limit           ║
+      ║ Vercel — proxy, CSP, rate limit                     ║
       ╚════════┬═══════════════════════════════════════════╝
                │
       ╔════════▼═══════════════════════════════════════════╗

@@ -27,7 +27,7 @@ import { Logo } from '@/ui/logo';
  *     or while the API wakes up; the link home is the exit that always works, and the one
  *     that was missing.
  *
- * No inline styles: the CSP in `middleware.ts` blocks them, so the default error page also
+ * No inline styles: the CSP in `proxy.ts` blocks them, so the default error page also
  * rendered half-styled. Everything uses design-system classes.
  *
  * This does NOT cover a failure in the root layout or its providers — that would be
