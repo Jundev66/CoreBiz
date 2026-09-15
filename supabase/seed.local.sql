@@ -46,3 +46,8 @@ begin
   raise notice 'CoreBiz: local seed applied (known demo password, template unlocked).';
 end
 $local$;
+
+-- 3. A KNOWN password for the API's database role, so the API and the test suites can
+--    connect as `corebiz_api` locally. The migration creates the role without one on
+--    purpose: production sets its own, never written down in this repository.
+alter role corebiz_api password 'corebiz-api-local';

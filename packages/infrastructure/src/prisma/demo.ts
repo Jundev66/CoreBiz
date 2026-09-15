@@ -6,9 +6,10 @@ import { getPrisma } from '@corebiz/db';
  *
  * Estas funciones NO pasan por el Unit of Work ni establecen contexto de tenant,
  * y no es un descuido: se ejecutan ANTES de que exista el tenant que van a
- * crear. Corren como el rol de la conexion —propietario de las funciones
- * `SECURITY DEFINER` de abajo— y esas funciones estan revocadas de `public`, asi
- * que no hay forma de invocarlas desde una sesion de usuario.
+ * crear. Corren con el rol de la API, `corebiz_api`, which cannot bypass row-level
+ * security: every read and write here goes through a `SECURITY DEFINER` function it was
+ * granted by name, revoked from `public`, `anon` and `authenticated`, so no user session
+ * can call them either.
  */
 
 /** El estado del presupuesto de infraestructura. */
@@ -117,26 +118,14 @@ export async function countRecentDemoSandboxes(
   url: string,
   options: { readonly ipHash?: string | null; readonly sinceSeconds: number },
 ): Promise<number> {
-  const prisma = getPrisma(url);
-  const since = options.sinceSeconds;
-
-  const rows =
-    options.ipHash === undefined
-      ? await prisma.$queryRaw<{ n: number }[]>`
-          select count(*)::int as n from public.demo_sessions
-           where kind = 'sandbox' and created_at > now() - make_interval(secs => ${since})
-        `
-      : options.ipHash === null
-        ? await prisma.$queryRaw<{ n: number }[]>`
-            select count(*)::int as n from public.demo_sessions
-             where kind = 'sandbox' and ip_hash is null
-               and created_at > now() - make_interval(secs => ${since})
-          `
-        : await prisma.$queryRaw<{ n: number }[]>`
-            select count(*)::int as n from public.demo_sessions
-             where kind = 'sandbox' and ip_hash = ${options.ipHash}
-               and created_at > now() - make_interval(secs => ${since})
-          `;
+  // Through a bounded function, not a table read: the API's role cannot bypass row-level
+  // security, and `demo_sessions` has no policy that would let it count.
+  const anyOrigin = options.ipHash === undefined;
+  const rows = await getPrisma(url).$queryRaw<{ n: number }[]>`
+    select app.count_demo_sessions(
+      'sandbox', ${options.sinceSeconds}::int, ${anyOrigin}, ${options.ipHash ?? null}::text
+    ) as n
+  `;
 
   return Number(rows[0]?.n ?? 0);
 }
@@ -204,9 +193,7 @@ export async function provisionDemoSandbox(
   // call. Without a ceiling, rotating addresses kept creating them forever.
   if (readonly && options.maxReadonlyPerHour !== undefined) {
     const seats = await getPrisma(url).$queryRaw<{ n: number }[]>`
-      select count(*)::int as n
-        from public.demo_sessions
-       where kind = 'viewer' and created_at > now() - interval '1 hour'
+      select app.count_demo_sessions('viewer', 3600, true, null) as n
     `;
     if (Number(seats[0]?.n ?? 0) >= options.maxReadonlyPerHour) {
       return { ok: false, reason: 'full' };
@@ -250,15 +237,11 @@ export async function provisionDemoSandbox(
  * afirmarlo en un test: que la medida de seguridad es la caducidad y no el cron.
  */
 export async function demoSandboxIsAlive(url: string, tenantId: string): Promise<boolean> {
-  const rows = await getPrisma(url).$queryRaw<{ uno: number }[]>`
-    select 1 as uno
-      from public.tenants
-     where id = ${tenantId}::uuid
-       and is_demo
-       and (expires_at is null or expires_at > now())
+  const rows = await getPrisma(url).$queryRaw<{ alive: boolean }[]>`
+    select app.demo_sandbox_is_alive(${tenantId}::uuid) as alive
   `;
 
-  return rows.length > 0;
+  return rows[0]?.alive === true;
 }
 
 /** Purga los sandboxes caducados. La invoca el cron de respaldo. */
