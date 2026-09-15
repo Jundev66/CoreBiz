@@ -63,6 +63,26 @@ function text(msgs, key) {
   return typeof value === 'string' ? value : undefined;
 }
 
+/**
+ * Whether a URL path has a page, the way the App Router resolves it.
+ *
+ * A folder in parentheses is a route GROUP: it organises files and adds nothing to the URL.
+ * The screens moved under `(app)` so they share one layout, and a check that only knew about
+ * `(auth)` reported every link to them as leading nowhere. Every group at the root of `app`
+ * is tried, whatever it is called.
+ */
+const APP_ROOT = 'apps/web/app';
+const ROUTE_GROUPS = readdirSync(APP_ROOT, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && /^\(.+\)$/.test(entry.name))
+  .map((entry) => entry.name);
+
+function screenExists(route) {
+  const parts = route.split('/').filter(Boolean).join('/');
+  return ['', ...ROUTE_GROUPS].some((group) =>
+    existsSync(join(APP_ROOT, group, parts, 'page.tsx')),
+  );
+}
+
 const failures = [];
 
 // ── Pass 1: every key with a card has it COMPLETE and in both languages ──────────
@@ -101,11 +121,7 @@ for (const key of withCard) {
 // ── Pass 1c: a link that leads nowhere is worse than no link ─────────────────────
 for (const [key, route] of targets) {
   if (route === null) continue;
-  const parts = route.split('/').filter(Boolean).join('/');
-  const exists =
-    existsSync(`apps/web/app/${parts}/page.tsx`) ||
-    existsSync(`apps/web/app/(auth)/${parts}/page.tsx`);
-  if (!exists) failures.push(`${key}: the link "${route}" leads to no screen`);
+  if (!screenExists(route)) failures.push(`${key}: the link "${route}" leads to no screen`);
 }
 
 // ── Pass 2: no key in the code is left undeclared ────────────────────────────────
@@ -161,7 +177,9 @@ console.error(`A new error key goes into ONE of the five lists in ${CONTRACT}:`)
 console.error('  PLAYBOOK_ROUTES      if it can be explained with something to do');
 console.error('  ESCALATE_ONLY_KINDS  if there is nothing to explain and support must know');
 console.error('  FIELD_SHAPE_KINDS    if it is always rendered next to its field');
-console.error('  NO_PANEL_KINDS       if it only happens on a screen that does not mount Shell');
+console.error(
+  '  NO_PANEL_KINDS       if it only happens on a screen that does not mount the frame',
+);
 console.error('  INTERNAL_KINDS       if a use case translates it and it never leaves the API');
 console.error('-------------------------------------------------------------------');
 process.exit(1);
