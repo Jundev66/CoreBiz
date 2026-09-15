@@ -81,3 +81,25 @@ consulta las pertenencias en cada petición, y sin fila no hay acceso.
 **Lo que NO se abre:** CORS. Nada en el navegador llama a la API. El día que hiciera
 falta abrirlo, la pregunta correcta no sería qué origen permitir, sino por qué el token
 ha llegado al navegador.
+
+---
+
+## Addendum (2026-09-15) — el proxy verifica con `getClaims()`
+
+El proxy (`apps/web/proxy.ts`, antes `middleware.ts`) corre antes de **cada** petición,
+prefetch de enlaces incluidos. Con `getUser()` cada clic pagaba un viaje de red a Supabase
+Auth antes de empezar a pintar nada, y era una de las causas de que cambiar de módulo se
+sintiera lento.
+
+`getClaims()` verifica la **firma** del token contra las claves públicas del proyecto
+(ES256), que `@supabase/auth-js` cachea para todo el proceso. Es la misma garantía que esta
+ADR exigía —una cookie fabricada a mano no pasa— sin el viaje de red, y renueva el token
+antes si estaba caducado. Es exactamente lo que ya hace la API desde el addendum anterior.
+
+Lo que no cambia: `getSession()` sigue sin decidir nada, y quien decide accesos sigue siendo
+la API con la pertenencia de la base de datos delante. El proxy solo usa la respuesta para
+renovar cookies y para elegir entre el panel y la portada pública en `/`.
+
+`currentUser()` sigue usando `getUser()` en las tres pantallas que deciden algo sobre la
+identidad antes de que exista una empresa (alta, invitación y demo): son pantallas de paso,
+no de navegación.

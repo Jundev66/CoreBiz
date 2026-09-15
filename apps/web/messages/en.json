@@ -138,6 +138,7 @@
     "change": "Switch",
     "optional": "(optional)",
     "saving": "Saving…",
+    "loading": "Loading…",
     "view": "View",
     "notSet": "—",
     "close": "Close",

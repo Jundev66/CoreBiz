@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { z } from 'zod';
@@ -394,6 +395,10 @@ export async function switchTenantAction(formData: FormData): Promise<void> {
   // And the last error stays in the company where it happened: explained inside another
   // one, it would talk about a customer or a note that does not exist there.
   await forgetFailure();
+
+  // The frame is a layout, kept across navigations. Without this the menu, the account area
+  // and the demo notice would keep describing the company that was just left.
+  revalidatePath('/', 'layout');
 
   redirect('/');
 }

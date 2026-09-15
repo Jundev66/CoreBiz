@@ -49,7 +49,7 @@ export function supabaseIsConfigured(): boolean {
  * Cliente para Server Components y Server Actions.
  *
  * En un Server Component las cookies son de solo lectura y `setAll` lanza. Se
- * traga a proposito: el refresco del token lo hace el middleware, que si puede
+ * traga a proposito: el refresco del token lo hace el proxy, que si puede
  * escribirlas. Sin este try/catch, cualquier pagina que renderice con un token a
  * punto de caducar reventaria con un error que no dice nada del problema real.
  */
@@ -75,13 +75,13 @@ export async function supabaseServer(): Promise<SupabaseClient> {
                * `maxAge` and `expires` do come from the library, which is what it should
                * decide: how long it lasts, not who can read it.
                *
-               * The middleware already used this order. Both places that write session
+               * The proxy already used this order. Both places that write session
                * cookies now agree.
                */
               store.set(name, value, { ...options, ...COOKIE_DEFAULTS });
             }
           } catch {
-            // Server Component: las escribe el middleware en la respuesta.
+            // Server Component: las escribe el proxy en la respuesta.
           }
         },
       },
