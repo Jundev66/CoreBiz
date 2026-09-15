@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { BarChart3, Boxes, FileText, TrendingUp, Wallet } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Stat } from '@/ui/primitives';
 import { DesktopOnly, MobileList } from '@/ui/list';
@@ -15,27 +15,26 @@ import { can } from '@corebiz/domain';
  */
 export default async function ReportsPage() {
   const t = await getTranslations();
-  const { ctx, queries } = await apiForRequest();
+  // Una sola llamada, que sale a la vez que la sesion: contra Postgres son agregados que la
+  // base de datos calcula sin traer las filas. La version anterior se bajaba quinientas
+  // notas y quinientos productos para sumarlos en JavaScript.
+  const { ctx, data: report } = await withSession((queries) => queries.reports.salesSummary());
 
   /*
    * Without `report:read` you get a notice, not a breakdown.
    *
    * The most visible case of the problem: warehouse and read-only had "Reports" in the menu
    * and clicking it gave the server error page. The entry is no longer shown to them
-   * (`@/auth/module-access`) and whoever arrives through the URL gets this.
+   * (`@/auth/module-access`) and whoever arrives through the URL gets this — the API's 403
+   * arrives as `null`.
    */
-  if (!can(ctx.actor, 'report:read')) {
+  if (!can(ctx.actor, 'report:read') || report === null) {
     return (
       <Screen title={t('reports.title')}>
         <NoAccess />
       </Screen>
     );
   }
-
-  // Una sola llamada: contra Postgres son agregados que la base de datos calcula
-  // sin traer las filas. La version anterior se bajaba quinientas notas y
-  // quinientos productos para sumarlos en JavaScript.
-  const report = await queries.reports.salesSummary();
 
   const units = (value: number): string =>
     value.toLocaleString('es-VE', { maximumFractionDigits: 3 });

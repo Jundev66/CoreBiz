@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, TableFrame } from '@/ui/shell';
 import { Alert, Badge } from '@/ui/feedback';
 import { SectionTitle } from '@/ui/primitives';
@@ -34,9 +34,7 @@ export default async function GoodsReceiptDetailPage({
   const t = await getTranslations();
   const format = await getFormatter();
   const { id } = await params;
-  const { ctx, queries } = await apiForRequest();
-
-  const receipt = await queries.purchasing.receiptById(id);
+  const { ctx, data: receipt } = await withSession((queries) => queries.purchasing.receiptById(id));
 
   // 404 y no 403: un 403 confirmaria que el documento existe en otra empresa.
   if (receipt === null) notFound();

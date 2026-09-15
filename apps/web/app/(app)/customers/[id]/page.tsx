@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Pencil } from 'lucide-react';
 import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { setCustomerStatusAction } from '@/actions/customers';
 import { Screen } from '@/ui/shell';
 import { buttonClasses } from '@/ui/button';
@@ -34,14 +34,11 @@ export default async function CustomerDetailPage({
   const t = await getTranslations();
   const { id } = await params;
   const { guardado } = await searchParams;
-  const { ctx, queries } = await apiForRequest();
+  const { ctx, data: customer } = await withSession((queries) => queries.customers.byId(id));
 
   // Without `customer:read` this record does not exist for the requester — the same answer
-  // the API gives, so the screen does not depend on the 403 never arriving.
-  if (!can(ctx.actor, 'customer:read')) notFound();
-
-  const customer = await queries.customers.byId(id);
-  if (customer === null) notFound();
+  // the API gives: its 403 arrives as `null`, like a record that is not there.
+  if (!can(ctx.actor, 'customer:read') || customer === null) notFound();
 
   const canWrite = can(ctx.actor, 'customer:write');
 

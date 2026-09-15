@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { Plus, Receipt } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
 import { Badge, type BadgeTone } from '@/ui/feedback';
@@ -27,21 +27,21 @@ export default async function DeliveryNotesPage({
   const { creado } = await searchParams;
   const createdCode = noticeCode(creado);
   const format = await getFormatter();
-  const { ctx, queries } = await apiForRequest();
+  const { ctx, data: page } = await withSession((queries) =>
+    queries.deliveryNotes.list({ limit: 50 }),
+  );
 
   /*
-   * The role decides whether this is read, and it is decided BEFORE asking: a 403 from the
-   * API surfaces as an exception and took the whole screen down. See `@/ui/no-access`.
+   * The session and the list travel together; the role still decides what is shown. A 403
+   * from the API arrives as `null` and becomes a notice. See `@/ui/no-access`.
    */
-  if (!can(ctx.actor, 'delivery_note:read')) {
+  if (!can(ctx.actor, 'delivery_note:read') || page === null) {
     return (
       <Screen title={t('deliveryNotes.title')}>
         <NoAccess />
       </Screen>
     );
   }
-
-  const page = await queries.deliveryNotes.list({ limit: 50 });
 
   const statusBadge = (status: string) => (
     <Badge tone={STATUS_TONES[status] ?? 'neutral'}>{t(`deliveryNotes.statuses.${status}`)}</Badge>

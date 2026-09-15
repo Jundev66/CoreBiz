@@ -15,6 +15,12 @@ updates:
       # available: the function fails on load. See apps/api/src/auth/supabase-jwt.verifier.ts.
       - dependency-name: jose
         update-types: ['version-update:semver-major']
+      # NestJS 12 ships every package as ESM only, consumed from CommonJS through
+      # `require(esm)` — the same wall as jose 6 on Vercel. The upgrade needs the API to move
+      # to ESM (or a runtime with `require(esm)`), not a version bump. Dependabot opened
+      # @nestjs/common and @nestjs/platform-express 12 separately and both broke the build.
+      - dependency-name: '@nestjs/*'
+        update-types: ['version-update:semver-major']
     groups:
       minor-and-patch:
         update-types: [minor, patch]

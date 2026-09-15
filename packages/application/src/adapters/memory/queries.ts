@@ -179,6 +179,15 @@ class InMemoryProductQueries implements ProductQueries {
     return Promise.resolve(page(items, filter.limit ?? 25));
   }
 
+  lowStock(limit = 10): Promise<readonly ProductListItem[]> {
+    const items = this.scoped()
+      .filter((p) => !p.isArchived && p.trackStock && p.isBelowMinimum)
+      .slice(0, limit)
+      .map((p) => this.toListItem(p));
+
+    return Promise.resolve(items);
+  }
+
   private toListItem(p: Product): ProductListItem {
     return {
       id: p.id,

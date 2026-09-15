@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { Printer } from 'lucide-react';
 import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, TableFrame } from '@/ui/shell';
 import { buttonClasses } from '@/ui/button';
 import { Alert, Badge, type BadgeTone } from '@/ui/feedback';
@@ -39,9 +39,7 @@ export default async function DeliveryNoteDetailPage({
   const { id } = await params;
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await apiForRequest();
-
-  const note = await queries.deliveryNotes.findById(id);
+  const { ctx, data: note } = await withSession((queries) => queries.deliveryNotes.findById(id));
 
   // 404 y no 403: un 403 confirmaria que el documento existe en otra empresa.
   if (!note) notFound();

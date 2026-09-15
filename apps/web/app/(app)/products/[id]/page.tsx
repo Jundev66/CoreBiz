@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pencil } from 'lucide-react';
 import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { setProductStatusAction } from '@/actions/sales';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { buttonClasses } from '@/ui/button';
@@ -41,10 +41,15 @@ export default async function ProductDetailPage({
   const format = await getFormatter();
   const { id } = await params;
   const { guardado } = await searchParams;
-  const { ctx, queries } = await apiForRequest();
-
-  const product = await queries.products.byId(id);
+  const {
+    ctx,
+    queries,
+    data: product,
+  } = await withSession((readModels) => readModels.products.byId(id));
   if (product === null) notFound();
+
+  // The movements wait for the product: whether there is a ledger depends on it tracking
+  // stock, and they need `stock:read`, which a role can lack while still seeing the product.
 
   const movements = product.trackStock ? await queries.products.movements(product.id, 50) : [];
   const canWrite = can(ctx.actor, 'product:write');

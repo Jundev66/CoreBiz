@@ -2,8 +2,8 @@ import 'server-only';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { Plan, asId, type Role, type TenantId, type UserId } from '@corebiz/domain';
-import type { TenantContext } from '@corebiz/application';
-import { get } from './client';
+import type { ReadModels, TenantContext } from '@corebiz/application';
+import { ApiForbiddenError, get } from './client';
 import { httpCommands } from './commands';
 import { httpReadModels } from './read-models';
 
@@ -157,3 +157,37 @@ export const apiForRequest = cache(async (_tenantSlug?: string) => {
 
   return { ctx, session, queries: httpReadModels(), ...httpCommands() };
 });
+
+/** A read that answers `null` when the API refuses it for this role (403). */
+export async function unlessForbidden<T>(read: Promise<T>): Promise<T | null> {
+  try {
+    return await read;
+  } catch (error) {
+    if (error instanceof ApiForbiddenError) return null;
+    throw error;
+  }
+}
+
+/**
+ * The session and a screen's own read, sent at the same time.
+ *
+ * Every screen used to ask for the session, wait for it, check the role and only then ask for
+ * its data: two trips to the API in a row on every navigation. Both now leave together, and
+ * the role is still checked — afterwards, against the session — while a 403 from the API
+ * arrives as `null` for the screen to show "no access" or answer 404.
+ *
+ * `allSettled` and not `all`, and the order of the checks is the point: when the session
+ * fails it has to win. Its failure is a redirect to sign in or to create the company, and
+ * with `all` whichever promise rejected first would decide — sometimes a data error in front
+ * of someone who only needed to sign in again.
+ */
+export async function withSession<T>(read: (queries: ReadModels) => Promise<T>) {
+  const [session, data] = await Promise.allSettled([
+    apiForRequest(),
+    unlessForbidden(read(httpReadModels())),
+  ]);
+
+  if (session.status === 'rejected') throw session.reason;
+  if (data.status === 'rejected') throw data.reason;
+  return { ...session.value, data: data.value };
+}
