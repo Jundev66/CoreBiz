@@ -49,5 +49,13 @@ export function safeInternalPath(target: string | null | undefined): string {
   // internal, however much it started with a slash.
   if (resolved.origin !== CONTROL_ORIGIN) return '/';
 
+  /*
+   * And the check that is NOT enough on its own. Dot segments are resolved above, so
+   * `/.//evil.example` or `/%2e//evil.example` stay on the control origin yet come out as
+   * `//evil.example` — a protocol-relative URL that `router.replace` and `href` send
+   * off-site. A path may never start with two separators.
+   */
+  if (/^[\\/]{2}/.test(resolved.pathname)) return '/';
+
   return `${resolved.pathname}${resolved.search}${resolved.hash}`;
 }

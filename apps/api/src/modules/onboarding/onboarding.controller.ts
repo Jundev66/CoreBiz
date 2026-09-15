@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, NotFoundException, Post, Query } from '@nestjs/common';
+import { Body, Controller, HttpCode, Inject, NotFoundException, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ExchangeRate } from '@corebiz/domain';
@@ -105,13 +105,19 @@ export class OnboardingController {
    * Un token invalido, caducado, revocado o ya usado dan el MISMO 404, a proposito:
    * con un token valido en la mano ya se sabe todo esto, y con uno invalido no se
    * aprende nada.
+   *
+   * POST even though it changes nothing, because the token is a live credential for seven
+   * days. In a query string it landed in the platform request logs of both Vercel projects,
+   * which our own log filter does not reach. In a body it does not. 200, not 201: nothing
+   * is created.
    */
-  @Get('invitations/preview')
+  @Post('invitations/preview')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Previsualizar una invitacion sin aceptarla' })
   async preview(
-    @Query(new ZodValidationPipe(tokenSchema)) query: z.infer<typeof tokenSchema>,
+    @Body(new ZodValidationPipe(tokenSchema)) body: z.infer<typeof tokenSchema>,
   ): Promise<InvitationPreview> {
-    const preview = await previewInvitation(databaseUrl(), this.identity.userId, query.token);
+    const preview = await previewInvitation(databaseUrl(), this.identity.userId, body.token);
     if (preview === null)
       throw new NotFoundException({ errorKind: 'InvitationNotFound', errorParams: {} });
     return preview;

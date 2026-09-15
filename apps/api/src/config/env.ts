@@ -121,6 +121,8 @@ const schema = z
     DEMO_MAX_READONLY_PER_HOUR: z.coerce.number().int().positive().default(60),
     /** Writes per verified user per hour through the API. See `WriteThrottleGuard`. */
     API_WRITES_PER_HOUR: z.coerce.number().int().positive().default(600),
+    /** Reads per verified user per minute, per API instance. See `ReadThrottleGuard`. */
+    API_READS_PER_MINUTE: z.coerce.number().int().positive().default(1_200),
   })
   .superRefine((value, ctx) => {
     if (value.DATA_DRIVER === 'postgres' && value.DATABASE_URL === undefined) {

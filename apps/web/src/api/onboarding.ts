@@ -77,14 +77,10 @@ export async function previewInvitationViaApi(
   token: string,
   invitationToken: string,
 ): Promise<InvitationPreview | null> {
-  const res = await fetch(
-    `${apiBaseUrl()}/v1/invitations/preview?token=${encodeURIComponent(invitationToken)}`,
-    {
-      headers: { authorization: `Bearer ${token}` },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(25_000),
-    },
-  ).catch(() => null);
+  // A POST body, not a query string: the token must not reach the platform's request logs.
+  const res = await post(token, '/v1/invitations/preview', { token: invitationToken }).catch(
+    () => null,
+  );
 
   if (res === null || !res.ok) return null;
 

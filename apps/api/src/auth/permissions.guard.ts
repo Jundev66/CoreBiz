@@ -45,7 +45,15 @@ export class PermissionsGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    if (required === undefined) return true;
+    /*
+     * A handler without a declared permission is DENIED, not waved through. Every handler
+     * behind this guard declares one today; the point is the next one. Reads have no use
+     * case behind them to catch a missing check, so a new GET without the decorator would
+     * have been open to every member, `viewer` included, with nothing turning red.
+     */
+    if (required === undefined) {
+      throw new ForbiddenException({ errorKind: 'Forbidden', errorParams: {} });
+    }
     if (can(this.ctx.actor, required)) return true;
 
     throw new ForbiddenException({ errorKind: 'Forbidden', errorParams: { permission: required } });

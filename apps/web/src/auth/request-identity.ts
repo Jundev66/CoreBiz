@@ -1,4 +1,5 @@
 import 'server-only';
+import { inMemoryRateLimiter } from '@corebiz/application/ports';
 import { callInternal, InternalCallFailed } from '@/api/internal';
 
 /*
@@ -15,17 +16,26 @@ export interface RateLimitDecision {
 }
 
 /**
+ * The counter used while the API does not answer. One per web instance.
+ *
+ * It does not replace the shared counter — several instances each keep their own — but it
+ * turns "unlimited" into "limited per instance" for exactly the moments an attacker can
+ * produce on purpose: flood the API until the internal call times out, then try passwords.
+ */
+const fallbackLimiter = inMemoryRateLimiter();
+
+/**
  * Registra un intento y dice si se admite.
  *
  * El contador vive en la API porque necesita Postgres: una ventana por proceso no
  * limita nada cuando hay varias instancias sirviendo, y en Vercel cada invocacion
  * puede ser un proceso nuevo.
  *
- * IF THE API DOES NOT ANSWER, the attempt is allowed. It is an uncomfortable decision and
- * the right one: failing closed would make the sign-in form unusable during a cold start
- * or a transient outage to avoid a few extra attempts in that same window. The limit
- * protects against brute force, not a flood, and a brute force that needs the API to be
- * down to get through gets only those moments to try.
+ * IF THE API DOES NOT ANSWER, the attempt is counted in this instance instead. Failing
+ * closed would make the sign-in form unusable during a cold start or a transient outage;
+ * failing open, as it used to, let anyone who could slow the API down switch every login,
+ * signup and reset limit off. The local counter keeps the form usable for a person and
+ * still stops a dictionary.
  */
 export async function hitRateLimit(
   bucket: string,
@@ -37,11 +47,11 @@ export async function hitRateLimit(
   } catch (error) {
     if (error instanceof InternalCallFailed) {
       /*
-       * Open only when the API is merely UNREACHABLE (see above). A MISCONFIGURED secret
-       * in production — unset, or different between the two Vercel projects — used to fail open
-       * too, which silently turned off every login, signup and reset limit with nothing
-       * but a warning in the log. That never fixes itself, so it fails closed instead:
-       * sign-in stops working loudly and someone looks at the configuration.
+       * A MISCONFIGURED secret in production — unset, or different between the two Vercel
+       * projects — used to fail open too, which silently turned off every login, signup and
+       * reset limit with nothing but a warning in the log. That never fixes itself, so it
+       * fails closed instead: sign-in stops working loudly and someone looks at the
+       * configuration.
        */
       if (error.reason === 'misconfigured' && process.env.NODE_ENV === 'production') {
         console.error(
@@ -50,8 +60,14 @@ export async function hitRateLimit(
         );
         return { allowed: false, retryAfterSeconds: 60 };
       }
-      console.warn('[rate-limit] la API no respondio; se admite el intento:', error.message);
-      return { allowed: true };
+      console.warn(
+        '[rate-limit] the API did not answer; counting in this instance:',
+        error.message,
+      );
+      const local = await fallbackLimiter.hit(bucket, limit, windowSeconds);
+      return local.allowed
+        ? { allowed: true }
+        : { allowed: false, retryAfterSeconds: local.retryAfterSeconds };
     }
     throw error;
   }

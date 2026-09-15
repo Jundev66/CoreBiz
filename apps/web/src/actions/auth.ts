@@ -335,6 +335,13 @@ export async function updatePasswordAction(
   const { error } = await supabase.auth.updateUser({ password: parsed.data });
   if (error !== null) return { status: 'error', errorKind: 'SignUpFailed' };
 
+  /*
+   * A password reset is what someone does when they suspect their account is in other hands.
+   * Changing the password alone left every other session alive until its refresh token ran
+   * out — including the one they were trying to shut out. This one stays; the rest go.
+   */
+  await supabase.auth.signOut({ scope: 'others' });
+
   await clearRecovery();
   redirect('/');
 }

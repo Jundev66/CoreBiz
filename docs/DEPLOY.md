@@ -72,6 +72,10 @@ Viven en el panel y el repositorio no los puede comprobar.
 - **Authentication → Sign In / Providers**: inicio de sesión **anónimo desactivado**.
 - **Altas cerradas**: desactiva «Allow new users to sign up» **y** pon `SIGNUP_ENABLED=false`
   en los dos proyectos de Vercel. La variable cierra la aplicación, no Supabase Auth.
+- **Authentication → Rate Limits** (y CAPTCHA si el plan lo permite): revísalos. Los
+  límites de acceso, alta y recuperación de la aplicación solo cubren el camino de la web;
+  quien llame directamente a `/auth/v1` con la clave anon —pública por diseño— solo se topa
+  con los de Supabase.
 - **Authentication → URL Configuration**: el dominio de la web en **Site URL** y en
   **Redirect URLs**. Sin esto, los enlaces de recuperación e invitación apuntan a `localhost`.
 

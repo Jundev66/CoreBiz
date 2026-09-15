@@ -39,6 +39,16 @@ export default defineConfig({
       },
       {
         test: {
+          // Pure functions of the web app only. Anything that imports `server-only` or Next
+          // belongs in the E2E suite, where a real request exists.
+          name: 'web',
+          root: './apps/web',
+          environment: 'node',
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           // Levanta la API de verdad contra Supabase local y le habla por HTTP. Es el
           // unico sitio donde se comprueba que dos identidades distintas atendidas por
           // el MISMO proceso no se ven la una a la otra.
