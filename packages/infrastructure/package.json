@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@prisma/adapter-pg": "7.10.0",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   }
