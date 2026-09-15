@@ -27,30 +27,31 @@ const SECTIONS: readonly { id: SettingsSection; href: string; permission?: Permi
   { id: 'audit', href: '/settings/audit', permission: 'audit:read' },
 ];
 
+/** A segmented control: it scrolls sideways on its own instead of pushing the page wider. */
 export async function SettingsNav({ current, actor }: { current: SettingsSection; actor: Actor }) {
   const t = await getTranslations();
 
   return (
-    <nav aria-label={t('settings.title')} className="mb-8 flex flex-wrap gap-2">
-      {SECTIONS.filter(({ permission }) => permission === undefined || can(actor, permission)).map(
-        (section) => {
+    <nav aria-label={t('settings.title')} className="mb-6 sm:mb-8">
+      <div className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-control bg-subtle p-1">
+        {SECTIONS.filter(
+          ({ permission }) => permission === undefined || can(actor, permission),
+        ).map((section) => {
           const active = section.id === current;
           return (
             <Link
               key={section.id}
               href={section.href}
               aria-current={active ? 'page' : undefined}
-              className={
-                active
-                  ? 'rounded-md bg-[var(--color-brand)] px-3 py-1.5 text-sm font-medium text-[var(--color-brand-ink)]'
-                  : 'rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]'
-              }
+              className={`rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                active ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink'
+              }`}
             >
               {t(`settings.tabs.${section.id}`)}
             </Link>
           );
-        },
-      )}
+        })}
+      </div>
     </nav>
   );
 }

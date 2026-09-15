@@ -1,3 +1,8 @@
+import { Archive, ArchiveRestore } from 'lucide-react';
+import { buttonClasses } from '@/ui/button';
+import { Badge } from '@/ui/feedback';
+import { Card } from '@/ui/primitives';
+
 /**
  * Piezas comunes de las fichas de detalle.
  *
@@ -33,24 +38,26 @@ export function DetailList({
   emptyLabel: string;
 }) {
   return (
-    <dl className="grid gap-x-8 gap-y-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-5 sm:grid-cols-2">
-      {rows.map((row) => (
-        <div key={row.label}>
-          <dt className="text-xs uppercase tracking-wide text-[var(--color-muted)]">{row.label}</dt>
-          <dd
-            className={
-              row.value === null
-                ? 'mt-1 text-[var(--color-muted)]'
-                : row.mono === true
-                  ? 'mt-1 font-mono text-sm'
-                  : 'mt-1'
-            }
-          >
-            {row.value ?? emptyLabel}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <Card>
+      <dl className="grid gap-x-8 gap-y-5 p-5 sm:grid-cols-2 sm:p-6">
+        {rows.map((row) => (
+          <div key={row.label} className="min-w-0">
+            <dt className="text-xs font-medium text-muted">{row.label}</dt>
+            <dd
+              className={
+                row.value === null
+                  ? 'mt-1 text-[15px] text-muted'
+                  : row.mono === true
+                    ? 'mt-1 font-mono text-sm break-all text-ink'
+                    : 'mt-1 text-[15px] break-words text-ink'
+              }
+            >
+              {row.value ?? emptyLabel}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </Card>
   );
 }
 
@@ -70,15 +77,7 @@ export function StatusBadge({
   archivedLabel: string;
 }) {
   return (
-    <span
-      className={
-        archived
-          ? 'rounded-full border border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-3 py-1 text-xs font-medium text-[var(--color-warn-ink)]'
-          : 'rounded-full border border-[var(--color-line)] px-3 py-1 text-xs font-medium'
-      }
-    >
-      {archived ? archivedLabel : activeLabel}
-    </span>
+    <Badge tone={archived ? 'warn' : 'success'}>{archived ? archivedLabel : activeLabel}</Badge>
   );
 }
 
@@ -105,14 +104,14 @@ export function StatusToggle({
   archiveLabel: string;
   restoreLabel: string;
 }) {
+  const Icon = archived ? ArchiveRestore : Archive;
+
   return (
     <form action={action}>
       <input type="hidden" name={idField} value={id} />
       <input type="hidden" name="archived" value={archived ? 'false' : 'true'} />
-      <button
-        type="submit"
-        className="rounded-md border border-[var(--color-line)] px-3 py-1.5 text-sm transition hover:border-[var(--color-brand)]"
-      >
+      <button type="submit" className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
+        <Icon aria-hidden="true" className="size-4" strokeWidth={1.75} />
         {archived ? restoreLabel : archiveLabel}
       </button>
     </form>

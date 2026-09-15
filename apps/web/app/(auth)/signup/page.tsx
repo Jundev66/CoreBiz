@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { signUpAction } from '@/actions/auth';
 import { demoConfig, signupConfig } from '@/demo/sandbox';
 import { AuthForm } from '@/ui/auth-form';
+import { buttonClasses } from '@/ui/button';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -28,21 +29,20 @@ export default async function SignUpPage() {
   if (!signupConfig.enabled()) {
     return (
       <>
-        <h1 className="text-2xl font-semibold tracking-tight">{t('auth.signup.closedTitle')}</h1>
-        <p className="mt-2 mb-6 text-sm text-[var(--color-muted)]">{t('auth.signup.closedBody')}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
+          {t('auth.signup.closedTitle')}
+        </h1>
+        <p className="mt-1.5 mb-6 text-sm text-muted">{t('auth.signup.closedBody')}</p>
 
         {demoConfig.enabled() && (
-          <Link
-            href="/demo"
-            className="block w-full rounded-md bg-[var(--color-brand)] px-5 py-3 text-center text-sm font-medium text-[var(--color-brand-ink)]"
-          >
+          <Link href="/demo" className={buttonClasses({ size: 'lg', block: true })}>
             {t('auth.signup.closedDemo')}
           </Link>
         )}
 
-        <p className="mt-6 text-sm text-[var(--color-muted)]">
+        <p className="mt-6 text-center text-sm text-muted">
           {t('auth.signup.haveAccount')}{' '}
-          <Link href="/login" className="underline underline-offset-4">
+          <Link href="/login" className="font-medium text-brand hover:underline">
             {t('auth.signup.signIn')}
           </Link>
         </p>
@@ -52,8 +52,8 @@ export default async function SignUpPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">{t('auth.signup.title')}</h1>
-      <p className="mt-2 mb-6 text-sm text-[var(--color-muted)]">{t('auth.signup.subtitle')}</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">{t('auth.signup.title')}</h1>
+      <p className="mt-1.5 mb-6 text-sm text-muted">{t('auth.signup.subtitle')}</p>
 
       {/*
         Tres campos y ni uno mas. Cada pregunta extra en un alta es una razon para
@@ -86,9 +86,9 @@ export default async function SignUpPage() {
         ]}
       />
 
-      <p className="mt-6 text-sm text-[var(--color-muted)]">
+      <p className="mt-6 text-center text-sm text-muted">
         {t('auth.signup.haveAccount')}{' '}
-        <Link href="/login" className="underline underline-offset-4">
+        <Link href="/login" className="font-medium text-brand hover:underline">
           {t('auth.signup.signIn')}
         </Link>
       </p>

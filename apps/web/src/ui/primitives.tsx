@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, type LucideIcon } from 'lucide-react';
+import { buttonClasses } from '@/ui/button';
 
 /**
  * Las piezas que se repetian a mano en cada pantalla.
@@ -19,9 +20,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div
-      className={`rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-xs)] ${className}`}
-    >
+    <div className={`rounded-card border border-line bg-surface shadow-xs ${className}`}>
       {children}
     </div>
   );
@@ -33,14 +32,31 @@ export function Card({
  * El valor va en tabular para que una columna de importes no baile, y la etiqueta
  * ARRIBA: leer primero que es y despues cuanto evita tener que volver la vista atras.
  */
-export function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+export function Stat({
+  label,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  icon?: LucideIcon;
+}) {
   return (
-    <Card className="p-5">
-      <p className="text-xs font-medium tracking-wide text-[var(--color-muted)] uppercase">
-        {label}
+    <Card className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] font-medium text-muted">{label}</p>
+        {Icon !== undefined && (
+          <span className="grid size-8 shrink-0 place-items-center rounded-control bg-brand-soft text-brand">
+            <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-[28px]">
+        {value}
       </p>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
-      {hint !== undefined && <p className="mt-1 text-xs text-[var(--color-muted)]">{hint}</p>}
+      {hint !== undefined && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </Card>
   );
 }
@@ -54,8 +70,8 @@ export function SectionTitle({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-4">
-      <h2 className="text-sm font-semibold text-[var(--color-ink)]">{children}</h2>
+    <div className="mb-3 flex items-center justify-between gap-4">
+      <h2 className="text-base font-semibold text-ink">{children}</h2>
       {action}
     </div>
   );
@@ -72,9 +88,9 @@ export function BackLink({ href, children }: { href: string; children: React.Rea
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] underline-offset-4 transition hover:text-[var(--color-ink)] hover:underline"
+      className="-ml-1 inline-flex items-center gap-1.5 rounded-control px-1 py-1 text-sm font-medium text-muted transition-colors hover:text-ink"
     >
-      <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
+      <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={2} />
       {children}
     </Link>
   );
@@ -83,10 +99,7 @@ export function BackLink({ href, children }: { href: string; children: React.Rea
 /** Boton secundario, en forma de enlace. */
 export function SecondaryLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-line)] bg-[var(--color-surface)] px-3.5 py-2 text-sm font-medium transition hover:border-[var(--color-line-strong)] hover:bg-[var(--color-subtle)]"
-    >
+    <Link href={href} className={buttonClasses({ variant: 'secondary' })}>
       {children}
     </Link>
   );

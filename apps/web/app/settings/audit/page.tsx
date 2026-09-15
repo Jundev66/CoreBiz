@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
+import { Download, History, Lock } from 'lucide-react';
 import { apiForRequest } from '@/api/session';
 import { Shell, TableFrame, Empty } from '@/ui/shell';
+import { Button, ButtonLink, buttonClasses } from '@/ui/button';
+import { DesktopOnly, MobileList } from '@/ui/list';
 import { SettingsNav } from '@/ui/settings-nav';
 import { dayParam, textParam } from '@/ui/filter-params';
 
@@ -60,6 +62,9 @@ export default async function AuditPage({
       ])
     : [{ items: [], nextCursor: null }, []];
 
+  const when = (occurredAt: Date): string =>
+    format.dateTime(occurredAt, { dateStyle: 'short', timeStyle: 'short' });
+
   return (
     <Shell
       ctx={ctx}
@@ -69,110 +74,146 @@ export default async function AuditPage({
     >
       <SettingsNav current="audit" actor={ctx.actor} />
 
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-medium">{t('settings.audit.heading')}</h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            {t('settings.audit.description')}
-          </p>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-ink">{t('settings.audit.heading')}</h2>
+            <p className="mt-1 text-sm text-muted">{t('settings.audit.description')}</p>
+          </div>
+
+          {/* A plain anchor, not a client-side Link: it is a file download from an API route. */}
+          <a
+            href={`/api/audit/export?${exportQuery(filters)}`}
+            className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'self-start' })}
+          >
+            <Download aria-hidden="true" className="size-4" strokeWidth={2} />
+            {t('settings.audit.export')}
+          </a>
         </div>
 
-        <a
-          href={`/api/audit/export?${exportQuery(filters)}`}
-          className="rounded-md border border-[var(--color-line)] px-4 py-2 text-sm font-medium"
-        >
-          {t('settings.audit.export')}
-        </a>
-      </div>
-
-      {!canRead ? (
-        <Empty>{t('settings.audit.notAllowed')}</Empty>
-      ) : (
-        <>
-          {/* GET y no una Server Action: los filtros pertenecen a la URL, para
-              que un enlace a "todo lo que hizo tal persona en marzo" se pueda
-              compartir y guardar. */}
-          <form method="get" className="mb-6 flex flex-wrap items-end gap-4">
-            <div>
-              <label htmlFor="action" className="block text-sm font-medium">
-                {t('settings.audit.action')}
-              </label>
-              <select
-                id="action"
-                name="action"
-                defaultValue={filters.action ?? ''}
-                className="mt-1.5 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
-              >
-                <option value="">{t('settings.audit.allActions')}</option>
-                {actions.map((action) => (
-                  <option key={action} value={action}>
-                    {action}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <DateField name="from" label={t('settings.audit.from')} value={filters.from} />
-            <DateField name="to" label={t('settings.audit.to')} value={filters.to} />
-
-            <button
-              type="submit"
-              className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
+        {!canRead ? (
+          <Empty icon={Lock}>{t('settings.audit.notAllowed')}</Empty>
+        ) : (
+          <>
+            {/* GET y no una Server Action: los filtros pertenecen a la URL, para
+                que un enlace a "todo lo que hizo tal persona en marzo" se pueda
+                compartir y guardar. */}
+            <form
+              method="get"
+              className="grid grid-cols-2 gap-3 rounded-card border border-line bg-surface p-4 shadow-xs sm:flex sm:flex-wrap sm:items-end sm:gap-4"
             >
-              {t('settings.audit.filter')}
-            </button>
+              <div className="col-span-2 sm:col-span-1">
+                <label htmlFor="action" className="block text-sm font-medium text-ink">
+                  {t('settings.audit.action')}
+                </label>
+                <select
+                  id="action"
+                  name="action"
+                  defaultValue={filters.action ?? ''}
+                  className={`${CONTROL} sm:min-w-48`}
+                >
+                  <option value="">{t('settings.audit.allActions')}</option>
+                  {actions.map((action) => (
+                    <option key={action} value={action}>
+                      {action}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {(filters.action ?? filters.from ?? filters.to) !== null && (
-              <Link href="/settings/audit" className="text-sm underline underline-offset-4">
-                {t('settings.audit.clear')}
-              </Link>
+              <DateField name="from" label={t('settings.audit.from')} value={filters.from} />
+              <DateField name="to" label={t('settings.audit.to')} value={filters.to} />
+
+              <div className="col-span-2 flex flex-wrap items-center gap-2">
+                <Button type="submit">{t('settings.audit.filter')}</Button>
+
+                {(filters.action ?? filters.from ?? filters.to) !== null && (
+                  <ButtonLink href="/settings/audit" variant="ghost">
+                    {t('settings.audit.clear')}
+                  </ButtonLink>
+                )}
+              </div>
+            </form>
+
+            {page.items.length === 0 ? (
+              <Empty icon={History}>{t('settings.audit.empty')}</Empty>
+            ) : (
+              <>
+                <DesktopOnly>
+                  <TableFrame>
+                    <thead>
+                      <tr className="border-b border-line bg-subtle/60">
+                        <th scope="col" className={TH}>
+                          {t('settings.audit.when')}
+                        </th>
+                        <th scope="col" className={TH}>
+                          {t('settings.audit.who')}
+                        </th>
+                        <th scope="col" className={TH}>
+                          {t('settings.audit.action')}
+                        </th>
+                        <th scope="col" className={TH}>
+                          {t('settings.audit.detail')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {page.items.map((entry) => (
+                        <tr
+                          key={entry.id}
+                          className="border-b border-line align-top transition-colors last:border-0 hover:bg-subtle/40"
+                        >
+                          <td className="px-4 py-3 whitespace-nowrap text-muted tabular-nums">
+                            {when(entry.occurredAt)}
+                          </td>
+                          <td className="px-4 py-3 text-ink-soft">{entry.actorEmail ?? '—'}</td>
+                          <td className="px-4 py-3 font-mono text-xs whitespace-nowrap text-ink">
+                            {entry.action}
+                          </td>
+                          <td className="px-4 py-3 break-words text-muted">
+                            {entry.summary === null ? '—' : summarize(entry.summary)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </TableFrame>
+                </DesktopOnly>
+
+                <MobileList>
+                  {page.items.map((entry) => (
+                    <li key={entry.id} className="px-4 py-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="min-w-0 truncate font-mono text-xs font-medium text-ink">
+                          {entry.action}
+                        </p>
+                        <p className="shrink-0 text-xs text-muted tabular-nums">
+                          {when(entry.occurredAt)}
+                        </p>
+                      </div>
+                      <p className="mt-1 truncate text-[13px] text-ink-soft">
+                        {entry.actorEmail ?? '—'}
+                      </p>
+                      {entry.summary !== null && (
+                        <p className="mt-1 text-[13px] break-words text-muted">
+                          {summarize(entry.summary)}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </MobileList>
+              </>
             )}
-          </form>
-
-          {page.items.length === 0 ? (
-            <Empty>{t('settings.audit.empty')}</Empty>
-          ) : (
-            <TableFrame>
-              <thead>
-                <tr className="border-b border-[var(--color-line)] text-[var(--color-muted)]">
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {t('settings.audit.when')}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {t('settings.audit.who')}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {t('settings.audit.action')}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {t('settings.audit.detail')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {page.items.map((entry) => (
-                  <tr key={entry.id} className="border-b border-[var(--color-line)] last:border-0">
-                    <td className="px-4 py-3 whitespace-nowrap text-[var(--color-muted)]">
-                      {format.dateTime(entry.occurredAt, {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </td>
-                    <td className="px-4 py-3">{entry.actorEmail ?? '—'}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{entry.action}</td>
-                    <td className="px-4 py-3 text-[var(--color-muted)]">
-                      {entry.summary === null ? '—' : summarize(entry.summary)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </TableFrame>
-          )}
-        </>
-      )}
+          </>
+        )}
+      </div>
     </Shell>
   );
 }
+
+const TH = 'px-4 py-2.5 text-xs font-medium tracking-wide text-muted uppercase';
+
+const CONTROL =
+  'mt-1.5 h-10 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink shadow-xs transition-colors focus:border-brand';
 
 /**
  * Los mismos filtros que muestra la tabla, en la URL de descarga.
@@ -198,8 +239,8 @@ function summarize(summary: Readonly<Record<string, unknown>>): string {
 
 function DateField({ name, label, value }: { name: string; label: string; value: string | null }) {
   return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium">
+    <div className="min-w-0">
+      <label htmlFor={name} className="block text-sm font-medium text-ink">
         {label}
       </label>
       <input
@@ -207,7 +248,7 @@ function DateField({ name, label, value }: { name: string; label: string; value:
         name={name}
         type="date"
         defaultValue={value ?? ''}
-        className="mt-1.5 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+        className={`${CONTROL} sm:w-auto`}
       />
     </div>
   );

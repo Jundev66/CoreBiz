@@ -33,12 +33,16 @@ export async function AssistantPanel() {
      * they are. With the label set, the name does not depend on state.
      */
     <details
+      data-assistant-fab
       aria-label={t('assistant.title')}
-      className="fixed right-4 bottom-4 z-40 w-[min(22rem,calc(100vw-2rem))] print:hidden"
+      // Above the phone tab bar (h-16 plus the safe area) and back to the corner on desktop.
+      className="fixed right-3 bottom-20 z-40 w-[min(22rem,calc(100vw-1.5rem))] lg:right-4 lg:bottom-4 print:hidden"
     >
-      <summary className="ml-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium shadow-[var(--shadow-md)] transition hover:border-[var(--color-line-strong)] [&::-webkit-details-marker]:hidden">
+      <summary className="ml-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-pill border border-line bg-surface px-3.5 py-2 text-sm font-medium shadow-md transition hover:border-line-strong [&::-webkit-details-marker]:hidden">
         <CircleHelp aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
-        {t('assistant.title')}
+        {/* Icon-only on phones, where the pill sat on top of list rows. The `<details>` keeps
+            its name through `aria-label`, and the summary still reads the word. */}
+        <span className="sr-only sm:not-sr-only">{t('assistant.title')}</span>
         {/* A dot, not a number: there is nothing to count, only something to look at. */}
         {error !== null && (
           <span

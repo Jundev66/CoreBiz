@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createCustomerAction, updateCustomerAction, type ActionState } from '@/actions/customers';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
 
 const INITIAL: ActionState = { status: 'idle' };
@@ -50,7 +53,7 @@ export function CustomerForm({ customer }: { customer?: CustomerFormValues }) {
   const valor = (v: string | null | undefined) => v ?? '';
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form action={formAction} className="space-y-6" noValidate>
       {editing && <input type="hidden" name="customerId" value={customer.id} />}
 
       {/* Al dar de alta no se pide el codigo: lo genera el sistema —`CLT26000001`— y
@@ -58,9 +61,8 @@ export function CustomerForm({ customer }: { customer?: CustomerFormValues }) {
           un problema del sistema: inventar un formato el primer dia y recordarlo cada
           vez. Al corregir ya existe, asi que se enseña. */}
       {editing && (
-        <p className="text-sm text-[var(--color-muted)]">
-          {t('customers.code')}:{' '}
-          <span className="font-mono text-[var(--color-ink)]">{customer.code}</span>
+        <p className="inline-flex items-center gap-1.5 rounded-control bg-subtle px-3 py-1.5 text-sm text-muted">
+          {t('customers.code')}: <span className="font-mono text-ink">{customer.code}</span>
         </p>
       )}
 
@@ -107,50 +109,58 @@ export function CustomerForm({ customer }: { customer?: CustomerFormValues }) {
 
       {/* La direccion. En tres campos porque quien lleva la mercancia busca la ciudad
           antes que la calle. */}
-      <fieldset className="grid gap-4 sm:grid-cols-2">
-        {/* El grupo se distingue de sus campos: mismo peso y mismo tamaño que las
-            etiquetas de dentro hacia que "Direccion" pareciera un campo mas. */}
-        <legend className="mb-2 text-xs font-semibold tracking-wide text-[var(--color-muted)] uppercase">
-          {t('customers.address')}
-        </legend>
-        <Field
-          name="addressLine1"
-          label={t('customers.addressLine1')}
-          error={fieldError('addressLine1')}
-          autoComplete="address-line1"
-          defaultValue={valor(customer?.addressLine1)}
-        />
-        <Field
-          name="addressCity"
-          label={t('customers.addressCity')}
-          error={fieldError('addressCity')}
-          autoComplete="address-level2"
-          defaultValue={valor(customer?.addressCity)}
-        />
-        <Field
-          name="addressState"
-          label={t('customers.addressState')}
-          error={fieldError('addressState')}
-          autoComplete="address-level1"
-          defaultValue={valor(customer?.addressState)}
-        />
-      </fieldset>
+      <div className="border-t border-line pt-6">
+        <fieldset className="grid gap-4 sm:grid-cols-2">
+          {/* El grupo se distingue de sus campos: mismo peso y mismo tamaño que las
+              etiquetas de dentro hacia que "Direccion" pareciera un campo mas. */}
+          <legend className="mb-4 text-base font-semibold text-ink">
+            {t('customers.address')}
+          </legend>
+          <div className="sm:col-span-2">
+            <Field
+              name="addressLine1"
+              label={t('customers.addressLine1')}
+              error={fieldError('addressLine1')}
+              autoComplete="address-line1"
+              defaultValue={valor(customer?.addressLine1)}
+            />
+          </div>
+          <Field
+            name="addressCity"
+            label={t('customers.addressCity')}
+            error={fieldError('addressCity')}
+            autoComplete="address-level2"
+            defaultValue={valor(customer?.addressCity)}
+          />
+          <Field
+            name="addressState"
+            label={t('customers.addressState')}
+            error={fieldError('addressState')}
+            autoComplete="address-level1"
+            defaultValue={valor(customer?.addressState)}
+          />
+        </fieldset>
+      </div>
 
       {/* El aviso ocupa sitio siempre que hay mensaje, y se anuncia a lectores de
           pantalla: un error que solo se ve no sirve a todo el mundo. */}
       {state.status === 'error' && state.errorKind && !state.fieldErrors && (
-        <p role="alert" className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm">
+        <Alert tone="danger" role="alert">
           {t(`errors.${state.errorKind}`, state.errorParams ?? {})}
-        </p>
+        </Alert>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-[var(--color-brand-ink)] transition disabled:opacity-60"
-      >
-        {pending ? '…' : t('common.save')}
-      </button>
+      <div className="flex flex-col-reverse gap-2 border-t border-line pt-6 sm:flex-row sm:justify-end">
+        <Link
+          href={editing ? `/customers/${customer.id}` : '/customers'}
+          className={buttonClasses({ variant: 'secondary' })}
+        >
+          {t('common.cancel')}
+        </Link>
+        <button type="submit" disabled={pending} className={buttonClasses()}>
+          {pending ? '…' : t('common.save')}
+        </button>
+      </div>
     </form>
   );
 }

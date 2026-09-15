@@ -10,7 +10,11 @@
     "deliveryNotes": "Delivery notes",
     "purchases": "Purchases",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "more": "More",
+    "account": "Your account",
+    "mobile": "Main navigation",
+    "deliveryNotesShort": "Notes"
   },
   "customers": {
     "title": "Customers",
@@ -246,7 +250,8 @@
     "averageTicket": "Average ticket",
     "stockValue": "Inventory value",
     "topProducts": "Best selling products",
-    "units": "Units"
+    "units": "Units",
+    "noSales": "No sales in this period yet."
   },
   "auth": {
     "email": "Email address",
@@ -332,7 +337,17 @@
     "seeAll": "See all",
     "ownAccount": "Want your own system?",
     "ownAccountHint": "Create an account and start with your business in under a minute.",
-    "signedOutLead": "Inventory, sales and delivery documents for businesses that need order, not a whole ERP."
+    "signedOutLead": "Inventory, sales and delivery documents for businesses that need order, not a whole ERP.",
+    "heroBadge": "Live demo · no sign-up",
+    "heroTitle": "Your shop counter, in order.",
+    "heroLead": "Customers, inventory and delivery notes in one place. Built for the phone and ready to work from the first minute.",
+    "valueStockTitle": "Inventory that stays current",
+    "valueStockBody": "Every delivery note updates stock and warns you when a product drops below its minimum.",
+    "valueNotesTitle": "Delivery notes in seconds",
+    "valueNotesBody": "Issue them, print them and record the delivery from your phone or computer.",
+    "valueTeamTitle": "Your team, with permissions",
+    "valueTeamBody": "Invite your people and decide what each role can see and do.",
+    "previewLabel": "CoreBiz preview"
   },
   "roles": {
     "owner": "Owner",

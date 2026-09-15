@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { ArrowLeft } from 'lucide-react';
 import { requestPasswordResetAction } from '@/actions/auth';
 import { AuthForm } from '@/ui/auth-form';
 
@@ -14,8 +15,8 @@ export default async function ForgotPasswordPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">{t('auth.forgot.title')}</h1>
-      <p className="mt-2 mb-6 text-sm text-[var(--color-muted)]">{t('auth.forgot.subtitle')}</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">{t('auth.forgot.title')}</h1>
+      <p className="mt-1.5 mb-6 text-sm text-muted">{t('auth.forgot.subtitle')}</p>
 
       {/*
         El mensaje de exito es el mismo exista o no la direccion. Decir "esa
@@ -30,8 +31,12 @@ export default async function ForgotPasswordPage() {
         fields={[{ name: 'email', label: t('auth.email'), type: 'email', autoComplete: 'email' }]}
       />
 
-      <p className="mt-6 text-sm">
-        <Link href="/login" className="underline underline-offset-4">
+      <p className="mt-6 text-center text-sm">
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-1.5 font-medium text-brand hover:underline"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={2} />
           {t('auth.forgot.back')}
         </Link>
       </p>

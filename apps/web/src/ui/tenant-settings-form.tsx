@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { updateTenantSettingsAction, type AdminState } from '@/actions/administration';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
 
 const INITIAL: AdminState = { status: 'idle' };
@@ -37,78 +39,67 @@ export function TenantSettingsForm({
   const [state, formAction, pending] = useActionState(updateTenantSettingsAction, INITIAL);
 
   return (
-    <form action={formAction} className="max-w-lg space-y-5">
-      <fieldset disabled={!canWrite || pending} className="space-y-5">
+    <form action={formAction} className="space-y-6">
+      {/* Said first, before the greyed-out fields, so nobody tries to type into them. */}
+      {!canWrite && <Alert tone="info">{t('settings.readOnlyNotice')}</Alert>}
+
+      <fieldset disabled={!canWrite || pending} className="space-y-6">
         <legend className="sr-only">{t('settings.business.heading')}</legend>
 
-        <Field
-          name="taxLabel"
-          label={t('settings.fields.taxLabel')}
-          hint={t('settings.hints.taxLabel')}
-          defaultValue={defaults.taxLabel}
-        />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
+            name="taxLabel"
+            label={t('settings.fields.taxLabel')}
+            hint={t('settings.hints.taxLabel')}
+            defaultValue={defaults.taxLabel}
+          />
 
-        <Field
-          name="taxRatePercent"
-          label={t('settings.fields.taxRate')}
-          hint={t('settings.hints.taxRate')}
-          defaultValue={defaults.taxRatePercent}
-          inputMode="decimal"
-        />
+          <Field
+            name="taxRatePercent"
+            label={t('settings.fields.taxRate')}
+            hint={t('settings.hints.taxRate')}
+            defaultValue={defaults.taxRatePercent}
+            inputMode="decimal"
+          />
 
-        <div>
-          <label htmlFor="baseCurrency" className="block text-sm font-medium">
-            {t('settings.fields.baseCurrency')}
-          </label>
-          <select
-            id="baseCurrency"
+          <Field
             name="baseCurrency"
+            label={t('settings.fields.baseCurrency')}
+            hint={t('settings.hints.baseCurrency')}
             defaultValue={defaults.baseCurrency}
-            aria-describedby="baseCurrency-hint"
-            className="mt-1.5 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2.5 text-base"
-          >
-            <option value="USD">USD</option>
-            <option value="VES">VES</option>
-          </select>
-          <p id="baseCurrency-hint" className="mt-1.5 text-xs text-[var(--color-muted)]">
-            {t('settings.hints.baseCurrency')}
-          </p>
+            options={[
+              { value: 'USD', label: 'USD' },
+              { value: 'VES', label: 'VES' },
+            ]}
+          />
+
+          <Field
+            name="exchangeRate"
+            label={t('settings.fields.exchangeRate')}
+            hint={t('settings.hints.exchangeRate')}
+            defaultValue={defaults.exchangeRate}
+            inputMode="decimal"
+          />
         </div>
 
-        <Field
-          name="exchangeRate"
-          label={t('settings.fields.exchangeRate')}
-          hint={t('settings.hints.exchangeRate')}
-          defaultValue={defaults.exchangeRate}
-          inputMode="decimal"
-        />
-
         {state.status === 'error' && state.errorKind !== undefined && (
-          <p
-            role="alert"
-            className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-          >
+          <Alert tone="danger" role="alert">
             {t(`settings.errors.${state.errorKind}`, state.errorParams ?? {})}
-          </p>
+          </Alert>
         )}
 
         {state.status === 'success' && (
-          <p role="status" className="rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
+          <Alert tone="success" role="status">
             {t('settings.saved')}
-          </p>
+          </Alert>
         )}
 
-        <button
-          type="submit"
-          className="rounded-md bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-[var(--color-brand-ink)] disabled:opacity-60"
-        >
-          {pending ? '…' : t('common.save')}
-        </button>
+        <div className="flex flex-col-reverse gap-2 border-t border-line pt-5 sm:flex-row sm:justify-end">
+          <button type="submit" className={buttonClasses()}>
+            {pending ? '…' : t('common.save')}
+          </button>
+        </div>
       </fieldset>
-
-      {!canWrite && (
-        <p className="text-sm text-[var(--color-muted)]">{t('settings.readOnlyNotice')}</p>
-      )}
     </form>
   );
 }

@@ -10,7 +10,11 @@
     "deliveryNotes": "Notas de entrega",
     "purchases": "Compras",
     "reports": "Reportes",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "more": "Más",
+    "account": "Tu cuenta",
+    "mobile": "Navegación principal",
+    "deliveryNotesShort": "Notas"
   },
   "customers": {
     "title": "Clientes",
@@ -246,7 +250,8 @@
     "averageTicket": "Ticket promedio",
     "stockValue": "Valor del inventario",
     "topProducts": "Productos más vendidos",
-    "units": "Unidades"
+    "units": "Unidades",
+    "noSales": "Todavía no hay ventas en este periodo."
   },
   "auth": {
     "email": "Correo electrónico",
@@ -332,7 +337,17 @@
     "seeAll": "Ver todo",
     "ownAccount": "¿Quieres tu propio sistema?",
     "ownAccountHint": "Crea una cuenta y empieza con tu negocio en menos de un minuto.",
-    "signedOutLead": "Inventario, ventas y documentos de entrega para empresas que necesitan orden y no un ERP entero."
+    "signedOutLead": "Inventario, ventas y documentos de entrega para empresas que necesitan orden y no un ERP entero.",
+    "heroBadge": "Demo en vivo · sin registro",
+    "heroTitle": "El mostrador de tu negocio, en orden.",
+    "heroLead": "Clientes, inventario y notas de entrega en un solo lugar. Pensado para el móvil y listo para trabajar desde el primer minuto.",
+    "valueStockTitle": "Inventario al día",
+    "valueStockBody": "Cada nota de entrega descuenta existencias y te avisa cuando un producto baja del mínimo.",
+    "valueNotesTitle": "Notas de entrega en segundos",
+    "valueNotesBody": "Emítelas, imprímelas y registra la entrega desde el teléfono o el ordenador.",
+    "valueTeamTitle": "Tu equipo, con permisos",
+    "valueTeamBody": "Invita a tu gente y decide qué puede ver y hacer cada rol.",
+    "previewLabel": "Vista previa de CoreBiz"
   },
   "roles": {
     "owner": "Dueño",

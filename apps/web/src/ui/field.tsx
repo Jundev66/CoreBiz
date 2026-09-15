@@ -2,6 +2,22 @@
 
 import { useTranslations } from 'next-intl';
 
+/*
+ * The look of every control: input, select and textarea.
+ *
+ * Exported so the hand-written controls of the line editors and action panels match `Field`
+ * exactly instead of re-typing the string. This module is a CLIENT module, so only client
+ * components can import these constants: a Server Component would receive a client
+ * reference instead of the text.
+ */
+export const CONTROL_BASE_CLASSES =
+  'w-full rounded-control border border-line-strong bg-surface px-3 text-[15px] text-ink shadow-xs transition placeholder:text-n-400 focus:border-brand focus:ring-3 focus:ring-brand/15 focus:outline-none aria-invalid:border-danger disabled:cursor-not-allowed disabled:bg-subtle disabled:text-muted sm:text-sm';
+export const CONTROL_CLASSES = `h-10 ${CONTROL_BASE_CLASSES}`;
+export const TEXTAREA_CLASSES = `min-h-24 py-2 ${CONTROL_BASE_CLASSES}`;
+export const LABEL_CLASSES = 'block text-sm font-medium text-ink';
+export const HINT_CLASSES = 'mt-1.5 text-xs text-muted';
+export const ERROR_CLASSES = 'mt-1.5 text-xs text-danger-ink';
+
 /**
  * El campo de formulario. UNO.
  *
@@ -41,6 +57,11 @@ export interface FieldProps {
   readonly placeholder?: string;
   readonly autoComplete?: string;
   readonly inputMode?: 'decimal' | 'text' | 'numeric';
+  /**
+   * With options the field renders as a `select`, with the same label, hint and error
+   * wiring as the text input. `placeholder` and `inputMode` do not apply to it.
+   */
+  readonly options?: readonly { readonly value: string; readonly label: string }[];
 }
 
 export function Field({
@@ -51,6 +72,7 @@ export function Field({
   optional,
   hint,
   error,
+  options,
   ...rest
 }: FieldProps) {
   const t = useTranslations();
@@ -81,40 +103,52 @@ export function Field({
     .filter(Boolean)
     .join(' ');
 
+  const shared = {
+    id: name,
+    name,
+    required,
+    'aria-invalid': error ? true : undefined,
+    ...(describedBy !== '' ? { 'aria-describedby': describedBy } : {}),
+  };
+
   return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium">
+    <div className="min-w-0">
+      <label htmlFor={name} className={LABEL_CLASSES}>
         {label}
         {required === true && (
-          <span aria-hidden="true" className="ml-0.5 text-[var(--color-danger-ink)]">
+          <span aria-hidden="true" className="ml-0.5 text-danger-ink">
             *
           </span>
         )}
         {optional === true && (
-          <span className="ml-1.5 text-xs font-normal text-[var(--color-muted)]">
-            {t('common.optional')}
-          </span>
+          <span className="ml-1.5 text-xs font-normal text-muted">{t('common.optional')}</span>
         )}
       </label>
 
-      <input
-        id={name}
-        name={name}
-        type={type}
-        required={required}
-        aria-invalid={error ? true : undefined}
-        {...(describedBy !== '' ? { 'aria-describedby': describedBy } : {})}
-        className="mt-1.5 w-full rounded-[var(--radius-control)] border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-sm transition placeholder:text-[var(--color-n-400)] focus:border-[var(--color-brand)] aria-invalid:border-[var(--color-danger)]"
-        {...rest}
-      />
+      {options !== undefined ? (
+        <select
+          {...shared}
+          defaultValue={rest.defaultValue}
+          autoComplete={rest.autoComplete}
+          className={`mt-1.5 ${CONTROL_CLASSES}`}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input {...shared} type={type} className={`mt-1.5 ${CONTROL_CLASSES}`} {...rest} />
+      )}
 
       {hint !== undefined && (
-        <p id={hintId} className="mt-1.5 text-xs text-[var(--color-muted)]">
+        <p id={hintId} className={HINT_CLASSES}>
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} className="mt-1.5 text-xs text-[var(--color-danger-ink)]">
+        <p id={errorId} className={ERROR_CLASSES}>
           {t(errorKey, { field: label })}
         </p>
       )}

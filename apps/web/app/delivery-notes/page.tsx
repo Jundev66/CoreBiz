@@ -1,16 +1,21 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
+import { Plus, Receipt } from 'lucide-react';
 import { apiForRequest } from '@/api/session';
 import { Shell, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
+import { ButtonLink } from '@/ui/button';
+import { Badge, type BadgeTone } from '@/ui/feedback';
+import { DesktopOnly, MobileList, MobileListItem } from '@/ui/list';
 import { noticeCode } from '@/ui/notice-code';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
-const STATUS_STYLES: Record<string, string> = {
-  issued: 'border-[var(--color-brand)] text-[var(--color-brand)]',
-  delivered: 'border-[var(--color-brand)] text-[var(--color-brand)]',
-  voided: 'border-[var(--color-danger)] text-[var(--color-danger-ink)] line-through',
+const STATUS_TONES: Record<string, BadgeTone> = {
+  draft: 'neutral',
+  issued: 'brand',
+  delivered: 'success',
+  voided: 'danger',
 };
 
 export default async function DeliveryNotesPage({
@@ -38,6 +43,10 @@ export default async function DeliveryNotesPage({
 
   const page = await queries.deliveryNotes.list({ limit: 50 });
 
+  const statusBadge = (status: string) => (
+    <Badge tone={STATUS_TONES[status] ?? 'neutral'}>{t(`deliveryNotes.statuses.${status}`)}</Badge>
+  );
+
   return (
     <Shell
       ctx={ctx}
@@ -48,69 +57,105 @@ export default async function DeliveryNotesPage({
         ? { toast: t('deliveryNotes.created', { number: createdCode }) }
         : {})}
       action={
-        <div className="flex items-end gap-6">
-          <PrimaryLink href="/delivery-notes/new">{t('deliveryNotes.new')}</PrimaryLink>
-        </div>
+        <PrimaryLink href="/delivery-notes/new">
+          <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+          {t('deliveryNotes.new')}
+        </PrimaryLink>
       }
     >
       {page.items.length === 0 ? (
-        <Empty>{t('deliveryNotes.empty')}</Empty>
+        <Empty
+          icon={Receipt}
+          action={
+            <ButtonLink href="/delivery-notes/new" size="sm">
+              <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+              {t('deliveryNotes.new')}
+            </ButtonLink>
+          }
+        >
+          {t('deliveryNotes.empty')}
+        </Empty>
       ) : (
-        <TableFrame>
-          <thead>
-            <tr className="border-b border-[var(--color-line)] text-[var(--color-muted)]">
-              <th scope="col" className="px-4 py-3 font-medium">
-                {t('deliveryNotes.number')}
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                {t('deliveryNotes.customer')}
-              </th>
-              <th scope="col" className="px-4 py-3 font-medium">
-                {t('deliveryNotes.status')}
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                {t('deliveryNotes.total')}
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium">
-                {t('deliveryNotes.totalBs')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <DesktopOnly>
+            <TableFrame>
+              <thead>
+                <tr className="border-b border-line bg-subtle/60">
+                  <th scope="col" className={TH}>
+                    {t('deliveryNotes.number')}
+                  </th>
+                  <th scope="col" className={TH}>
+                    {t('deliveryNotes.customer')}
+                  </th>
+                  <th scope="col" className={TH}>
+                    {t('deliveryNotes.status')}
+                  </th>
+                  <th scope="col" className={`${TH} text-right`}>
+                    {t('deliveryNotes.total')}
+                  </th>
+                  <th scope="col" className={`${TH} text-right`}>
+                    {t('deliveryNotes.totalBs')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.items.map((note) => (
+                  <tr
+                    key={note.id}
+                    className="border-b border-line transition-colors last:border-0 hover:bg-subtle/40"
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {/* The link text is ONLY the number: lists and tests open a note by it. */}
+                      <Link
+                        href={`/delivery-notes/${note.id}`}
+                        className="font-mono text-xs font-medium text-brand underline-offset-2 hover:underline"
+                      >
+                        {note.number}
+                      </Link>
+                      {note.issuedAt && (
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {format.dateTime(note.issuedAt, { dateStyle: 'medium' })}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-ink-soft">{note.customerName}</td>
+                    <td className="px-4 py-3">{statusBadge(note.status)}</td>
+                    <td
+                      className={`px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums ${note.status === 'voided' ? 'text-muted line-through' : ''}`}
+                    >
+                      $ {note.total}
+                    </td>
+                    {/* El equivalente en bolivares usa la tasa CONGELADA del documento,
+                        no la vigente hoy. Ver ADR 002. */}
+                    <td className="px-4 py-3 text-right whitespace-nowrap text-muted tabular-nums">
+                      Bs {note.totalSecondary}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          </DesktopOnly>
+
+          <MobileList>
             {page.items.map((note) => (
-              <tr key={note.id} className="border-b border-[var(--color-line)] last:border-0">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/delivery-notes/${note.id}`}
-                    className="font-mono text-xs underline-offset-2 hover:underline"
-                  >
-                    {note.number}
-                  </Link>
-                  {note.issuedAt && (
-                    <span className="ml-2 text-xs text-[var(--color-muted)]">
-                      {format.dateTime(note.issuedAt, { dateStyle: 'medium' })}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">{note.customerName}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-xs ${STATUS_STYLES[note.status] ?? ''}`}
-                  >
-                    {t(`deliveryNotes.statuses.${note.status}`)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">$ {note.total}</td>
-                {/* El equivalente en bolivares usa la tasa CONGELADA del documento,
-                    no la vigente hoy. Ver ADR 002. */}
-                <td className="px-4 py-3 text-right tabular-nums text-[var(--color-muted)]">
-                  Bs {note.totalSecondary}
-                </td>
-              </tr>
+              <MobileListItem
+                key={note.id}
+                href={`/delivery-notes/${note.id}`}
+                title={<span className="font-mono text-sm">{note.number}</span>}
+                subtitle={
+                  note.issuedAt
+                    ? `${note.customerName} · ${format.dateTime(note.issuedAt, { dateStyle: 'medium' })}`
+                    : note.customerName
+                }
+                trailing={`$ ${note.total}`}
+                trailingHint={statusBadge(note.status)}
+              />
             ))}
-          </tbody>
-        </TableFrame>
+          </MobileList>
+        </>
       )}
     </Shell>
   );
 }
+
+const TH = 'px-4 py-2.5 text-xs font-medium tracking-wide text-muted uppercase';

@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { Card } from '@/ui/primitives';
 import { CustomerForm } from '@/ui/customer-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -44,9 +44,9 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
       session={session}
       title={t('customers.edit')}
       subtitle={customer.name}
-      action={<BackLink href={`/customers/${id}`}>{t('customers.detail')}</BackLink>}
+      back={{ href: `/customers/${id}`, label: t('customers.detail') }}
     >
-      <div className="max-w-2xl">
+      <Card className="max-w-2xl p-5 sm:p-6">
         <CustomerForm
           customer={{
             id: customer.id,
@@ -61,7 +61,7 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
             addressState: customer.addressState,
           }}
         />
-      </div>
+      </Card>
     </Shell>
   );
 }

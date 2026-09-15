@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { Pencil } from 'lucide-react';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { setCustomerStatusAction } from '@/actions/customers';
 import { Shell } from '@/ui/shell';
-import { BackLink, SecondaryLink } from '@/ui/primitives';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
 import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,27 +43,33 @@ export default async function CustomerDetailPage({
   const customer = await queries.customers.byId(id);
   if (customer === null) notFound();
 
+  const canWrite = can(ctx.actor, 'customer:write');
+
   return (
     <Shell
       ctx={ctx}
       session={session}
       title={customer.name}
       subtitle={customer.code}
+      back={{ href: '/customers', label: t('customers.title') }}
       {...(guardado !== undefined ? { toast: t('common.saved') } : {})}
       action={
-        <div className="flex flex-wrap items-center gap-3">
-          <BackLink href="/customers">{t('customers.title')}</BackLink>
+        <>
           <StatusBadge
             archived={customer.archived}
             activeLabel={t('status.active')}
             archivedLabel={t('status.archived')}
           />
-          {can(ctx.actor, 'customer:write') && (
-            <SecondaryLink href={`/customers/${customer.id}/edit`}>
+          {canWrite && (
+            <Link
+              href={`/customers/${customer.id}/edit`}
+              className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+            >
+              <Pencil aria-hidden="true" className="size-4" strokeWidth={1.75} />
               {t('common.edit')}
-            </SecondaryLink>
+            </Link>
           )}
-          {can(ctx.actor, 'customer:write') && (
+          {canWrite && (
             <StatusToggle
               action={setCustomerStatusAction}
               idField="customerId"
@@ -70,33 +79,33 @@ export default async function CustomerDetailPage({
               restoreLabel={t('customers.restore')}
             />
           )}
-        </div>
+        </>
       }
     >
+      {/* The ONLY live region inside `main` on this screen: the archived notice. */}
       {customer.archived && (
-        <p
-          role="status"
-          className="mb-6 rounded-md border border-[var(--color-warn)] bg-[var(--color-warn)]/10 px-4 py-3 text-sm"
-        >
+        <Alert tone="warn" role="status" className="mb-6">
           {t('customers.archivedNotice')}
-        </p>
+        </Alert>
       )}
 
-      <DetailList
-        rows={[
-          { label: t('customers.code'), value: customer.code, mono: true },
-          { label: t('customers.name'), value: customer.name },
-          { label: t('customers.taxId'), value: customer.taxId },
-          { label: t('customers.email'), value: customer.email },
-          { label: t('customers.phone'), value: customer.phone },
-          { label: t('customers.address'), value: customer.address },
-          {
-            label: t('customers.creditLimit'),
-            value: customer.creditLimit === null ? null : `$ ${customer.creditLimit}`,
-          },
-        ]}
-        emptyLabel={t('common.notSet')}
-      />
+      <div className="max-w-4xl">
+        <DetailList
+          rows={[
+            { label: t('customers.code'), value: customer.code, mono: true },
+            { label: t('customers.name'), value: customer.name },
+            { label: t('customers.taxId'), value: customer.taxId },
+            { label: t('customers.email'), value: customer.email },
+            { label: t('customers.phone'), value: customer.phone },
+            { label: t('customers.address'), value: customer.address },
+            {
+              label: t('customers.creditLimit'),
+              value: customer.creditLimit === null ? null : `$ ${customer.creditLimit}`,
+            },
+          ]}
+          emptyLabel={t('common.notSet')}
+        />
+      </div>
     </Shell>
   );
 }

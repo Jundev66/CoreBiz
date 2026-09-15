@@ -4,6 +4,9 @@ import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { adjustStockAction } from '@/actions/sales';
 import type { ActionState } from '@/actions/customers';
+import { buttonClasses } from '@/ui/button';
+import { Alert, Badge } from '@/ui/feedback';
+import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 
 /**
  * Cuadrar el inventario de un producto tras contarlo.
@@ -34,19 +37,23 @@ export function StockAdjustForm({ productId, sku, name, onHand, unit }: StockAdj
   return (
     <form
       action={formAction}
-      className="mb-6 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-5 py-5"
+      className="rounded-card border border-line bg-surface p-5 shadow-xs sm:p-6"
     >
-      <h2 className="text-base font-medium">{t('products.adjustTitle')}</h2>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        <span className="font-mono text-xs">{sku}</span> · {name} ·{' '}
-        {t('products.currentStock', { onHand, unit })}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-ink">{t('products.adjustTitle')}</h2>
+          <p className="mt-1 text-sm text-muted">
+            <span className="font-mono text-xs">{sku}</span> · {name}
+          </p>
+        </div>
+        <Badge tone="brand">{t('products.currentStock', { onHand, unit })}</Badge>
+      </div>
 
       <input type="hidden" name="productId" value={productId} />
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">{t('products.countedBalance')}</span>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className={LABEL_CLASSES}>{t('products.countedBalance')}</span>
           <input
             name="newBalance"
             required
@@ -56,48 +63,41 @@ export function StockAdjustForm({ productId, sku, name, onHand, unit }: StockAdj
             autoComplete="off"
             autoFocus
             defaultValue={onHand}
-            className="w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2"
+            className={`mt-1.5 ${CONTROL_CLASSES}`}
           />
         </label>
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">{t('products.adjustReason')}</span>
+        <label className="block">
+          <span className={LABEL_CLASSES}>{t('products.adjustReason')}</span>
           <input
             name="reason"
             required
             maxLength={200}
             placeholder={t('products.adjustReasonHint')}
-            className="w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2"
+            className={`mt-1.5 ${CONTROL_CLASSES}`}
           />
         </label>
       </div>
 
       {state.status === 'error' && state.errorKind && (
-        <p
-          role="alert"
-          className="mt-4 rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-        >
+        <Alert tone="danger" role="alert" className="mt-4">
           {t(`errors.${state.errorKind}`, state.errorParams ?? {})}
-        </p>
+        </Alert>
       )}
 
       {state.status === 'success' && (
-        <p role="status" className="mt-4 rounded-md bg-[var(--color-brand)]/10 px-4 py-3 text-sm">
+        <Alert tone="success" role="status" className="mt-4">
           {t('products.adjusted', { onHand: state.createdCode ?? '', unit })}
-        </p>
+        </Alert>
       )}
 
-      <div className="mt-4 flex items-center gap-4">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)] disabled:opacity-60"
-        >
-          {pending ? t('common.saving') : t('products.adjustSubmit')}
-        </button>
-        <a href="/products" className="text-sm underline underline-offset-4">
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <a href="/products" className={buttonClasses({ variant: 'secondary' })}>
           {t('common.cancel')}
         </a>
+        <button type="submit" disabled={pending} className={buttonClasses()}>
+          {pending ? t('common.saving') : t('products.adjustSubmit')}
+        </button>
       </div>
     </form>
   );

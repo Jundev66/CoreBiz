@@ -7,6 +7,7 @@ import {
   removeMemberAction,
   type AdminState,
 } from '@/actions/administration';
+import { Badge } from '@/ui/feedback';
 
 const INITIAL: AdminState = { status: 'idle' };
 
@@ -31,6 +32,10 @@ export interface MemberRowData {
  * A uno mismo no se le ofrece expulsarse: es un error facil de cometer con un
  * boton al lado del propio nombre, y quien lo hace queda fuera de una empresa a
  * la que no puede volver por su cuenta. El caso de uso tambien lo impide.
+ *
+ * Below `sm` the row reflows into a card: the `tr` becomes a two-column grid and `order`
+ * puts person and date on top, role and "remove" side by side underneath. From `sm` up it
+ * is a normal table row, where `order` and the grid have no effect.
  */
 export function MemberRow({ member, canManage }: { member: MemberRowData; canManage: boolean }) {
   const t = useTranslations();
@@ -50,22 +55,24 @@ export function MemberRow({ member, canManage }: { member: MemberRowData; canMan
   const error = failed.errorKind;
 
   return (
-    <tr className="border-b border-[var(--color-line)] last:border-0 align-top">
-      <td className="px-4 py-3">
-        <span className="font-medium">{member.email ?? t('settings.team.noEmail')}</span>
+    <tr className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-line px-4 py-3 align-top transition-colors last:border-0 hover:bg-subtle/40 sm:table-row sm:p-0">
+      <td className="order-1 col-span-2 sm:px-4 sm:py-3">
+        <span className="font-medium break-all text-ink sm:break-normal">
+          {member.email ?? t('settings.team.noEmail')}
+        </span>
         {member.isYou && (
-          <span className="ml-2 rounded-full border border-[var(--color-line)] px-2 py-0.5 text-xs">
-            {t('settings.team.you')}
+          <span className="ml-2 align-[1px]">
+            <Badge tone="brand">{t('settings.team.you')}</Badge>
           </span>
         )}
         {error !== undefined && (
-          <p role="alert" className="mt-1 text-xs text-[var(--color-danger-ink)]">
+          <p role="alert" className="mt-1 text-xs text-danger-ink">
             {t(`settings.errors.${error}`, failed.errorParams ?? {})}
           </p>
         )}
       </td>
 
-      <td className="px-4 py-3">
+      <td className="order-3 sm:px-4 sm:py-3">
         {canManage ? (
           <form action={changeRole}>
             <input type="hidden" name="userId" value={member.userId} />
@@ -78,7 +85,7 @@ export function MemberRow({ member, canManage }: { member: MemberRowData; canMan
               defaultValue={member.role}
               disabled={changing}
               onChange={(event) => event.currentTarget.form?.requestSubmit()}
-              className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
+              className="h-9 rounded-control border border-line-strong bg-surface px-2.5 text-sm text-ink shadow-xs transition-colors focus:border-brand disabled:opacity-60"
             >
               {ROLES.map((role) => (
                 <option key={role} value={role}>
@@ -96,20 +103,23 @@ export function MemberRow({ member, canManage }: { member: MemberRowData; canMan
             </noscript>
           </form>
         ) : (
-          t(`roles.${member.role}`)
+          <span className="text-ink-soft">{t(`roles.${member.role}`)}</span>
         )}
       </td>
 
-      <td className="px-4 py-3 text-[var(--color-muted)]">{member.since}</td>
+      <td className="order-2 col-span-2 text-xs text-muted sm:px-4 sm:py-3 sm:text-sm sm:whitespace-nowrap">
+        <span className="sm:hidden">{t('settings.team.since')}: </span>
+        {member.since}
+      </td>
 
-      <td className="px-4 py-3 text-right">
+      <td className="order-4 text-right sm:px-4 sm:py-3">
         {canManage && !member.isYou && (
           <form action={remove}>
             <input type="hidden" name="userId" value={member.userId} />
             <button
               type="submit"
               disabled={removing}
-              className="text-sm text-[var(--color-danger-ink)] underline underline-offset-4 disabled:opacity-60"
+              className="text-sm font-medium text-danger-ink underline-offset-4 hover:underline disabled:opacity-60"
             >
               {t('settings.team.remove')}
             </button>

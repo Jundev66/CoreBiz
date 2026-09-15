@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
 import { Shell } from '@/ui/shell';
-import { BackLink } from '@/ui/primitives';
+import { Card } from '@/ui/primitives';
 import { ProductForm } from '@/ui/product-form';
 import { notFound } from 'next/navigation';
 import { can } from '@corebiz/domain';
@@ -17,11 +17,11 @@ export default async function NewProductPage() {
       ctx={ctx}
       session={session}
       title={t('products.new')}
-      action={<BackLink href="/products">{t('products.title')}</BackLink>}
+      back={{ href: '/products', label: t('products.title') }}
     >
-      <div className="max-w-2xl">
+      <Card className="max-w-2xl p-5 sm:p-6">
         <ProductForm />
-      </div>
+      </Card>
     </Shell>
   );
 }

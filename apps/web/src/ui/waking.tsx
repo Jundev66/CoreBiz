@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { buttonClasses } from '@/ui/button';
 
 /**
  * La espera mientras la API despierta.
@@ -76,18 +78,30 @@ export function Waking({ next, labels }: WakingProps) {
     };
   }, [next, router]);
 
+  const Icon = state === 'ready' ? CheckCircle2 : state === 'stuck' ? AlertTriangle : Loader2;
+  const tone =
+    state === 'ready'
+      ? 'bg-success-soft text-success-ink'
+      : state === 'stuck'
+        ? 'bg-warn-soft text-warn-ink'
+        : 'bg-brand-soft text-ink';
+
   return (
-    <div className="space-y-3">
-      <p aria-live="polite" className="text-sm">
-        {state === 'ready' ? labels.ready : state === 'stuck' ? labels.stuck : labels.waiting}
-        {state === 'waiting' && elapsed > 0 ? ` (${String(elapsed)} s)` : ''}
-      </p>
+    <div className="space-y-4">
+      <div className={`flex items-center gap-3 rounded-control px-4 py-3 ${tone}`}>
+        <Icon
+          aria-hidden="true"
+          className={`size-4 shrink-0 ${state === 'waiting' ? 'animate-spin text-brand' : ''}`}
+          strokeWidth={2}
+        />
+        <p aria-live="polite" className="text-sm">
+          {state === 'ready' ? labels.ready : state === 'stuck' ? labels.stuck : labels.waiting}
+          {state === 'waiting' && elapsed > 0 ? ` (${String(elapsed)} s)` : ''}
+        </p>
+      </div>
 
       {state === 'stuck' && (
-        <a
-          href={next}
-          className="inline-block text-sm underline underline-offset-4 text-[var(--color-muted)]"
-        >
+        <a href={next} className={buttonClasses({ variant: 'secondary', block: true })}>
           {labels.retry}
         </a>
       )}

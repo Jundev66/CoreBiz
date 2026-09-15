@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { Clock, KeyRound, ShieldCheck } from 'lucide-react';
 import { get } from '@/api/client';
 import { activeDriver } from '@/api/session';
 import { currentUser, supabaseIsConfigured } from '@/auth/supabase';
 import { demoConfig, signupConfig } from '@/demo/sandbox';
 import { DemoStart, type DemoSessionState } from '@/ui/demo-start';
+import { Logo } from '@/ui/logo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -61,31 +63,70 @@ export default async function DemoPage() {
   // credenciales antes de que nadie pudiera leerlas.
   const session = await sessionState();
 
+  const points = [
+    { Icon: ShieldCheck, text: t('demo.pointOwnCopy') },
+    { Icon: KeyRound, text: t('demo.pointCredentials') },
+    { Icon: Clock, text: t('demo.pointExpires') },
+  ];
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">{t('demo.title')}</h1>
-      <p className="mt-3 text-[var(--color-muted)]">{t('demo.intro')}</p>
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-linear-to-b from-brand-soft via-canvas to-canvas"
+      />
 
-      {session === 'none' && (
-        <ul className="mt-6 list-disc space-y-2 pl-5 text-sm text-[var(--color-muted)] marker:text-[var(--color-line-strong)]">
-          <li>{t('demo.pointOwnCopy')}</li>
-          <li>{t('demo.pointCredentials')}</li>
-          <li>{t('demo.pointExpires')}</li>
-        </ul>
-      )}
+      <header className="relative mx-auto flex h-16 w-full max-w-5xl items-center px-4 sm:px-6">
+        <Link href="/" className="rounded-control">
+          <Logo name={t('app.name')} />
+        </Link>
+      </header>
 
-      <DemoStart session={session} />
+      <main className="relative mx-auto grid w-full max-w-5xl flex-1 content-center items-center gap-8 px-4 pt-4 pb-12 sm:px-6 lg:grid-cols-[1fr_26rem] lg:gap-16">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-pill border border-brand-line bg-surface px-3 py-1 text-xs font-medium text-brand shadow-xs">
+            <span aria-hidden="true" className="size-1.5 rounded-pill bg-success" />
+            {t('home.heroBadge')}
+          </p>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-balance text-ink sm:text-4xl">
+            {t('demo.title')}
+          </h1>
+          <p className="mt-3 max-w-lg text-lg text-pretty text-ink-soft">{t('demo.intro')}</p>
 
-      {signupConfig.enabled() && (
-        <p className="mt-6 text-sm text-[var(--color-muted)]">
-          {t('demo.orSignUp')}{' '}
-          <Link href="/signup" className="underline underline-offset-4">
-            {t('auth.signup.submit')}
-          </Link>
-        </p>
-      )}
+          {session === 'none' && (
+            <ul className="mt-8 space-y-4">
+              {points.map(({ Icon, text }) => (
+                <li key={text} className="flex items-start gap-3">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-control bg-surface text-brand shadow-xs ring-1 ring-line">
+                    <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
+                  </span>
+                  <span className="pt-1.5 text-sm text-ink-soft">{text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-      <p className="mt-10 text-xs text-[var(--color-muted)]">{t('legal.notice')}</p>
-    </main>
+        <div className="rounded-2xl border border-line bg-surface p-5 shadow-lg sm:p-7">
+          <DemoStart session={session} />
+
+          {signupConfig.enabled() && (
+            <p className="mt-5 text-center text-sm text-muted">
+              {t('demo.orSignUp')}{' '}
+              <Link
+                href="/signup"
+                className="font-medium text-brand underline-offset-4 hover:underline"
+              >
+                {t('auth.signup.submit')}
+              </Link>
+            </p>
+          )}
+        </div>
+      </main>
+
+      <footer className="relative mx-auto w-full max-w-5xl px-4 pb-8 sm:px-6">
+        <p className="text-xs text-muted">{t('legal.notice')}</p>
+      </footer>
+    </div>
   );
 }

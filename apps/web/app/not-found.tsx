@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { Compass } from 'lucide-react';
+import { buttonClasses } from '@/ui/button';
+import { Logo } from '@/ui/logo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -24,29 +27,34 @@ export default async function NotFound() {
   const t = await getTranslations();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-12">
-        <Link href="/" className="mb-8 block text-center text-2xl font-semibold tracking-tight">
-          {t('app.name')}
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-linear-to-b from-brand-soft to-transparent"
+      />
+
+      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10 sm:px-6">
+        <Link href="/" className="mb-8 flex justify-center">
+          <Logo name={t('app.name')} size="lg" />
         </Link>
 
-        <div className="space-y-4 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6 sm:p-8">
-          <h1 className="text-lg font-semibold">{t('notFound.title')}</h1>
-          <p className="text-sm text-[var(--color-muted)]">{t('notFound.lead')}</p>
+        <div className="rounded-2xl border border-line bg-surface p-6 shadow-md sm:p-8">
+          <span className="grid size-11 place-items-center rounded-pill bg-brand-soft text-brand">
+            <Compass aria-hidden="true" className="size-5" strokeWidth={1.75} />
+          </span>
+          <h1 className="mt-4 text-xl font-semibold tracking-tight text-ink">
+            {t('notFound.title')}
+          </h1>
+          <p className="mt-2 text-sm text-muted">{t('notFound.lead')}</p>
 
-          <div className="pt-2">
-            <Link
-              href="/"
-              className="inline-block rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand-ink)]"
-            >
-              {t('notFound.home')}
-            </Link>
-          </div>
+          <Link href="/" className={buttonClasses({ block: true, className: 'mt-6' })}>
+            {t('notFound.home')}
+          </Link>
         </div>
       </main>
 
-      <footer className="mx-auto w-full max-w-md px-6 pb-8">
-        <p className="text-center text-xs text-[var(--color-muted)]">{t('legal.notice')}</p>
+      <footer className="relative mx-auto w-full max-w-md px-6 pb-8">
+        <p className="text-center text-xs text-muted">{t('legal.notice')}</p>
       </footer>
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -7,6 +8,8 @@ import {
   updateSupplierAction,
   type PurchasingState,
 } from '@/actions/purchasing';
+import { buttonClasses } from '@/ui/button';
+import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
 
 const INITIAL: PurchasingState = { status: 'idle' };
@@ -20,6 +23,9 @@ const INITIAL: PurchasingState = { status: 'idle' };
  *
  * Gana `notes`, que el contrato y la API aceptaban desde el principio y ninguna pantalla
  * pedia — el campo llegaba hasta la base de datos y no habia forma de rellenarlo.
+ *
+ * It stays a single column: the create form lives in the narrow side panel of the
+ * suppliers list, and a two-column grid there would squeeze every field.
  */
 export interface SupplierFormValues {
   readonly id: string;
@@ -50,9 +56,8 @@ export function SupplierForm({ supplier }: { supplier?: SupplierFormValues }) {
       {/* El codigo lo genera el sistema al guardar (`PRV26000001`). Al corregir ya
           existe, asi que se enseña — como texto, porque no es un campo. */}
       {editing && (
-        <p className="text-sm text-[var(--color-muted)]">
-          {t('suppliers.code')}:{' '}
-          <span className="font-mono text-[var(--color-ink)]">{supplier.code}</span>
+        <p className="inline-flex items-center gap-1.5 rounded-control bg-subtle px-3 py-1.5 text-sm text-muted">
+          {t('suppliers.code')}: <span className="font-mono text-ink">{supplier.code}</span>
         </p>
       )}
 
@@ -107,21 +112,25 @@ export function SupplierForm({ supplier }: { supplier?: SupplierFormValues }) {
       {/* The general notice only when there are NO field errors: with both, the same thing
           is said twice, and the general one does not point at where. */}
       {state.status === 'error' && state.errorKind !== undefined && !state.fieldErrors && (
-        <p
-          role="alert"
-          className="rounded-md bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger-ink)]"
-        >
+        <Alert tone="danger" role="alert">
           {t(`purchases.errors.${state.errorKind}`, state.errorParams ?? {})}
-        </p>
+        </Alert>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-md bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-[var(--color-brand-ink)] disabled:opacity-60"
-      >
-        {pending ? '…' : t('common.save')}
-      </button>
+      {editing ? (
+        <div className="flex flex-col-reverse gap-2 border-t border-line pt-5 sm:flex-row sm:justify-end">
+          <Link href="/purchases/suppliers" className={buttonClasses({ variant: 'secondary' })}>
+            {t('common.cancel')}
+          </Link>
+          <button type="submit" disabled={pending} className={buttonClasses()}>
+            {pending ? '…' : t('common.save')}
+          </button>
+        </div>
+      ) : (
+        <button type="submit" disabled={pending} className={buttonClasses({ block: true })}>
+          {pending ? '…' : t('common.save')}
+        </button>
+      )}
     </form>
   );
 }
