@@ -2,7 +2,11 @@ import { Scope, type FactoryProvider } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { Plan, asId, isRole, type Role, type TenantId, type UserId } from '@corebiz/domain';
 import type { TenantContext } from '@corebiz/application';
-import { listMemberships, loadTenantProfile, type Membership } from '@corebiz/infrastructure';
+import {
+  loadSessionContext,
+  type Membership,
+  type SessionMembership,
+} from '@corebiz/infrastructure';
 import type { AuthenticatedRequest, VerifiedIdentity } from '../auth/authenticated-request';
 import { ACTIVE_CONTEXT, IDENTITY, MEMBERSHIPS, SESSION_INFO, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
@@ -87,19 +91,23 @@ export const membershipsProvider: FactoryProvider = {
   provide: MEMBERSHIPS,
   scope: Scope.REQUEST,
   inject: [IDENTITY],
-  useFactory: async (identity: VerifiedIdentity): Promise<readonly Membership[]> =>
-    activeDriver() === 'memory' ? [] : listMemberships(databaseUrl(), identity.userId),
+  /*
+   * Memberships and each company's profile arrive together, in ONE transaction. The active
+   * company's settings used to be read in a second one, on every call to the API.
+   */
+  useFactory: async (identity: VerifiedIdentity): Promise<readonly SessionMembership[]> =>
+    activeDriver() === 'memory' ? [] : loadSessionContext(databaseUrl(), identity.userId),
 };
 
 export const activeContextProvider: FactoryProvider = {
   provide: ACTIVE_CONTEXT,
   scope: Scope.REQUEST,
   inject: [REQUEST, IDENTITY, MEMBERSHIPS],
-  useFactory: async (
+  useFactory: (
     req: AuthenticatedRequest,
     identity: VerifiedIdentity,
-    memberships: readonly Membership[],
-  ): Promise<ResolvedContext | null> => {
+    memberships: readonly SessionMembership[],
+  ): ResolvedContext | null => {
     const rawRole = header(req, 'x-corebiz-demo-role');
     const roleOverride: Role | null = rawRole !== undefined && isRole(rawRole) ? rawRole : null;
 
@@ -141,7 +149,7 @@ export const activeContextProvider: FactoryProvider = {
         ? roleOverride
         : membershipRole;
 
-    const base: TenantContext = {
+    const ctx: TenantContext = {
       tenantId: asId<TenantId>(active.tenantId),
       tenantSlug: active.slug,
       actor: { userId: asId<UserId>(identity.userId), role },
@@ -149,23 +157,22 @@ export const activeContextProvider: FactoryProvider = {
       // limites. Aqui habia ademas una cabecera de demostracion para alternar entre
       // gratuito y de pago; se fue con los planes, porque no queda nada que alternar.
       plan: Plan.of(planFrom(active.planCode)),
-      settings: DEMO_SETTINGS,
+      // The profile came with the membership, from the same function and the same
+      // transaction: there is no window in which the membership exists and the profile
+      // does not.
+      settings: settingsFrom(active),
       isDemo: active.isDemo,
     };
-
-    const profile = await loadTenantProfile(databaseUrl(), base);
 
     const session: SessionInfo = {
       email: identity.email,
       memberships,
       isDemo: active.isDemo,
-      expiresAt: profile?.expiresAt ?? null,
+      expiresAt: active.expiresAt,
       memoryDriver: false,
     };
 
-    if (profile === null) return { ctx: base, session };
-
-    return { ctx: { ...base, settings: settingsFrom(profile) }, session };
+    return { ctx, session };
   },
 };
 
