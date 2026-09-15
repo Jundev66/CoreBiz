@@ -2,6 +2,7 @@ import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { AuthMiddleware } from './auth/auth.middleware';
+import { ReadThrottleGuard } from './auth/read-throttle.guard';
 import { WriteThrottleGuard } from './auth/write-throttle.guard';
 import { CompositionModule } from './composition/composition.module';
 import { HealthModule } from './health/health.module';
@@ -41,7 +42,10 @@ import { SessionModule } from './modules/session/session.module';
     InternalModule,
   ],
   // Global and singleton on purpose: see the note in `WriteThrottleGuard`.
-  providers: [{ provide: APP_GUARD, useClass: WriteThrottleGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: ReadThrottleGuard },
+    { provide: APP_GUARD, useClass: WriteThrottleGuard },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

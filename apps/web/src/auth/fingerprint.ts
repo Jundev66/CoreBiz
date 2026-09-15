@@ -35,11 +35,18 @@ function dailySalt(): string {
 export async function clientFingerprint(): Promise<string> {
   const store = await headers();
 
-  // `x-forwarded-for` may carry a chain of proxies; the first entry is the client. On
-  // Vercel the platform sets it and it cannot be forged from outside; on another host only
-  // our own proxy should be trusted.
-  const forwarded = store.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const ip = forwarded ?? store.get('x-real-ip') ?? 'unknown';
+  /*
+   * The platform's own headers first. `x-vercel-forwarded-for` and `x-real-ip` are written by
+   * Vercel and nothing a client sends survives into them. The first `x-forwarded-for` entry
+   * is only as trustworthy as the host: Vercel overwrites it, but behind any other proxy a
+   * client can prepend whatever it likes and walk past every login limit and demo quota.
+   * It stays as the last resort for local development, where none of the others exist.
+   */
+  const ip =
+    store.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ??
+    store.get('x-real-ip')?.trim() ??
+    store.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    'unknown';
 
   return createHash('sha256').update(`${dailySalt()}:${ip}`).digest('hex').slice(0, 32);
 }

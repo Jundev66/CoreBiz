@@ -74,6 +74,16 @@ export class SupabaseJwtVerifier {
         throw new UnauthorizedException({ errorKind: 'Unauthenticated', errorParams: {} });
       }
 
+      /*
+       * Anonymous sign-ins are off in the project, and that is a dashboard switch, not a
+       * decision of this code. If someone turns it on, an anonymous user carries a valid,
+       * signed token with a `sub` — enough to create a company or accept an invitation. The
+       * API only serves people who signed up.
+       */
+      if (payload['is_anonymous'] === true) {
+        throw new UnauthorizedException({ errorKind: 'Unauthenticated', errorParams: {} });
+      }
+
       return {
         userId: payload.sub,
         email: typeof payload.email === 'string' ? payload.email : null,

@@ -69,8 +69,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
      *    log gets read over someone's shoulder, pasted into a chat and stored by a third
      *    party.
      *  - The query string. `originalUrl` includes it, and worse things than the body travel
-     *    there: `GET /v1/invitations/preview?token=` carries a bearer credential — whoever
-     *    holds it joins the company —, `?search=` whatever the operator typed looking for a
+     *    there: the invitation preview used to carry its token that way — a bearer
+     *    credential; it is a POST body now, but the next one may not be —, `?search=`
+     *    whatever the operator typed looking for a
      *    customer, and `?actorEmail=` an email address. The database is careful not to store
      *    that token; this log must not be the back door.
      *

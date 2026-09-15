@@ -35,11 +35,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Consultar el endpoint de salud
+        # Through `env:` and not interpolated into the script: an expression expands BEFORE
+        # the shell parses the line, so a value with quotes or `$(...)` would run as code.
+        env:
+          APP_URL: ${{ vars.APP_URL }}
         run: |
           set -euo pipefail
-          URL="${{ vars.APP_URL }}/api/health"
+          URL="${APP_URL}/api/health"
 
-          if [ -z "${{ vars.APP_URL }}" ]; then
+          if [ -z "${APP_URL}" ]; then
             echo "APP_URL no esta configurada todavia; nada que hacer."
             exit 0
           fi

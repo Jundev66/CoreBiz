@@ -35,7 +35,6 @@ import { autoLoginConfig } from '@/demo/sandbox';
  * incluidos.
  */
 function contentSecurityPolicy(nonce: string): string {
-  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   const production = process.env.NODE_ENV === 'production';
 
   const directives = [
@@ -57,7 +56,10 @@ function contentSecurityPolicy(nonce: string): string {
 
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
-    supabase === '' ? `connect-src 'self'` : `connect-src 'self' ${supabase}`,
+    // Only our own origin. The browser never talks to Supabase — authentication is
+    // server-only (ADR 006) — and listing the project URL here published it in every
+    // response header for nothing.
+    `connect-src 'self'`,
 
     // El destino de los formularios queda fijado al propio origen: si alguien
     // logra inyectar marcado, no puede redirigir un envio con credenciales fuera.
