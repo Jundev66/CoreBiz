@@ -26,8 +26,10 @@ export { establishTenantContext, readOnly, asUser } from './prisma/session';
 export { PrismaRateLimiter, postgresRateLimiter } from './prisma/rate-limiter';
 export {
   listMemberships,
+  loadSessionContext,
   provisionTenant,
   type Membership,
+  type SessionMembership,
   type ProvisionError,
   type ProvisionResult,
 } from './prisma/identity';

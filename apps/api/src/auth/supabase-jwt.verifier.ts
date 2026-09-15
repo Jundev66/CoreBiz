@@ -27,7 +27,7 @@ import type { VerifiedIdentity } from './authenticated-request';
  * baja a 10 minutos en Authentication -> Sessions; no es un ajuste aparte, es parte
  * de esta decision. La revocacion que mas importa en un sistema multi-tenant —echar a
  * alguien de una empresa— sigue siendo inmediata por otra via: el contexto de tenant
- * consulta `listMemberships` en cada peticion, y sin fila no hay acceso.
+ * consulta las pertenencias (`loadSessionContext`) en cada peticion, y sin fila no hay acceso.
  */
 @Injectable()
 export class SupabaseJwtVerifier {

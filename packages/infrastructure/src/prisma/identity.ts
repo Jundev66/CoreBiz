@@ -54,6 +54,62 @@ export async function listMemberships(url: string, userId: string): Promise<read
   }));
 }
 
+/** A membership together with what the request context needs from its company. */
+export interface SessionMembership extends Membership {
+  /** Cuando desaparece el tenant, o null si no caduca. Solo los sandboxes caducan. */
+  readonly expiresAt: Date | null;
+  readonly taxLabel: string;
+  readonly taxRateBp: number;
+  readonly baseCurrency: string;
+  readonly exchangeRateScaled: bigint | null;
+  readonly exchangeRateAt: Date | null;
+}
+
+interface SessionMembershipRow extends MembershipRow {
+  expires_at: Date | null;
+  tax_label: string | null;
+  tax_rate_bp: number;
+  base_currency: string;
+  exchange_rate_scaled: bigint | null;
+  exchange_rate_at: Date | null;
+}
+
+/**
+ * The caller's companies AND each company's profile, in one transaction.
+ *
+ * The API used to build the request context in two: `listMemberships`, then
+ * `loadTenantProfile` for the active company. Every call to the API paid both before its own
+ * query, and a screen makes more than one call. `app.my_session_context()` returns the same
+ * rows as `app.my_memberships()`, under the same conditions and the same `auth.uid()`, with
+ * the profile columns alongside.
+ */
+export async function loadSessionContext(
+  url: string,
+  userId: string,
+): Promise<readonly SessionMembership[]> {
+  const rows = await asUser(
+    getPrisma(url),
+    userId,
+    (tx) => tx.$queryRaw<SessionMembershipRow[]>`select * from app.my_session_context()`,
+  );
+
+  return rows.map((r) => ({
+    tenantId: r.tenant_id,
+    slug: r.slug,
+    name: r.name,
+    role: r.role,
+    planCode: r.plan_code,
+    isDemo: r.is_demo,
+    status: r.status,
+    expiresAt: r.expires_at,
+    taxLabel: r.tax_label ?? 'Impuesto informativo',
+    taxRateBp: r.tax_rate_bp,
+    baseCurrency: r.base_currency,
+    exchangeRateScaled: r.exchange_rate_scaled,
+    exchangeRateAt: r.exchange_rate_at,
+  }));
+}
+
 export type ProvisionError =
   | 'ALREADY_OWNER'
   | 'ALREADY_MEMBER'
