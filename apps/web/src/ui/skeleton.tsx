@@ -9,7 +9,14 @@ import { getTranslations } from 'next-intl/server';
  * the server had finished, which is exactly what reads as "slow".
  *
  * It mirrors the shapes of the real screens — a title, then a table, a card or a grid of
- * figures — so the content does not jump when it lands. Nothing in it is a landmark, a
+ * figures — so the content does not jump when it lands.
+ *
+ * NOT every module has one, on purpose: `/products` and the dashboard do not, and neither
+ * does the `(app)` root, which would wrap them. Content streamed behind a loading boundary is
+ * revealed by React on the next animation frame, so the page `load` event can fire while the
+ * table is still hidden. The stock of a product is read straight off that table right after
+ * opening it, and it read zero. Without a boundary the table is in the document when the page
+ * finishes loading; a click on those two still shows the pending hint in the menu. Nothing in it is a landmark, a
  * heading or a live region: assistive technology hears one "loading" and then the page.
  */
 
