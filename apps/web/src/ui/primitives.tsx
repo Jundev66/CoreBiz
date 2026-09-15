@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, type LucideIcon } from 'lucide-react';
 import { buttonClasses } from '@/ui/button';
+import { CHIP, type Tone } from '@/ui/module-tone';
 
 /**
  * Las piezas que se repetian a mano en cada pantalla.
@@ -20,7 +21,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-card border border-line bg-surface shadow-xs ${className}`}>
+    <div className={`rounded-card border border-line bg-surface shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -37,18 +38,21 @@ export function Stat({
   value,
   hint,
   icon: Icon,
+  tone = 'brand',
 }: {
   label: string;
   value: string;
   hint?: string;
   icon?: LucideIcon;
+  /** The colour of the icon chip, so four figures side by side do not look like one. */
+  tone?: Tone;
 }) {
   return (
     <Card className="p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] font-medium text-muted">{label}</p>
         {Icon !== undefined && (
-          <span className="grid size-8 shrink-0 place-items-center rounded-control bg-brand-soft text-brand">
+          <span className={`grid size-9 shrink-0 place-items-center rounded-control ${CHIP[tone]}`}>
             <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
           </span>
         )}

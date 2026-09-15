@@ -43,18 +43,30 @@ export default async function ReportsPage() {
     <Screen title={t('reports.title')} subtitle={t('reports.subtitle')}>
       <div className="space-y-8 lg:space-y-10">
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <Stat label={t('reports.salesTotal')} value={`$ ${report.salesTotal}`} icon={Wallet} />
+          <Stat
+            label={t('reports.salesTotal')}
+            value={`$ ${report.salesTotal}`}
+            icon={Wallet}
+            tone="emerald"
+          />
           <Stat
             label={t('reports.documentsIssued')}
             value={String(report.documentCount)}
             icon={FileText}
+            tone="violet"
           />
           <Stat
             label={t('reports.averageTicket')}
             value={`$ ${report.averageTicket}`}
             icon={TrendingUp}
+            tone="sky"
           />
-          <Stat label={t('reports.stockValue')} value={`$ ${report.inventoryValue}`} icon={Boxes} />
+          <Stat
+            label={t('reports.stockValue')}
+            value={`$ ${report.inventoryValue}`}
+            icon={Boxes}
+            tone="amber"
+          />
         </div>
 
         <section aria-labelledby="top-products">

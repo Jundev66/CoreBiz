@@ -24,6 +24,8 @@ import { buttonClasses } from '@/ui/button';
 import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
 import { MoreSummary, NavDetails, NavLink } from '@/ui/nav-link';
+import { NAV_ICON, moduleTone } from '@/ui/module-tone';
+import { ThemeToggle } from '@/ui/theme-toggle';
 
 /**
  * Marco comun de las pantallas de la aplicacion.
@@ -107,7 +109,10 @@ export async function AppFrame({
        */}
       <AssistantPanel />
 
-      <aside className="hidden border-r border-line bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col">
+      <aside
+        data-surface="nav"
+        className="hidden border-r border-nav-line bg-nav lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col"
+      >
         <div className="flex h-16 items-center px-5">
           <Link href="/" className="rounded-control">
             <Logo name={t('app.name')} />
@@ -121,11 +126,16 @@ export async function AppFrame({
               href={item.href}
               {...(item.exact === true ? { exact: true } : {})}
               hint="inline"
-              className="flex items-center gap-3 rounded-control px-3 py-2 text-sm transition-colors"
-              activeClassName="bg-brand-soft font-medium text-brand"
-              idleClassName="text-ink-soft hover:bg-subtle hover:text-ink"
+              className="group flex items-center gap-3 rounded-control px-3 py-2 text-sm transition-colors"
+              activeClassName="bg-brand font-medium text-brand-ink shadow-sm"
+              idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
             >
-              <item.Icon aria-hidden="true" className="size-[18px] shrink-0" strokeWidth={1.75} />
+              {/* Each module keeps its colour while idle; the current one takes the link's. */}
+              <item.Icon
+                aria-hidden="true"
+                className={`size-[18px] shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(item.href)]}`}
+                strokeWidth={1.75}
+              />
               {item.label}
             </NavLink>
           ))}
@@ -137,7 +147,10 @@ export async function AppFrame({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur-md lg:hidden">
+        <header
+          data-surface="nav"
+          className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-nav-line bg-nav/95 px-4 backdrop-blur-md lg:hidden"
+        >
           <Link href="/" className="rounded-control">
             <Logo name={t('app.name')} />
           </Link>
@@ -181,7 +194,7 @@ export async function AppFrame({
                   {...(item.exact === true ? { exact: true } : {})}
                   hint="top"
                   className="relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors [&[aria-current=page]>svg]:[stroke-width:2.25]"
-                  activeClassName="text-brand"
+                  activeClassName="text-brand before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:rounded-pill before:bg-brand"
                   idleClassName="text-muted active:text-ink"
                 >
                   <item.Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
@@ -332,6 +345,8 @@ async function AccountArea({
       )}
 
       <div className="flex flex-col gap-2">
+        <ThemeToggle />
+
         {/* En una demostracion, "crear mi cuenta" va JUNTO a "salir", no en su
             lugar. Quien esta probando el sistema tiene una sesion de verdad que
             puede querer cerrar, y a la vez es la unica persona a la que tiene
@@ -406,10 +421,13 @@ export function PrimaryLink({ href, children }: { href: string; children: React.
   );
 }
 
-/** Contenedor de tabla con scroll propio: la pagina nunca desborda en movil. */
+/**
+ * Contenedor de tabla con scroll propio: la pagina nunca desborda en movil.
+ * The row hover lives here, once, instead of in each list page's `<tr>`.
+ */
 export function TableFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-xs">
+    <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-sm [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-brand-soft/40">
       <table className="w-full border-collapse text-left text-sm">{children}</table>
     </div>
   );
@@ -427,7 +445,7 @@ export function Empty({
 }) {
   return (
     <div className="flex flex-col items-center rounded-card border border-dashed border-line-strong bg-surface px-6 py-12 text-center">
-      <span className="grid size-11 place-items-center rounded-pill bg-subtle text-muted">
+      <span className="grid size-11 place-items-center rounded-pill bg-brand-soft text-brand">
         <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
       </span>
       <p className="mt-3 max-w-sm text-sm text-muted">{children}</p>
