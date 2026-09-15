@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Archive, ArrowLeft, Building2 } from 'lucide-react';
 import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
 import { Badge } from '@/ui/feedback';
@@ -12,6 +12,7 @@ import { SupplierForm } from '@/ui/supplier-form';
 import { StatusToggle } from '@/ui/detail';
 import { setSupplierStatusAction } from '@/actions/purchasing';
 import { noticeCode } from '@/ui/notice-code';
+import { NoAccess } from '@/ui/no-access';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -33,18 +34,25 @@ export default async function SuppliersPage({
   const t = await getTranslations();
   const { archivados, creado, guardado } = await searchParams;
   const createdCode = noticeCode(creado);
-  const { ctx, queries } = await apiForRequest();
+  const includeArchived = archivados === '1';
+  const { ctx, data: page } = await withSession((queries) =>
+    queries.purchasing.suppliers({ limit: 50, includeArchived }),
+  );
+
+  // The session and the list travel together. A role the API refuses gets a notice rather
+  // than the server error page.
+  if (page === null) {
+    return (
+      <Screen title={t('suppliers.title')}>
+        <NoAccess />
+      </Screen>
+    );
+  }
 
   // Quien no puede escribir proveedores ve el listado y nada mas. Ocultar el formulario
   // NO es la medida de seguridad —el caso de uso revalida el permiso— pero enseñar un
   // formulario que va a fallar al enviarlo hace perder el tiempo y parecer un fallo.
   const puedeEscribir = can(ctx.actor, 'supplier:write');
-
-  const includeArchived = archivados === '1';
-  const page = await queries.purchasing.suppliers({
-    limit: 50,
-    includeArchived,
-  });
 
   const stateBadge = (archived: boolean) =>
     archived ? (

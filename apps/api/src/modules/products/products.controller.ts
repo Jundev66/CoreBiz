@@ -29,6 +29,7 @@ import { PermissionsGuard } from '../../auth/permissions.guard';
 import { RequirePermission } from '../../auth/require-permission.decorator';
 import { unwrapOrThrow } from '../../http/api-error';
 import {
+  lowStockQuerySchema,
   optionsQuerySchema,
   productListQuerySchema,
   withoutUndefined,
@@ -69,6 +70,17 @@ export class ProductsController {
     @Query(new ZodValidationPipe(optionsQuerySchema)) query: z.infer<typeof optionsQuerySchema>,
   ): Promise<readonly ProductOption[]> {
     return this.runtime.queries.products.options(query.limit);
+  }
+
+  // Declared before `:id`, like `options`: a literal segment has to be matched first or
+  // `low-stock` would be read as a product id.
+  @Get('low-stock')
+  @RequirePermission('product:read')
+  @ApiOperation({ summary: 'Productos por debajo de su minimo, para el panel' })
+  lowStock(
+    @Query(new ZodValidationPipe(lowStockQuerySchema)) query: z.infer<typeof lowStockQuerySchema>,
+  ): Promise<readonly ProductListItem[]> {
+    return this.runtime.queries.products.lowStock(query.limit);
   }
 
   @Get(':id')

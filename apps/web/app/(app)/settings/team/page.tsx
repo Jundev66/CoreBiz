@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { MailOpen } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { SettingsNav } from '@/ui/settings-nav';
 import { InviteForm } from '@/ui/invite-form';
@@ -34,14 +34,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function TeamPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await apiForRequest();
+  const { ctx, data } = await withSession((queries) =>
+    Promise.all([queries.admin.team(), queries.admin.pendingInvitations()]),
+  );
 
   /*
-   * Without `user:read` the team is not requested: the list of colleagues is exactly what
-   * the API denies with a 403, and that 403 took the screen down. Three of the five roles
-   * got here from the settings tab; the tab is no longer rendered for them.
+   * Without `user:read` there is no team to show: the list of colleagues is exactly what the
+   * API denies with a 403, which arrives as `null` instead of taking the screen down. Three of
+   * the five roles got here from the settings tab; the tab is no longer rendered for them.
    */
-  if (!can(ctx.actor, 'user:read')) {
+  if (!can(ctx.actor, 'user:read') || data === null) {
     return (
       <Screen title={t('settings.title')}>
         <SettingsNav current="team" actor={ctx.actor} />
@@ -50,10 +52,7 @@ export default async function TeamPage() {
     );
   }
 
-  const [team, invitations] = await Promise.all([
-    queries.admin.team(),
-    queries.admin.pendingInvitations(),
-  ]);
+  const [team, invitations] = data;
   const canManage = ctx.actor.role === 'owner' || ctx.actor.role === 'admin';
 
   return (

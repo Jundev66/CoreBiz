@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { AlertTriangle, Boxes, FileText, Package, Receipt, TrendingUp, Wallet } from 'lucide-react';
-import { can } from '@corebiz/domain';
-import { apiForRequest } from '@/api/session';
+import { unlessForbidden, withSession } from '@/api/session';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Stat, SectionTitle } from '@/ui/primitives';
 import { Badge } from '@/ui/feedback';
@@ -21,24 +20,25 @@ import { DesktopOnly, MobileList, MobileListItem } from '@/ui/list';
 export default async function DashboardPage() {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await apiForRequest();
-
   /*
-   * El resumen de ventas exige `report:read`, y almacen no lo tiene.
+   * La sesion y las tres lecturas salen a la vez.
    *
-   * Sin esta comprobacion, quien entrara con ese rol recibiria un 403 del API y la
-   * pantalla de inicio —la primera que se ve— seria un error. Se degrada: se le enseñan
-   * las secciones que si le corresponden, que ademas son las suyas.
+   * El resumen de ventas exige `report:read`, y almacen no lo tiene: la API responde 403,
+   * llega como `null` y la pantalla de inicio —la primera que se ve— no se convierte en un
+   * error. Se degrada: se le enseñan las secciones que si le corresponden, que ademas son
+   * las suyas.
    */
-  const puedeVerCifras = can(ctx.actor, 'report:read');
+  const { data } = await withSession((queries) =>
+    Promise.all([
+      unlessForbidden(queries.reports.salesSummary()),
+      queries.deliveryNotes.list({ limit: 5 }),
+      // Solo lo que esta por debajo de su minimo, filtrado en la base. Antes se traian cien
+      // productos para quedarse aqui con los que faltaban.
+      queries.products.lowStock(LOW_STOCK_ROWS),
+    ]),
+  );
 
-  const [resumen, notas, productos] = await Promise.all([
-    puedeVerCifras ? queries.reports.salesSummary() : Promise.resolve(null),
-    queries.deliveryNotes.list({ limit: 5 }),
-    queries.products.list({ limit: 100 }),
-  ]);
-
-  const bajoMinimo = productos.items.filter((p) => p.belowMinimum);
+  const [resumen, notas, bajoMinimo] = data ?? [null, { items: [], nextCursor: null }, []];
 
   return (
     <Screen title={t('home.title')} subtitle={t('home.subtitle')}>
@@ -176,6 +176,9 @@ export default async function DashboardPage() {
     </Screen>
   );
 }
+
+/** How many low-stock products the dashboard lists; the full list is one click away. */
+const LOW_STOCK_ROWS = 10;
 
 function SeeAll({ href, label }: { href: string; label: string }) {
   return (

@@ -108,6 +108,11 @@ export const optionsQuerySchema = z
   .object({ limit: z.coerce.number().int().min(1).max(200).default(50) })
   .strict();
 
+/** The dashboard's short list: a handful of rows, never the catalogue. */
+export const lowStockQuerySchema = z
+  .object({ limit: z.coerce.number().int().min(1).max(50).default(10) })
+  .strict();
+
 /**
  * Quita las claves cuyo valor es `undefined`.
  *

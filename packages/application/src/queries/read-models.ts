@@ -128,6 +128,13 @@ export interface ProductQueries {
     limit?: number;
   }): Promise<Page<ProductListItem>>;
   options(limit?: number): Promise<readonly ProductOption[]>;
+  /**
+   * Products that track stock, are not archived and sit below their minimum, by name.
+   *
+   * Its own query and not a filter over `list`: the dashboard used to fetch a hundred
+   * products to keep the few that were short, and missed any beyond the hundredth.
+   */
+  lowStock(limit?: number): Promise<readonly ProductListItem[]>;
   byId(id: string): Promise<ProductDetail | null>;
   /** Los ultimos movimientos del producto, del mas reciente al mas antiguo. */
   movements(productId: string, limit?: number): Promise<readonly StockMovementItem[]>;

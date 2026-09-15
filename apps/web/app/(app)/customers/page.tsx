@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Archive, ArrowLeft, Plus, UsersRound } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
 import { Badge } from '@/ui/feedback';
@@ -26,22 +26,23 @@ export default async function CustomersPage({
   const t = await getTranslations();
   const { archivados, creado } = await searchParams;
   const createdCode = noticeCode(creado);
-  const { ctx, queries } = await apiForRequest();
+  const includeArchived = archivados === '1';
+  const { ctx, data: page } = await withSession((queries) =>
+    queries.customers.list({ limit: 25, includeArchived }),
+  );
 
   /*
-   * The role decides whether this is read, and it is decided BEFORE asking: a 403 from the
-   * API surfaces as an exception and took the whole screen down. See `@/ui/no-access`.
+   * The session and the list travel together; the role still decides what is shown. Without
+   * `customer:read` the API answers 403, which arrives as `null`, and the screen says so
+   * instead of letting the refusal take it down. See `@/ui/no-access`.
    */
-  if (!can(ctx.actor, 'customer:read')) {
+  if (!can(ctx.actor, 'customer:read') || page === null) {
     return (
       <Screen title={t('customers.title')}>
         <NoAccess />
       </Screen>
     );
   }
-
-  const includeArchived = archivados === '1';
-  const page = await queries.customers.list({ limit: 25, includeArchived });
 
   return (
     <Screen

@@ -104,6 +104,8 @@ export function httpReadModels(): ReadModels {
           })}`,
         ),
       options: (limit) => get<readonly ProductOption[]>(`/v1/products/options${query({ limit })}`),
+      lowStock: (limit) =>
+        get<readonly ProductListItem[]>(`/v1/products/low-stock${query({ limit })}`),
       byId: (id) => getOrNull<ProductDetail>(`/v1/products/${encodeURIComponent(id)}`),
       movements: async (productId, limit) => {
         const rows = await get<readonly Wire<StockMovementItem>[]>(

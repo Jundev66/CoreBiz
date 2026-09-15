@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { AlertTriangle, Archive, ArrowLeft, Package, Plus } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
 import { Alert, Badge } from '@/ui/feedback';
@@ -18,22 +18,22 @@ export default async function ProductsPage({
   const t = await getTranslations();
   const { archivados, creado } = await searchParams;
   const createdCode = noticeCode(creado);
-  const { ctx, queries } = await apiForRequest();
+  const includeArchived = archivados === '1';
+  const { ctx, data: page } = await withSession((queries) =>
+    queries.products.list({ limit: 50, includeArchived }),
+  );
 
   /*
-   * The role decides whether this is read, and it is decided BEFORE asking: a 403 from the
-   * API surfaces as an exception and took the whole screen down. See `@/ui/no-access`.
+   * The session and the list travel together; the role still decides what is shown. A 403
+   * from the API arrives as `null` and becomes a notice. See `@/ui/no-access`.
    */
-  if (!can(ctx.actor, 'product:read')) {
+  if (!can(ctx.actor, 'product:read') || page === null) {
     return (
       <Screen title={t('products.title')}>
         <NoAccess />
       </Screen>
     );
   }
-
-  const includeArchived = archivados === '1';
-  const page = await queries.products.list({ limit: 50, includeArchived });
 
   const belowMinimum = page.items.filter((p) => p.belowMinimum);
 

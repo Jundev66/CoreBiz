@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { Download, History, Lock } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Button, ButtonLink, buttonClasses } from '@/ui/button';
 import { DesktopOnly, MobileList } from '@/ui/list';
@@ -32,8 +32,6 @@ export default async function AuditPage({
 }) {
   const t = await getTranslations();
   const format = await getFormatter();
-  const { ctx, queries } = await apiForRequest();
-
   /*
    * Filters are sanitised BEFORE use, and not out of zeal: they are untrusted input that
    * ends in `.toISOString()` three layers down. An impossible date is dropped instead of
@@ -46,21 +44,25 @@ export default async function AuditPage({
     to: dayParam(rawParams.to),
   };
 
-  const canRead = ctx.actor.role === 'owner' || ctx.actor.role === 'admin';
+  // The log leaves together with the session. Anyone but owner and admin gets a 403 from the
+  // API, which arrives as `null`: the screen explains it instead of breaking.
+  const { ctx, data } = await withSession((queries) =>
+    Promise.all([
+      queries.admin.auditLog({
+        ...(filters.action !== null ? { action: filters.action } : {}),
+        ...(filters.from !== null ? { from: new Date(`${filters.from}T00:00:00.000Z`) } : {}),
+        // Hasta el FINAL del dia elegido. Sin esto, filtrar "hasta hoy" no
+        // devuelve nada de hoy, que es lo que casi siempre se busca.
+        ...(filters.to !== null ? { to: new Date(`${filters.to}T23:59:59.999Z`) } : {}),
+        limit: 100,
+      }),
+      queries.admin.auditActions(),
+    ]),
+  );
 
-  const [page, actions] = canRead
-    ? await Promise.all([
-        queries.admin.auditLog({
-          ...(filters.action !== null ? { action: filters.action } : {}),
-          ...(filters.from !== null ? { from: new Date(`${filters.from}T00:00:00.000Z`) } : {}),
-          // Hasta el FINAL del dia elegido. Sin esto, filtrar "hasta hoy" no
-          // devuelve nada de hoy, que es lo que casi siempre se busca.
-          ...(filters.to !== null ? { to: new Date(`${filters.to}T23:59:59.999Z`) } : {}),
-          limit: 100,
-        }),
-        queries.admin.auditActions(),
-      ])
-    : [{ items: [], nextCursor: null }, []];
+  const canRead = (ctx.actor.role === 'owner' || ctx.actor.role === 'admin') && data !== null;
+
+  const [page, actions] = canRead && data !== null ? data : [{ items: [], nextCursor: null }, []];
 
   const when = (occurredAt: Date): string =>
     format.dateTime(occurredAt, { dateStyle: 'short', timeStyle: 'short' });

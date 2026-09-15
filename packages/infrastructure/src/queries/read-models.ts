@@ -275,6 +275,47 @@ class PrismaProductQueries implements ProductQueries {
     });
   }
 
+  lowStock(limit = 10): Promise<readonly ProductListItem[]> {
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      // SQL and not the query DSL: the condition compares two columns of the same row,
+      // which Prisma cannot express, and the whole point is to not fetch the catalogue to
+      // filter it here. The tenant filter is explicit as well as enforced by RLS.
+      const rows = await tx.$queryRaw<
+        {
+          id: string;
+          sku: string;
+          name: string;
+          unit: string;
+          price_minor: bigint;
+          price_currency: string;
+          on_hand: bigint;
+        }[]
+      >`
+        select id, sku, name, unit, price_minor, price_currency, on_hand
+          from public.products
+         where tenant_id = ${this.ctx.tenantId}::uuid
+           and archived_at is null
+           and track_stock
+           and min_stock is not null
+           and on_hand < min_stock
+         order by name, id
+         limit ${pageLimit(limit)}
+      `;
+
+      return rows.map((row): ProductListItem => ({
+        id: row.id,
+        sku: row.sku,
+        name: row.name,
+        unit: row.unit,
+        price: money(row.price_minor, row.price_currency as Currency),
+        trackStock: true,
+        onHand: quantity(row.on_hand),
+        belowMinimum: true,
+        archived: false,
+      }));
+    });
+  }
+
   byId(id: string): Promise<ProductDetail | null> {
     if (!isRowKey(id)) return Promise.resolve(null);
 

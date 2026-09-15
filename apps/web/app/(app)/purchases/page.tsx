@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { Plus, Truck, UsersRound } from 'lucide-react';
-import { apiForRequest } from '@/api/session';
+import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
 import { Badge } from '@/ui/feedback';
@@ -33,21 +33,21 @@ export default async function PurchasesPage({
   const { creado } = await searchParams;
   const createdCode = noticeCode(creado);
   const format = await getFormatter();
-  const { ctx, queries } = await apiForRequest();
+  const { ctx, data: page } = await withSession((queries) =>
+    queries.purchasing.receipts({ limit: 50 }),
+  );
 
   /*
-   * The role decides whether this is read, and it is decided BEFORE asking: a 403 from the
-   * API surfaces as an exception and took the whole screen down. See `@/ui/no-access`.
+   * The session and the list travel together; the role still decides what is shown. A 403
+   * from the API arrives as `null` and becomes a notice. See `@/ui/no-access`.
    */
-  if (!can(ctx.actor, 'purchase:read')) {
+  if (!can(ctx.actor, 'purchase:read') || page === null) {
     return (
       <Screen title={t('purchases.title')}>
         <NoAccess />
       </Screen>
     );
   }
-
-  const page = await queries.purchasing.receipts({ limit: 50 });
 
   const receivedOn = (receivedAt: Date | null): string =>
     receivedAt === null ? '—' : format.dateTime(receivedAt, { dateStyle: 'medium' });

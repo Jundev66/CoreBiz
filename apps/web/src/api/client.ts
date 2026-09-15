@@ -172,6 +172,15 @@ function incidentSuffix(res: Response): string {
 export class ApiUnavailableError extends Error {}
 
 /**
+ * The API refused this read for the current role (403).
+ *
+ * Its own type so a screen can ask for its data at the same time as the session and turn
+ * the refusal into "no access" afterwards (`unlessForbidden` in `./session`), instead of
+ * checking the role first and paying one more round trip on every navigation.
+ */
+export class ApiForbiddenError extends Error {}
+
+/**
  * Manda a la pantalla de espera, conservando a donde queria ir.
  *
  * The API can be slow to answer after idling (a cold function, a database waking up). It is
@@ -229,6 +238,7 @@ export async function get<T>(path: string): Promise<T> {
   });
 
   if (res.status === 401) redirect('/login');
+  if (res.status === 403) throw new ApiForbiddenError(`GET ${path} respondio 403`);
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
     throw new Error(
@@ -250,6 +260,7 @@ export async function getOrNull<T>(path: string): Promise<T | null> {
   // 404 aqui NO es un fallo: es "no existe, o no es tuyo", y desde fuera no se
   // distingue a proposito. La pantalla lo trata igual que antes trataba un null.
   if (res.status === 404) return null;
+  if (res.status === 403) throw new ApiForbiddenError(`GET ${path} respondio 403`);
   if (!res.ok) throw new Error(`GET ${path} respondio ${res.status}${incidentSuffix(res)}`);
 
   return (await res.json()) as T;
