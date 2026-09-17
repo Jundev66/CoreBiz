@@ -492,7 +492,7 @@
         "ollama": {
           "name": "Ollama",
           "tagline": "Modelos abiertos en tu propio equipo o servidor. Sin costo por uso.",
-          "baseUrlHint": "CoreBiz se conecta desde internet: localhost solo funciona en desarrollo. En producción usa una dirección pública con https (por ejemplo, un túnel).",
+          "baseUrlHint": "CoreBiz se conecta desde internet: localhost solo funciona en desarrollo. En producción usa una dirección pública con https (por ejemplo, un túnel). Cada respuesta tiene que llegar en menos de 45 segundos: sin tarjeta gráfica, elige un modelo pequeño y sin razonamiento, como qwen2.5:0.5b o llama3.2:1b.",
           "how": {
             "a": "Instala Ollama desde ollama.com en el equipo o servidor que responderá.",
             "b": "Descarga un modelo, por ejemplo: ollama pull llama3.2",

@@ -28,6 +28,13 @@ export const DEMO_ROLE_COOKIE = 'corebiz_demo_role';
 const REQUEST_TIMEOUT_MS = 25_000;
 
 /**
+ * For the calls that wait on a third party: the AI assistant asks the company's provider and
+ * the answer can take tens of seconds. Just under the API function's own `maxDuration` (60 s
+ * in `apps/api/vercel.json`), so the API's error arrives before this gives up.
+ */
+export const SLOW_REQUEST_TIMEOUT_MS = 58_000;
+
+/**
  * Falta configuracion. NO es lo mismo que una API dormida.
  *
  * Tiene tipo propio porque durante un tiempo no lo tuvo: `apiBaseUrl()` lanzaba un
@@ -195,7 +202,11 @@ async function redirectToWakeScreen(): Promise<never> {
   redirect(`/waking-up?next=${encodeURIComponent(path)}`);
 }
 
-async function request(path: string, init?: RequestInit): Promise<Response> {
+async function request(
+  path: string,
+  init?: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   /*
    * Las cabeceras se construyen FUERA del try, y no es una preferencia de estilo.
    *
@@ -221,7 +232,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
        * una respuesta cacheada de un tenant servida a otro seria una fuga.
        */
       cache: 'no-store',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (cause) {
     // Se distingue de un error de la API a proposito: "no ha contestado" y "ha dicho
@@ -312,11 +323,13 @@ export async function send<T>(
   method: 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
+  options: { readonly timeoutMs?: number } = {},
 ): Promise<Result<T, ApiFailure>> {
-  const res = await request(path, {
-    method,
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+  const res = await request(
+    path,
+    { method, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) },
+    options.timeoutMs,
+  );
 
   if (res.status === 401) redirect('/login');
 
