@@ -32,3 +32,13 @@ export type {
   TenantSettingsRepository,
 } from './administration';
 export type { SupplierRepository, GoodsReceiptRepository } from './purchasing';
+export type {
+  AiSettingsRecord,
+  AiSettingsRepository,
+  SecretBox,
+  AiConnection,
+  AiModel,
+  AssistantMessage,
+  AiGatewayError,
+  AiGateway,
+} from './ai';

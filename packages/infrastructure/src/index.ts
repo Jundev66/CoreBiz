@@ -61,3 +61,7 @@ export {
   type ProvisionDemoOptions,
   type DemoCredentials,
 } from './prisma/demo';
+export { PrismaAiSettingsRepository } from './prisma/ai-settings';
+export { aesGcmSecretBox } from './crypto/secret-box';
+export { httpAiGateway, type HttpAiGatewayOptions } from './ai/http-ai-gateway';
+export { isAllowedBaseUrl } from './ai/url-guard';

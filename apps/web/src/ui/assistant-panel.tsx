@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { CircleHelp, ArrowRight } from 'lucide-react';
 import { hasPlaybook, isEscalateOnly, playbookRoute } from '@corebiz/contracts';
 import { readLastFailure } from '@/api/last-error';
+import { AssistantAi } from '@/ui/assistant-ai';
 
 /**
  * The help panel, and the first half of what will later be the assistant.
@@ -19,6 +20,10 @@ import { readLastFailure } from '@/api/last-error';
  *
  * Zero tokens, zero requests, zero dependencies. Most of what people ask when an ERP will
  * not let them continue can be answered without asking anyone.
+ *
+ * Below the cards sits `AssistantAi`, the only part that may involve a model — and only once
+ * an admin connected one. It is a small client island: the cards above keep working with no
+ * JavaScript, and a panel nobody opens asks the API nothing.
  */
 
 export async function AssistantPanel() {
@@ -65,6 +70,7 @@ export async function AssistantPanel() {
              thing it can instead of going blank or rendering the raw key. */
           <p className="text-sm text-[var(--color-muted)]">{t('assistant.noPlaybook')}</p>
         )}
+        <AssistantAi />
       </div>
     </details>
   );

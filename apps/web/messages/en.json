@@ -369,7 +369,8 @@
     "tabs": {
       "business": "Business",
       "team": "Team",
-      "audit": "Activity"
+      "audit": "Activity",
+      "ai": "Artificial intelligence"
     },
     "business": {
       "heading": "Business details",
@@ -416,7 +417,15 @@
       "AuthUnavailable": "We could not verify your session right now. Try again in a few seconds.",
       "ApiUnavailable": "The server is not responding right now. Try again in a few seconds.",
       "PayloadTooLarge": "What you tried to send is too big.",
-      "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again."
+      "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again.",
+      "AiNotConfigured": "The assistant has no AI connected yet.",
+      "AiKeyMissing": "This provider's API key is missing. Paste it again.",
+      "AiEncryptionUnavailable": "The server has no key encryption configured, so the key cannot be stored safely.",
+      "AiKeyRejected": "The provider rejected the key. Check that it is complete and active.",
+      "AiModelUnavailable": "That model is not available for this key.",
+      "AiBaseUrlNotAllowed": "That address is not allowed. Use a public https address.",
+      "AiProviderUnreachable": "The AI provider did not respond. Try again in a few seconds.",
+      "AiRateLimited": "The AI provider is limiting requests. Wait a moment and try again."
     },
     "team": {
       "heading": "People",
@@ -454,6 +463,71 @@
       "empty": "No activity matches those filters.",
       "export": "Download CSV",
       "notAllowed": "Only the owner and administrators can see the activity."
+    },
+    "ai": {
+      "heading": "AI assistant",
+      "description": "Connect the assistant in the Help button to an AI provider. Without it, the panel still explains errors, but it cannot chat.",
+      "connectedTitle": "Assistant connected",
+      "connected": "It answers with {provider}, model {model}. Anyone on the team can ask it from the Help button.",
+      "step1": "1. Where is your AI?",
+      "step2": "2. Connect it",
+      "step3": "3. Choose the model",
+      "baseUrl": "Service address",
+      "apiKey": "API key",
+      "apiKeySaved": "Saved: ••••{hint}",
+      "apiKeyKeepHint": "Leave it empty to keep using the saved key. It is never shown in full again.",
+      "apiKeyHint": "Stored encrypted and never shown in full again.",
+      "testAndList": "Test connection and load models",
+      "listed": "{count, plural, one {Connection works: # model available.} other {Connection works: # models available.}}",
+      "modelFirstTest": "Test the connection first",
+      "modelHint": "These are the models your key can use, according to the provider itself.",
+      "modelTypeHint": "This service does not publish its model list. Type the exact name; we check it when saving.",
+      "chooseModel": "Test the connection and choose a model before saving.",
+      "privacy": "What the team types into the assistant is sent to this provider. The assistant does not read company data (customers, sales, inventory).",
+      "privacyOllama": "With Ollama on your own machine or server, questions do not go to a third party. The assistant does not read company data.",
+      "save": "Save connection",
+      "saved": "Done. The assistant now answers from the Help button.",
+      "remove": "Disconnect the assistant",
+      "providers": {
+        "ollama": {
+          "name": "Ollama",
+          "tagline": "Open models on your own machine or server. No per-use cost.",
+          "baseUrlHint": "CoreBiz connects from the internet: localhost only works in development. In production use a public https address (for example, a tunnel).",
+          "how": {
+            "a": "Install Ollama from ollama.com on the machine or server that will answer.",
+            "b": "Download a model, for example: ollama pull llama3.2",
+            "c": "Publish it at an https address reachable from the internet and paste it here. A key is only needed if you protect it with a proxy."
+          }
+        },
+        "anthropic": {
+          "name": "Claude (Anthropic)",
+          "tagline": "Claude models with your own API key.",
+          "how": {
+            "a": "Sign in to console.anthropic.com.",
+            "b": "Go to API Keys and create a new key (it starts with sk-ant-).",
+            "c": "Paste it here and press \"Test connection\": you will see the Claude models your account can use."
+          }
+        },
+        "gemini": {
+          "name": "Gemini (Google)",
+          "tagline": "Gemini models with a Google AI Studio key.",
+          "how": {
+            "a": "Sign in to aistudio.google.com with your Google account.",
+            "b": "Press \"Get API key\" and create a key.",
+            "c": "Paste it here and press \"Test connection\": you will see the Gemini models available to that key."
+          }
+        },
+        "openai_compatible": {
+          "name": "OpenAI-compatible",
+          "tagline": "OpenAI, OpenRouter, OpenCode Zen, Groq, LM Studio and similar.",
+          "baseUrlHint": "The base address of the service, ending in /v1. For example: https://api.openai.com/v1 or https://openrouter.ai/api/v1",
+          "how": {
+            "a": "Create an API key in the service you use (OpenAI, OpenRouter, OpenCode Zen…).",
+            "b": "Type the base address of the service and paste the key.",
+            "c": "Press \"Test connection\". If the service does not publish its models, type the model name by hand."
+          }
+        }
+      }
     }
   },
   "invitation": {
@@ -757,7 +831,62 @@
       "DiscountOutOfRange": {
         "what": "That discount is outside the range a document accepts: between 0% and 100%.",
         "do": "Fix it on the line that carries it."
+      },
+      "AiNotConfigured": {
+        "what": "Nobody has connected an AI provider for this company yet.",
+        "do": "An owner or admin can do it in Settings › Artificial intelligence."
+      },
+      "AiKeyMissing": {
+        "what": "The saved connection has no usable key: it is missing, or it was stored with an encryption key the server no longer has.",
+        "do": "Paste the API key again in Settings › Artificial intelligence."
+      },
+      "AiEncryptionUnavailable": {
+        "what": "The server lacks AI_KEY_ENCRYPTION_KEY, and without it keys are not stored: storing them unencrypted is not an option.",
+        "do": "Whoever runs the deployment has to set it. Meanwhile you can only connect an Ollama without a key."
+      },
+      "AiKeyRejected": {
+        "what": "The provider said the key is not valid: it is incomplete, revoked or from another service.",
+        "do": "Create or copy the key again in the provider's console and paste it in Settings › Artificial intelligence."
+      },
+      "AiModelUnavailable": {
+        "what": "The saved model no longer exists or your account has no access to it.",
+        "do": "Test the connection again and choose a model from the list."
+      },
+      "AiBaseUrlNotAllowed": {
+        "what": "The address points to a private network or does not use https. CoreBiz's server does not connect to internal addresses, for security.",
+        "do": "Publish your service (for example your Ollama) at a public https address and use that."
+      },
+      "AiProviderUnreachable": {
+        "what": "The AI provider did not answer in time or returned an error of its own.",
+        "do": "Wait a few seconds and try again. If it persists, check the service address."
+      },
+      "AiRateLimited": {
+        "what": "Your account at the AI provider hit its request or credit limit.",
+        "do": "Wait a moment. If it happens often, review your plan with the provider."
       }
+    },
+    "setup": {
+      "title": "AI assistant",
+      "lead": "No AI is connected yet. Turn it on in three steps and you can ask me how to do anything in CoreBiz:",
+      "step1": "Choose where your AI lives: Ollama, Claude, Gemini or an OpenAI-compatible service.",
+      "step2": "Paste the API key (or the address of your Ollama).",
+      "step3": "Test the connection and pick one of the models the provider offers.",
+      "providers": "Everything above this line uses no AI: it always works.",
+      "goTo": "Connect an AI",
+      "askAdmin": "The AI assistant is not enabled. Ask an owner or admin to connect it in Settings › Artificial intelligence."
+    },
+    "chat": {
+      "title": "Ask me",
+      "poweredBy": "AI · {provider} · {model}",
+      "empty": "Ask how to do something in CoreBiz. I can't see your company's data: I'll tell you where to find it.",
+      "you": "You",
+      "assistant": "Assistant",
+      "thinking": "Thinking…",
+      "label": "Your question",
+      "placeholder": "How do I void a delivery note?",
+      "privacy": "Sent to {provider}.",
+      "privacyOllama": "Sent to your Ollama.",
+      "send": "Send"
     }
   }
 }

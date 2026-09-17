@@ -369,7 +369,8 @@
     "tabs": {
       "business": "Empresa",
       "team": "Equipo",
-      "audit": "Actividad"
+      "audit": "Actividad",
+      "ai": "Inteligencia artificial"
     },
     "business": {
       "heading": "Datos de la empresa",
@@ -416,7 +417,15 @@
       "AuthUnavailable": "No pudimos comprobar tu sesión ahora mismo. Inténtalo en unos segundos.",
       "ApiUnavailable": "El servidor no responde ahora mismo. Inténtalo en unos segundos.",
       "PayloadTooLarge": "Lo que intentaste enviar es demasiado grande.",
-      "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo."
+      "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo.",
+      "AiNotConfigured": "El asistente todavía no tiene una IA conectada.",
+      "AiKeyMissing": "Falta la clave de API de este proveedor. Pégala de nuevo.",
+      "AiEncryptionUnavailable": "El servidor no tiene configurado el cifrado de claves, así que no podemos guardar la clave de forma segura.",
+      "AiKeyRejected": "El proveedor rechazó la clave. Revisa que esté completa y activa.",
+      "AiModelUnavailable": "Ese modelo no está disponible para esta clave.",
+      "AiBaseUrlNotAllowed": "Esa dirección no está permitida. Usa una dirección pública con https.",
+      "AiProviderUnreachable": "El proveedor de IA no respondió. Inténtalo en unos segundos.",
+      "AiRateLimited": "El proveedor de IA está limitando las peticiones. Espera un momento y vuelve a intentarlo."
     },
     "team": {
       "heading": "Personas",
@@ -454,6 +463,71 @@
       "empty": "No hay actividad que mostrar con esos filtros.",
       "export": "Descargar CSV",
       "notAllowed": "Solo el dueño y los administradores pueden ver la actividad."
+    },
+    "ai": {
+      "heading": "Asistente con inteligencia artificial",
+      "description": "Conecta el asistente del botón Ayuda a un proveedor de IA. Sin esto, el panel sigue explicando los errores, pero no puede conversar.",
+      "connectedTitle": "Asistente conectado",
+      "connected": "Responde con {provider}, modelo {model}. Cualquier persona del equipo puede preguntarle desde el botón Ayuda.",
+      "step1": "1. ¿Dónde está tu IA?",
+      "step2": "2. Conéctala",
+      "step3": "3. Elige el modelo",
+      "baseUrl": "Dirección del servicio",
+      "apiKey": "Clave de API",
+      "apiKeySaved": "Guardada: ••••{hint}",
+      "apiKeyKeepHint": "Déjala vacía para seguir usando la clave guardada. Nunca se vuelve a mostrar completa.",
+      "apiKeyHint": "Se guarda cifrada y nunca se vuelve a mostrar completa.",
+      "testAndList": "Probar conexión y cargar modelos",
+      "listed": "{count, plural, one {Conexión correcta: # modelo disponible.} other {Conexión correcta: # modelos disponibles.}}",
+      "modelFirstTest": "Primero prueba la conexión",
+      "modelHint": "Son los modelos que tu clave puede usar, según el propio proveedor.",
+      "modelTypeHint": "Este servicio no publica su lista de modelos. Escribe el nombre exacto; al guardar lo comprobamos.",
+      "chooseModel": "Prueba la conexión y elige un modelo antes de guardar.",
+      "privacy": "Lo que el equipo escriba en el asistente se envía a este proveedor. El asistente no lee datos de la empresa (clientes, ventas, inventario).",
+      "privacyOllama": "Con Ollama en tu propio equipo o servidor, las preguntas no salen hacia un tercero. El asistente no lee datos de la empresa.",
+      "save": "Guardar conexión",
+      "saved": "Listo. El asistente ya responde desde el botón Ayuda.",
+      "remove": "Desconectar el asistente",
+      "providers": {
+        "ollama": {
+          "name": "Ollama",
+          "tagline": "Modelos abiertos en tu propio equipo o servidor. Sin costo por uso.",
+          "baseUrlHint": "CoreBiz se conecta desde internet: localhost solo funciona en desarrollo. En producción usa una dirección pública con https (por ejemplo, un túnel).",
+          "how": {
+            "a": "Instala Ollama desde ollama.com en el equipo o servidor que responderá.",
+            "b": "Descarga un modelo, por ejemplo: ollama pull llama3.2",
+            "c": "Publícalo con una dirección https accesible desde internet y pégala aquí. La clave solo hace falta si lo proteges con un proxy."
+          }
+        },
+        "anthropic": {
+          "name": "Claude (Anthropic)",
+          "tagline": "Modelos Claude con tu propia clave de API.",
+          "how": {
+            "a": "Entra en console.anthropic.com con tu cuenta.",
+            "b": "Ve a API Keys y crea una clave nueva (empieza por sk-ant-).",
+            "c": "Pégala aquí y pulsa «Probar conexión»: verás los modelos Claude que tu cuenta puede usar."
+          }
+        },
+        "gemini": {
+          "name": "Gemini (Google)",
+          "tagline": "Modelos Gemini con una clave de Google AI Studio.",
+          "how": {
+            "a": "Entra en aistudio.google.com con tu cuenta de Google.",
+            "b": "Pulsa «Get API key» y crea una clave.",
+            "c": "Pégala aquí y pulsa «Probar conexión»: verás los modelos Gemini disponibles para esa clave."
+          }
+        },
+        "openai_compatible": {
+          "name": "Compatible con OpenAI",
+          "tagline": "OpenAI, OpenRouter, OpenCode Zen, Groq, LM Studio y similares.",
+          "baseUrlHint": "La dirección base del servicio, terminada en /v1. Por ejemplo: https://api.openai.com/v1 o https://openrouter.ai/api/v1",
+          "how": {
+            "a": "Crea una clave de API en el servicio que uses (OpenAI, OpenRouter, OpenCode Zen…).",
+            "b": "Escribe la dirección base del servicio y pega la clave.",
+            "c": "Pulsa «Probar conexión». Si el servicio no publica sus modelos, escribe el nombre del modelo a mano."
+          }
+        }
+      }
     }
   },
   "invitation": {
@@ -757,7 +831,62 @@
       "DiscountOutOfRange": {
         "what": "Ese descuento está fuera del rango que admite un documento: entre 0 % y 100 %.",
         "do": "Corrígelo en la línea que lo lleva."
+      },
+      "AiNotConfigured": {
+        "what": "Nadie ha conectado todavía un proveedor de IA para esta empresa.",
+        "do": "Un dueño o administrador puede hacerlo en Ajustes › Inteligencia artificial."
+      },
+      "AiKeyMissing": {
+        "what": "La conexión guardada no tiene una clave que se pueda usar: falta, o se guardó con una clave de cifrado que el servidor ya no tiene.",
+        "do": "Vuelve a pegar la clave de API en Ajustes › Inteligencia artificial."
+      },
+      "AiEncryptionUnavailable": {
+        "what": "El servidor no tiene la variable AI_KEY_ENCRYPTION_KEY, y sin ella las claves no se guardan: guardarlas sin cifrar no es una opción.",
+        "do": "Quien administra el despliegue tiene que configurarla. Mientras tanto solo puedes conectar un Ollama sin clave."
+      },
+      "AiKeyRejected": {
+        "what": "El proveedor dijo que la clave no es válida: está incompleta, fue revocada o es de otro servicio.",
+        "do": "Crea o copia de nuevo la clave en la consola del proveedor y pégala en Ajustes › Inteligencia artificial."
+      },
+      "AiModelUnavailable": {
+        "what": "El modelo guardado ya no existe o tu cuenta no tiene acceso a él.",
+        "do": "Prueba la conexión otra vez y elige un modelo de la lista."
+      },
+      "AiBaseUrlNotAllowed": {
+        "what": "La dirección apunta a una red privada o no usa https. El servidor de CoreBiz no se conecta a direcciones internas por seguridad.",
+        "do": "Publica tu servicio (por ejemplo tu Ollama) con una dirección pública https y úsala."
+      },
+      "AiProviderUnreachable": {
+        "what": "El proveedor de IA no contestó a tiempo o devolvió un error propio.",
+        "do": "Espera unos segundos y vuelve a intentarlo. Si sigue igual, revisa la dirección del servicio."
+      },
+      "AiRateLimited": {
+        "what": "Tu cuenta en el proveedor de IA llegó a su límite de peticiones o de saldo.",
+        "do": "Espera un momento. Si pasa a menudo, revisa el plan de tu cuenta en el proveedor."
       }
+    },
+    "setup": {
+      "title": "Asistente con IA",
+      "lead": "Todavía no hay una IA conectada. Actívala en tres pasos y podrás preguntarme cómo hacer cualquier cosa en CoreBiz:",
+      "step1": "Elige dónde está tu IA: Ollama, Claude, Gemini o un servicio compatible con OpenAI.",
+      "step2": "Pega la clave de API (o la dirección de tu Ollama).",
+      "step3": "Prueba la conexión y elige uno de los modelos que te ofrece el proveedor.",
+      "providers": "Lo que hay arriba de esta línea no usa IA: funciona siempre.",
+      "goTo": "Conectar una IA",
+      "askAdmin": "El asistente con IA no está activado. Pídele a un dueño o administrador que lo conecte en Ajustes › Inteligencia artificial."
+    },
+    "chat": {
+      "title": "Pregúntame",
+      "poweredBy": "Con IA · {provider} · {model}",
+      "empty": "Pregunta cómo hacer algo en CoreBiz. No veo los datos de tu empresa: te digo dónde encontrarlos.",
+      "you": "Tú",
+      "assistant": "Asistente",
+      "thinking": "Pensando…",
+      "label": "Tu pregunta",
+      "placeholder": "¿Cómo anulo una nota de entrega?",
+      "privacy": "Se envía a {provider}.",
+      "privacyOllama": "Se envía a tu Ollama.",
+      "send": "Enviar"
     }
   }
 }

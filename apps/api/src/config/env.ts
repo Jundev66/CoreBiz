@@ -121,6 +121,36 @@ const schema = z
     DEMO_MAX_READONLY_PER_HOUR: z.coerce.number().int().positive().default(60),
     /** Writes per verified user per hour through the API. See `WriteThrottleGuard`. */
     API_WRITES_PER_HOUR: z.coerce.number().int().positive().default(600),
+    /**
+     * Seals the AI provider keys companies paste into Settings (AES-256-GCM): 32 random
+     * bytes, base64 — `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+     *
+     * Optional so the API still boots without it: companies can then only connect an Ollama
+     * that needs no key, and saving any key is refused instead of storing it in clear.
+     * Changing it makes every saved key unreadable; admins would have to paste them again.
+     */
+    AI_KEY_ENCRYPTION_KEY: z
+      .string()
+      .optional()
+      .refine(
+        (value) =>
+          value === undefined || value === '' || Buffer.from(value, 'base64').length === 32,
+        'AI_KEY_ENCRYPTION_KEY tiene que ser 32 bytes en base64.',
+      ),
+
+    /**
+     * Lets companies point the assistant at private or plain-http addresses, such as an
+     * Ollama on localhost. For local development and the test suite ONLY: in production it
+     * would let any admin make the API call the internal network (SSRF).
+     */
+    AI_ALLOW_PRIVATE_BASE_URLS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+
+    /** Questions to the assistant per user per hour. Each one is a paid provider call. */
+    ASSISTANT_CHATS_PER_HOUR: z.coerce.number().int().positive().default(60),
+
     /** Reads per verified user per minute, per API instance. See `ReadThrottleGuard`. */
     API_READS_PER_MINUTE: z.coerce.number().int().positive().default(1_200),
   })

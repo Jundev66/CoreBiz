@@ -13,3 +13,4 @@ export * from './customers/index';
 export * from './products/index';
 export * from './sales/index';
 export * from './purchasing/index';
+export * from './ai/index';

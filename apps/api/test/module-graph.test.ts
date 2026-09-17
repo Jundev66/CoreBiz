@@ -61,6 +61,7 @@ describe('el arbol de dependencias de la API', () => {
       '/v1/administration/team',
       '/v1/reports/sales-summary',
       '/v1/usage',
+      '/v1/assistant/status',
     ]) {
       expect(paths).toContain(path);
     }

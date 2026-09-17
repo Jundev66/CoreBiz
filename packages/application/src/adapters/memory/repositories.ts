@@ -20,6 +20,7 @@ import {
   createSalesStores,
   type SalesStores,
 } from './sales';
+import { InMemoryAiSettingsRepository } from './ai';
 import type {
   AuditEntry,
   AuditLogger,
@@ -204,6 +205,7 @@ export class InMemoryUnitOfWork implements UnitOfWork {
       tenantSettings: new Map(this.stores.tenantSettings),
       suppliers: new Map(this.stores.suppliers),
       goodsReceipts: new Map(this.stores.goodsReceipts),
+      aiSettings: new Map(this.stores.aiSettings),
     };
     const auditLength = this.audit.entries.length;
 
@@ -233,6 +235,10 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         suppliers: new InMemorySupplierRepository(this.stores.suppliers as never, this.tenantId),
         goodsReceipts: new InMemoryGoodsReceiptRepository(
           this.stores.goodsReceipts as never,
+          this.tenantId,
+        ),
+        aiSettings: new InMemoryAiSettingsRepository(
+          this.stores.aiSettings as never,
           this.tenantId,
         ),
       });

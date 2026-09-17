@@ -19,6 +19,7 @@ import {
   PrismaTenantSettingsRepository,
 } from './administration';
 import { PrismaGoodsReceiptRepository, PrismaSupplierRepository } from './purchasing';
+import { PrismaAiSettingsRepository } from './ai-settings';
 import { withTenant } from './session';
 
 export interface UnitOfWorkDeps {
@@ -73,6 +74,7 @@ export class PrismaUnitOfWork implements UnitOfWork {
         settings: new PrismaTenantSettingsRepository(tx, ctx.tenantId),
         suppliers: new PrismaSupplierRepository(tx, ctx.tenantId),
         goodsReceipts: new PrismaGoodsReceiptRepository(tx, ctx.tenantId),
+        aiSettings: new PrismaAiSettingsRepository(tx, ctx.tenantId, ctx.actor.userId),
       }),
     );
   }

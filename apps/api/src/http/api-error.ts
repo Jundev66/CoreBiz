@@ -53,6 +53,17 @@ const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   NoActiveTenant: 409,
 
   TooManyAttempts: 429,
+
+  // The assistant. A provider refusing the key or going quiet is not OUR 5xx: it is a
+  // configuration an admin can fix, so it travels as a 4xx with its key for the panel.
+  AiNotConfigured: 409,
+  AiKeyMissing: 409,
+  AiEncryptionUnavailable: 409,
+  AiKeyRejected: 422,
+  AiModelUnavailable: 422,
+  AiBaseUrlNotAllowed: 422,
+  AiProviderUnreachable: 424,
+  AiRateLimited: 429,
 };
 
 /**

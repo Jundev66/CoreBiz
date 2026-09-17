@@ -12,7 +12,7 @@ import { can, type Actor, type Permission } from '@corebiz/domain';
  * La pestana activa lleva `aria-current="page"` ademas del color. El color solo
  * lo ve quien puede verlo.
  */
-export type SettingsSection = 'business' | 'team' | 'audit';
+export type SettingsSection = 'business' | 'team' | 'audit' | 'ai';
 
 /**
  * `permission` is what is needed for the tab to lead somewhere.
@@ -25,6 +25,7 @@ const SECTIONS: readonly { id: SettingsSection; href: string; permission?: Permi
   { id: 'business', href: '/settings' },
   { id: 'team', href: '/settings/team', permission: 'user:read' },
   { id: 'audit', href: '/settings/audit', permission: 'audit:read' },
+  { id: 'ai', href: '/settings/ai', permission: 'ai:configure' },
 ];
 
 /** A segmented control: it scrolls sideways on its own instead of pushing the page wider. */

@@ -19,6 +19,7 @@ import type {
   VoidDeliveryNoteInput,
   VoidGoodsReceiptInput,
 } from '@corebiz/application';
+import type { AiDraftInput, AskAssistantBody, SaveAiSettingsBody } from '@corebiz/contracts';
 import { send } from './client';
 
 /**
@@ -171,6 +172,18 @@ export function httpCommands() {
 
     updateTenantSettings: (input: UpdateTenantSettingsInput) =>
       send<unknown>('PATCH', '/v1/administration/settings', input),
+
+    // ── Asistente con IA ─────────────────────────────────────────────────────
+    listAiModels: (input: AiDraftInput) =>
+      send<{ models: readonly { id: string; label: string }[] }>('POST', '/v1/ai/models', input),
+
+    saveAiSettings: (input: SaveAiSettingsBody) =>
+      send<{ settings: unknown }>('POST', '/v1/ai/settings', input),
+
+    removeAiSettings: () => send<{ removed: boolean }>('DELETE', '/v1/ai/settings'),
+
+    askAssistant: (input: AskAssistantBody) =>
+      send<{ reply: string }>('POST', '/v1/assistant/chat', input),
 
     // ── Compras ──────────────────────────────────────────────────────────────
     createSupplier: (input: CreateSupplierInput) =>

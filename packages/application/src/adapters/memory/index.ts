@@ -15,3 +15,4 @@ export * from './sales';
 export { inMemoryReadModels } from './queries';
 export * from './administration';
 export * from './purchasing';
+export * from './ai';
