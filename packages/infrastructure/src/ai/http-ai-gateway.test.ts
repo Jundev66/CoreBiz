@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AiConnection } from '@corebiz/application';
-import { httpAiGateway } from './http-ai-gateway';
+import { httpAiGateway, joinText } from './http-ai-gateway';
 import { isAllowedBaseUrl } from './url-guard';
 
 interface Recorded {
@@ -251,5 +251,15 @@ describe('isAllowedBaseUrl', () => {
 
   it('accepts a public name that resolves publicly', async () => {
     expect(await isAllowedBaseUrl('https://openrouter.ai/api/v1', false, publicDns)).toBe(true);
+  });
+});
+
+describe('joinText', () => {
+  it('drops inline reasoning, closed or cut off by the token limit', () => {
+    expect(joinText(['<think>the user wants…</think>\n\nVe a Notas de entrega.'])).toBe(
+      'Ve a Notas de entrega.',
+    );
+    expect(joinText(['<think>still thinking when the budget ran out'])).toBe('');
+    expect(joinText(['Sin razonamiento.', null])).toBe('Sin razonamiento.');
   });
 });

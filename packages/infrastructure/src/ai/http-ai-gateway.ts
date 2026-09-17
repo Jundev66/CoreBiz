@@ -311,10 +311,19 @@ function isOpenAiItself(baseUrl: string): boolean {
   }
 }
 
-function joinText(parts: readonly (string | null)[]): string {
+/**
+ * The text of a reply, without the model's reasoning.
+ *
+ * Reasoning models served through Ollama, LM Studio or OpenRouter (Qwen3, DeepSeek R1…)
+ * often put their chain of thought inline as `<think>…</think>`. Shown in the panel, the
+ * person reads a page of English musings before the answer — or only the musings, when the
+ * token budget ran out inside them.
+ */
+export function joinText(parts: readonly (string | null)[]): string {
   return parts
     .filter((p): p is string => p !== null)
     .join('')
+    .replace(/<think>[\s\S]*?(<\/think>|$)/gi, '')
     .trim()
     .slice(0, MAX_REPLY_CHARS);
 }

@@ -20,7 +20,7 @@ import type {
   VoidGoodsReceiptInput,
 } from '@corebiz/application';
 import type { AiDraftInput, AskAssistantBody, SaveAiSettingsBody } from '@corebiz/contracts';
-import { send } from './client';
+import { SLOW_REQUEST_TIMEOUT_MS, send } from './client';
 
 /**
  * El lado de ESCRITURA, servido por HTTP.
@@ -174,16 +174,23 @@ export function httpCommands() {
       send<unknown>('PATCH', '/v1/administration/settings', input),
 
     // ── Asistente con IA ─────────────────────────────────────────────────────
+    // These wait on the company's AI provider, not only on our API: the slow timeout.
     listAiModels: (input: AiDraftInput) =>
-      send<{ models: readonly { id: string; label: string }[] }>('POST', '/v1/ai/models', input),
+      send<{ models: readonly { id: string; label: string }[] }>('POST', '/v1/ai/models', input, {
+        timeoutMs: SLOW_REQUEST_TIMEOUT_MS,
+      }),
 
     saveAiSettings: (input: SaveAiSettingsBody) =>
-      send<{ settings: unknown }>('POST', '/v1/ai/settings', input),
+      send<{ settings: unknown }>('POST', '/v1/ai/settings', input, {
+        timeoutMs: SLOW_REQUEST_TIMEOUT_MS,
+      }),
 
     removeAiSettings: () => send<{ removed: boolean }>('DELETE', '/v1/ai/settings'),
 
     askAssistant: (input: AskAssistantBody) =>
-      send<{ reply: string }>('POST', '/v1/assistant/chat', input),
+      send<{ reply: string }>('POST', '/v1/assistant/chat', input, {
+        timeoutMs: SLOW_REQUEST_TIMEOUT_MS,
+      }),
 
     // ── Compras ──────────────────────────────────────────────────────────────
     createSupplier: (input: CreateSupplierInput) =>

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { assistantStatus, type AssistantStatusView } from '@/api/ai';
+import { ApiUnavailableError } from '@/api/client';
 import { apiForRequest } from '@/api/session';
 
 /**
@@ -133,8 +134,15 @@ export async function askAssistantAction(
   if (!parsed.success) return { ok: false, errorKind: 'InvalidFormat' };
 
   const { askAssistant } = await apiForRequest();
-  const result = await askAssistant(parsed.data);
-  return result.ok
-    ? { ok: true, reply: result.value.reply }
-    : { ok: false, errorKind: result.error.kind };
+  try {
+    const result = await askAssistant(parsed.data);
+    return result.ok
+      ? { ok: true, reply: result.value.reply }
+      : { ok: false, errorKind: result.error.kind };
+  } catch (error) {
+    // A reply that never came must not take the whole panel down with an unhandled error:
+    // it becomes a message the chat can show, like any other failure.
+    if (error instanceof ApiUnavailableError) return { ok: false, errorKind: 'ApiUnavailable' };
+    throw error;
+  }
 }
