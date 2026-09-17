@@ -37,7 +37,12 @@ describe('RBAC — separacion de responsabilidades', () => {
 
   it('un observador no escribe absolutamente nada', () => {
     const writePermissions = PERMISSIONS.filter(
-      (p) => !p.endsWith(':read') && p !== 'report:export' && p !== 'audit:export',
+      (p) =>
+        !p.endsWith(':read') &&
+        p !== 'report:export' &&
+        p !== 'audit:export' &&
+        // Asking the assistant reads nothing and writes nothing.
+        p !== 'assistant:use',
     );
     for (const permission of writePermissions) {
       expect(can(actor('viewer'), permission)).toBe(false);
@@ -49,6 +54,13 @@ describe('RBAC — separacion de responsabilidades', () => {
       const expected = role === 'owner' || role === 'admin';
       expect(can(actor(role), 'user:manage')).toBe(expected);
       expect(can(actor(role), 'audit:read')).toBe(expected);
+    }
+  });
+
+  it('solo owner y admin conectan la IA, y todos los roles pueden preguntarle', () => {
+    for (const role of ROLES) {
+      expect(can(actor(role), 'ai:configure')).toBe(role === 'owner' || role === 'admin');
+      expect(can(actor(role), 'assistant:use')).toBe(true);
     }
   });
 

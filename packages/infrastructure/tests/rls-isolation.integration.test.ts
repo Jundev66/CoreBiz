@@ -58,6 +58,7 @@ const COVERED = [
   'suppliers',
   'goods_receipts',
   'goods_receipt_lines',
+  'tenant_ai_settings',
 ] as const;
 
 /**
@@ -179,6 +180,12 @@ async function seedOneRowPerTable(tenant: TestTenant): Promise<void> {
     ) values (
       ${t}, ${receiptId}, 1, ${productId}, 'Producto de la matriz', 'und', 1000, 1000, 1000
     )
+  `;
+
+  // The ciphertext is a placeholder: isolation is about the row, not about the seal.
+  await sql`
+    insert into public.tenant_ai_settings (tenant_id, provider, api_key_ciphertext, api_key_hint, model)
+    values (${t}, 'anthropic', 'v1.rls.probe.value', 'obe1', 'claude-rls-probe')
   `;
 }
 

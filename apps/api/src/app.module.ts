@@ -7,6 +7,7 @@ import { WriteThrottleGuard } from './auth/write-throttle.guard';
 import { CompositionModule } from './composition/composition.module';
 import { HealthModule } from './health/health.module';
 import { AdministrationModule } from './modules/administration/administration.module';
+import { AiModule } from './modules/ai/ai.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { DemoModule } from './modules/demo/demo.module';
 import { InternalModule } from './modules/internal/internal.module';
@@ -36,6 +37,7 @@ import { SessionModule } from './modules/session/session.module';
     DeliveryNotesModule,
     PurchasingModule,
     AdministrationModule,
+    AiModule,
     InsightsModule,
     OnboardingModule,
     DemoModule,

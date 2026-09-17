@@ -22,10 +22,19 @@ import {
   makeSetSupplierStatus,
   makeUpdateTenantSettings,
   makeVoidDeliveryNote,
+  makeAskAssistant,
+  makeAssistantStatus,
+  makeGetAiSettings,
+  makeListAiModels,
+  makeRemoveAiSettings,
+  makeSaveAiSettings,
   systemClock,
+  type AiGateway,
+  type SecretBox,
   type TenantContext,
 } from '@corebiz/application';
-import { cryptoTokenFactory } from '@corebiz/infrastructure';
+import { aesGcmSecretBox, cryptoTokenFactory, httpAiGateway } from '@corebiz/infrastructure';
+import { loadEnv } from '../config/env';
 import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../tokens';
 import type { Runtime } from './runtime.provider';
 
@@ -39,6 +48,22 @@ import type { Runtime } from './runtime.provider';
  * Devolver funciones ya inyectadas —en lugar de un contenedor consultable— hace que
  * la llamada quede tipada y que no exista forma de pedir algo que no se ha montado.
  */
+/**
+ * The AI adapters hold no per-request state, so they are built once per process. Lazily,
+ * because `loadEnv()` must not run at import time in tests that set the environment later.
+ */
+let aiAdapters: { gateway: AiGateway; secrets: SecretBox } | null = null;
+function ai() {
+  if (aiAdapters === null) {
+    const env = loadEnv();
+    aiAdapters = {
+      gateway: httpAiGateway({ allowPrivateBaseUrls: env.AI_ALLOW_PRIVATE_BASE_URLS }),
+      secrets: aesGcmSecretBox(env.AI_KEY_ENCRYPTION_KEY),
+    };
+  }
+  return aiAdapters;
+}
+
 function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
   const shared = {
     uow: runtime.uow,
@@ -50,6 +75,8 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
   // Los tokens de invitacion se generan con `randomBytes`, no con Math.random: un
   // token predecible es una puerta abierta a la empresa que lo espera.
   const withTokens = { ...shared, tokens: cryptoTokenFactory() };
+
+  const withAi = { ...shared, ...ai() };
 
   return {
     createCustomer: makeCreateCustomer(shared),
@@ -81,6 +108,14 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     setSupplierStatus: makeSetSupplierStatus(shared),
     receiveGoods: makeReceiveGoods(shared),
     voidGoodsReceipt: makeVoidGoodsReceipt(shared),
+
+    // AI assistant. Settings are owner/admin; asking is open to every role.
+    getAiSettings: makeGetAiSettings(withAi),
+    listAiModels: makeListAiModels(withAi),
+    saveAiSettings: makeSaveAiSettings(withAi),
+    removeAiSettings: makeRemoveAiSettings(withAi),
+    assistantStatus: makeAssistantStatus(withAi),
+    askAssistant: makeAskAssistant(withAi),
   } as const;
 }
 

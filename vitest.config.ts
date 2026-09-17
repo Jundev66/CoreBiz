@@ -29,6 +29,17 @@ export default defineConfig({
       },
       {
         test: {
+          // Adapters that need no database: key encryption and the AI provider clients,
+          // which are tested against a stubbed `fetch`.
+          name: 'infrastructure',
+          root: './packages/infrastructure',
+          environment: 'node',
+          globals: true,
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'api',
           root: './apps/api',
           environment: 'node',

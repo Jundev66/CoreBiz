@@ -1,5 +1,6 @@
 import type { Page } from './page';
 import type { GoodsReceiptRepository, SupplierRepository } from './purchasing';
+import type { AiSettingsRepository } from './ai';
 import type {
   InvitationRepository,
   MembershipRepository,
@@ -117,6 +118,10 @@ export interface Repositories {
   // saldo de cada producto y el libro mayor de inventario.
   readonly suppliers: SupplierRepository;
   readonly goodsReceipts: GoodsReceiptRepository;
+
+  // The AI connection. In the unit of work so that changing it and auditing the change
+  // commit together: an audit row for a key that was never saved is a lie.
+  readonly aiSettings: AiSettingsRepository;
 }
 
 /**

@@ -62,6 +62,11 @@ export const RATE_LIMITS = {
    * from `API_WRITES_PER_HOUR` so a deployment can tune it without a release.
    */
   apiWrites: { limit: 600, windowSeconds: 3_600 },
+  /**
+   * Questions to the assistant, per verified user. Each one is a paid call to the company's
+   * own provider account, so the ceiling protects their bill as much as our function time.
+   */
+  assistantChat: { limit: 60, windowSeconds: 3_600 },
 } as const satisfies Record<string, { limit: number; windowSeconds: number }>;
 
 export type RateLimitPolicy = keyof typeof RATE_LIMITS;

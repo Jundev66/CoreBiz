@@ -12,3 +12,4 @@ export * from './sales';
 export * from './purchasing';
 export * from './administration';
 export * from './support';
+export * from './ai';

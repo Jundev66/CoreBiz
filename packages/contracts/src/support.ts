@@ -155,6 +155,17 @@ export const PLAYBOOK_ROUTES: Readonly<Record<string, string | null>> = {
   InvalidCurrency: '/settings',
   InvalidExchangeRate: '/settings',
 
+  // The AI assistant. All of them are fixed from the connection screen except the provider's
+  // own rate limit, which only waiting fixes.
+  AiNotConfigured: '/settings/ai',
+  AiKeyMissing: '/settings/ai',
+  AiEncryptionUnavailable: null,
+  AiKeyRejected: '/settings/ai',
+  AiModelUnavailable: '/settings/ai',
+  AiBaseUrlNotAllowed: '/settings/ai',
+  AiProviderUnreachable: '/settings/ai',
+  AiRateLimited: null,
+
   // Session and account.
   Unauthenticated: '/login',
   NoActiveTenant: '/onboarding',

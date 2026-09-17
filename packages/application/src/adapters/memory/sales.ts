@@ -206,6 +206,7 @@ export interface SalesStores {
   readonly tenantSettings: Map<string, unknown>;
   readonly suppliers: Map<string, unknown>;
   readonly goodsReceipts: Map<string, unknown>;
+  readonly aiSettings: Map<string, unknown>;
 }
 
 /** Un movimiento ya consumido del agregado, listo para leer. */
@@ -233,5 +234,6 @@ export function createSalesStores(): SalesStores {
     tenantSettings: new Map(),
     suppliers: new Map(),
     goodsReceipts: new Map(),
+    aiSettings: new Map(),
   };
 }
