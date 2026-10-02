@@ -11,6 +11,15 @@ export default defineConfig({
     projects: [
       {
         test: {
+          name: 'synapse',
+          root: './packages/synapse',
+          environment: 'node',
+          globals: true,
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'domain',
           root: './packages/domain',
           environment: 'node',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AI_PROVIDERS, AI_PROVIDER_TRAITS, type AiProvider } from '@corebiz/domain';
 import {
@@ -13,6 +13,7 @@ import type { AiSettingsView } from '@/api/ai';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, HINT_CLASSES, LABEL_CLASSES } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 const INITIAL: AiFormState = { status: 'idle' };
 
@@ -56,6 +57,35 @@ export function AiSettingsForm({ saved }: { saved: AiSettingsView | null }) {
   const sameAsSaved = saved !== null && saved.provider === provider;
   const models = listed.provider === provider ? listed.models : undefined;
   const pending = listing || saving || removing;
+
+  useEffect(() => {
+    if (save.status === 'error' && save.errorKind) {
+      toast.error(
+        save.errorKind === 'Required'
+          ? t('settings.ai.chooseModel')
+          : t(`settings.errors.${save.errorKind}`),
+        { title: 'Configuración de IA' },
+      );
+    } else if (save.status === 'success') {
+      toast.success(t('settings.ai.saved'), { title: 'Configuración guardada' });
+    }
+  }, [save, t]);
+
+  useEffect(() => {
+    if (listed.status === 'error' && listed.errorKind) {
+      toast.error(t(`settings.errors.${listed.errorKind}`), { title: 'Conexión con el proveedor' });
+    } else if (listed.status === 'success' && listed.models) {
+      toast.success(t('settings.ai.listed', { count: listed.models.length }), {
+        title: 'Modelos disponibles',
+      });
+    }
+  }, [listed, t]);
+
+  useEffect(() => {
+    if (removal.status === 'error' && removal.errorKind) {
+      toast.error(t(`settings.errors.${removal.errorKind}`), { title: 'Desconexión de IA' });
+    }
+  }, [removal, t]);
 
   // What the model control offers: the provider's list, a free field when there is no list,
   // or — before testing — the saved model so an unchanged form can still be saved.

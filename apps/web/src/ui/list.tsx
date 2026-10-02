@@ -68,3 +68,37 @@ export function MobileListItem({
     </li>
   );
 }
+
+/**
+ * Item de lista móvil para datos informativos o de resumen (sin enlace de navegación).
+ */
+export function MobileStaticItem({
+  title,
+  subtitle,
+  trailing,
+  trailingHint,
+}: {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  trailing?: React.ReactNode;
+  trailingHint?: React.ReactNode;
+}) {
+  return (
+    <li className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-ink">{title}</p>
+        {subtitle !== undefined && <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>}
+      </div>
+      {(trailing !== undefined || trailingHint !== undefined) && (
+        <div className="shrink-0 text-right">
+          {trailing !== undefined && (
+            <p className="text-sm font-medium text-ink tabular-nums">{trailing}</p>
+          )}
+          {trailingHint !== undefined && (
+            <div className="mt-0.5 text-xs text-muted">{trailingHint}</div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}

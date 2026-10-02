@@ -55,6 +55,7 @@ export {
   provisionDemoSandbox,
   demoSandboxIsAlive,
   purgeExpiredDemos,
+  destroyDemoSandbox,
   type DemoMode,
   type DemoCapacity,
   type ProvisionDemoResult,

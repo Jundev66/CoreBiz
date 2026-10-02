@@ -201,12 +201,14 @@ describe('AI assistant', () => {
       expect(admin.ok && admin.value.canConfigure).toBe(true);
     });
 
-    it('answers AiNotConfigured before calling anyone', async () => {
+    it('answers deterministically through Synapse before calling anyone when AI is not configured', async () => {
       const { ask, stub } = setup('viewer');
-      expect(await ask([{ role: 'user', content: 'hola' }])).toEqual({
-        ok: false,
-        error: { kind: 'AiNotConfigured' },
-      });
+      const result = await ask([{ role: 'user', content: '¿Cómo creo un cliente?' }]);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.reply).toContain('Gestión de Clientes');
+        expect(result.value.reply).toContain('Modo Local sin IA');
+      }
       expect(stub.calls).toHaveLength(0);
     });
 

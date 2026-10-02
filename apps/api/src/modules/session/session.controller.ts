@@ -1,9 +1,12 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, HttpStatus, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { destroyDemoSandbox } from '@corebiz/infrastructure';
 import type { Membership } from '@corebiz/infrastructure';
 import { ACTIVE_CONTEXT, IDENTITY, MEMBERSHIPS } from '../../tokens';
 import type { ResolvedContext } from '../../composition/context.provider';
 import type { VerifiedIdentity } from '../../auth/authenticated-request';
+import { databaseUrl } from '../../config/driver';
+import { domainError } from '../../http/api-error';
 import { bigintToString, dateToIso } from '../../http/serialize';
 import { type SessionDto } from './session.dto';
 
@@ -69,5 +72,20 @@ export class SessionController {
       planCode: ctx.plan.code,
       memoryDriver: session.memoryDriver,
     };
+  }
+
+  @Delete('demo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Auto-destrucción inmediata de los datos y sandbox de demostración' })
+  async destroyDemo(): Promise<{ destroyed: boolean }> {
+    if (this.resolved === null || !this.resolved.ctx.isDemo) {
+      throw domainError('Forbidden');
+    }
+
+    const tenantId = this.resolved.ctx.tenantId;
+    const userId = this.identity.userId;
+    const destroyed = await destroyDemoSandbox(databaseUrl(), tenantId, userId);
+
+    return { destroyed };
   }
 }

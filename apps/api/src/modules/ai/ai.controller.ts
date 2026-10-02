@@ -92,7 +92,7 @@ export class AssistantController {
   @ApiOperation({ summary: 'Preguntar al asistente. No guarda la conversacion' })
   async chat(
     @Body(new ZodValidationPipe(askAssistantSchema)) body: z.infer<typeof askAssistantSchema>,
-  ): Promise<{ reply: string }> {
+  ): Promise<{ reply: string; actions?: readonly { label: string; href: string }[] }> {
     return unwrapOrThrow(await this.useCases.askAssistant(body.messages));
   }
 }

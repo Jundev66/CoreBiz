@@ -227,10 +227,12 @@ class PrismaProductQueries implements ProductQueries {
     search?: string;
     includeArchived?: boolean;
     limit?: number;
+    cursor?: string;
   }): Promise<Page<ProductListItem>> {
     const limit = pageLimit(filter.limit);
 
     return readOnly(this.prisma, this.ctx, async (tx) => {
+      const cursor = decodeCursor(filter.cursor);
       const search = filter.search?.trim() ?? '';
 
       const rows = await tx.products.findMany({
@@ -250,13 +252,18 @@ class PrismaProductQueries implements ProductQueries {
           tenant_id: this.ctx.tenantId,
           ...(filter.includeArchived !== true ? { archived_at: null } : {}),
           ...(search !== '' ? coincideCon(['name', 'sku'], search) : {}),
+          ...(cursor !== null ? despuesDelCursor(cursor) : {}),
         },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
-        take: limit,
+        take: limit + 1,
       });
 
+      const hasMore = rows.length > limit;
+      const visible = hasMore ? rows.slice(0, limit) : rows;
+      const last = visible[visible.length - 1];
+
       return {
-        items: rows.map((row): ProductListItem => ({
+        items: visible.map((row): ProductListItem => ({
           id: row.id,
           sku: row.sku,
           name: row.name,
@@ -270,7 +277,7 @@ class PrismaProductQueries implements ProductQueries {
           belowMinimum: bajoMinimo(row),
           archived: row.archived_at !== null,
         })),
-        nextCursor: null,
+        nextCursor: hasMore && last !== undefined ? encodeCursor(last.name, last.id) : null,
       };
     });
   }
@@ -382,6 +389,7 @@ class PrismaProductQueries implements ProductQueries {
           unit: true,
           price_minor: true,
           price_currency: true,
+          cost_minor: true,
           track_stock: true,
           on_hand: true,
         },
@@ -397,6 +405,8 @@ class PrismaProductQueries implements ProductQueries {
         unit: row.unit,
         price: money(row.price_minor, row.price_currency as Currency),
         stock: row.track_stock ? quantity(row.on_hand) : null,
+        cost:
+          row.cost_minor === null ? null : money(row.cost_minor, row.price_currency as Currency),
       }));
     });
   }
@@ -408,7 +418,11 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
     private readonly ctx: TenantContext,
   ) {}
 
-  list(filter: { status?: string; limit?: number }): Promise<Page<DeliveryNoteListItem>> {
+  list(filter: {
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<DeliveryNoteListItem>> {
     const limit = pageLimit(filter.limit);
 
     return readOnly(this.prisma, this.ctx, async (tx) => {
@@ -430,13 +444,18 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
         where: {
           tenant_id: this.ctx.tenantId,
           ...(filter.status !== undefined ? { status: filter.status } : {}),
+          ...(filter.cursor !== undefined ? { number: { lt: filter.cursor } } : {}),
         },
         orderBy: { number: 'desc' },
-        take: limit,
+        take: limit + 1,
       });
 
+      const hasMore = rows.length > limit;
+      const visible = hasMore ? rows.slice(0, limit) : rows;
+      const last = visible[visible.length - 1];
+
       return {
-        items: rows.map((row): DeliveryNoteListItem => ({
+        items: visible.map((row): DeliveryNoteListItem => ({
           id: row.id,
           number: row.number,
           status: row.status,
@@ -445,7 +464,7 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
           totalSecondary: money(row.total_secondary_minor, row.exchange_rate_to as Currency),
           issuedAt: row.issued_at,
         })),
-        nextCursor: null,
+        nextCursor: hasMore && last !== undefined ? last.number : null,
       };
     });
   }

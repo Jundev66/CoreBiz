@@ -10,17 +10,16 @@ function panel(page: Page) {
 Then('it explains how to turn on the AI assistant', async ({ page }) => {
   const opened = panel(page);
 
-  // The status is asked when the panel opens, so the guide appears a moment later.
+  // The status is asked when the panel opens, so the connect button appears a moment later.
   await expect(
-    opened.getByRole('heading', { name: /AI assistant|Asistente con IA/i }),
+    opened.getByRole('link', { name: /connect an ai|conectar una ia|conectar ia/i }),
   ).toBeVisible();
-  await expect(opened.getByRole('listitem')).toHaveCount(3);
   await expect(opened).not.toContainText('assistant.setup');
 });
 
 When('I follow the link to connect an AI', async ({ page }) => {
   await panel(page)
-    .getByRole('link', { name: /connect an ai|conectar una ia/i })
+    .getByRole('link', { name: /connect an ai|conectar una ia|conectar ia/i })
     .click();
   await expect(page).toHaveURL(/\/settings\/ai$/);
 });
@@ -39,6 +38,6 @@ Then('I see the AI connection screen with the four providers', async ({ page }) 
 Then('it tells me to ask an owner or admin to connect the AI', async ({ page }) => {
   const opened = panel(page);
 
-  await expect(opened).toContainText(/ask an owner or admin/i);
-  await expect(opened.getByRole('link', { name: /connect an ai/i })).toHaveCount(0);
+  await expect(opened).toContainText(/ask an owner or admin|pídele a un dueño o administrador/i);
+  await expect(opened.getByRole('link', { name: /connect an ai|conectar ia/i })).toHaveCount(0);
 });

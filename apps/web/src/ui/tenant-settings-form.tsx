@@ -1,11 +1,12 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { updateTenantSettingsAction, type AdminState } from '@/actions/administration';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 const INITIAL: AdminState = { status: 'idle' };
 
@@ -16,18 +17,6 @@ export interface TenantSettingsDefaults {
   readonly exchangeRate: string;
 }
 
-/**
- * Ajustes de la empresa.
- *
- * Cuatro campos, y tres de ellos con consecuencias que la pantalla explica en
- * una linea debajo. No es relleno: la tasa de cambio es el ajuste que mas se
- * malinterpreta de todo el sistema —mucha gente espera que cambiarla actualice
- * los documentos anteriores— y decirlo aqui evita una llamada de soporte que
- * empieza con "se me han descuadrado las notas de marzo".
- *
- * `canWrite` deshabilita los campos para quien no puede cambiarlos, pero el que
- * de verdad decide es el caso de uso. Esto es cortesia visual, no un permiso.
- */
 export function TenantSettingsForm({
   canWrite,
   defaults,
@@ -38,8 +27,46 @@ export function TenantSettingsForm({
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(updateTenantSettingsAction, INITIAL);
 
+  useEffect(() => {
+    if (state.status === 'error' && state.errorKind) {
+      toast.error(t(`settings.errors.${state.errorKind}`, state.errorParams ?? {}));
+    } else if (state.status === 'success') {
+      toast.success(t('settings.saved'));
+    }
+  }, [state, t]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget;
+    const rateInput = form.elements.namedItem('exchangeRate') as HTMLInputElement | null;
+    const taxInput = form.elements.namedItem('taxRatePercent') as HTMLInputElement | null;
+
+    if (rateInput && rateInput.value.trim() !== '') {
+      const r = Number(rateInput.value.trim().replace(',', '.'));
+      if (isNaN(r) || r <= 0) {
+        e.preventDefault();
+        toast.error('La tasa de cambio oficial debe ser un número positivo mayor a cero.', {
+          title: 'Tasa inválida',
+        });
+        rateInput.focus();
+        return;
+      }
+    }
+
+    if (taxInput && taxInput.value.trim() !== '') {
+      const tVal = Number(taxInput.value.trim().replace(',', '.'));
+      if (isNaN(tVal) || tVal < 0 || tVal > 100) {
+        e.preventDefault();
+        toast.error('El porcentaje de impuesto debe ser un valor entre 0 y 100.', {
+          title: 'Impuesto inválido',
+        });
+        taxInput.focus();
+        return;
+      }
+    }
+  };
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} onSubmit={handleSubmit} className="space-y-6">
       {/* Said first, before the greyed-out fields, so nobody tries to type into them. */}
       {!canWrite && <Alert tone="info">{t('settings.readOnlyNotice')}</Alert>}
 

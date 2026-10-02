@@ -251,3 +251,18 @@ export async function purgeExpiredDemos(url: string): Promise<number> {
   >`select app.purge_expired_demos() as deleted`;
   return Number(rows[0]?.deleted ?? 0);
 }
+
+/**
+ * Destruye de forma inmediata e irreversible el sandbox y la cuenta de demo actual.
+ * Purga el tenant, las configuraciones de IA asociadas y la identidad de GoTrue.
+ */
+export async function destroyDemoSandbox(
+  url: string,
+  tenantId: string,
+  userId: string,
+): Promise<boolean> {
+  const rows = await getPrisma(url).$queryRaw<
+    { destroyed: boolean }[]
+  >`select app.destroy_demo_session(${tenantId}::uuid, ${userId}::uuid) as destroyed`;
+  return rows[0]?.destroyed === true;
+}

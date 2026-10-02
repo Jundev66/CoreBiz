@@ -1,32 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { createProductAction, updateProductAction } from '@/actions/sales';
 import type { ActionState } from '@/actions/customers';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 const INITIAL: ActionState = { status: 'idle' };
 
-/**
- * Formulario de producto: alta y correccion.
- *
- * Tres campos del alta DESAPARECEN al corregir, y cada ausencia tiene su motivo:
- *
- *   - el SKU, porque suele existir antes que el sistema —esta impreso en la etiqueta
- *     del estante o es el codigo de barras del fabricante— y cambiarlo dejaria el
- *     estante diciendo una cosa y la pantalla otra;
- *   - el inventario inicial, porque el saldo solo se mueve declarando un movimiento, y
- *     para corregirlo esta el ajuste, que EXIGE un motivo;
- *   - el control de existencias, porque apagarlo con saldo distinto de cero deja ese
- *     saldo huerfano: ni desaparece ni se puede explicar.
- *
- * No es que la pantalla los esconda: el esquema los rechaza y la API responde 400 si
- * alguien los manda a mano. Esconder un campo no es una regla.
- */
 export interface ProductFormValues {
   readonly id: string;
   readonly sku: string;
@@ -48,14 +33,67 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
   );
 
   const valor = (v: string | null | undefined) => v ?? '';
+  const fieldError = (field: string) => state.fieldErrors?.[field];
+
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.fieldErrors?.name) {
+        toast.error('El nombre del producto es obligatorio para registrarlo en el catálogo.', {
+          title: 'Campo requerido',
+        });
+      } else if (state.fieldErrors?.price) {
+        toast.error('El precio de venta es obligatorio y debe ser un importe numérico válido.', {
+          title: 'Precio requerido',
+        });
+      } else if (state.fieldErrors?.cost) {
+        toast.warning('El costo debe ser un importe numérico válido.', {
+          title: 'Costo inválido',
+        });
+      } else if (state.fieldErrors?.sku) {
+        toast.warning('El código SKU ingresado no tiene un formato válido.', {
+          title: 'SKU inválido',
+        });
+      } else if (state.errorKind) {
+        const msg = t(`errors.${state.errorKind}`, state.errorParams ?? {});
+        toast.error(msg, { title: 'No se pudo guardar el producto' });
+      }
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const name = formData.get('name');
+    if (typeof name !== 'string' || !name.trim()) {
+      toast.error('El nombre del producto es obligatorio para registrarlo en el catálogo.', {
+        title: 'Campo requerido',
+      });
+      return;
+    }
+
+    const price = formData.get('price');
+    if (typeof price !== 'string' || !price.trim()) {
+      toast.error(
+        'El precio de venta es obligatorio y debe ser un importe numérico válido (ejemplo: 2,50).',
+        {
+          title: 'Precio requerido',
+        },
+      );
+      return;
+    }
+    const p = Number(price.trim().replace(',', '.'));
+    if (isNaN(p) || p < 0) {
+      toast.error('El precio de venta debe ser un número válido mayor o igual a 0.', {
+        title: 'Precio inválido',
+      });
+      return;
+    }
+
+    formAction(formData);
+  };
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={handleAction} className="space-y-6">
       {editing && <input type="hidden" name="productId" value={product.id} />}
 
-      {/* El SKU: escribible al crear, solo lectura al corregir. Como texto y no como un
-          input deshabilitado — un input deshabilitado sigue en el DOM y sugiere que
-          algun dia podria escribirse. */}
       {editing && (
         <p className="inline-flex items-center gap-1.5 rounded-control bg-subtle px-3 py-1.5 text-sm text-muted">
           {t('products.sku')}: <span className="font-mono text-ink">{product.sku}</span>
@@ -64,14 +102,12 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {!editing && (
-          /* El unico codigo que se puede escribir, y a proposito: obligar a llevar dos
-             codigos para la misma bolsa de harina es una pelea que gana siempre el que
-             ya esta pegado al producto. En blanco, lo genera el sistema. */
           <Field
             name="sku"
             label={t('products.sku')}
             hint={t('products.skuHint')}
             autoComplete="off"
+            error={fieldError('sku')}
           />
         )}
         <Field
@@ -79,6 +115,7 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
           label={t('products.name')}
           required
           defaultValue={valor(product?.name)}
+          error={fieldError('name')}
         />
         <Field
           name="price"
@@ -87,39 +124,45 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
           inputMode="decimal"
           placeholder="2,50"
           defaultValue={valor(product?.price)}
+          error={fieldError('price')}
         />
         <Field
           name="cost"
           label={t('products.cost')}
           inputMode="decimal"
           defaultValue={valor(product?.cost)}
+          error={fieldError('cost')}
         />
         <Field
           name="unit"
           label={t('products.unit')}
           placeholder="und"
           defaultValue={valor(product?.unit)}
+          error={fieldError('unit')}
         />
         {!editing && (
-          <Field name="initialStock" label={t('products.initialStock')} inputMode="decimal" />
+          <Field
+            name="initialStock"
+            label={t('products.initialStock')}
+            inputMode="decimal"
+            error={fieldError('initialStock')}
+          />
         )}
         <Field
           name="minStock"
           label={t('products.minStock')}
           inputMode="decimal"
           defaultValue={valor(product?.minStock)}
+          error={fieldError('minStock')}
         />
         {editing && (
-          /* La descripcion, que el dominio guardaba desde el principio y ningun
-             formulario pedia. Solo al corregir: pedirla el primer dia, cuando lo que
-             se quiere es meter el catalogo deprisa, alarga un alta que ya tiene siete
-             campos. */
           <div className="sm:col-span-2">
             <Field
               name="description"
               label={t('products.description')}
               optional
               defaultValue={valor(product?.description)}
+              error={fieldError('description')}
             />
           </div>
         )}

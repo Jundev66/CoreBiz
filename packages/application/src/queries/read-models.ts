@@ -119,6 +119,7 @@ export interface ProductOption {
   readonly price: string;
   readonly unit: string;
   readonly stock: string | null;
+  readonly cost?: string | null;
 }
 
 export interface ProductQueries {
@@ -126,6 +127,7 @@ export interface ProductQueries {
     search?: string;
     includeArchived?: boolean;
     limit?: number;
+    cursor?: string;
   }): Promise<Page<ProductListItem>>;
   options(limit?: number): Promise<readonly ProductOption[]>;
   /**
@@ -185,7 +187,11 @@ export interface DeliveryNoteView {
 }
 
 export interface DeliveryNoteQueries {
-  list(filter: { status?: string; limit?: number }): Promise<Page<DeliveryNoteListItem>>;
+  list(filter: {
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<DeliveryNoteListItem>>;
   findById(id: string): Promise<DeliveryNoteView | null>;
 }
 
@@ -355,7 +361,7 @@ export interface PurchasingQueries {
   supplierOptions(limit?: number): Promise<readonly SupplierOption[]>;
   /** Null si no existe o si es de otro tenant: desde fuera no se distingue. */
   supplierById(id: string): Promise<SupplierDetail | null>;
-  receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>>;
+  receipts(filter: { limit?: number; cursor?: string }): Promise<Page<GoodsReceiptListItem>>;
   /** Null si no existe o si es de otro tenant: desde fuera no se distingue. */
   receiptById(id: string): Promise<GoodsReceiptView | null>;
 }

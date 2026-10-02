@@ -24,6 +24,7 @@
       "@corebiz/db": ["../../packages/db/src/index"],
       "@corebiz/db/schema": ["../../packages/db/src/schema/index"],
       "@corebiz/infrastructure": ["../../packages/infrastructure/src/index"],
+      "@corebiz/synapse": ["../../packages/synapse/src/index"],
       // Va en `paths` como los demas: el cliente de Prisma 7 es TypeScript en crudo, asi
       // que `tsc` lo compila a `dist` y `tsc-alias` reescribe el require. Si se dejase
       // fuera, Node intentaria cargar el `.ts` original en produccion.

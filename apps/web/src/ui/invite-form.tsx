@@ -1,31 +1,58 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { inviteUserAction, type AdminState } from '@/actions/administration';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, HINT_CLASSES, LABEL_CLASSES } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 const INITIAL: AdminState = { status: 'idle' };
 
 /** `owner` no esta: la propiedad se transfiere entre quienes ya estan dentro. */
 const ROLES = ['admin', 'sales', 'warehouse', 'viewer'] as const;
 
-/**
- * Invitar a alguien.
- *
- * Aqui habia un aviso de "plazas agotadas" y el formulario se dejaba enviable de todos
- * modos, para que el "no" viniera del servidor y no pareciera vivir en el boton. Ya no
- * hay plazas que agotar, pero el principio se queda escrito porque sigue rigiendo todo
- * lo demas: quien decide es el caso de uso, no la pantalla.
- */
 export function InviteForm() {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(inviteUserAction, INITIAL);
 
+  useEffect(() => {
+    if (state.status === 'error' && state.errorKind) {
+      toast.error(t(`settings.errors.${state.errorKind}`, state.errorParams ?? {}));
+    } else if (state.status === 'success') {
+      toast.success(t('settings.team.inviteCreated'));
+    }
+  }, [state, t]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget;
+    const emailInput = form.elements.namedItem('email') as HTMLInputElement | null;
+    if (!emailInput || !emailInput.value.trim()) {
+      e.preventDefault();
+      toast.error('Debe ingresar un correo electrónico para enviar la invitación.', {
+        title: 'Correo requerido',
+      });
+      emailInput?.focus();
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(emailInput.value.trim())) {
+      e.preventDefault();
+      toast.warning(
+        'El correo electrónico no tiene un formato válido (ejemplo: usuario@empresa.com).',
+        {
+          title: 'Correo no válido',
+        },
+      );
+      emailInput.focus();
+      return;
+    }
+  };
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="invite-email" className={LABEL_CLASSES}>
           {t('auth.email')}

@@ -122,7 +122,11 @@ const askInput = z.object({
 });
 
 export type AskAssistantResult =
-  | { readonly ok: true; readonly reply: string }
+  | {
+      readonly ok: true;
+      readonly reply: string;
+      readonly actions?: readonly { label: string; href: string }[];
+    }
   | { readonly ok: false; readonly errorKind: string };
 
 export async function askAssistantAction(
@@ -136,12 +140,15 @@ export async function askAssistantAction(
   const { askAssistant } = await apiForRequest();
   try {
     const result = await askAssistant(parsed.data);
-    return result.ok
-      ? { ok: true, reply: result.value.reply }
-      : { ok: false, errorKind: result.error.kind };
+    if (result.ok) {
+      return {
+        ok: true,
+        reply: result.value.reply,
+        ...(result.value.actions ? { actions: result.value.actions } : {}),
+      };
+    }
+    return { ok: false, errorKind: result.error.kind };
   } catch (error) {
-    // A reply that never came must not take the whole panel down with an unhandled error:
-    // it becomes a message the chat can show, like any other failure.
     if (error instanceof ApiUnavailableError) return { ok: false, errorKind: 'ApiUnavailable' };
     throw error;
   }

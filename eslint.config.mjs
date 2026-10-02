@@ -22,6 +22,7 @@ export default tseslint.config(
       'supabase/.temp/**',
       // Codigo generado por `prisma generate`, con su propio `@ts-nocheck`.
       'packages/prisma-client/generated/**',
+      'apps/web/public/**',
     ],
   },
 

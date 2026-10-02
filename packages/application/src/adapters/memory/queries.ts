@@ -59,7 +59,7 @@ import type { SalesStores } from './sales';
  * verde un escenario que contra Postgres no puede pasar, que es exactamente el fallo
  * que esta pareja de adaptadores existe para impedir.
  */
-function page<T>(items: readonly T[], limit: number): Page<T> {
+function _page<T>(items: readonly T[], limit: number): Page<T> {
   return { items: items.slice(0, limit), nextCursor: null };
 }
 
@@ -170,13 +170,14 @@ class InMemoryProductQueries implements ProductQueries {
     search?: string;
     includeArchived?: boolean;
     limit?: number;
+    cursor?: string;
   }): Promise<Page<ProductListItem>> {
     const items = this.scoped()
       .filter((p) => filter.includeArchived === true || !p.isArchived)
       .filter((p) => matches([p.name, p.sku], filter.search ?? ''))
       .map((p): ProductListItem => this.toListItem(p));
 
-    return Promise.resolve(page(items, filter.limit ?? 25));
+    return Promise.resolve(paginate(items, filter.limit ?? 25, filter.cursor));
   }
 
   lowStock(limit = 10): Promise<readonly ProductListItem[]> {
@@ -248,6 +249,7 @@ class InMemoryProductQueries implements ProductQueries {
         price: p.price.toString(),
         unit: p.unit,
         stock: p.trackStock ? p.onHand.toCompactString() : null,
+        cost: p.cost ? p.cost.toString() : null,
       }));
 
     return Promise.resolve(items);
@@ -270,7 +272,11 @@ class InMemoryDeliveryNoteQueries implements DeliveryNoteQueries {
       .sort((a, b) => b.number.localeCompare(a.number));
   }
 
-  list(filter: { status?: string; limit?: number }): Promise<Page<DeliveryNoteListItem>> {
+  list(filter: {
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<DeliveryNoteListItem>> {
     const items = this.scoped()
       .filter((n) => filter.status === undefined || n.status === filter.status)
       .map((n): DeliveryNoteListItem => ({
@@ -283,7 +289,7 @@ class InMemoryDeliveryNoteQueries implements DeliveryNoteQueries {
         issuedAt: n.issuedAt,
       }));
 
-    return Promise.resolve(page(items, filter.limit ?? 25));
+    return Promise.resolve(paginate(items, filter.limit ?? 25, filter.cursor));
   }
 
   findById(id: string): Promise<DeliveryNoteView | null> {
@@ -611,26 +617,24 @@ class InMemoryPurchasingQueries implements PurchasingQueries {
     );
   }
 
-  receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>> {
+  receipts(filter: { limit?: number; cursor?: string }): Promise<Page<GoodsReceiptListItem>> {
     const byId = new Map(this.scopedSuppliers().map((s) => [s.id as string, s.name]));
 
     const items = ([...this.stores.goodsReceipts.values()] as GoodsReceipt[])
       .filter((r) => r.tenantId === this.tenantId)
-      .sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0))
-      .slice(0, filter.limit ?? 25);
+      .sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0));
 
-    return Promise.resolve({
-      items: items.map((r) => ({
-        id: r.id,
-        number: r.number,
-        status: r.status,
-        supplierName: byId.get(r.supplierId) ?? '—',
-        total: r.total.toString(),
-        lineCount: r.lines.length,
-        receivedAt: r.receivedAt,
-      })),
-      nextCursor: null,
-    });
+    const rows = items.map((r) => ({
+      id: r.id,
+      number: r.number,
+      status: r.status,
+      supplierName: byId.get(r.supplierId) ?? '—',
+      total: r.total.toString(),
+      lineCount: r.lines.length,
+      receivedAt: r.receivedAt,
+    }));
+
+    return Promise.resolve(paginate(rows, filter.limit ?? 25, filter.cursor));
   }
 
   receiptById(id: string): Promise<GoodsReceiptView | null> {

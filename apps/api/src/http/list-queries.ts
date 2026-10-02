@@ -28,31 +28,20 @@ export const customerListQuerySchema = paginationSchema
   })
   .strict();
 
-/**
- * Sin `cursor`, y no es un olvido: `ProductQueries.list` no lo acepta. Declararlo aqui
- * lo dejaria pasar la validacion para que el adaptador lo ignorase en silencio, y una
- * segunda pagina que siempre devuelve la primera es de los fallos mas dificiles de ver.
- */
-export const productListQuerySchema = z
-  .object({
-    limit: z.coerce.number().int().min(1).max(100).default(25),
+export const productListQuerySchema = paginationSchema
+  .extend({
     search: z.string().trim().max(120).optional(),
     includeArchived: booleanFlag,
   })
   .strict();
 
-/** Tampoco lleva cursor, por lo mismo: `DeliveryNoteQueries.list` solo filtra y limita. */
-export const deliveryNoteListQuerySchema = z
-  .object({
-    limit: z.coerce.number().int().min(1).max(100).default(25),
+export const deliveryNoteListQuerySchema = paginationSchema
+  .extend({
     status: z.string().trim().max(32).optional(),
   })
   .strict();
 
-/** Ni las recepciones de mercancia. */
-export const receiptListQuerySchema = z
-  .object({ limit: z.coerce.number().int().min(1).max(100).default(25) })
-  .strict();
+export const receiptListQuerySchema = paginationSchema.strict();
 
 export const auditQuerySchema = paginationSchema
   .extend({

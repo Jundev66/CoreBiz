@@ -1,9 +1,27 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { readTheme } from '@/ui/theme';
+import { PwaRegister } from '@/ui/pwa-register';
+import { ToastContainer } from '@/ui/toast';
 import './globals.css';
+
+/**
+ * Configuración de Viewport PWA y dispositivos móviles:
+ * - Soporte para notch y safe-areas en iOS/Android (`viewportFit: 'cover'`).
+ * - Color de tema adaptativo claro/oscuro para la barra de estado del sistema operativo.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+};
 
 /**
  * Inter, variable y servida desde el propio origen.
@@ -26,6 +44,15 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: t('name'), template: `%s · ${t('name')}` },
     description: t('tagline'),
     robots: { index: true, follow: true },
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'CoreBiz ERP',
+    },
+    formatDetection: {
+      telephone: false,
+    },
   };
 }
 
@@ -35,7 +62,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} className={inter.variable} data-theme={theme}>
       <body className="min-h-screen antialiased">
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          {children}
+          <ToastContainer />
+          <PwaRegister />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -1,33 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { createCustomerAction, updateCustomerAction, type ActionState } from '@/actions/customers';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 const INITIAL: ActionState = { status: 'idle' };
 
-/**
- * Formulario de cliente: sirve para dar de alta y para corregir.
- *
- * UNO y no dos. Los campos, sus validaciones, el orden, los `autoComplete` y el
- * cableado de accesibilidad son identicos en los dos casos; duplicarlo garantizaria
- * que dentro de dos meses el alta pida un campo que la correccion no, o al reves.
- *
- * Lo que cambia entre los dos modos es exactamente esto:
- *
- *   - la Server Action a la que envia,
- *   - los valores iniciales,
- *   - un campo oculto con el identificador,
- *   - y que el CODIGO se pinte, porque al corregir ya existe.
- *
- * El codigo se pinta como TEXTO, nunca como un input deshabilitado. Un input
- * deshabilitado sigue estando en el DOM y sugiere que en algun momento podria
- * escribirse; el codigo no se cambia nunca, asi que no es un campo del formulario.
- */
 export interface CustomerFormValues {
   readonly id: string;
   readonly code: string;
@@ -52,8 +35,72 @@ export function CustomerForm({ customer }: { customer?: CustomerFormValues }) {
   const fieldError = (field: string) => state.fieldErrors?.[field];
   const valor = (v: string | null | undefined) => v ?? '';
 
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.fieldErrors?.name) {
+        toast.error('El nombre o razón social del cliente es obligatorio para guardarlo.', {
+          title: 'Campo requerido',
+        });
+      } else if (state.fieldErrors?.email) {
+        toast.warning(
+          'El correo electrónico no tiene un formato válido (ej: contacto@empresa.com).',
+          {
+            title: 'Correo inválido',
+          },
+        );
+      } else if (state.fieldErrors?.creditLimit) {
+        toast.warning('El límite de crédito debe ser un número válido (ej: 1500,00).', {
+          title: 'Monto inválido',
+        });
+      } else if (state.errorKind) {
+        const msg = t(`errors.${state.errorKind}`, state.errorParams ?? {});
+        toast.error(msg, { title: 'No se pudo guardar el cliente' });
+      }
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const name = formData.get('name');
+    if (typeof name !== 'string' || !name.trim()) {
+      toast.error('El nombre o razón social del cliente es obligatorio para guardarlo.', {
+        title: 'Campo requerido',
+      });
+      return;
+    }
+
+    const email = formData.get('email');
+    if (typeof email === 'string' && email.trim()) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email.trim())) {
+        toast.warning(
+          'El correo del cliente debe tener un formato válido (ejemplo: contacto@empresa.com).',
+          {
+            title: 'Correo no válido',
+          },
+        );
+        return;
+      }
+    }
+
+    const creditLimit = formData.get('creditLimit');
+    if (typeof creditLimit === 'string' && creditLimit.trim()) {
+      const val = Number(creditLimit.trim().replace(',', '.'));
+      if (isNaN(val) || val < 0) {
+        toast.warning(
+          'El límite de crédito debe ser un importe numérico mayor o igual a 0 (ejemplo: 1500,00).',
+          {
+            title: 'Monto inválido',
+          },
+        );
+        return;
+      }
+    }
+
+    formAction(formData);
+  };
+
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form action={handleAction} className="space-y-6" noValidate>
       {editing && <input type="hidden" name="customerId" value={customer.id} />}
 
       {/* Al dar de alta no se pide el codigo: lo genera el sistema —`CLT26000001`— y

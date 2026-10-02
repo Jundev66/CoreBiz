@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
 import { forgetFailure } from '@/api/last-error';
 import { clientFingerprint } from '@/auth/request-identity';
-import { apiIsAwake } from '@/api/client';
+import { apiIsAwake, send } from '@/api/client';
 import { startDemoSandbox } from '@/api/demo';
 import { demoConfig } from '@/demo/sandbox';
 
@@ -43,6 +43,21 @@ export type DemoState =
  * another one, not a sign-in form for an account that is about to be deleted.
  */
 export async function restartDemoAction(): Promise<void> {
+  const supabase = await supabaseServer();
+  await supabase.auth.signOut({ scope: 'local' });
+  (await cookies()).delete(ACTIVE_TENANT_COOKIE);
+  await forgetFailure();
+  redirect('/demo');
+}
+
+/**
+ * Destruye de inmediato todos los datos de demostración, configuraciones de IA y la cuenta,
+ * cerrando la sesión y redirigiendo al visitante.
+ */
+export async function destroyDemoAction(): Promise<void> {
+  // Pide a la API que purgue inmediatamente el tenant y el usuario demo
+  await send('DELETE', '/v1/session/demo').catch(() => null);
+
   const supabase = await supabaseServer();
   await supabase.auth.signOut({ scope: 'local' });
   (await cookies()).delete(ACTIVE_TENANT_COOKIE);

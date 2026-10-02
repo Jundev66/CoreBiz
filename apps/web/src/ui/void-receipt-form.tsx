@@ -1,26 +1,13 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { Ban } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { voidGoodsReceiptAction, type PurchasingState } from '@/actions/purchasing';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
-
-/**
- * Anular una recepcion de mercancia ya registrada.
- *
- * Simetrico al de anular una nota de entrega, con una diferencia que el formulario avisa
- * ANTES de que alguien pulse: esto puede fallar. Anular una venta siempre se puede
- * —devolver al inventario lo que salio no tiene impedimento—, pero anular una compra QUITA
- * lo que entro, y si esa mercancia ya se vendio el saldo no da. No se puede dar por no
- * llegado algo que ya salio por la puerta.
- *
- * El motivo es OBLIGATORIO, y no por formalismo: es la unica explicacion de por que una
- * entrada que existe dejo de contar. Sin el, dentro de seis meses nadie sabra si aquella
- * recepcion se anulo porque la mercancia llego danada o porque se tecleo dos veces.
- */
+import { toast } from '@/ui/toast';
 
 const INITIAL: PurchasingState = { status: 'idle' };
 
@@ -33,9 +20,26 @@ export function VoidReceiptForm({ goodsReceiptId, number }: VoidReceiptFormProps
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(voidGoodsReceiptAction, INITIAL);
 
+  useEffect(() => {
+    if (state.status === 'error' && state.errorKind) {
+      toast.error(t(`purchases.errors.${state.errorKind}`, state.errorParams ?? {}));
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const reason = formData.get('reason');
+    if (typeof reason !== 'string' || reason.trim().length < 3) {
+      toast.error('Debe indicar el motivo de la anulación de la compra (mínimo 3 caracteres).', {
+        title: 'Motivo requerido',
+      });
+      return;
+    }
+    formAction(formData);
+  };
+
   return (
     <form
-      action={formAction}
+      action={handleAction}
       className="rounded-card border border-danger/25 bg-surface p-5 shadow-xs sm:p-6"
     >
       <div className="flex items-start gap-3">

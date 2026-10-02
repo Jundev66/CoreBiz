@@ -188,9 +188,14 @@ export function httpCommands() {
     removeAiSettings: () => send<{ removed: boolean }>('DELETE', '/v1/ai/settings'),
 
     askAssistant: (input: AskAssistantBody) =>
-      send<{ reply: string }>('POST', '/v1/assistant/chat', input, {
-        timeoutMs: SLOW_REQUEST_TIMEOUT_MS,
-      }),
+      send<{ reply: string; actions?: readonly { label: string; href: string }[] }>(
+        'POST',
+        '/v1/assistant/chat',
+        input,
+        {
+          timeoutMs: SLOW_REQUEST_TIMEOUT_MS,
+        },
+      ),
 
     // ── Compras ──────────────────────────────────────────────────────────────
     createSupplier: (input: CreateSupplierInput) =>

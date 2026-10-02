@@ -126,7 +126,7 @@ function parseLines(formData: FormData) {
   return productIds.flatMap((productId, index) => {
     const quantity = quantities[index] ?? '';
     const unitCost = costs[index] ?? '';
-    if (productId === '' || quantity.trim() === '' || unitCost.trim() === '') return [];
+    if (productId === '' || quantity.trim() === '') return [];
 
     // La coma decimal es lo normal en español. Sin esta conversion, "1,5" se
     // interpretaria como texto invalido y el mensaje culparia a quien escribio
@@ -135,7 +135,7 @@ function parseLines(formData: FormData) {
       {
         productId,
         quantity: quantity.replace(',', '.'),
-        unitCost: unitCost.replace(',', '.'),
+        ...(unitCost.trim() !== '' ? { unitCost: unitCost.replace(',', '.') } : {}),
       },
     ];
   });

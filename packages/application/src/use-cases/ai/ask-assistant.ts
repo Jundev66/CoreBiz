@@ -9,6 +9,8 @@ import {
 } from '@corebiz/domain';
 import type { TenantContext, UnitOfWork } from '../../ports/repositories';
 import type { AiGateway, AiGatewayError, AssistantMessage, SecretBox } from '../../ports/ai';
+import { SynapseOrchestrator } from '@corebiz/synapse';
+import { CoreBizBridgeAdapter } from '../../adapters/synapse/corebiz-bridge';
 import { assistantSystemPrompt } from './system-prompt';
 
 /**
@@ -60,11 +62,42 @@ export function makeAssistantStatus(deps: AssistantDeps) {
 export function makeAskAssistant(deps: AssistantDeps) {
   return async function askAssistant(
     messages: readonly AssistantMessage[],
-  ): Promise<Result<{ reply: string }, AskAssistantError>> {
+  ): Promise<
+    Result<
+      { reply: string; actions?: readonly { label: string; href: string }[] },
+      AskAssistantError
+    >
+  > {
     if (!can(deps.ctx.actor, 'assistant:use')) return err({ kind: 'Forbidden' });
 
     const record = await deps.uow.run((repos) => repos.aiSettings.find());
-    if (record === null) return err({ kind: 'AiNotConfigured' });
+
+    if (record === null) {
+      const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+      const query = (lastUser?.content ?? '').trim().toLowerCase();
+      if (query !== 'hola' && query.length > 4) {
+        const bridge = new CoreBizBridgeAdapter();
+        const orchestrator = new SynapseOrchestrator({ erp: bridge });
+        const fallbackResult = await orchestrator.ask(
+          {
+            userId: deps.ctx.actor.userId,
+            tenantId: deps.ctx.tenantId,
+            roleName: deps.ctx.actor.role,
+            permissions: [],
+          },
+          null,
+          [{ role: 'user', content: lastUser?.content ?? '' }],
+        );
+
+        if (fallbackResult.ok) {
+          return ok({
+            reply: fallbackResult.value.reply,
+            ...(fallbackResult.value.actions ? { actions: fallbackResult.value.actions } : {}),
+          });
+        }
+      }
+      return err({ kind: 'AiNotConfigured' });
+    }
 
     let apiKey: string | null = null;
     if (record.apiKeyCiphertext !== null) {

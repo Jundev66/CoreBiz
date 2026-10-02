@@ -31,3 +31,4 @@ export * from './use-cases/purchasing/void-goods-receipt';
 export * from './use-cases/ai/manage-ai-settings';
 export * from './use-cases/ai/ask-assistant';
 export * from './use-cases/ai/system-prompt';
+export * from './adapters/synapse/corebiz-bridge';

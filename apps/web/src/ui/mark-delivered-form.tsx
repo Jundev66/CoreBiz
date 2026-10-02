@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { PackageCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { markDeliveredAction } from '@/actions/sales';
@@ -8,6 +8,7 @@ import type { ActionState } from '@/actions/customers';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 /**
  * Confirmar que el cliente recibio la mercancia.
@@ -33,6 +34,12 @@ interface MarkDeliveredFormProps {
 export function MarkDeliveredForm({ deliveryNoteId }: MarkDeliveredFormProps) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(markDeliveredAction, INITIAL);
+
+  useEffect(() => {
+    if (state.status === 'error' && state.errorKind) {
+      toast.error(t(`errors.${state.errorKind}`, state.errorParams ?? {}));
+    }
+  }, [state, t]);
 
   return (
     <form

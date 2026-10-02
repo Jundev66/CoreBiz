@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   createSupplierAction,
@@ -11,22 +11,10 @@ import {
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 const INITIAL: PurchasingState = { status: 'idle' };
 
-/**
- * Formulario de proveedor: alta y correccion.
- *
- * Un campo obligatorio y cinco opcionales. Los opcionales van marcados como tales y no
- * al reves: un formulario donde todo parece obligatorio hace que la gente invente datos
- * para poder guardar.
- *
- * Gana `notes`, que el contrato y la API aceptaban desde el principio y ninguna pantalla
- * pedia — el campo llegaba hasta la base de datos y no habia forma de rellenarlo.
- *
- * It stays a single column: the create form lives in the narrow side panel of the
- * suppliers list, and a two-column grid there would squeeze every field.
- */
 export interface SupplierFormValues {
   readonly id: string;
   readonly code: string;
@@ -49,8 +37,50 @@ export function SupplierForm({ supplier }: { supplier?: SupplierFormValues }) {
   const valor = (v: string | null | undefined) => v ?? '';
   const fieldError = (field: string) => state.fieldErrors?.[field];
 
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.fieldErrors?.name) {
+        toast.error('El nombre o razón social del proveedor es obligatorio para registrarlo.', {
+          title: 'Campo requerido',
+        });
+      } else if (state.fieldErrors?.email) {
+        toast.warning(
+          'El correo del proveedor no tiene un formato válido (ej: proveedor@empresa.com).',
+          {
+            title: 'Correo inválido',
+          },
+        );
+      } else if (state.errorKind) {
+        toast.error(t(`purchases.errors.${state.errorKind}`, state.errorParams ?? {}));
+      }
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const name = formData.get('name');
+    if (typeof name !== 'string' || !name.trim()) {
+      toast.error('El nombre o razón social del proveedor es obligatorio para guardarlo.', {
+        title: 'Campo requerido',
+      });
+      return;
+    }
+
+    const email = formData.get('email');
+    if (typeof email === 'string' && email.trim()) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email.trim())) {
+        toast.warning('El correo electrónico del proveedor no tiene un formato válido.', {
+          title: 'Correo no válido',
+        });
+        return;
+      }
+    }
+
+    formAction(formData);
+  };
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={handleAction} className="space-y-4">
       {editing && <input type="hidden" name="supplierId" value={supplier.id} />}
 
       {/* El codigo lo genera el sistema al guardar (`PRV26000001`). Al corregir ya

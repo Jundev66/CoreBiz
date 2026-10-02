@@ -38,7 +38,7 @@ export interface ReceiveGoodsInput {
   readonly lines: readonly {
     readonly productId: string;
     readonly quantity: string;
-    readonly unitCost: string;
+    readonly unitCost?: string | undefined;
   }[];
   readonly supplierReference?: string | null;
   readonly notes?: string | null;
@@ -113,9 +113,21 @@ export function makeReceiveGoods(deps: ReceiveGoodsDeps) {
           return err({ kind: 'InvalidQuantity', productId: line.productId, raw: line.quantity });
         }
 
-        const unitCost = Money.of(line.unitCost, currency);
-        if (!unitCost.ok) {
-          return err({ kind: 'InvalidCost', productId: line.productId, raw: line.unitCost });
+        let unitCostMoney: Money;
+        if (line.unitCost !== undefined && line.unitCost.trim() !== '') {
+          const parsed = Money.of(line.unitCost, currency);
+          if (!parsed.ok) {
+            return err({ kind: 'InvalidCost', productId: line.productId, raw: line.unitCost });
+          }
+          unitCostMoney = parsed.value;
+        } else if (product.cost !== null) {
+          unitCostMoney = product.cost;
+        } else {
+          return err({
+            kind: 'InvalidCost',
+            productId: line.productId,
+            raw: line.unitCost ?? '',
+          });
         }
 
         lines.push({
@@ -126,7 +138,7 @@ export function makeReceiveGoods(deps: ReceiveGoodsDeps) {
             trackStock: product.trackStock,
           },
           quantity: quantity.value,
-          unitCost: unitCost.value,
+          unitCost: unitCostMoney,
         });
       }
 

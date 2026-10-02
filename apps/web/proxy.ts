@@ -62,6 +62,7 @@ function contentSecurityPolicy(nonce: string): string {
     // server-only (ADR 006) — and listing the project URL here published it in every
     // response header for nothing.
     `connect-src 'self'`,
+    `worker-src 'self'`,
 
     // El destino de los formularios queda fijado al propio origen: si alguien
     // logra inyectar marcado, no puede redirigir un envio con credenciales fuera.
@@ -124,6 +125,10 @@ const SIN_SESION = [
   '/auth/callback',
   '/demo',
   '/api',
+  '/offline',
+  '/manifest.webmanifest',
+  '/sw.js',
+  '/icon.svg',
 ];
 
 function admiteInicioAutomatico(pathname: string): boolean {
@@ -172,7 +177,7 @@ export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-  if (url !== '' && key !== '') {
+  if (process.env.DATA_DRIVER !== 'memory' && url !== '' && key !== '') {
     const supabase = createServerClient(url, key, {
       cookies: {
         getAll: () => request.cookies.getAll(),

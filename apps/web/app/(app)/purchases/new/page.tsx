@@ -41,7 +41,12 @@ export default async function NewGoodsReceiptPage() {
           // Un servicio no se puede recibir: no tiene existencias. Se filtra
           // aqui para no ofrecer una opcion que el dominio va a rechazar.
           .filter((p) => p.stock !== null)
-          .map((p) => ({ id: p.id, label: `${p.sku} · ${p.name}`, unit: p.unit }))}
+          .map((p) => ({
+            id: p.id,
+            label: `${p.sku} · ${p.name}`,
+            unit: p.unit,
+            cost: p.cost ?? null,
+          }))}
       />
     </Screen>
   );

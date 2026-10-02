@@ -1,24 +1,13 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { adjustStockAction } from '@/actions/sales';
 import type { ActionState } from '@/actions/customers';
-import { buttonClasses } from '@/ui/button';
+import { buttonClasses, ButtonLink } from '@/ui/button';
 import { Alert, Badge } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
-
-/**
- * Cuadrar el inventario de un producto tras contarlo.
- *
- * Se pide el SALDO NUEVO y no la diferencia. Quien esta delante del estante ha
- * contado doce; pedirle "-3" es pedirle una resta que puede fallar, y el fallo
- * entraria como si fuera un conteo. El delta lo calcula el dominio, que ya sabe
- * cuanto habia.
- *
- * El saldo actual se muestra al lado, para que el ajuste se haga mirando los dos
- * numeros y no de memoria.
- */
+import { toast } from '@/ui/toast';
 
 const INITIAL: ActionState = { status: 'idle' };
 
@@ -34,9 +23,47 @@ export function StockAdjustForm({ productId, sku, name, onHand, unit }: StockAdj
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(adjustStockAction, INITIAL);
 
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.errorKind) {
+        toast.error(t(`errors.${state.errorKind}`, state.errorParams ?? {}));
+      }
+    } else if (state.status === 'success') {
+      toast.success(t('products.adjusted', { onHand: state.createdCode ?? '', unit }));
+    }
+  }, [state, t, unit]);
+
+  const handleAction = (formData: FormData) => {
+    const balance = formData.get('newBalance');
+    if (typeof balance !== 'string' || balance.trim() === '') {
+      toast.error('Debe indicar el nuevo saldo contado en existencia.', {
+        title: 'Conteo requerido',
+      });
+      return;
+    }
+
+    const b = Number(balance.trim().replace(',', '.'));
+    if (isNaN(b) || b < 0) {
+      toast.warning('La cantidad de inventario debe ser un número mayor o igual a 0.', {
+        title: 'Cantidad inválida',
+      });
+      return;
+    }
+
+    const reason = formData.get('reason');
+    if (typeof reason !== 'string' || reason.trim().length < 3) {
+      toast.error('El motivo del ajuste de inventario es obligatorio (mínimo 3 caracteres).', {
+        title: 'Motivo requerido',
+      });
+      return;
+    }
+
+    formAction(formData);
+  };
+
   return (
     <form
-      action={formAction}
+      action={handleAction}
       className="rounded-card border border-line bg-surface p-5 shadow-xs sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -92,9 +119,9 @@ export function StockAdjustForm({ productId, sku, name, onHand, unit }: StockAdj
       )}
 
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <a href="/products" className={buttonClasses({ variant: 'secondary' })}>
+        <ButtonLink href="/products" variant="secondary">
           {t('common.cancel')}
-        </a>
+        </ButtonLink>
         <button type="submit" disabled={pending} className={buttonClasses()}>
           {pending ? t('common.saving') : t('products.adjustSubmit')}
         </button>

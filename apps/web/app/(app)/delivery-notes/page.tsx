@@ -9,6 +9,7 @@ import { DesktopOnly, MobileList, MobileListItem } from '@/ui/list';
 import { noticeCode } from '@/ui/notice-code';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
+import { Pagination } from '@/ui/pagination';
 
 /** Colores del estado. Nunca se comunica solo con color: siempre acompaña un texto. */
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -21,14 +22,18 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 export default async function DeliveryNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ creado?: string }>;
+  searchParams: Promise<{ creado?: string; cursor?: string; limite?: string }>;
 }) {
   const t = await getTranslations();
-  const { creado } = await searchParams;
+  const { creado, cursor, limite } = await searchParams;
   const createdCode = noticeCode(creado);
   const format = await getFormatter();
+  const pageSize = limite ? Math.min(100, Math.max(5, parseInt(limite, 10) || 50)) : 50;
   const { ctx, data: page } = await withSession((queries) =>
-    queries.deliveryNotes.list({ limit: 50 }),
+    queries.deliveryNotes.list({
+      limit: pageSize,
+      ...(cursor !== undefined ? { cursor } : {}),
+    }),
   );
 
   /*
@@ -150,6 +155,15 @@ export default async function DeliveryNotesPage({
               />
             ))}
           </MobileList>
+
+          <Pagination
+            nextCursor={page.nextCursor}
+            currentCursor={cursor}
+            basePath="/delivery-notes"
+            itemCount={page.items.length}
+            pageSize={pageSize}
+            params={{ ...(limite ? { limite } : {}) }}
+          />
         </>
       )}
     </Screen>

@@ -9,6 +9,7 @@ import { DesktopOnly, MobileList, MobileListItem } from '@/ui/list';
 import { noticeCode } from '@/ui/notice-code';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
+import { Pagination } from '@/ui/pagination';
 
 /**
  * Listado de clientes.
@@ -21,14 +22,19 @@ import { can } from '@corebiz/domain';
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archivados?: string; creado?: string }>;
+  searchParams: Promise<{ archivados?: string; creado?: string; cursor?: string; limite?: string }>;
 }) {
   const t = await getTranslations();
-  const { archivados, creado } = await searchParams;
+  const { archivados, creado, cursor, limite } = await searchParams;
   const createdCode = noticeCode(creado);
   const includeArchived = archivados === '1';
+  const pageSize = limite ? Math.min(100, Math.max(5, parseInt(limite, 10) || 50)) : 50;
   const { ctx, data: page } = await withSession((queries) =>
-    queries.customers.list({ limit: 25, includeArchived }),
+    queries.customers.list({
+      limit: pageSize,
+      includeArchived,
+      ...(cursor !== undefined ? { cursor } : {}),
+    }),
   );
 
   /*
@@ -165,6 +171,15 @@ export default async function CustomersPage({
                 />
               ))}
             </MobileList>
+
+            <Pagination
+              nextCursor={page.nextCursor}
+              currentCursor={cursor}
+              basePath="/customers"
+              itemCount={page.items.length}
+              pageSize={pageSize}
+              params={{ archivados, ...(limite ? { limite } : {}) }}
+            />
           </>
         )}
       </div>

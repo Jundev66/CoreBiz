@@ -13,6 +13,7 @@ import { StatusToggle } from '@/ui/detail';
 import { setSupplierStatusAction } from '@/actions/purchasing';
 import { noticeCode } from '@/ui/notice-code';
 import { NoAccess } from '@/ui/no-access';
+import { Pagination } from '@/ui/pagination';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
@@ -29,14 +30,25 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SuppliersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archivados?: string; creado?: string; guardado?: string }>;
+  searchParams: Promise<{
+    archivados?: string;
+    creado?: string;
+    guardado?: string;
+    cursor?: string;
+    limite?: string;
+  }>;
 }) {
   const t = await getTranslations();
-  const { archivados, creado, guardado } = await searchParams;
+  const { archivados, creado, guardado, cursor, limite } = await searchParams;
   const createdCode = noticeCode(creado);
   const includeArchived = archivados === '1';
+  const pageSize = limite ? Math.min(100, Math.max(5, parseInt(limite, 10) || 50)) : 50;
   const { ctx, data: page } = await withSession((queries) =>
-    queries.purchasing.suppliers({ limit: 50, includeArchived }),
+    queries.purchasing.suppliers({
+      limit: pageSize,
+      includeArchived,
+      ...(cursor !== undefined ? { cursor } : {}),
+    }),
   );
 
   // The session and the list travel together. A role the API refuses gets a notice rather
@@ -201,6 +213,15 @@ export default async function SuppliersPage({
                   </li>
                 ))}
               </MobileList>
+
+              <Pagination
+                nextCursor={page.nextCursor}
+                currentCursor={cursor}
+                basePath="/purchases/suppliers"
+                itemCount={page.items.length}
+                pageSize={pageSize}
+                params={{ archivados, ...(limite ? { limite } : {}) }}
+              />
             </>
           )}
         </section>

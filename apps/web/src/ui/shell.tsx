@@ -20,6 +20,7 @@ import { AssistantPanel } from '@/ui/assistant-panel';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
+import { DestroyDemoButton } from '@/ui/destroy-demo-button';
 import { buttonClasses } from '@/ui/button';
 import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
@@ -398,7 +399,12 @@ async function DemoNotice({ session }: { session: SessionInfo }) {
   const hours = Math.ceil((session.expiresAt.getTime() - Date.now()) / 3_600_000);
 
   return (
-    <Banner>{hours <= 1 ? t('demo.sessionNoticeSoon') : t('demo.sessionNotice', { hours })}</Banner>
+    <Banner>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <span>{hours <= 1 ? t('demo.sessionNoticeSoon') : t('demo.sessionNotice', { hours })}</span>
+        <DestroyDemoButton />
+      </div>
+    </Banner>
   );
 }
 

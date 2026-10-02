@@ -7,14 +7,14 @@
     "home": "Home",
     "customers": "Customers",
     "products": "Products",
-    "deliveryNotes": "Delivery notes",
+    "deliveryNotes": "Sales (Notes)",
     "purchases": "Purchases",
     "reports": "Reports",
     "settings": "Settings",
     "more": "More",
     "account": "Your account",
     "mobile": "Main navigation",
-    "deliveryNotesShort": "Notes"
+    "deliveryNotesShort": "Sales"
   },
   "customers": {
     "title": "Customers",
@@ -123,9 +123,11 @@
     "createAccount": "Create my account",
     "templateNotice": "You are in the sample shop. It is the copy cloned for every visitor, so whatever you record here will be seen by the next ones.",
     "readonlyLimit": "Your network already created several copies in the last hour, so you are in read-only mode: you can see everything, but not save changes. In a while you can get your own copy.",
-    "expiredTitle": "Your demo has ended",
-    "expiredBody": "That copy has expired. Sign out and start a new one: it takes a few seconds.",
-    "restart": "Start a new demo"
+    "restart": "Start a new demo",
+    "destroyTitle": "Delete my data now",
+    "destroyHint": "Sign out and delete your sandbox and AI keys immediately.",
+    "destroyConfirm": "Delete your demo sandbox and all your settings right now?",
+    "destroySuccess": "Data deleted."
   },
   "common": {
     "save": "Save",
@@ -519,8 +521,8 @@
         },
         "openai_compatible": {
           "name": "OpenAI-compatible",
-          "tagline": "OpenAI, OpenRouter, OpenCode Zen, Groq, LM Studio and similar.",
-          "baseUrlHint": "The base address of the service, ending in /v1. For example: https://api.openai.com/v1 or https://openrouter.ai/api/v1",
+          "tagline": "OpenAI, OpenRouter, OpenCode Zen, Groq, LM Studio and similar services.",
+          "baseUrlHint": "The base address of the service, ending in /v1. For example: https://api.openai.com/v1, https://openrouter.ai/api/v1 or your OpenCode URL (e.g. https://api.opencode.ai/v1).",
           "how": {
             "a": "Create an API key in the service you use (OpenAI, OpenRouter, OpenCode Zen…).",
             "b": "Type the base address of the service and paste the key.",
@@ -878,6 +880,7 @@
     "chat": {
       "title": "Ask me",
       "poweredBy": "AI · {provider} · {model}",
+      "poweredByLocal": "Local Mode (No AI) · Deterministic replies & navigation",
       "empty": "Ask how to do something in CoreBiz. I can't see your company's data: I'll tell you where to find it.",
       "you": "You",
       "assistant": "Assistant",

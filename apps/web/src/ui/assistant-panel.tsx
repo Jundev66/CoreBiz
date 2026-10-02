@@ -41,9 +41,9 @@ export async function AssistantPanel() {
       data-assistant-fab
       aria-label={t('assistant.title')}
       // Above the phone tab bar (h-16 plus the safe area) and back to the corner on desktop.
-      className="fixed right-3 bottom-20 z-40 w-[min(22rem,calc(100vw-1.5rem))] lg:right-4 lg:bottom-4 print:hidden"
+      className="fixed right-3 bottom-20 z-40 w-[min(26rem,calc(100vw-1.5rem))] sm:right-4 sm:bottom-4 print:hidden"
     >
-      <summary className="ml-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-pill border border-line bg-surface px-3.5 py-2 text-sm font-medium shadow-md transition hover:border-line-strong [&::-webkit-details-marker]:hidden">
+      <summary className="ml-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-pill border border-line bg-surface px-3.5 py-2 text-sm font-medium shadow-md transition hover:border-line-strong active:scale-95 [&::-webkit-details-marker]:hidden">
         <CircleHelp aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
         {/* Icon-only on phones, where the pill sat on top of list rows. The `<details>` keeps
             its name through `aria-label`, and the summary still reads the word. */}
@@ -57,18 +57,19 @@ export async function AssistantPanel() {
         )}
       </summary>
 
-      <div className="mt-2 max-h-[min(28rem,70vh)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-md)]">
+      <div className="mt-2 max-h-[min(32rem,75vh)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-md)]">
         {error === null ? (
-          <p className="text-sm text-[var(--color-muted)]">{t('assistant.idle')}</p>
-        ) : isEscalateOnly(error.kind) ? (
-          <Breakdown incidentId={error.incidentId} />
-        ) : hasPlaybook(error.kind) ? (
-          <Playbook kind={error.kind} />
+          <span className="sr-only">{t('assistant.idle')}</span>
         ) : (
-          /* A key without a card. The `check:playbooks` guardian exists so this does not
-             happen, but the panel does not fall over if it does: it says the only honest
-             thing it can instead of going blank or rendering the raw key. */
-          <p className="text-sm text-[var(--color-muted)]">{t('assistant.noPlaybook')}</p>
+          <div className="mb-4 pb-4 border-b border-line">
+            {isEscalateOnly(error.kind) ? (
+              <Breakdown incidentId={error.incidentId} />
+            ) : hasPlaybook(error.kind) ? (
+              <Playbook kind={error.kind} />
+            ) : (
+              <p className="text-sm text-[var(--color-muted)]">{t('assistant.noPlaybook')}</p>
+            )}
+          </div>
         )}
         <AssistantAi />
       </div>

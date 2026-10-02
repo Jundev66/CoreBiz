@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { Plus, Truck, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { receiveGoodsAction, type PurchasingState } from '@/actions/purchasing';
@@ -8,6 +8,7 @@ import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, Field, LABEL_CLASSES, TEXTAREA_CLASSES } from '@/ui/field';
 import { Card } from '@/ui/primitives';
+import { toast } from '@/ui/toast';
 
 const INITIAL: PurchasingState = { status: 'idle' };
 
@@ -24,6 +25,7 @@ export interface ReceivableProduct {
   readonly id: string;
   readonly label: string;
   readonly unit: string;
+  readonly cost?: string | null;
 }
 
 interface LineDraft {
@@ -41,9 +43,8 @@ interface LineDraft {
  * sabe recibir, y esa simetria vale mas que cualquier diferencia que pudiera
  * hacerlo "mas apropiado" para compras.
  *
- * El coste se pide por linea y no se toma del catalogo: el precio al que se
- * compra cambia con cada pedido, y rellenarlo con el ultimo coste conocido haria
- * que alguien lo aceptara sin mirar.
+ * El coste se pre-rellena con el coste estandar del producto si esta definido en
+ * catalogo, pero puede ser editado por linea si el proveedor cambio el precio.
  */
 export function GoodsReceiptForm({
   suppliers,
@@ -64,13 +65,14 @@ export function GoodsReceiptForm({
   // Total orientativo. El bueno lo calcula el dominio al registrar, con su
   // propio redondeo: duplicar aqui la aritmetica exacta seria pedir que las dos
   // versiones se desincronicen tarde o temprano.
-  const estimated = lines.reduce(
-    (acc, line) =>
-      acc +
-      (Number(line.quantity.replace(',', '.')) || 0) *
-        (Number(line.unitCost.replace(',', '.')) || 0),
-    0,
-  );
+  const estimated = lines.reduce((acc, line) => {
+    const prod = products.find((p) => p.id === line.productId);
+    const costValue =
+      line.unitCost.trim() !== ''
+        ? Number(line.unitCost.replace(',', '.')) || 0
+        : Number(prod?.cost?.replace(',', '.')) || 0;
+    return acc + (Number(line.quantity.replace(',', '.')) || 0) * costValue;
+  }, 0);
 
   if (suppliers.length === 0) {
     return (
@@ -83,9 +85,71 @@ export function GoodsReceiptForm({
     );
   }
 
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.errorKind === 'Required' && state.errorParams?.field === 'supplierId') {
+        toast.error('Debe seleccionar un proveedor para registrar la recepción.', {
+          title: 'Proveedor requerido',
+        });
+      } else if (state.errorKind === 'NoLines') {
+        toast.error('La recepción debe contener al menos un producto recibido.', {
+          title: 'Renglón requerido',
+        });
+      } else if (state.errorKind) {
+        toast.error(t(`purchases.errors.${state.errorKind}`, state.errorParams ?? {}));
+      }
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const supplierId = formData.get('supplierId');
+    if (typeof supplierId !== 'string' || !supplierId.trim()) {
+      toast.error('Debe seleccionar un proveedor para registrar la recepción de mercancía.', {
+        title: 'Proveedor requerido',
+      });
+      return;
+    }
+
+    const filledLines = lines.filter((l) => l.productId.trim() !== '');
+    if (filledLines.length === 0) {
+      toast.error('Debe seleccionar al menos un producto recibido en los renglones.', {
+        title: 'Renglón requerido',
+      });
+      return;
+    }
+
+    for (const line of filledLines) {
+      const q = line.quantity.trim().replace(',', '.');
+      if (!q || isNaN(Number(q)) || Number(q) <= 0) {
+        const prod = products.find((p) => p.id === line.productId);
+        toast.warning(
+          `Indique una cantidad válida mayor a cero para el producto "${prod?.label ?? 'seleccionado'}".`,
+          { title: 'Cantidad requerida' },
+        );
+        return;
+      }
+    }
+
+    // Check duplicate products
+    const seen = new Set<string>();
+    for (const line of filledLines) {
+      if (seen.has(line.productId)) {
+        const prod = products.find((p) => p.id === line.productId);
+        toast.warning(
+          `El producto "${prod?.label ?? 'seleccionado'}" está duplicado en la recepción. Sume las unidades en un solo renglón.`,
+          { title: 'Producto repetido' },
+        );
+        return;
+      }
+      seen.add(line.productId);
+    }
+
+    formAction(formData);
+  };
+
   return (
     <form
-      action={formAction}
+      action={handleAction}
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
     >
       <div className="min-w-0 space-y-6">
@@ -173,7 +237,14 @@ export function GoodsReceiptForm({
                       id={`product-${line.key}`}
                       name="productId"
                       value={line.productId}
-                      onChange={(event) => update(line.key, { productId: event.target.value })}
+                      onChange={(event) => {
+                        const newProductId = event.target.value;
+                        const prod = products.find((p) => p.id === newProductId);
+                        update(line.key, {
+                          productId: newProductId,
+                          unitCost: prod?.cost ? prod.cost : line.unitCost,
+                        });
+                      }}
                       className={CONTROL_CLASSES}
                     >
                       <option value="">—</option>
@@ -208,6 +279,7 @@ export function GoodsReceiptForm({
                       name="unitCost"
                       inputMode="decimal"
                       value={line.unitCost}
+                      placeholder={products.find((p) => p.id === line.productId)?.cost ?? ''}
                       onChange={(event) => update(line.key, { unitCost: event.target.value })}
                       className={CONTROL_CLASSES}
                     />

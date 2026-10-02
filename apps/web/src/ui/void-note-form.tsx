@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { Ban } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { voidDeliveryNoteAction } from '@/actions/sales';
@@ -8,19 +8,7 @@ import type { ActionState } from '@/actions/customers';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
-
-/**
- * Anular una nota de entrega ya emitida.
- *
- * Anular NO es borrar, y el formulario tiene que dejarlo claro antes de que alguien
- * pulse: la nota conserva su numero —la numeracion es continua y un hueco es lo primero
- * que mira una inspeccion—, el inventario vuelve, y el documento sigue existiendo con el
- * motivo a la vista.
- *
- * El motivo es OBLIGATORIO, y no por formalismo: es la unica explicacion de por que un
- * documento que existe dejo de valer. Sin el, dentro de seis meses nadie sabra si aquella
- * nota se anulo por un error de cantidad o porque el cliente devolvio la mercancia.
- */
+import { toast } from '@/ui/toast';
 
 const INITIAL: ActionState = { status: 'idle' };
 
@@ -33,9 +21,26 @@ export function VoidNoteForm({ deliveryNoteId, number }: VoidNoteFormProps) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(voidDeliveryNoteAction, INITIAL);
 
+  useEffect(() => {
+    if (state.status === 'error' && state.errorKind) {
+      toast.error(t(`errors.${state.errorKind}`, state.errorParams ?? {}));
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const reason = formData.get('reason');
+    if (typeof reason !== 'string' || reason.trim().length < 3) {
+      toast.error('Debe indicar el motivo de la anulación (mínimo 3 caracteres).', {
+        title: 'Motivo requerido',
+      });
+      return;
+    }
+    formAction(formData);
+  };
+
   return (
     <form
-      action={formAction}
+      action={handleAction}
       className="rounded-card border border-danger/25 bg-surface p-5 shadow-xs sm:p-6"
     >
       <div className="flex items-start gap-3">

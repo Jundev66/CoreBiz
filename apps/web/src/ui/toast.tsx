@@ -1,55 +1,211 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+export type ToastTone = 'error' | 'warning' | 'success' | 'info';
+
+export interface ToastItem {
+  readonly id: string;
+  readonly tone: ToastTone;
+  readonly title?: string | undefined;
+  readonly message: string;
+  readonly duration?: number | undefined;
+}
+
+type ToastListener = (toasts: readonly ToastItem[]) => void;
+
+class ToastManager {
+  private items: ToastItem[] = [];
+  private listeners: Set<ToastListener> = new Set();
+  private counter = 0;
+
+  subscribe(listener: ToastListener): () => void {
+    this.listeners.add(listener);
+    listener(this.items);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(): void {
+    const readonlyItems = [...this.items];
+    this.listeners.forEach((listener) => listener(readonlyItems));
+  }
+
+  show(tone: ToastTone, message: string, options?: { title?: string; duration?: number }): string {
+    const id = `toast-${Date.now()}-${++this.counter}`;
+    const duration = options?.duration ?? (tone === 'error' ? 6000 : 4500);
+    const item: ToastItem = {
+      id,
+      tone,
+      title: options?.title,
+      message,
+      duration,
+    };
+    // Keep at most 4 toasts on screen
+    this.items = [...this.items.slice(-3), item];
+    this.notify();
+    return id;
+  }
+
+  dismiss(id: string): void {
+    this.items = this.items.filter((item) => item.id !== id);
+    this.notify();
+  }
+
+  clear(): void {
+    this.items = [];
+    this.notify();
+  }
+
+  error(message: string, options?: { title?: string; duration?: number }): string {
+    return this.show('error', message, options);
+  }
+
+  warning(message: string, options?: { title?: string; duration?: number }): string {
+    return this.show('warning', message, options);
+  }
+
+  success(message: string, options?: { title?: string; duration?: number }): string {
+    return this.show('success', message, options);
+  }
+
+  info(message: string, options?: { title?: string; duration?: number }): string {
+    return this.show('info', message, options);
+  }
+}
+
+export const toast = new ToastManager();
+
 /**
- * El aviso flotante de "listo".
- *
- * Sustituye a lo que habia: un parrafo incrustado en el formulario que decia «Cliente
- * creado. Su codigo es CLT26000009» y dejaba a la persona exactamente donde estaba, con
- * el formulario vacio delante. Dos problemas en uno — el mensaje se leia como parte del
- * formulario, y despues de crear algo lo que uno quiere es VERLO en la lista.
- *
- * Ahora la accion redirige al listado y el aviso viaja en la URL. Se eligio el parametro
- * de consulta y no un estado nuevo por una razon concreta: sobrevive a la navegacion del
- * servidor sin inventar almacenamiento, funciona con el boton de atras y se puede
- * enlazar. Lo unico que hace falta despues es limpiarlo, para que recargar la pagina no
- * vuelva a anunciar algo que ocurrio hace diez minutos.
- *
- * `role="status"` y no `role="alert"`: esto es una confirmacion, no un problema. `alert`
- * interrumpe a quien usa un lector de pantalla en mitad de lo que este leyendo, y para
- * dar una buena noticia eso es maleducado.
+ * Toast item individual con barra de tiempo y pausa al colocar el cursor encima.
  */
-
-/** Lo que tarda en irse solo. Suficiente para leer un codigo de doce caracteres. */
-const DURACION_MS = 6000;
-
-export function Toast({ message }: { message: string }) {
+function ToastItemCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {
   const t = useTranslations();
-  const [visible, setVisible] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const remainingRef = useRef(item.duration ?? 4500);
+  const startRef = useRef(Date.now());
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startTimer = useCallback(() => {
+    startRef.current = Date.now();
+    timerRef.current = setTimeout(() => {
+      onDismiss(item.id);
+    }, remainingRef.current);
+  }, [item.id, onDismiss]);
+
+  const pauseTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startRef.current));
+    }
+  }, []);
 
   useEffect(() => {
-    /*
-     * La URL se limpia con `history.replaceState`, NO con `router.replace`.
-     *
-     * La diferencia no es de estilo. `router.replace` le pide a Next que vuelva a
-     * pedir la pantalla, y la pantalla ya sin el parametro deja de pasarle mensaje a
-     * este componente: el aviso se mataba a si mismo un instante despues de aparecer.
-     * Se vio en el navegador — la URL quedaba limpia y el aviso no llegaba a leerse.
-     *
-     * `history.replaceState` cambia lo que pone en la barra sin provocar navegacion
-     * alguna. El parametro deja de estar —recargar ya no repite un aviso de hace diez
-     * minutos, ni el boton de atras vuelve a el— y el aviso vive sus seis segundos.
-     *
-     * Se limpia AL PINTARSE y no al desaparecer, porque en cuanto esta en pantalla el
-     * parametro ya cumplio su trabajo.
-     */
+    if (!isPaused) {
+      startTimer();
+    } else {
+      pauseTimer();
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [isPaused, startTimer, pauseTimer]);
+
+  const toneConfig = {
+    error: {
+      border: 'border-l-[4px] border-l-[var(--color-danger)]',
+      bg: 'bg-surface shadow-xl border border-line',
+      icon: <AlertCircle className="size-5 shrink-0 text-[var(--color-danger)]" strokeWidth={2} />,
+      role: 'alert' as const,
+      defaultTitle: 'Validación requerida',
+    },
+    warning: {
+      border: 'border-l-[4px] border-l-[var(--color-warn)]',
+      bg: 'bg-surface shadow-xl border border-line',
+      icon: <AlertTriangle className="size-5 shrink-0 text-[var(--color-warn)]" strokeWidth={2} />,
+      role: 'alert' as const,
+      defaultTitle: 'Atención',
+    },
+    success: {
+      border: 'border-l-[4px] border-l-[var(--color-success)]',
+      bg: 'bg-surface shadow-xl border border-line',
+      icon: (
+        <CheckCircle2 className="size-5 shrink-0 text-[var(--color-success)]" strokeWidth={2} />
+      ),
+      role: 'status' as const,
+      defaultTitle: 'Operación exitosa',
+    },
+    info: {
+      border: 'border-l-[4px] border-l-[var(--color-brand)]',
+      bg: 'bg-surface shadow-xl border border-line',
+      icon: <Info className="size-5 shrink-0 text-[var(--color-brand)]" strokeWidth={2} />,
+      role: 'status' as const,
+      defaultTitle: 'Información',
+    },
+  }[item.tone];
+
+  return (
+    <div
+      role={toneConfig.role}
+      aria-live={item.tone === 'error' ? 'assertive' : 'polite'}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      className={`pointer-events-auto relative flex w-full max-w-md items-start gap-3 rounded-card p-4 transition-all duration-200 animate-in fade-in slide-in-from-top-3 ${toneConfig.bg} ${toneConfig.border}`}
+    >
+      <div className="mt-0.5">{toneConfig.icon}</div>
+      <div className="min-w-0 flex-1">
+        <h4 className="text-sm font-semibold text-ink">{item.title ?? toneConfig.defaultTitle}</h4>
+        <p className="mt-0.5 text-xs sm:text-sm leading-relaxed text-ink-soft">{item.message}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onDismiss(item.id)}
+        aria-label={t('common.close')}
+        className="shrink-0 rounded-control p-1 text-muted transition hover:bg-subtle hover:text-ink"
+      >
+        <X className="size-4" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Contenedor global de Toasts.
+ * Montado en RootLayout para escuchar avisos desde cualquier lugar del sistema.
+ */
+export function ToastContainer() {
+  const [items, setItems] = useState<readonly ToastItem[]>([]);
+
+  useEffect(() => {
+    return toast.subscribe((newItems) => {
+      setItems(newItems);
+    });
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <aside
+      aria-label="Notificaciones"
+      className="pointer-events-none fixed top-4 right-4 sm:top-5 sm:right-5 z-[9999] flex w-[min(28rem,calc(100vw-2rem))] flex-col gap-2.5"
+    >
+      {items.map((item) => (
+        <ToastItemCard key={item.id} item={item} onDismiss={(id) => toast.dismiss(id)} />
+      ))}
+    </aside>
+  );
+}
+
+/**
+ * Componente Toast original para compatibilidad con avisos en la URL (?creado=, ?guardado=).
+ */
+export function Toast({ message }: { message: string }) {
+  useEffect(() => {
     const url = new URL(window.location.href);
-    // Los dos parametros que traen un aviso: `creado` tras un alta y `guardado` tras
-    // una correccion. Se limpian los dos en la misma pasada — si solo se limpiara uno,
-    // recargar la ficha que acaba de corregirse repetiria el aviso indefinidamente.
     const avisos = ['creado', 'guardado'].filter((clave) => url.searchParams.has(clave));
     if (avisos.length > 0) {
       for (const clave of avisos) url.searchParams.delete(clave);
@@ -61,38 +217,8 @@ export function Toast({ message }: { message: string }) {
       );
     }
 
-    const temporizador = setTimeout(() => setVisible(false), DURACION_MS);
-    return () => clearTimeout(temporizador);
-    // Solo al montar: el aviso pertenece a la navegacion que lo trajo, y volver a
-    // entrar reiniciaria el temporizador.
-  }, []);
+    toast.success(message);
+  }, [message]);
 
-  if (!visible) return null;
-
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed bottom-24 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 rounded-card border border-line bg-surface px-4 py-3 text-sm shadow-lg lg:bottom-6"
-    >
-      <div className="flex items-start gap-3">
-        <Check
-          aria-hidden="true"
-          className="mt-0.5 size-4 shrink-0 text-[var(--color-success)]"
-          strokeWidth={2.25}
-        />
-        <p className="flex-1">{message}</p>
-        {/* Cerrar a mano existe porque seis segundos es poco para quien lee despacio y
-            mucho para quien ya lo leyo. */}
-        <button
-          type="button"
-          onClick={() => setVisible(false)}
-          className="text-[var(--color-muted)] hover:text-[var(--color-ink)]"
-        >
-          <X aria-hidden="true" className="size-4" strokeWidth={2} />
-          <span className="sr-only">{t('common.close')}</span>
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }

@@ -84,11 +84,9 @@ export const goodsReceiptLineSchema = z
     productId: recordIdSchema,
     quantity: decimalStringSchema,
     /**
-     * El coste es OBLIGATORIO al recibir, a diferencia del precio al vender.
-     * Recibir mercancia sin coste deja el inventario valorado a cero y el margen
-     * mintiendo desde ese momento en adelante.
+     * El coste se toma del catalogo si no se especifica expresamente.
      */
-    unitCost: decimalStringSchema,
+    unitCost: decimalStringSchema.optional().or(z.literal('')),
   })
   .strict();
 

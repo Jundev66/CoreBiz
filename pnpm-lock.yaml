@@ -212,6 +212,9 @@ importers:
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../domain
+      '@corebiz/synapse':
+        specifier: workspace:*
+        version: link:../synapse
     devDependencies:
       typescript:
         specifier: ^5.9.3
@@ -316,6 +319,22 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/synapse:
+    dependencies:
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.2
+    devDependencies:
+      '@types/node':
+        specifier: ^26.5.1
+        version: 26.5.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13))
 
 packages:
 

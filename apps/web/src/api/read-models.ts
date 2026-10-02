@@ -99,6 +99,7 @@ export function httpReadModels(): ReadModels {
         get<Page<ProductListItem>>(
           `/v1/products${query({
             limit: filter.limit,
+            cursor: filter.cursor,
             search: filter.search,
             includeArchived: filter.includeArchived,
           })}`,
@@ -118,7 +119,11 @@ export function httpReadModels(): ReadModels {
     deliveryNotes: {
       list: async (filter) => {
         const page = await get<Page<Wire<DeliveryNoteListItem>>>(
-          `/v1/delivery-notes${query({ limit: filter.limit, status: filter.status })}`,
+          `/v1/delivery-notes${query({
+            limit: filter.limit,
+            cursor: filter.cursor,
+            status: filter.status,
+          })}`,
         );
         return {
           ...page,
@@ -206,7 +211,7 @@ export function httpReadModels(): ReadModels {
         getOrNull<SupplierDetail>(`/v1/purchasing/suppliers/${encodeURIComponent(id)}`),
       receipts: async (filter) => {
         const page = await get<Page<Wire<GoodsReceiptListItem>>>(
-          `/v1/purchasing/receipts${query({ limit: filter.limit })}`,
+          `/v1/purchasing/receipts${query({ limit: filter.limit, cursor: filter.cursor })}`,
         );
         return {
           ...page,

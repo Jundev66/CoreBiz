@@ -132,7 +132,7 @@ class PrismaPurchasingQueries implements PurchasingQueries {
     );
   }
 
-  receipts(filter: { limit?: number }): Promise<Page<GoodsReceiptListItem>> {
+  receipts(filter: { limit?: number; cursor?: string }): Promise<Page<GoodsReceiptListItem>> {
     const limit = pageLimit(filter.limit);
     const currency = this.ctx.settings.baseCurrency;
 
@@ -150,13 +150,20 @@ class PrismaPurchasingQueries implements PurchasingQueries {
           suppliers: { select: { name: true } },
           _count: { select: { goods_receipt_lines: true } },
         },
-        where: { tenant_id: this.ctx.tenantId },
-        orderBy: { received_at: 'desc' },
-        take: limit,
+        where: {
+          tenant_id: this.ctx.tenantId,
+          ...(filter.cursor !== undefined ? { number: { lt: filter.cursor } } : {}),
+        },
+        orderBy: { number: 'desc' },
+        take: limit + 1,
       });
 
+      const hasMore = rows.length > limit;
+      const visible = hasMore ? rows.slice(0, limit) : rows;
+      const last = visible[visible.length - 1];
+
       return {
-        items: rows.map((row): GoodsReceiptListItem => ({
+        items: visible.map((row): GoodsReceiptListItem => ({
           id: row.id,
           number: row.number,
           status: row.status,
@@ -165,7 +172,7 @@ class PrismaPurchasingQueries implements PurchasingQueries {
           lineCount: row._count.goods_receipt_lines,
           receivedAt: row.received_at,
         })),
-        nextCursor: null,
+        nextCursor: hasMore && last !== undefined ? last.number : null,
       };
     });
   }

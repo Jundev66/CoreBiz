@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { issueDeliveryNoteAction, type IssueNoteState } from '@/actions/sales';
@@ -8,6 +8,7 @@ import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES, TEXTAREA_CLASSES } from '@/ui/field';
 import { Card } from '@/ui/primitives';
+import { toast } from '@/ui/toast';
 
 const INITIAL: IssueNoteState = { status: 'idle' };
 
@@ -95,9 +96,79 @@ export function DeliveryNoteForm({
   const updateLine = (key: number, patch: Partial<LineDraft>) =>
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.errorKind === 'Required' && state.errorParams?.field === 'customerId') {
+        toast.error('Debe seleccionar un cliente antes de emitir la nota de entrega.', {
+          title: 'Cliente requerido',
+        });
+      } else if (state.errorKind === 'NoLines') {
+        toast.error('La nota de entrega debe contener al menos un producto con su cantidad.', {
+          title: 'Renglón requerido',
+        });
+      } else if (state.errorKind === 'InsufficientStock') {
+        toast.error(t('errors.InsufficientStock', state.errorParams ?? {}), {
+          title: 'Inventario insuficiente',
+        });
+      } else if (state.errorKind === 'CreditLimitExceeded') {
+        toast.error('Esta operación supera el límite de crédito disponible del cliente.', {
+          title: 'Límite de crédito excedido',
+        });
+      } else if (state.errorKind) {
+        toast.error(t(`errors.${state.errorKind}`, state.errorParams ?? {}));
+      }
+    }
+  }, [state, t]);
+
+  const handleAction = (formData: FormData) => {
+    const customerId = formData.get('customerId');
+    if (typeof customerId !== 'string' || !customerId.trim()) {
+      toast.error('Debe seleccionar un cliente antes de emitir la nota de entrega.', {
+        title: 'Cliente requerido',
+      });
+      return;
+    }
+
+    const filledLines = lines.filter((l) => l.productId.trim() !== '');
+    if (filledLines.length === 0) {
+      toast.error('Debe seleccionar al menos un producto en los renglones de la nota.', {
+        title: 'Renglón requerido',
+      });
+      return;
+    }
+
+    for (const line of filledLines) {
+      const q = line.quantity.trim().replace(',', '.');
+      if (!q || isNaN(Number(q)) || Number(q) <= 0) {
+        const prod = products.find((p) => p.id === line.productId);
+        toast.warning(
+          `Debe indicar una cantidad válida mayor a cero para el producto "${prod?.label ?? 'seleccionado'}".`,
+          { title: 'Cantidad requerida' },
+        );
+        return;
+      }
+    }
+
+    // Check for duplicate products
+    const seen = new Set<string>();
+    for (const line of filledLines) {
+      if (seen.has(line.productId)) {
+        const prod = products.find((p) => p.id === line.productId);
+        toast.warning(
+          `El producto "${prod?.label ?? 'seleccionado'}" está duplicado en la nota. Combine las cantidades en una sola línea.`,
+          { title: 'Producto repetido' },
+        );
+        return;
+      }
+      seen.add(line.productId);
+    }
+
+    formAction(formData);
+  };
+
   return (
     <form
-      action={formAction}
+      action={handleAction}
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
     >
       <div className="min-w-0 space-y-6">

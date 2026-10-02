@@ -1,11 +1,12 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import type { AuthState } from '@/actions/auth';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_BASE_CLASSES, ERROR_CLASSES, HINT_CLASSES, LABEL_CLASSES } from '@/ui/field';
+import { toast } from '@/ui/toast';
 
 /**
  * Formulario de las pantallas de cuenta.
@@ -71,6 +72,67 @@ export function AuthForm({
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
+  useEffect(() => {
+    if (state.status === 'error') {
+      if (state.fieldErrors) {
+        for (const [fieldName] of Object.entries(state.fieldErrors)) {
+          const fieldSpec = fields.find((f) => f.name === fieldName);
+          const label = fieldSpec?.label ?? fieldName;
+          toast.error(`El campo "${label}" es obligatorio o contiene un formato no válido.`, {
+            title: 'Campo requerido',
+          });
+        }
+      } else if (state.errorKind !== undefined) {
+        toast.error(
+          t(`auth.errors.${state.errorKind}`, {
+            minutes: Math.max(1, Math.ceil((state.retryAfter ?? 60) / 60)),
+          }),
+        );
+      }
+    }
+  }, [state, fields, t]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget;
+    for (const field of fields) {
+      if (field.optional) continue;
+      const input = form.elements.namedItem(field.name) as HTMLInputElement | null;
+      if (!input || !input.value.trim()) {
+        e.preventDefault();
+        toast.error(`El campo "${field.label}" es obligatorio para continuar.`, {
+          title: 'Campo requerido',
+        });
+        input?.focus();
+        return;
+      }
+      if (field.type === 'email') {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(input.value.trim())) {
+          e.preventDefault();
+          toast.warning(
+            'El correo electrónico no tiene un formato válido (ejemplo: usuario@empresa.com).',
+            {
+              title: 'Correo no válido',
+            },
+          );
+          input.focus();
+          return;
+        }
+      }
+      if (field.minLength && input.value.trim().length < field.minLength) {
+        e.preventDefault();
+        toast.warning(
+          `El campo "${field.label}" debe tener al menos ${field.minLength} caracteres.`,
+          {
+            title: 'Longitud insuficiente',
+          },
+        );
+        input.focus();
+        return;
+      }
+    }
+  };
+
   if (state.status === 'sent' && sentMessage !== undefined) {
     return (
       <Alert tone="success" role="status">
@@ -80,7 +142,7 @@ export function AuthForm({
   }
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} onSubmit={handleSubmit} className="space-y-5" noValidate>
       {fields.map((field) => (
         <AuthField key={field.name} field={field} error={state.fieldErrors?.[field.name]} />
       ))}
