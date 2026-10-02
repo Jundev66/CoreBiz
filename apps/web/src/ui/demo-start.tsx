@@ -6,6 +6,7 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { restartDemoAction, startDemoAction, type DemoState } from '@/actions/demo';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
+import { Field } from '@/ui/field';
 
 /** `none`: no session. `active`: already inside. `expired`: a demo whose copy is gone. */
 export type DemoSessionState = 'none' | 'active' | 'expired';
@@ -100,9 +101,9 @@ export function DemoStart({ session }: { session: DemoSessionState }) {
   }
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className="space-y-4">
       {state.status === 'error' && (
-        <Alert tone="danger" role="alert" className="mb-4">
+        <Alert tone="danger" role="alert" className="mb-2">
           {state.errorKind === 'TooManyAttempts'
             ? t('demo.rateLimited', {
                 // At least one minute: "try again in 0 min" reads like a broken counter.
@@ -112,10 +113,30 @@ export function DemoStart({ session }: { session: DemoSessionState }) {
         </Alert>
       )}
 
+      <Field
+        name="email"
+        type="email"
+        label={t('demo.leadEmailLabel')}
+        placeholder={t('demo.leadEmailPlaceholder')}
+        required
+        autoComplete="email"
+      />
+
+      <Field
+        name="name"
+        type="text"
+        label={t('demo.leadNameLabel')}
+        placeholder={t('demo.leadNamePlaceholder')}
+        optional
+        autoComplete="name"
+      />
+
+      <p className="text-xs text-muted">{t('demo.leadHelp')}</p>
+
       <button
         type="submit"
         disabled={pending}
-        className={buttonClasses({ size: 'lg', block: true })}
+        className={buttonClasses({ size: 'lg', block: true, className: 'mt-2' })}
       >
         {pending ? t('demo.starting') : t('demo.start')}
         {!pending && <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2} />}

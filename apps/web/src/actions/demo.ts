@@ -65,39 +65,31 @@ export async function destroyDemoAction(): Promise<void> {
   redirect('/demo');
 }
 
-export async function startDemoAction(_prev: DemoState, _formData: FormData): Promise<DemoState> {
+export async function startDemoAction(_prev: DemoState, formData: FormData): Promise<DemoState> {
   // La misma variable que cierra la puerta en el resto del sistema. Se comprueba
   // tambien aqui y no solo al pintar la pagina: una Server Action es un endpoint,
   // y se puede invocar sin haber pasado por su formulario.
   if (!demoConfig.enabled()) redirect('/login');
 
-  /*
-   * If the API is not answering, do NOT wait here.
-   *
-   * Provisioning a visitor clones the whole demo database, which is already slow with a
-   * warm API. Adding a cold start on top can exceed a Vercel function's time limit, and
-   * then whoever opens the résumé link does not see a wait: they see a 504.
-   *
-   * Asi que se parte en dos: se le manda a la pantalla de espera, que le cuenta lo que
-   * pasa y le trae de vuelta aqui con la API ya caliente. Es el unico sitio donde la
-   * decision de "aceptar el arranque en frio" obliga a cambiar como funciona algo, y
-   * no solo a anadir una pantalla.
-   */
   if (!(await apiIsAwake())) redirect('/waking-up?next=%2Fdemo');
+
+  const rawEmail = formData?.get('email');
+  const leadEmail = typeof rawEmail === 'string' && rawEmail.trim() !== '' ? rawEmail.trim() : null;
+
+  const rawName = formData?.get('name');
+  const leadName = typeof rawName === 'string' && rawName.trim() !== '' ? rawName.trim() : null;
+
+  const rawCompany = formData?.get('company');
+  const leadCompany =
+    typeof rawCompany === 'string' && rawCompany.trim() !== '' ? rawCompany.trim() : null;
 
   const fingerprint = await clientFingerprint();
 
-  /*
-   * El limite por origen y el aprovisionamiento viajan JUNTOS en una sola llamada.
-   *
-   * Podrian ir separados —pedir permiso y luego crear— y seria peor: entre las dos
-   * llamadas cabe una tercera peticion, y el limite dejaria de contar lo que
-   * pretende. Que la API haga las dos cosas seguidas es lo que lo mantiene honesto.
-   *
-   * El hash del origen SI se calcula aqui, que es el unico sitio donde
-   * `x-forwarded-for` es de fiar. La IP no cruza el cable.
-   */
-  const result = await startDemoSandbox(fingerprint);
+  const result = await startDemoSandbox(fingerprint, {
+    email: leadEmail,
+    name: leadName,
+    company: leadCompany,
+  });
 
   if (!result.ok) {
     return result.errorKind === 'TooManyAttempts'

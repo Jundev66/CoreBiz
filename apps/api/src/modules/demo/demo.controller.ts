@@ -14,6 +14,7 @@ import {
   countRecentDemoSandboxes,
   postgresRateLimiter,
   provisionDemoSandbox,
+  recordDemoLead,
 } from '@corebiz/infrastructure';
 import { InternalSecretGuard } from '../../auth/internal-secret.guard';
 import { loadEnv } from '../../config/env';
@@ -28,12 +29,11 @@ const startDemoSchema = z
   .object({
     /**
      * El origen, YA HASHEADO por la web.
-     *
-     * La direccion IP no cruza esta frontera. Se hashea donde `x-forwarded-for` es de
-     * fiar —lo pone Vercel, no el cliente— y aqui solo llega un rastro anonimo con el
-     * que contar intentos.
      */
     ipHash: z.string().trim().min(1).max(160).nullable(),
+    leadEmail: z.string().trim().email().max(255).optional().nullable(),
+    leadName: z.string().trim().max(120).optional().nullable(),
+    leadCompany: z.string().trim().max(120).optional().nullable(),
   })
   .strict();
 
@@ -141,6 +141,15 @@ export class DemoController {
     });
 
     if (!result.ok) throw domainError('Unavailable');
+
+    if (body.leadEmail) {
+      void recordDemoLead(url, {
+        email: body.leadEmail,
+        name: body.leadName,
+        company: body.leadCompany,
+        ipHash: body.ipHash,
+      });
+    }
 
     return {
       email: result.email,

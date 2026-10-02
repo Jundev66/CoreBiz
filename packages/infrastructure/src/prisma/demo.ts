@@ -266,3 +266,44 @@ export async function destroyDemoSandbox(
   >`select app.destroy_demo_session(${tenantId}::uuid, ${userId}::uuid) as destroyed`;
   return rows[0]?.destroyed === true;
 }
+
+/**
+ * Guarda el correo e información de contacto de un visitante de la demo.
+ * Totalmente resiliente: si la tabla o función aún no existen, no interrumpe el acceso.
+ */
+export async function recordDemoLead(
+  url: string,
+  data: {
+    email: string;
+    name?: string | null | undefined;
+    company?: string | null | undefined;
+    ipHash?: string | null | undefined;
+  },
+): Promise<void> {
+  if (!data.email || data.email.trim() === '') return;
+  try {
+    await getPrisma(url).$executeRaw`
+      select app.record_demo_lead(
+        ${data.email.trim().toLowerCase()},
+        ${data.name?.trim() || null},
+        ${data.company?.trim() || null},
+        ${data.ipHash || null}
+      )
+    `;
+  } catch {
+    // Si la función SQL aún no se aplicó en el entorno remoto, intentamos insert directo o log
+    try {
+      await getPrisma(url).$executeRaw`
+        insert into public.demo_leads (email, name, company, ip_hash)
+        values (
+          ${data.email.trim().toLowerCase()},
+          ${data.name?.trim() || null},
+          ${data.company?.trim() || null},
+          ${data.ipHash || null}
+        )
+      `;
+    } catch {
+      // Silencioso para no degradar la experiencia del usuario
+    }
+  }
+}

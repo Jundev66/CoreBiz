@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { ArrowRight, Boxes, FileText, UsersRound } from 'lucide-react';
+import { ArrowRight, Boxes, FileText, UsersRound, Smartphone, Bot, BarChart3 } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
 import { Card } from '@/ui/primitives';
 import { ButtonLink } from '@/ui/button';
@@ -22,6 +22,9 @@ export default async function WelcomePage() {
   const values = [
     { Icon: Boxes, title: t('home.valueStockTitle'), body: t('home.valueStockBody') },
     { Icon: FileText, title: t('home.valueNotesTitle'), body: t('home.valueNotesBody') },
+    { Icon: Smartphone, title: t('home.valuePwaTitle'), body: t('home.valuePwaBody') },
+    { Icon: Bot, title: t('home.valueAiTitle'), body: t('home.valueAiBody') },
+    { Icon: BarChart3, title: t('home.valueAnalyticsTitle'), body: t('home.valueAnalyticsBody') },
     { Icon: UsersRound, title: t('home.valueTeamTitle'), body: t('home.valueTeamBody') },
   ];
 
@@ -72,7 +75,7 @@ export default async function WelcomePage() {
           <ProductPreview />
         </section>
 
-        <section className="grid gap-4 pb-20 sm:grid-cols-3">
+        <section className="grid gap-4 pb-20 sm:grid-cols-2 lg:grid-cols-3">
           {values.map(({ Icon, title, body }) => (
             <Card key={title} className="p-5 sm:p-6">
               <span className="grid size-10 place-items-center rounded-control bg-brand-soft text-brand">

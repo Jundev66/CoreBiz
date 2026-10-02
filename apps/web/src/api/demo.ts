@@ -32,7 +32,10 @@ export type DemoStartResult =
       readonly retryAfter?: number;
     };
 
-export async function startDemoSandbox(ipHash: string): Promise<DemoStartResult> {
+export async function startDemoSandbox(
+  ipHash: string,
+  lead?: { email?: string | null; name?: string | null; company?: string | null },
+): Promise<DemoStartResult> {
   const secret = process.env.INTERNAL_API_SECRET;
 
   // Without the secret the API answers 404 on this route. Say "unavailable" right here
@@ -42,7 +45,12 @@ export async function startDemoSandbox(ipHash: string): Promise<DemoStartResult>
   const res = await fetch(`${apiBaseUrl()}/v1/demo/sandboxes`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${secret}` },
-    body: JSON.stringify({ ipHash }),
+    body: JSON.stringify({
+      ipHash,
+      leadEmail: lead?.email?.trim() || null,
+      leadName: lead?.name?.trim() || null,
+      leadCompany: lead?.company?.trim() || null,
+    }),
     cache: 'no-store',
     /*
      * The longest timeout in the application, for a reason: this call may hit a cold API
