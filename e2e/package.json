@@ -16,6 +16,6 @@
     "@types/node": "^26.5.1",
     "playwright": "^1.63.0",
     "playwright-bdd": "^9.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
