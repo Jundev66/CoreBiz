@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { CircleHelp, ArrowRight } from 'lucide-react';
+import { BotMessageSquare, ArrowRight } from 'lucide-react';
 import { hasPlaybook, isEscalateOnly, playbookRoute } from '@corebiz/contracts';
 import { readLastFailure } from '@/api/last-error';
 import { AssistantAi } from '@/ui/assistant-ai';
@@ -44,7 +44,11 @@ export async function AssistantPanel() {
       className="fixed right-3 bottom-20 z-40 w-[min(26rem,calc(100vw-1.5rem))] sm:right-4 sm:bottom-4 print:hidden"
     >
       <summary className="ml-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-pill border border-line bg-surface px-3.5 py-2 text-sm font-medium shadow-md transition hover:border-line-strong active:scale-95 [&::-webkit-details-marker]:hidden">
-        <CircleHelp aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+        <BotMessageSquare
+          aria-hidden="true"
+          className="size-4 shrink-0 text-[var(--color-brand)]"
+          strokeWidth={1.75}
+        />
         {/* Icon-only on phones, where the pill sat on top of list rows. The `<details>` keeps
             its name through `aria-label`, and the summary still reads the word. */}
         <span className="sr-only sm:not-sr-only">{t('assistant.title')}</span>

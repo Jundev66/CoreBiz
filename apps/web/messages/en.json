@@ -654,7 +654,7 @@
     "retry": "Try again"
   },
   "assistant": {
-    "title": "Help",
+    "title": "Assistant",
     "idle": "When something won't let you continue, open this: it tells you why, and what you can do.",
     "noPlaybook": "I can't explain the last failure yet. If it happens again, let us know.",
     "whatHappened": "What happened",

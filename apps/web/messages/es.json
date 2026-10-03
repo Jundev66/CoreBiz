@@ -654,7 +654,7 @@
     "retry": "Reintentar"
   },
   "assistant": {
-    "title": "Ayuda",
+    "title": "Asistente",
     "idle": "Cuando algo no te deje continuar, ábreme: te digo por qué y qué puedes hacer.",
     "noPlaybook": "Lo último que falló no lo sé explicar todavía. Si vuelve a pasar, avísanos.",
     "whatHappened": "Qué ha pasado",
