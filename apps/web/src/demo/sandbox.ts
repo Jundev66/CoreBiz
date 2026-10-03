@@ -30,7 +30,7 @@ export const demoConfig = {
  * y probado. Lo que sobra ahi son negocios vacios que nadie va a volver a mirar.
  */
 export const signupConfig = {
-  enabled: () => process.env.SIGNUP_ENABLED !== 'false',
+  enabled: () => process.env.SIGNUP_ENABLED === 'true',
 } as const;
 
 /**
