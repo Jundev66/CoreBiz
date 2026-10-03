@@ -51,12 +51,12 @@
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-boundaries": "^7.2.0",
-    "lefthook": "^2.1.12",
-    "prettier": "^3.6.2",
-    "supabase": "^2.117.0",
-    "turbo": "^2.5.9",
+    "lefthook": "^2.1.15",
+    "prettier": "^3.9.9",
+    "supabase": "^2.118.0",
+    "turbo": "^2.11.5",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.70.0",
+    "typescript-eslint": "^8.71.0",
     "vitest": "^4.1.11"
   },
   "pnpm": {
