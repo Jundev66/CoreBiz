@@ -54,7 +54,8 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
     }
   });
 
-  it('provides general capabilities fallback when asking something unknown in deterministic mode', async () => {
+  it('responds with main menu guide when user greets or asks for help', async () => {
+    // 'hola' y 'opciones' coinciden con la guía del Menú Principal en el motor determinista.
     const orchestrator = new SynapseOrchestrator({
       erp: dummyErp,
     });
@@ -68,7 +69,27 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.mode).toBe('deterministic');
-      expect(result.value.reply).toContain('Asistente Operativo');
+      // La guía del menú principal tiene prioridad sobre el fallback genérico.
+      expect(result.value.reply).toContain('Menú Principal de Opciones');
+    }
+  });
+
+  it('falls back to listing authorized capabilities for completely unknown queries', async () => {
+    const orchestrator = new SynapseOrchestrator({
+      erp: dummyErp,
+    });
+
+    const result = await orchestrator.ask(
+      { userId: 'u1', tenantId: 't1', roleName: 'Admin', permissions: [] },
+      null,
+      [{ role: 'user', content: 'cuánto es 2+2?' }],
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.mode).toBe('deterministic');
+      // El fallback lista las capacidades disponibles del actor.
+      expect(result.value.reply).toContain('Asistente Operativo Synapse');
     }
   });
 

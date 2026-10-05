@@ -1,8 +1,8 @@
-import type { ErpActorContext, ErpBridgePort, LlmGatewayPort } from './ports';
-import { synapseOk, type SynapseResult } from './ports';
-import type { SynapseConnection, SynapseErrorKind, SynapseMessage } from './types';
-import { buildSynapsePrompt } from './prompt-builder';
-import { executeDeterministicQuery, type SynapseAction } from './deterministic-engine';
+import type { ErpActorContext, ErpBridgePort, LlmGatewayPort } from './ports.ts';
+import { synapseOk, type SynapseResult } from './ports.ts';
+import type { SynapseConnection, SynapseErrorKind, SynapseMessage } from './types.ts';
+import { buildSynapsePrompt } from './prompt-builder.ts';
+import { executeDeterministicQuery, type SynapseAction } from './deterministic-engine.ts';
 
 export interface SynapseOrchestratorDeps {
   readonly erp: ErpBridgePort;

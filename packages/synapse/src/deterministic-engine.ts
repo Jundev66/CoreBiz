@@ -1,4 +1,4 @@
-import type { ErpActorContext, ErpBridgePort } from './ports';
+import type { ErpActorContext, ErpBridgePort } from './ports.ts';
 
 export interface SynapseAction {
   readonly label: string;

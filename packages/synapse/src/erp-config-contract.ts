@@ -1,5 +1,5 @@
-import type { SynapseProvider, SynapseModel } from './types';
-import type { SynapseResult } from './ports';
+import type { SynapseProvider, SynapseModel } from './types.ts';
+import type { SynapseResult } from './ports.ts';
 
 /**
  * Universal ERP AI Configuration Contract.

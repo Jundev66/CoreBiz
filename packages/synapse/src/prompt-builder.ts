@@ -1,4 +1,4 @@
-import type { ErpActorContext, ErpBridgePort } from './ports';
+import type { ErpActorContext, ErpBridgePort } from './ports.ts';
 
 /**
  * Builds an ERP-agnostic, zero-hallucination system prompt for Synapse Assistant.
