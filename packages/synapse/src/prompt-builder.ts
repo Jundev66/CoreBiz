@@ -1,4 +1,6 @@
-import type { ErpActorContext, ErpBridgePort } from './ports.ts';
+import type { ErpActorContext, ErpBridgePort } from './ports';
+import type { ErpErrorContext } from './types';
+import { sanitizeErrorContext } from './security';
 
 /**
  * Builds an ERP-agnostic, zero-hallucination system prompt for Synapse Assistant.
@@ -6,6 +8,7 @@ import type { ErpActorContext, ErpBridgePort } from './ports.ts';
 export async function buildSynapsePrompt(
   erp: ErpBridgePort,
   actor: ErpActorContext,
+  errorContext?: ErpErrorContext | null,
 ): Promise<string> {
   const capabilities = await erp.getAvailableCapabilities(actor);
   const screensList = capabilities
@@ -13,6 +16,17 @@ export async function buildSynapsePrompt(
     .join('\n');
 
   const customInstructions = erp.getSystemInstructions(actor);
+  const safeError = sanitizeErrorContext(errorContext);
+
+  let errorAdvisory = '';
+  if (safeError !== null) {
+    errorAdvisory = `\nContexto de Error o Validación Reciente en Pantalla:
+- Código de Regla: ${safeError.kind}
+${safeError.incidentId ? `- Referencia de Incidente Técnico: ${safeError.incidentId}\n` : ''}
+Instrucción de Asistencia ante este Error:
+Si el usuario consulta o pide ayuda sobre este error, explícale con empatía la causa a nivel de negocio y cómo solucionarlo paso a paso con las pantallas autorizadas.
+PROTECCIÓN DE DATOS: Bajo ninguna circunstancia muestres consultas SQL, tablas internas, tokens ni inventes información técnica confidencial.\n`;
+  }
 
   return `Eres Synapse, el asistente operativo inteligente para ${erp.erpName}.
 
@@ -24,7 +38,7 @@ Reglas de Ciberseguridad y Privacidad:
 - AISLAMIENTO DE ROL: El usuario actual tiene el rol "${actor.roleName}". Limítate a sugerir funciones que correspondan a sus permisos. Si solicita algo restringido, indícale amablemente que solicite acceso a un administrador.
 - BREVEDAD: Responde en español, de forma concisa y con pasos numerados cuando se trate de un procedimiento.
 
-${customInstructions ? `Instrucciones del ERP:\n${customInstructions}\n` : ''}
+${customInstructions ? `Instrucciones del ERP:\n${customInstructions}\n` : ''}${errorAdvisory}
 Pantallas y módulos disponibles para este usuario:
 ${screensList || '(Sin pantallas específicas autorizadas)'}`;
 }

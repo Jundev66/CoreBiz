@@ -1,4 +1,4 @@
-import type { SynapseMessage, SynapseModel, SynapseErrorKind, SynapseConnection } from './types.ts';
+import type { SynapseMessage, SynapseModel, SynapseErrorKind, SynapseConnection } from './types';
 
 export type SynapseResult<T, E = { kind: SynapseErrorKind; message?: string }> =
   { ok: true; value: T } | { ok: false; error: E };

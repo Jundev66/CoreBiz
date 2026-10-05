@@ -1,8 +1,8 @@
-import type { ErpActorContext, ErpBridgePort, LlmGatewayPort } from './ports.ts';
-import { synapseOk, type SynapseResult } from './ports.ts';
-import type { SynapseConnection, SynapseErrorKind, SynapseMessage } from './types.ts';
-import { buildSynapsePrompt } from './prompt-builder.ts';
-import { executeDeterministicQuery, type SynapseAction } from './deterministic-engine.ts';
+import type { ErpActorContext, ErpBridgePort, LlmGatewayPort } from './ports';
+import { synapseOk, type SynapseResult } from './ports';
+import type { ErpErrorContext, SynapseConnection, SynapseErrorKind, SynapseMessage } from './types';
+import { buildSynapsePrompt } from './prompt-builder';
+import { executeDeterministicQuery, type SynapseAction } from './deterministic-engine';
 
 export interface SynapseOrchestratorDeps {
   readonly erp: ErpBridgePort;
@@ -24,13 +24,15 @@ export class SynapseOrchestrator {
 
   /**
    * Dual-mode ask method:
-   * 1. If connection is provided and valid, routes to LLM Gateway.
-   * 2. If no connection or missing key, routes seamlessly to Deterministic Rule Engine (No-AI mode).
+   * 1. If connection is provided and valid, routes to LLM Gateway with error context guidance.
+   * 2. If no connection or missing key, routes seamlessly to Deterministic Rule Engine (No-AI mode)
+   *    evaluating authorized modules, operational guides, and business error diagnoses.
    */
   async ask(
     actor: ErpActorContext,
     connection: SynapseConnection | null,
     conversation: readonly SynapseMessage[],
+    errorContext?: ErpErrorContext | null,
   ): Promise<SynapseChatResult> {
     const lastUserMessage = [...conversation].reverse().find((m) => m.role === 'user');
     const userQuery = lastUserMessage?.content ?? '';
@@ -46,6 +48,7 @@ export class SynapseOrchestrator {
         this.deps.erp,
         actor,
         userQuery,
+        errorContext,
       );
 
       return synapseOk({
@@ -59,7 +62,7 @@ export class SynapseOrchestrator {
     }
 
     // Modo Con IA (LLM)
-    const systemPrompt = await buildSynapsePrompt(this.deps.erp, actor);
+    const systemPrompt = await buildSynapsePrompt(this.deps.erp, actor, errorContext);
 
     const gateway = this.deps.gateway!;
     const llmResult = await gateway.chat(connection!, conversation, systemPrompt);

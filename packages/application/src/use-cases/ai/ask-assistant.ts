@@ -9,7 +9,7 @@ import {
 } from '@corebiz/domain';
 import type { TenantContext, UnitOfWork } from '../../ports/repositories';
 import type { AiGateway, AiGatewayError, AssistantMessage, SecretBox } from '../../ports/ai';
-import { SynapseOrchestrator } from '@corebiz/synapse';
+import { SynapseOrchestrator, type ErpErrorContext } from '@corebiz/synapse';
 import { CoreBizBridgeAdapter } from '../../adapters/synapse/corebiz-bridge';
 import { assistantSystemPrompt } from './system-prompt';
 
@@ -62,6 +62,7 @@ export function makeAssistantStatus(deps: AssistantDeps) {
 export function makeAskAssistant(deps: AssistantDeps) {
   return async function askAssistant(
     messages: readonly AssistantMessage[],
+    errorContext?: ErpErrorContext | null,
   ): Promise<
     Result<
       { reply: string; actions?: readonly { label: string; href: string }[] },
@@ -75,7 +76,23 @@ export function makeAskAssistant(deps: AssistantDeps) {
     if (record === null) {
       const lastUser = [...messages].reverse().find((m) => m.role === 'user');
       const query = (lastUser?.content ?? '').trim().toLowerCase();
-      if (query !== 'hola' && query.length > 4) {
+      const hasErrorContext = Boolean(errorContext?.kind);
+      const isErrorRelated =
+        hasErrorContext ||
+        query.includes('error') ||
+        query.includes('falló') ||
+        query.includes('fallo') ||
+        query.includes('correo') ||
+        query.includes('stock') ||
+        query.includes('credito') ||
+        query.includes('crédito') ||
+        query.includes('sku') ||
+        query.includes('tasa') ||
+        query.includes('permiso') ||
+        query.includes('validación') ||
+        query.includes('validacion');
+
+      if (hasErrorContext || isErrorRelated || (query !== 'hola' && query.length > 4)) {
         const bridge = new CoreBizBridgeAdapter();
         const orchestrator = new SynapseOrchestrator({ erp: bridge });
         const fallbackResult = await orchestrator.ask(
@@ -87,6 +104,7 @@ export function makeAskAssistant(deps: AssistantDeps) {
           },
           null,
           [{ role: 'user', content: lastUser?.content ?? '' }],
+          errorContext,
         );
 
         if (fallbackResult.ok) {
@@ -123,7 +141,7 @@ export function makeAskAssistant(deps: AssistantDeps) {
       },
       {
         model: record.model,
-        system: assistantSystemPrompt(deps.ctx.actor),
+        system: assistantSystemPrompt(deps.ctx.actor, errorContext),
         messages: trimmed,
         maxTokens: ASSISTANT_LIMITS.maxReplyTokens,
       },

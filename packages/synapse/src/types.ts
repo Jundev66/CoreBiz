@@ -67,3 +67,8 @@ export type SynapseErrorKind =
   | 'AiRateLimited'
   | 'Forbidden'
   | 'InvalidFormat';
+
+export interface ErpErrorContext {
+  readonly kind: string;
+  readonly incidentId?: string | null | undefined;
+}

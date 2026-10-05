@@ -8,9 +8,10 @@
  *
  * LEE `AGENTS.md` antes de modificar este paquete.
  */
-export * from './types.ts';
-export * from './ports.ts';
-export * from './prompt-builder.ts';
-export * from './deterministic-engine.ts';
-export * from './orchestrator.ts';
-export * from './erp-config-contract.ts';
+export * from './types';
+export * from './ports';
+export * from './prompt-builder';
+export * from './deterministic-engine';
+export * from './orchestrator';
+export * from './erp-config-contract';
+export * from './security';

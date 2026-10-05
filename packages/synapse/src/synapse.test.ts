@@ -116,4 +116,75 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
       expect(result.value.reply).toBe('Respuesta generada por Claude 3.5');
     }
   });
+
+  describe('Error Diagnosis & Cybersecurity Guardrails (without AI)', () => {
+    it('diagnoses EmailAlreadyRegistered in deterministic mode with business explanation', async () => {
+      const orchestrator = new SynapseOrchestrator({ erp: dummyErp });
+      const result = await orchestrator.ask(
+        { userId: 'u1', tenantId: 't1', roleName: 'Admin', permissions: [] },
+        null,
+        [{ role: 'user', content: '¿Por qué me sale el error de correo ya existente?' }],
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.mode).toBe('deterministic');
+        expect(result.value.reply).toContain('Correo ya registrado');
+        expect(result.value.reply).toContain('¿Por qué pasa?');
+        expect(result.value.reply).toContain('¿Qué debes hacer?');
+        expect(result.value.actions).toEqual([{ label: 'Ir a Iniciar Sesión', href: '/login' }]);
+      }
+    });
+
+    it('diagnoses InsufficientStock in deterministic mode with clear action buttons', async () => {
+      const orchestrator = new SynapseOrchestrator({ erp: dummyErp });
+      const result = await orchestrator.ask(
+        { userId: 'u1', tenantId: 't1', roleName: 'Admin', permissions: [] },
+        null,
+        [{ role: 'user', content: 'me dio error de stock insuficiente' }],
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.mode).toBe('deterministic');
+        expect(result.value.reply).toContain('stock insuficiente en inventario');
+        expect(result.value.suggestedPath).toBe('/products');
+      }
+    });
+
+    it('picks up active errorContext when user asks why it failed', async () => {
+      const orchestrator = new SynapseOrchestrator({ erp: dummyErp });
+      const result = await orchestrator.ask(
+        { userId: 'u1', tenantId: 't1', roleName: 'Admin', permissions: [] },
+        null,
+        [{ role: 'user', content: '¿Por qué falló?' }],
+        { kind: 'CreditLimitExceeded', incidentId: null },
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.mode).toBe('deterministic');
+        expect(result.value.reply).toContain('Límite de crédito comercial excedido');
+        expect(result.value.reply).toContain('¿Qué debes hacer?');
+      }
+    });
+
+    it('protects incident details and redacts sensitive data from outputs', async () => {
+      const orchestrator = new SynapseOrchestrator({ erp: dummyErp });
+      const result = await orchestrator.ask(
+        { userId: 'u1', tenantId: 't1', roleName: 'Admin', permissions: [] },
+        null,
+        [{ role: 'user', content: '¿Qué pasó con el fallo?' }],
+        { kind: 'Unexpected', incidentId: 'INC-A1B2C3D4' },
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.mode).toBe('deterministic');
+        expect(result.value.reply).toContain('INC-A1B2C3D4');
+        expect(result.value.reply).toContain('Ciberseguridad y Privacidad');
+        expect(result.value.reply).not.toContain('stack');
+      }
+    });
+  });
 });

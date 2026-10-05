@@ -75,7 +75,7 @@ export async function AssistantPanel() {
             )}
           </div>
         )}
-        <AssistantAi />
+        <AssistantAi initialError={error} />
       </div>
     </details>
   );

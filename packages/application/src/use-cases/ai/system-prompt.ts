@@ -91,9 +91,20 @@ const ROLE_NAMES: Readonly<Record<Role, string>> = {
   viewer: 'Solo lectura',
 };
 
-export function assistantSystemPrompt(actor: Actor): string {
+export function assistantSystemPrompt(
+  actor: Actor,
+  errorContext?: { readonly kind: string; readonly incidentId?: string | null | undefined } | null,
+): string {
   const visible = ASSISTANT_SCREENS.filter((s) => s.needs === undefined || can(actor, s.needs));
   const screens = visible.map((s) => `- ${s.name} (${s.path}): ${s.what}`).join('\n');
+
+  let errorNotice = '';
+  if (errorContext?.kind) {
+    errorNotice = `\n\nAlerta de error o validación reciente en pantalla:
+- Código de Regla: ${errorContext.kind}${errorContext.incidentId ? ` (Referencia de soporte: ${errorContext.incidentId})` : ''}
+Si la persona pregunta sobre este fallo, explícale con empatía la causa a nivel de negocio y cómo resolverlo con los pasos y pantallas autorizadas.
+Privacidad y Ciberseguridad: No expongas consultas SQL ni detalles técnicos internos.`;
+  }
 
   return `Eres el asistente de ayuda de CoreBiz, un ERP para comercios pequeños (clientes, productos e inventario, notas de entrega, compras y reportes, en USD y VES).
 
@@ -108,5 +119,5 @@ Reglas:
 - Responde en español, breve y en pasos cuando sea un procedimiento. Menciona las pantallas por su nombre.
 
 Pantallas disponibles para esta persona:
-${screens}`;
+${screens}${errorNotice}`;
 }

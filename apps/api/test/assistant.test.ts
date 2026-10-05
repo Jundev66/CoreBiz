@@ -100,6 +100,21 @@ describe('assistant over HTTP', () => {
     expect(await res.json()).toMatchObject({ errorKind: 'AiNotConfigured' });
   });
 
+  it('diagnoses system errors deterministically via Synapse without requiring an AI connection', async () => {
+    const res = await call('POST', '/v1/assistant/chat', {
+      messages: [{ role: 'user', content: '¿Por qué me sale correo ya existente?' }],
+      errorContext: { kind: 'EmailAlreadyRegistered', incidentId: null },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      reply: string;
+      actions?: { label: string; href: string }[];
+    };
+    expect(body.reply).toContain('Correo ya registrado');
+    expect(body.reply).toContain('Modo Local sin IA');
+    expect(body.actions).toEqual([{ label: 'Ir a Iniciar Sesión', href: '/login' }]);
+  });
+
   it('keeps the settings routes to owner and admin', async () => {
     for (const role of ['sales', 'warehouse', 'viewer']) {
       expect((await call('GET', '/v1/ai/settings', undefined, role)).status).toBe(403);

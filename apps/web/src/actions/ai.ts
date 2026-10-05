@@ -109,6 +109,8 @@ export async function assistantStatusAction(): Promise<AssistantStatusView | nul
   }
 }
 
+import { errorContextSchema, type ErrorContextInput } from '@corebiz/contracts';
+
 const askInput = z.object({
   messages: z
     .array(
@@ -119,6 +121,7 @@ const askInput = z.object({
     )
     .min(1)
     .max(20),
+  errorContext: errorContextSchema.nullable().optional(),
 });
 
 export type AskAssistantResult =
@@ -131,10 +134,11 @@ export type AskAssistantResult =
 
 export async function askAssistantAction(
   messages: readonly { role: 'user' | 'assistant'; content: string }[],
+  errorContext?: ErrorContextInput | null,
 ): Promise<AskAssistantResult> {
   // Only the most recent turns travel: the API would cut them anyway, and a long
   // conversation must not become a body too large to send.
-  const parsed = askInput.safeParse({ messages: messages.slice(-20) });
+  const parsed = askInput.safeParse({ messages: messages.slice(-20), errorContext });
   if (!parsed.success) return { ok: false, errorKind: 'InvalidFormat' };
 
   const { askAssistant } = await apiForRequest();

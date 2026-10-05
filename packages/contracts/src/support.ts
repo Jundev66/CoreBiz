@@ -62,7 +62,6 @@ export const FIELD_SHAPE_KINDS = [
  */
 export const NO_PANEL_KINDS = [
   'InvalidCredentials',
-  'EmailAlreadyRegistered',
   'SignUpFailed',
   'SignUpClosed',
   'ResetLinkExpired',
@@ -128,6 +127,7 @@ export const PLAYBOOK_ROUTES: Readonly<Record<string, string | null>> = {
   DeliveryNoteNotFound: '/delivery-notes',
   SupplierNotFound: '/purchases/suppliers',
   NotFound: null,
+  EmailAlreadyRegistered: '/login',
 
   // Business rules.
   InsufficientStock: '/products',

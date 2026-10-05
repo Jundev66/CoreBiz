@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, Send, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Send, Sparkles } from 'lucide-react';
+import type { LastFailure } from '@corebiz/contracts';
 import { askAssistantAction, assistantStatusAction } from '@/actions/ai';
 import type { AssistantStatusView } from '@/api/ai';
 import { buttonClasses } from '@/ui/button';
@@ -16,20 +17,17 @@ interface Turn {
 }
 
 /**
- * The half of the help panel that can involve a model.
+ * The half of the help panel that can involve a model or Synapse deterministic engine.
  *
  * Where the line between AI and not-AI falls, because it has to stay visible:
  *
  *   - The error cards above this component never use a model. They are fixed text.
- *   - The setup guide shown when nothing is configured is ALSO fixed text: it is what gets
- *     someone from "no AI" to "AI", so it cannot depend on having one.
- *   - Only the chat talks to a model, only once an admin connected one, and it says which
- *     provider receives the messages.
- *
- * It asks whether there is an assistant when the panel OPENS, not on every page render: the
- * panel is in the frame of every screen and almost always stays closed.
+ *   - The setup guide shown when nothing is configured is ALSO fixed text.
+ *   - Synapse answers deterministically when no external model is configured, providing
+ *     comprehensive error diagnostics (why it happened + what to do) without external cost.
+ *   - All questions and errors are sanitized to prevent any leak of confidential data.
  */
-export function AssistantAi() {
+export function AssistantAi({ initialError }: { initialError?: LastFailure | null | undefined }) {
   const t = useTranslations();
   const anchor = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<AssistantStatusView | null | 'loading' | 'idle'>('idle');
@@ -56,17 +54,24 @@ export function AssistantAi() {
       {status === 'idle' || status === null ? null : status === 'loading' ? (
         <p className="text-sm text-muted">{t('common.loading')}</p>
       ) : (
-        <Chat status={status} />
+        <Chat status={status} initialError={initialError} />
       )}
     </div>
   );
 }
 
-function Chat({ status }: { status: AssistantStatusView }) {
+function Chat({
+  status,
+  initialError,
+}: {
+  status: AssistantStatusView;
+  initialError?: LastFailure | null | undefined;
+}) {
   const t = useTranslations();
   const [turns, setTurns] = useState<readonly Turn[]>([]);
   const [draft, setDraft] = useState('');
   const [errorKind, setErrorKind] = useState<string | null>(null);
+  const [activeError] = useState<LastFailure | null>(initialError ?? null);
   const [pending, startTransition] = useTransition();
   const log = useRef<HTMLDivElement>(null);
 
@@ -77,9 +82,14 @@ function Chat({ status }: { status: AssistantStatusView }) {
   const providerName =
     status.provider === null ? '' : t(`settings.ai.providers.${status.provider}.name`);
 
-  const askQuestion = (rawText: string) => {
+  const askQuestion = (rawText: string, explicitError?: LastFailure | null) => {
     const question = rawText.trim();
     if (question === '' || pending) return;
+
+    const errToPass = explicitError ?? activeError;
+    const errorPayload = errToPass
+      ? { kind: errToPass.kind, incidentId: errToPass.incidentId }
+      : null;
 
     const next: readonly Turn[] = [...turns, { role: 'user', content: question.slice(0, 2_000) }];
     setTurns(next);
@@ -87,7 +97,7 @@ function Chat({ status }: { status: AssistantStatusView }) {
     setErrorKind(null);
 
     startTransition(async () => {
-      const result = await askAssistantAction(next);
+      const result = await askAssistantAction(next, errorPayload);
       if (result.ok) {
         setTurns([
           ...next,
@@ -156,6 +166,50 @@ function Chat({ status }: { status: AssistantStatusView }) {
         )}
       </div>
 
+      {/* Sección Dedicada de Detección de Error Activo con Protección y Ciberseguridad */}
+      {activeError !== null && (
+        <div className="rounded-control border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-ink space-y-1.5 shadow-sm">
+          <div className="flex items-center justify-between font-semibold text-amber-800 dark:text-amber-200">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle
+                aria-hidden="true"
+                className="size-3.5 text-amber-600 dark:text-amber-400 shrink-0"
+              />
+              <span>
+                {t('assistant.errorDetected')}:{' '}
+                <code className="font-mono text-[11px] bg-surface px-1 py-0.5 rounded border border-line">
+                  {activeError.kind}
+                </code>
+              </span>
+            </span>
+            {activeError.incidentId && (
+              <span className="font-mono text-[10px] bg-surface px-1.5 py-0.5 rounded border border-line text-muted">
+                {activeError.incidentId}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-muted leading-tight">
+            Synapse comprende las validaciones de negocio y puede explicarte exactamente por qué
+            ocurrió y cómo resolverlo.
+          </p>
+          <div className="flex items-center gap-2 pt-0.5">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                askQuestion(
+                  `¿Por qué ocurrió el error ${activeError.kind} y qué debo hacer?`,
+                  activeError,
+                )
+              }
+              className="inline-flex items-center gap-1 rounded-pill bg-[var(--color-brand)] px-2.5 py-1 text-[11px] font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              <span>💡 {t('assistant.explainError')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Historial o Sugerencias Rápidas */}
       <div ref={log} aria-live="polite" className="max-h-64 space-y-2 overflow-y-auto">
         {turns.length === 0 && (
@@ -164,6 +218,25 @@ function Chat({ status }: { status: AssistantStatusView }) {
               👋 Selecciona una opción del menú o escribe tu consulta:
             </p>
             <div className="flex flex-col gap-1.5">
+              {activeError !== null && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    askQuestion(
+                      `¿Por qué ocurrió el error ${activeError.kind} y qué debo hacer?`,
+                      activeError,
+                    )
+                  }
+                  className="flex items-center justify-between rounded-control border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-left text-xs font-medium text-ink transition hover:border-[var(--color-brand)]"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <AlertTriangle className="size-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Explicar error actual ({activeError.kind})</span>
+                  </span>
+                  <span className="text-[10px] text-amber-700 dark:text-amber-300">Explicar →</span>
+                </button>
+              )}
               {[
                 { label: '👥 Gestión de Clientes', query: '¿Cómo creo un cliente?' },
                 { label: '📦 Catálogo de Productos', query: '¿Cómo creo un producto?' },
@@ -172,6 +245,10 @@ function Chat({ status }: { status: AssistantStatusView }) {
                   query: '¿Cómo emito una nota de entrega?',
                 },
                 { label: '📥 Compras y Recepciones', query: '¿Cómo registro una compra?' },
+                {
+                  label: `🛡️ ${t('assistant.errorGuide')}`,
+                  query: '¿Por qué fallan las validaciones del sistema?',
+                },
               ].map((item) => (
                 <button
                   key={item.label}

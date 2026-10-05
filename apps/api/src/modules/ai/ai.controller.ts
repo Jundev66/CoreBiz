@@ -93,6 +93,6 @@ export class AssistantController {
   async chat(
     @Body(new ZodValidationPipe(askAssistantSchema)) body: z.infer<typeof askAssistantSchema>,
   ): Promise<{ reply: string; actions?: readonly { label: string; href: string }[] }> {
-    return unwrapOrThrow(await this.useCases.askAssistant(body.messages));
+    return unwrapOrThrow(await this.useCases.askAssistant(body.messages, body.errorContext));
   }
 }

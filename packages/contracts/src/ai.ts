@@ -28,7 +28,23 @@ export const saveAiSettingsSchema = aiDraftSchema
 export type SaveAiSettingsBody = z.infer<typeof saveAiSettingsSchema>;
 
 /**
- * A question with the conversation so far.
+ * Structured, sanitized error context passed to the assistant to diagnose active failures.
+ */
+export const errorContextSchema = z
+  .object({
+    kind: z.string().regex(/^[A-Z][A-Za-z0-9_]{1,63}$/),
+    incidentId: z
+      .string()
+      .regex(/^INC-[0-9A-F]{8}$/)
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
+export type ErrorContextInput = z.infer<typeof errorContextSchema>;
+
+/**
+ * A question with the conversation so far, optionally accompanied by the screen's active error context.
  *
  * The limits live here AND in the use case: here they stop an oversized body before any
  * work is done; there they keep the provider bill bounded whoever the caller is.
@@ -46,6 +62,7 @@ export const askAssistantSchema = z
       )
       .min(1)
       .max(20),
+    errorContext: errorContextSchema.nullable().optional(),
   })
   .strict()
   .refine((body) => body.messages.at(-1)?.role === 'user', {

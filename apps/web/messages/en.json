@@ -664,6 +664,9 @@
     "breakdownWithReference": "Give us this reference when you contact us: it lets us find exactly what broke.",
     "breakdownNoReference": "No reference came through, so tell us what you were doing when it happened.",
     "reference": "Reference",
+    "errorDetected": "System validation or error detected",
+    "explainError": "Explain error with Synapse",
+    "errorGuide": "Error & validation guide",
     "playbooks": {
       "Forbidden": {
         "what": "Your role doesn't include this action. CoreBiz decides by role, not by screen: a button can be visible and the action still be denied.",
@@ -736,6 +739,10 @@
       "NotFound": {
         "what": "We couldn't find what you asked for. It may not exist, or the link may be mistyped.",
         "do": "Go back to the list and look for it from there."
+      },
+      "EmailAlreadyRegistered": {
+        "what": "An account with this email address is already registered on the platform.",
+        "do": "Sign in with that email address or use the password recovery option if you forgot it."
       },
       "InsufficientStock": {
         "what": "There are fewer units than you are trying to take out. Stock is not allowed to go negative.",

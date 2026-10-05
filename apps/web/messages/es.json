@@ -664,6 +664,9 @@
     "breakdownWithReference": "Danos esta referencia cuando nos escribas: con ella encontramos exactamente lo que falló.",
     "breakdownNoReference": "No llegó ninguna referencia, así que cuéntanos qué estabas haciendo cuando pasó.",
     "reference": "Referencia",
+    "errorDetected": "Validación o error detectado",
+    "explainError": "Explicar error con Synapse",
+    "errorGuide": "Guía de errores y validaciones",
     "playbooks": {
       "Forbidden": {
         "what": "Tu rol no incluye esta acción. CoreBiz decide por rol, no por pantalla: un botón puede estar a la vista y la acción seguir prohibida.",
@@ -736,6 +739,10 @@
       "NotFound": {
         "what": "No encontramos lo que pediste. Puede que no exista, o que el enlace esté mal escrito.",
         "do": "Vuelve a la lista y búscalo desde allí."
+      },
+      "EmailAlreadyRegistered": {
+        "what": "Ya existe una cuenta registrada con esta dirección de correo electrónico en la plataforma.",
+        "do": "Inicia sesión con ese correo o utiliza la opción de recuperar contraseña si la olvidaste."
       },
       "InsufficientStock": {
         "what": "No hay tantas unidades como estás intentando sacar. El inventario no puede quedar en negativo.",
