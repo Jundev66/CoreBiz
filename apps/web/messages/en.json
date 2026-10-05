@@ -667,6 +667,13 @@
     "errorDetected": "System validation or error detected",
     "explainError": "Explain error with Synapse",
     "errorGuide": "Error & validation guide",
+    "tabChat": "Chat & Assistant",
+    "tabNotifications": "Notifications",
+    "notificationsTitle": "Notifications & Validation Center",
+    "notificationsSubtitle": "Alerts detected by the system. Select any to see how Synapse guides you:",
+    "diagnoseWithSynapse": "Explain with Synapse",
+    "unreadCount": "{count} alerts",
+    "notificationsAvailable": "validation alerts ready to explore",
     "playbooks": {
       "Forbidden": {
         "what": "Your role doesn't include this action. CoreBiz decides by role, not by screen: a button can be visible and the action still be denied.",

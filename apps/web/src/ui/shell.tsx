@@ -21,7 +21,6 @@ import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
 import { DestroyDemoButton } from '@/ui/destroy-demo-button';
-import { DemoValidationSimulator } from '@/ui/demo-validation-simulator';
 import { buttonClasses } from '@/ui/button';
 
 import { Logo } from '@/ui/logo';
@@ -110,7 +109,7 @@ export async function AppFrame({
        * belongs to the system, not to a list. Being here also keeps it out of (auth) and
        * the print screen, which do not mount the frame.
        */}
-      <AssistantPanel />
+      <AssistantPanel isDemo={session.isDemo} />
 
       <aside
         data-surface="nav"
@@ -175,12 +174,7 @@ export async function AppFrame({
           </NavDetails>
         </header>
 
-        {session.isDemo && (
-          <>
-            <DemoNotice session={session} />
-            <DemoValidationSimulator />
-          </>
-        )}
+        {session.isDemo && <DemoNotice session={session} />}
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-10 lg:pt-10">
           {children}

@@ -667,6 +667,13 @@
     "errorDetected": "Validación o error detectado",
     "explainError": "Explicar error con Synapse",
     "errorGuide": "Guía de errores y validaciones",
+    "tabChat": "Chat & Asistente",
+    "tabNotifications": "Notificaciones",
+    "notificationsTitle": "Centro de Notificaciones & Validaciones",
+    "notificationsSubtitle": "Alertas detectadas por el sistema. Selecciona cualquiera para ver cómo Synapse te guía:",
+    "diagnoseWithSynapse": "Explicar con Synapse",
+    "unreadCount": "{count} alertas",
+    "notificationsAvailable": "alertas de validación listas para consultar",
     "playbooks": {
       "Forbidden": {
         "what": "Tu rol no incluye esta acción. CoreBiz decide por rol, no por pantalla: un botón puede estar a la vista y la acción seguir prohibida.",

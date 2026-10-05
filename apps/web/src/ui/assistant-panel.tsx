@@ -26,7 +26,7 @@ import { AssistantAi } from '@/ui/assistant-ai';
  * JavaScript, and a panel nobody opens asks the API nothing.
  */
 
-export async function AssistantPanel() {
+export async function AssistantPanel({ isDemo }: { readonly isDemo?: boolean | undefined }) {
   const t = await getTranslations();
   const error = await readLastFailure();
 
@@ -52,13 +52,19 @@ export async function AssistantPanel() {
         {/* Icon-only on phones, where the pill sat on top of list rows. The `<details>` keeps
             its name through `aria-label`, and the summary still reads the word. */}
         <span className="sr-only sm:not-sr-only">{t('assistant.title')}</span>
-        {/* A dot, not a number: there is nothing to count, only something to look at. */}
-        {error !== null && (
+        {error !== null ? (
           <span
             aria-hidden="true"
-            className="size-2 shrink-0 rounded-full bg-[var(--color-warn)]"
+            className="size-2 shrink-0 rounded-full bg-[var(--color-warn)] animate-pulse"
           />
-        )}
+        ) : isDemo ? (
+          <span
+            className="flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300"
+            title={t('assistant.notificationsTitle')}
+          >
+            🔔 7
+          </span>
+        ) : null}
       </summary>
 
       <div className="mt-2 max-h-[min(32rem,75vh)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-md)]">
@@ -75,7 +81,7 @@ export async function AssistantPanel() {
             )}
           </div>
         )}
-        <AssistantAi initialError={error} />
+        <AssistantAi initialError={error} isDemo={isDemo} />
       </div>
     </details>
   );
