@@ -21,7 +21,9 @@ import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
 import { DestroyDemoButton } from '@/ui/destroy-demo-button';
+import { DemoValidationSimulator } from '@/ui/demo-validation-simulator';
 import { buttonClasses } from '@/ui/button';
+
 import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
 import { MoreSummary, NavDetails, NavLink } from '@/ui/nav-link';
@@ -173,7 +175,12 @@ export async function AppFrame({
           </NavDetails>
         </header>
 
-        {session.isDemo && <DemoNotice session={session} />}
+        {session.isDemo && (
+          <>
+            <DemoNotice session={session} />
+            <DemoValidationSimulator />
+          </>
+        )}
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-10 lg:pt-10">
           {children}

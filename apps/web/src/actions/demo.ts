@@ -2,8 +2,9 @@
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { supabaseServer, ACTIVE_TENANT_COOKIE } from '@/auth/supabase';
-import { forgetFailure } from '@/api/last-error';
+import { forgetFailure, rememberFailure } from '@/api/last-error';
 import { clientFingerprint } from '@/auth/request-identity';
 import { apiIsAwake, send } from '@/api/client';
 import { startDemoSandbox } from '@/api/demo';
@@ -63,6 +64,19 @@ export async function destroyDemoAction(): Promise<void> {
   (await cookies()).delete(ACTIVE_TENANT_COOKIE);
   await forgetFailure();
   redirect('/demo');
+}
+
+/**
+ * Permite simular una validación de negocio o fallo de sistema en modo demo
+ * para observar en vivo cómo Synapse lo captura, diagnostica y explica.
+ */
+export async function simulateDemoValidationAction(kind: string): Promise<void> {
+  if (kind === 'clear') {
+    await forgetFailure();
+  } else {
+    await rememberFailure(kind, kind === 'Unexpected' ? 'INC-A1B2C3D4' : null);
+  }
+  revalidatePath('/', 'layout');
 }
 
 export async function startDemoAction(_prev: DemoState, formData: FormData): Promise<DemoState> {
