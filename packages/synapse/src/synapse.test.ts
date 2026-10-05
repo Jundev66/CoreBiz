@@ -130,8 +130,7 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
       if (result.ok) {
         expect(result.value.mode).toBe('deterministic');
         expect(result.value.reply).toContain('Correo ya registrado');
-        expect(result.value.reply).toContain('¿Por qué pasa?');
-        expect(result.value.reply).toContain('¿Qué debes hacer?');
+        expect(result.value.reply).toContain('Cómo resolverlo:');
         expect(result.value.actions).toEqual([{ label: 'Ir a Iniciar Sesión', href: '/login' }]);
       }
     });
@@ -147,7 +146,7 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.mode).toBe('deterministic');
-        expect(result.value.reply).toContain('stock insuficiente en inventario');
+        expect(result.value.reply).toContain('Stock insuficiente en almacén');
         expect(result.value.suggestedPath).toBe('/products');
       }
     });
@@ -164,8 +163,8 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.mode).toBe('deterministic');
-        expect(result.value.reply).toContain('Límite de crédito comercial excedido');
-        expect(result.value.reply).toContain('¿Qué debes hacer?');
+        expect(result.value.reply).toContain('Límite de crédito excedido');
+        expect(result.value.reply).toContain('Cómo resolverlo:');
       }
     });
 
@@ -182,7 +181,6 @@ describe('Synapse Architecture & Dual-Mode Engine', () => {
       if (result.ok) {
         expect(result.value.mode).toBe('deterministic');
         expect(result.value.reply).toContain('INC-A1B2C3D4');
-        expect(result.value.reply).toContain('Ciberseguridad y Privacidad');
         expect(result.value.reply).not.toContain('stack');
       }
     });

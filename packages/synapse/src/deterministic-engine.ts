@@ -38,12 +38,11 @@ export interface BusinessErrorGuide {
 export const BUSINESS_ERROR_GUIDES: readonly BusinessErrorGuide[] = [
   {
     kind: 'EmailAlreadyRegistered',
-    title: 'Correo ya registrado en la plataforma',
-    why: 'Ya existe una cuenta activa asociada a esta dirección de correo electrónico. Por seguridad de acceso y unicidad, el sistema no permite registros duplicados con el mismo correo.',
+    title: 'Correo ya registrado',
+    why: 'Ya existe una cuenta activa con esta dirección de correo electrónico.',
     whatToDo: [
       'Inicia sesión directamente con ese correo en la pantalla de acceso.',
-      'Si no recuerdas la contraseña, pulsa en "¿Olvidaste tu contraseña?" para restablecerla de forma segura.',
-      'Si estabas invitando a un nuevo miembro al equipo, confirma su correo o pídele que inicie sesión.',
+      'Si no recuerdas la contraseña, usa "¿Olvidaste tu contraseña?" para restablecerla.',
     ],
     targetPath: '/login',
     actions: [{ label: 'Ir a Iniciar Sesión', href: '/login' }],
@@ -62,11 +61,11 @@ export const BUSINESS_ERROR_GUIDES: readonly BusinessErrorGuide[] = [
   {
     kind: 'InvalidCredentials',
     title: 'Credenciales de acceso incorrectas',
-    why: 'El correo electrónico o la contraseña ingresados no coinciden con las cuentas registradas en el sistema.',
+    why: 'El correo electrónico o la contraseña ingresados no coinciden con las cuentas registradas.',
     whatToDo: [
-      'Verifica que el correo no contenga espacios accidentales o faltas ortográficas.',
-      'Asegúrate de que la tecla Bloq Mayús no esté activada.',
-      'Si olvidaste tu clave, utiliza el enlace para restablecer contraseña.',
+      'Verifica que el correo no contenga espacios accidentales.',
+      'Asegúrate de que la tecla Bloq Mayús esté desactivada.',
+      'Si olvidaste tu clave, utiliza el enlace para restablecerla.',
     ],
     targetPath: '/login',
     actions: [{ label: 'Ir a Iniciar Sesión', href: '/login' }],
@@ -80,12 +79,12 @@ export const BUSINESS_ERROR_GUIDES: readonly BusinessErrorGuide[] = [
   },
   {
     kind: 'InsufficientStock',
-    title: 'Existencias o stock insuficiente en inventario',
-    why: 'Estás intentando despachar o facturar más unidades de las que existen registradas físicamente en almacén. El sistema bloquea existencias negativas para proteger la contabilidad y el inventario.',
+    title: 'Stock insuficiente en almacén',
+    why: 'Estás intentando despachar más unidades de las que existen en inventario (no se admiten existencias negativas).',
     whatToDo: [
-      'Registra primero la recepción de compra del proveedor desde el módulo de Compras para cargar stock.',
-      'Si la mercancía ya está en tienda pero no se ha contabilizado, realiza un ajuste manual de inventario desde la ficha del producto.',
-      'O disminuye la cantidad solicitada en la línea de la nota de entrega.',
+      'Registra la recepción de compra en Compras para reponer inventario.',
+      'O realiza un ajuste manual de inventario desde la ficha del producto.',
+      'O disminuye la cantidad solicitada en la nota de entrega.',
     ],
     targetPath: '/products',
     actions: [
@@ -105,11 +104,11 @@ export const BUSINESS_ERROR_GUIDES: readonly BusinessErrorGuide[] = [
   },
   {
     kind: 'CreditLimitExceeded',
-    title: 'Límite de crédito comercial excedido',
-    why: 'Esta operación dejaría la deuda acumulada del cliente por encima del cupo de crédito máximo autorizado para su cuenta.',
+    title: 'Límite de crédito excedido',
+    why: 'Esta operación sobrepasa el cupo de crédito máximo autorizado para este cliente.',
     whatToDo: [
-      'Registra un cobro parcial o total de las notas de entrega pendientes de este cliente para liberar saldo disponible.',
-      'O solicita a un administrador que aumente su límite de crédito desde la ficha del cliente.',
+      'Registra un cobro de notas pendientes de este cliente para liberar saldo.',
+      'O solicita a un administrador ampliar su límite de crédito desde su ficha.',
     ],
     targetPath: '/customers',
     actions: [{ label: 'Ver Clientes', href: '/customers' }],
@@ -125,11 +124,11 @@ export const BUSINESS_ERROR_GUIDES: readonly BusinessErrorGuide[] = [
   },
   {
     kind: 'DuplicateSku',
-    title: 'Código SKU ya registrado',
-    why: 'Ya existe otro producto en tu catálogo con ese mismo código SKU. El SKU es el identificador único del ítem en almacén y no puede repetirse.',
+    title: 'Código SKU duplicado',
+    why: 'Ya existe otro producto en tu catálogo con este mismo código identificador (SKU).',
     whatToDo: [
-      'Asigna un código SKU distinto y único al producto que estás creando.',
-      'Si el producto ya fue creado anteriormente, búscalo en el catálogo para actualizar sus existencias o precios.',
+      'Asigna un código SKU diferente al nuevo producto.',
+      'O busca el producto en el catálogo para actualizar sus datos o existencias.',
     ],
     targetPath: '/products',
     actions: [{ label: 'Ir a Productos', href: '/products' }],
@@ -425,16 +424,13 @@ export function formatErrorGuideReply(
   incidentId?: string | null,
 ): DeterministicReply {
   const stepsFormatted = guide.whatToDo.map((step, i) => `${i + 1}. ${step}`).join('\n');
-  const incidentSection = incidentId
-    ? `\n\n📌 **Código de Referencia de Soporte:** \`${incidentId}\` *(Compártelo con soporte para revisar los registros protegidos)*`
-    : '';
+  const incidentSection = incidentId ? `\n\nReferencia de soporte: \`${incidentId}\`` : '';
 
   const replyText =
-    `⚠️ **Diagnóstico de Validación: ${guide.title}** (Modo Local sin IA)\n\n` +
-    `🛑 **¿Por qué pasa?**\n${guide.why}\n\n` +
-    `💡 **¿Qué debes hacer?**\n${stepsFormatted}` +
-    incidentSection +
-    `\n\n🔒 *Ciberseguridad y Privacidad: Tu información y datos técnicos internos se mantienen aislados y protegidos.*`;
+    `**${guide.title}**\n\n` +
+    `${guide.why}\n\n` +
+    `**Cómo resolverlo:**\n${stepsFormatted}` +
+    incidentSection;
 
   return {
     reply: replyText,
