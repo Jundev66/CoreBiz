@@ -111,7 +111,7 @@ describe('assistant over HTTP', () => {
       actions?: { label: string; href: string }[];
     };
     expect(body.reply).toContain('Correo ya registrado');
-    expect(body.reply).toContain('Modo Local sin IA');
+    expect(body.reply).toContain('Cómo resolverlo:');
     expect(body.actions).toEqual([{ label: 'Ir a Iniciar Sesión', href: '/login' }]);
   });
 
