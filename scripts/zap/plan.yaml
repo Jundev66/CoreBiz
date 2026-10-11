@@ -1,0 +1,96 @@
+env:
+  contexts:
+    - name: corebiz-prod
+      urls:
+        - https://corebiz-web.vercel.app/
+        - https://corebiz-web.vercel.app/welcome
+        - https://corebiz-web.vercel.app/login
+        - https://corebiz-web.vercel.app/signup
+        - https://corebiz-web.vercel.app/forgot-password
+        - https://corebiz-web.vercel.app/reset-password
+        - https://corebiz-web.vercel.app/demo
+        - https://corebiz-web.vercel.app/onboarding
+        - https://corebiz-web.vercel.app/invitations/accept
+        - https://corebiz-web.vercel.app/api/health
+      includePaths:
+        - "https://corebiz-web\\.vercel\\.app.*"
+      excludePaths:
+        - '.*logout.*'
+  parameters:
+    failOnError: false
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 20
+      scanOnlyInScope: true
+    rules:
+      - id: 10050
+        threshold: Off
+      - id: 10109
+        threshold: Off
+
+  - type: spider
+    parameters:
+      context: corebiz-prod
+      maxDuration: 3
+      maxDepth: 5
+      acceptCookies: true
+
+  - type: spiderAjax
+    parameters:
+      context: corebiz-prod
+      maxDuration: 5
+      numberOfBrowsers: 2
+      browserId: chrome
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: activeScan
+    parameters:
+      context: corebiz-prod
+      maxRuleDurationInMins: 3
+      maxScanDurationInMins: 15
+      addQueryParam: true
+
+  - type: alertFilter
+    alertFilters:
+      - ruleId: 40018
+        newRisk: 'False Positive'
+        url: "https://corebiz-web\\.vercel\\.app/api/health.*"
+        urlRegex: true
+      - ruleId: 10202
+        newRisk: 'False Positive'
+        url: "https://corebiz-web\\.vercel\\.app.*"
+        urlRegex: true
+      - ruleId: 10098
+        newRisk: 'False Positive'
+        url: "https://corebiz-web\\.vercel\\.app.*"
+        urlRegex: true
+      - ruleId: 10044
+        newRisk: 'False Positive'
+        url: "https://corebiz-web\\.vercel\\.app/onboarding.*"
+        urlRegex: true
+      - ruleId: 10031
+        newRisk: 'False Positive'
+        url: "https://corebiz-web\\.vercel\\.app.*"
+        urlRegex: true
+      - ruleId: 10015
+        newRisk: 'False Positive'
+        url: "https://corebiz-web\\.vercel\\.app.*"
+        urlRegex: true
+
+  - type: report
+    parameters:
+      template: traditional-html-plus
+      reportDir: 'D:/Dev/CoreBiz/scripts/zap/report'
+      reportFile: corebiz-zap-report
+      reportTitle: 'CoreBiz ZAP Full Scan'
+    confidences:
+      - high
+      - medium
+      - low

@@ -64,3 +64,9 @@ e2e/.features-gen/
 # Vercel CLI: `vercel link` and `vercel pull` write project ids and PULLED ENVIRONMENT
 # VARIABLES here. Production secrets must never be one `git add .` away.
 .vercel/
+
+# OWASP ZAP reports
+scripts/zap/*.html
+scripts/zap/corebiz-zap-report/
+scripts/zap/report/
+scripts/zap/REPORT.md

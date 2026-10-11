@@ -99,7 +99,6 @@ async function probe(): Promise<Probe> {
 }
 
 export async function GET(): Promise<Response> {
-  const started = Date.now();
   const driver = activeDriver();
 
   if (driver === 'memory') {
@@ -111,7 +110,7 @@ export async function GET(): Promise<Response> {
   const upstream = await probe();
 
   if (upstream.ok) {
-    return json({ status: 'ok', driver, api: 'reachable', latencyMs: Date.now() - started }, 200);
+    return json({ status: 'ok', driver, api: 'reachable' }, 200);
   }
 
   // El motivo no viaja al cliente: la respuesta de la API puede llevar detalle que
