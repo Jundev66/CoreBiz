@@ -31,6 +31,16 @@ jobs:
         threshold: Off
       - id: 10109
         threshold: Off
+      - id: 10202
+        threshold: Off
+      - id: 10098
+        threshold: Off
+      - id: 10044
+        threshold: Off
+      - id: 10031
+        threshold: Off
+      - id: 10015
+        threshold: Off
 
   - type: spider
     parameters:
