@@ -12,9 +12,9 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",
-    "@playwright/test": "^1.63.0",
-    "@types/node": "^26.5.1",
-    "playwright": "^1.63.0",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.5",
+    "playwright": "^1.64.0",
     "playwright-bdd": "^9.2.1",
     "typescript": "^5.9.3"
   }
