@@ -538,6 +538,7 @@ model customers {
   updated_at            DateTime         @default(now()) @db.Timestamptz(6)
   tenants               tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   delivery_notes        delivery_notes[]
+  payments              payments[]
 
   @@unique([tenant_id, code], map: "customers_tenant_code_key")
   @@index([tenant_id, name], map: "customers_tenant_name_idx", where: raw("(archived_at IS NULL)"))
@@ -599,12 +600,55 @@ model delivery_notes {
   created_at            DateTime              @default(now()) @db.Timestamptz(6)
   updated_at            DateTime              @default(now()) @db.Timestamptz(6)
   delivery_note_lines   delivery_note_lines[]
+  payment_allocations   payment_allocations[]
   customers             customers             @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tenants               tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, number], map: "delivery_notes_tenant_number_key")
   @@index([tenant_id, customer_id], map: "delivery_notes_tenant_customer_idx")
   @@index([tenant_id, issued_at(sort: Desc)], map: "delivery_notes_tenant_issued_idx")
+  @@schema("public")
+}
+
+model payments {
+  id                   String                @id @db.Uuid
+  tenant_id            String                @db.Uuid
+  number               String
+  customer_id          String                @db.Uuid
+  amount_minor         BigInt
+  currency             String
+  exchange_rate_scaled BigInt
+  payment_method       String
+  reference            String?
+  status               String
+  notes                String?
+  paid_at              DateTime              @default(now()) @db.Timestamptz(6)
+  voided_at            DateTime?             @db.Timestamptz(6)
+  void_reason          String?
+  created_at           DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime              @default(now()) @db.Timestamptz(6)
+  payment_allocations  payment_allocations[]
+  customers            customers             @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenants              tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, number], map: "payments_tenant_number_key")
+  @@index([tenant_id, customer_id], map: "payments_tenant_customer_idx")
+  @@index([tenant_id, paid_at(sort: Desc)], map: "payments_tenant_paid_idx")
+  @@schema("public")
+}
+
+model payment_allocations {
+  tenant_id        String         @db.Uuid
+  payment_id       String         @db.Uuid
+  delivery_note_id String         @db.Uuid
+  amount_minor     BigInt
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  delivery_notes   delivery_notes @relation(fields: [delivery_note_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payments         payments       @relation(fields: [payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenants          tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([payment_id, delivery_note_id])
+  @@index([tenant_id, delivery_note_id], map: "payment_allocations_delivery_note_idx")
   @@schema("public")
 }
 
@@ -875,6 +919,8 @@ model tenants {
   goods_receipts       goods_receipts[]
   invitations          invitations[]
   memberships          memberships[]
+  payment_allocations  payment_allocations[]
+  payments             payments[]
   products             products[]
   stock_movements      stock_movements[]
   suppliers            suppliers[]

@@ -5,11 +5,14 @@ import type {
   CustomerDetail,
   CustomerListItem,
   CustomerOption,
+  CustomerReceivableItem,
   DeliveryNoteListItem,
   DeliveryNoteView,
   GoodsReceiptListItem,
   GoodsReceiptView,
   Page,
+  PaymentListItem,
+  PaymentView,
   PendingInvitationView,
   ProductDetail,
   ProductListItem,
@@ -224,6 +227,52 @@ export function httpReadModels(): ReadModels {
         );
         if (receipt === null) return null;
         return { ...receipt, receivedAt: toDateOrNull(receipt.receivedAt) };
+      },
+    },
+
+    payments: {
+      list: async (filter) => {
+        const page = await get<Page<Wire<PaymentListItem>>>(
+          `/v1/payments${query({
+            customerId: filter.customerId,
+            status: filter.status,
+            limit: filter.limit,
+            cursor: filter.cursor,
+          })}`,
+        );
+        return {
+          ...page,
+          items: page.items.map((item) => ({
+            ...item,
+            paidAt: toDate(item.paidAt),
+          })),
+        };
+      },
+      byId: async (id) => {
+        const payment = await getOrNull<Wire<PaymentView>>(
+          `/v1/payments/${encodeURIComponent(id)}`,
+        );
+        if (payment === null) return null;
+        return {
+          ...payment,
+          paidAt: toDate(payment.paidAt),
+          voidedAt: toDateOrNull(payment.voidedAt),
+        };
+      },
+      outstandingBalanceFor: async (customerId, currency) => {
+        const res = await get<{ balance: string }>(
+          `/v1/payments/balance/${encodeURIComponent(customerId)}${query({ currency })}`,
+        );
+        return res.balance;
+      },
+      customerReceivables: async (customerId) => {
+        const items = await get<readonly Wire<CustomerReceivableItem>[]>(
+          `/v1/payments/receivables/${encodeURIComponent(customerId)}`,
+        );
+        return items.map((item) => ({
+          ...item,
+          issuedAt: toDateOrNull(item.issuedAt),
+        }));
       },
     },
   };

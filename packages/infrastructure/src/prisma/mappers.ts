@@ -3,6 +3,7 @@ import {
   DeliveryNote,
   ExchangeRate,
   Money,
+  Payment,
   Product,
   Quantity,
   asId,
@@ -14,6 +15,11 @@ import {
   type DeliveryNoteLine,
   type DeliveryNoteProps,
   type DeliveryNoteStatus,
+  type PaymentAllocation,
+  type PaymentId,
+  type PaymentMethod,
+  type PaymentProps,
+  type PaymentStatus,
   type ProductId,
   type ProductProps,
   type StockPolicy,
@@ -273,5 +279,78 @@ export function fromDeliveryNoteLines(note: DeliveryNote): DeliveryNoteLineInser
     discount_bp: line.discountBp,
     taxable: line.taxable,
     line_total_minor: line.lineTotal.minorUnits,
+  }));
+}
+
+type PaymentRow = Prisma.paymentsGetPayload<object>;
+type PaymentAllocationRow = Prisma.payment_allocationsGetPayload<object>;
+
+export type PaymentInsert = Prisma.paymentsUncheckedCreateInput;
+export type PaymentAllocationInsert = Prisma.payment_allocationsUncheckedCreateInput;
+
+export function toPayment(
+  row: PaymentRow,
+  allocationRows: readonly PaymentAllocationRow[],
+): Payment {
+  const currency = row.currency as Currency;
+  const allocations: PaymentAllocation[] = allocationRows.map((a) => ({
+    deliveryNoteId: asId<DeliveryNoteId>(a.delivery_note_id),
+    amount: Money.fromMinor(a.amount_minor, currency),
+  }));
+
+  const exchangeRate = ExchangeRate.fromScaled(
+    row.exchange_rate_scaled,
+    currency,
+    currency === 'USD' ? 'VES' : 'USD',
+    row.paid_at,
+  );
+
+  const props: PaymentProps = {
+    tenantId: asId<TenantId>(row.tenant_id),
+    number: row.number,
+    customerId: asId<CustomerId>(row.customer_id),
+    amount: Money.fromMinor(row.amount_minor, currency),
+    currency,
+    exchangeRate,
+    paymentMethod: row.payment_method as PaymentMethod,
+    reference: row.reference,
+    status: row.status as PaymentStatus,
+    notes: row.notes,
+    paidAt: row.paid_at,
+    allocations,
+    voidedAt: row.voided_at,
+    voidReason: row.void_reason,
+  };
+
+  return Payment.rehydrate(asId<PaymentId>(row.id), props);
+}
+
+export function fromPayment(payment: Payment): PaymentInsert {
+  const s = payment.snapshot();
+  return {
+    id: s.id,
+    tenant_id: s.tenantId,
+    number: s.number,
+    customer_id: s.customerId,
+    amount_minor: s.amount.minorUnits,
+    currency: s.currency,
+    exchange_rate_scaled: s.exchangeRate.scaledRate,
+    payment_method: s.paymentMethod,
+    reference: s.reference,
+    status: s.status,
+    notes: s.notes,
+    paid_at: s.paidAt,
+    voided_at: s.voidedAt,
+    void_reason: s.voidReason,
+  };
+}
+
+export function fromPaymentAllocations(payment: Payment): PaymentAllocationInsert[] {
+  const s = payment.snapshot();
+  return s.allocations.map((a) => ({
+    tenant_id: s.tenantId,
+    payment_id: s.id,
+    delivery_note_id: a.deliveryNoteId,
+    amount_minor: a.amount.minorUnits,
   }));
 }

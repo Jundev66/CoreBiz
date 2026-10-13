@@ -59,6 +59,8 @@ const COVERED = [
   'goods_receipts',
   'goods_receipt_lines',
   'tenant_ai_settings',
+  'payments',
+  'payment_allocations',
 ] as const;
 
 /**
@@ -186,6 +188,25 @@ async function seedOneRowPerTable(tenant: TestTenant): Promise<void> {
   await sql`
     insert into public.tenant_ai_settings (tenant_id, provider, api_key_ciphertext, api_key_hint, model)
     values (${t}, 'anthropic', 'v1.rls.probe.value', 'obe1', 'claude-rls-probe')
+  `;
+
+  const paymentId = crypto.randomUUID();
+  await sql`
+    insert into public.payments (
+      id, tenant_id, number, customer_id, amount_minor, currency,
+      exchange_rate_scaled, payment_method, status, notes, paid_at
+    ) values (
+      ${paymentId}, ${t}, 'REC-RLS-001', ${customerId}, 1000, 'USD',
+      3650000000, 'bank_transfer', 'applied', 'Pago de prueba RLS', now()
+    )
+  `;
+
+  await sql`
+    insert into public.payment_allocations (
+      tenant_id, payment_id, delivery_note_id, amount_minor
+    ) values (
+      ${t}, ${paymentId}, ${noteId}, 1000
+    )
   `;
 }
 

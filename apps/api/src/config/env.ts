@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ROLES } from '@corebiz/domain';
 
 /**
  * The environment is validated AT STARTUP, not the first time someone reads it.
@@ -72,6 +73,37 @@ const schema = z
      * exactamente la regla que ya sigue `/api/cron/purge`.
      */
     INTERNAL_API_SECRET: z.string().min(16).optional(),
+
+    /**
+     * Clave de la integracion externa (ConciliaBot).
+     *
+     * Un cliente de MAQUINA no tiene sesion de usuario: la unica credencial posible es
+     * este secreto, que viaja como `Authorization: Bearer <key>`. Sin el, `/v1/integrations/*`
+     * responde 404 en lugar de abrirse —la misma regla que ya siguen `/internal/*` y
+     * `/api/cron/purge`—: un endpoint que se abre porque falta configuracion es la peor de
+     * las dos opciones. El valor NUNCA se registra en logs.
+     */
+    INTEGRATIONS_API_KEY: z.string().min(16).optional(),
+
+    /**
+     * La empresa que el cliente de maquina tiene permiso de leer.
+     *
+     * Sin ella la integracion no puede acotar las consultas, y un listado vacio se
+     * confundiria con un negocio sin documentos. Por eso el `superRefine` de abajo exige
+     * que venga cuando la clave esta puesta.
+     */
+    INTEGRATIONS_TENANT_ID: z.string().uuid().optional(),
+
+    /** Slug sintetizado en el contexto. Solo informa; ninguna consulta decide con el. */
+    INTEGRATIONS_TENANT_SLUG: z.string().trim().min(1).optional(),
+    INTEGRATIONS_USER_ID: z.string().uuid().optional(),
+
+    /**
+     * Rol sintetizado para el actor de la integracion.
+     *
+     * Permite operar y registrar recepciones de notas de entrega. `owner` por defecto.
+     */
+    INTEGRATIONS_ACTOR_ROLE: z.enum(ROLES).default('owner'),
 
     /**
      * Con `false`, nadie puede crear una cuenta ni una empresa.
@@ -153,6 +185,14 @@ const schema = z
 
     /** Reads per verified user per minute, per API instance. See `ReadThrottleGuard`. */
     API_READS_PER_MINUTE: z.coerce.number().int().positive().default(1_200),
+
+    /**
+     * Requests per minute through the external integration (`/v1/integrations/*`). See
+     * `IntegrationsThrottleGuard`. The caller is a machine, so there is no "user" to key
+     * on; the whole credential is one client and this bounds what it can take from the
+     * instance's connection pool.
+     */
+    INTEGRATIONS_REQUESTS_PER_MINUTE: z.coerce.number().int().positive().default(600),
   })
   .superRefine((value, ctx) => {
     if (value.DATA_DRIVER === 'postgres' && value.DATABASE_URL === undefined) {
@@ -170,6 +210,17 @@ const schema = z
         path: ['DATA_DRIVER'],
         message:
           'DATA_DRIVER=memory es solo para la suite de pruebas. Arranca la base de datos con `pnpm db:start` y deja DATA_DRIVER=postgres.',
+      });
+    }
+
+    // Una integracion sin empresa no puede acotar sus lecturas. Se niega al arrancar en
+    // lugar de servir un listado vacio, que se leeria como un negocio sin documentos.
+    if (value.INTEGRATIONS_API_KEY !== undefined && value.INTEGRATIONS_TENANT_ID === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INTEGRATIONS_TENANT_ID'],
+        message:
+          'INTEGRATIONS_TENANT_ID es obligatorio cuando INTEGRATIONS_API_KEY esta configurado.',
       });
     }
   });

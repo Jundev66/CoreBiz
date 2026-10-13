@@ -371,6 +371,121 @@ begin
   ) as p(n, code, name, tax_id, contact, phone);
 
   -- ─────────────────────────────────────────────────────────────────────────
+  -- Cobros de demostracion
+  --
+  -- Dan vida al modulo de cobros y cuentas por cobrar:
+  --   1. REC-000001: Cobro total de NE-000001 (Bodega La Esquina, al dia).
+  --   2. REC-000002: Cobro parcial de NE-000002 (Ferreteria El Tornillo, abono $40).
+  --   3. REC-000003: Cobro anulado de NE-000003 (Supermercado Mi Barrio, evidencia trazabilidad).
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- REC-000001 (Cobro total de NE-000001)
+  insert into public.payments (
+    id, tenant_id, number, customer_id, amount_minor, currency,
+    exchange_rate_scaled, payment_method, reference, status, notes,
+    paid_at, created_at
+  )
+  select
+    '40000000-0000-4000-8000-000000000001'::uuid,
+    v_tenant,
+    'REC-000001',
+    dn.customer_id,
+    dn.total_minor,
+    'USD',
+    v_rate,
+    'bank_transfer',
+    'TRANS-849201',
+    'applied',
+    'Cobro total de nota inicial',
+    dn.issued_at + interval '1 day',
+    dn.issued_at + interval '1 day'
+  from public.delivery_notes dn
+  where dn.id = '30000000-0000-4000-8000-000000000001'::uuid;
+
+  insert into public.payment_allocations (
+    tenant_id, payment_id, delivery_note_id, amount_minor, created_at
+  )
+  select
+    v_tenant,
+    '40000000-0000-4000-8000-000000000001'::uuid,
+    dn.id,
+    dn.total_minor,
+    dn.issued_at + interval '1 day'
+  from public.delivery_notes dn
+  where dn.id = '30000000-0000-4000-8000-000000000001'::uuid;
+
+  -- REC-000002 (Cobro parcial de $40.00 sobre NE-000002)
+  insert into public.payments (
+    id, tenant_id, number, customer_id, amount_minor, currency,
+    exchange_rate_scaled, payment_method, reference, status, notes,
+    paid_at, created_at
+  )
+  select
+    '40000000-0000-4000-8000-000000000002'::uuid,
+    v_tenant,
+    'REC-000002',
+    dn.customer_id,
+    4000, -- $40.00
+    'USD',
+    v_rate,
+    'cash_usd',
+    'USD-CAJA-01',
+    'applied',
+    'Abono en efectivo en caja',
+    dn.issued_at + interval '2 days',
+    dn.issued_at + interval '2 days'
+  from public.delivery_notes dn
+  where dn.id = '30000000-0000-4000-8000-000000000002'::uuid;
+
+  insert into public.payment_allocations (
+    tenant_id, payment_id, delivery_note_id, amount_minor, created_at
+  )
+  select
+    v_tenant,
+    '40000000-0000-4000-8000-000000000002'::uuid,
+    dn.id,
+    4000,
+    dn.issued_at + interval '2 days'
+  from public.delivery_notes dn
+  where dn.id = '30000000-0000-4000-8000-000000000002'::uuid;
+
+  -- REC-000003 (Cobro anulado sobre NE-000003)
+  insert into public.payments (
+    id, tenant_id, number, customer_id, amount_minor, currency,
+    exchange_rate_scaled, payment_method, reference, status, notes,
+    paid_at, voided_at, void_reason, created_at
+  )
+  select
+    '40000000-0000-4000-8000-000000000003'::uuid,
+    v_tenant,
+    'REC-000003',
+    dn.customer_id,
+    5000, -- $50.00
+    'USD',
+    v_rate,
+    'mobile_pay',
+    'PMOV-4412',
+    'voided',
+    'Pago móvil de prueba',
+    dn.issued_at + interval '1 day',
+    dn.issued_at + interval '2 days',
+    'Pago móvil no liquidado en cuenta receptora',
+    dn.issued_at + interval '1 day'
+  from public.delivery_notes dn
+  where dn.id = '30000000-0000-4000-8000-000000000003'::uuid;
+
+  insert into public.payment_allocations (
+    tenant_id, payment_id, delivery_note_id, amount_minor, created_at
+  )
+  select
+    v_tenant,
+    '40000000-0000-4000-8000-000000000003'::uuid,
+    dn.id,
+    5000,
+    dn.issued_at + interval '1 day'
+  from public.delivery_notes dn
+  where dn.id = '30000000-0000-4000-8000-000000000003'::uuid;
+
+  -- ─────────────────────────────────────────────────────────────────────────
   -- Correlativo
   --
   -- Apunta al siguiente numero libre. Si quedara desfasado, la primera nota que
@@ -378,7 +493,9 @@ begin
   -- y fallaria en la accion mas visible que tiene el producto.
   -- ─────────────────────────────────────────────────────────────────────────
   insert into public.document_sequences (tenant_id, doc_type, period, prefix, next_number, padding)
-  values (v_tenant, 'delivery_note', '', 'NE', (select max(no) + 1 from seed_notes), 6);
+  values
+    (v_tenant, 'delivery_note', '', 'NE', (select max(no) + 1 from seed_notes), 6),
+    (v_tenant, 'payment', '', 'REC', (select count(*) + 1 from public.payments where tenant_id = v_tenant), 6);
 
   -- Correlativos de los registros maestros, con el ano como periodo.
   --
@@ -420,6 +537,8 @@ begin
       (select count(*) from public.products    where tenant_id = v_tenant)),
     (v_tenant, 'suppliers', 'total',
       (select count(*) from public.suppliers   where tenant_id = v_tenant)),
+    (v_tenant, 'payments',  'total',
+      (select count(*) from public.payments    where tenant_id = v_tenant)),
     (v_tenant, 'users',     'total',
       (select count(*) from public.memberships where tenant_id = v_tenant)),
     (v_tenant, 'documents_month', to_char(now() at time zone 'UTC', 'YYYY-MM'), v_docs_mes);

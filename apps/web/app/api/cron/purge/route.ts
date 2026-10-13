@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { callInternal, InternalCallFailed } from '@/api/internal';
 
 /**
@@ -76,7 +76,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 function constantTimeEquals(expected: string, provided: string): boolean {
-  const a = Buffer.from(expected);
-  const b = Buffer.from(provided);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const a = createHash('sha256').update(expected).digest();
+  const b = createHash('sha256').update(provided).digest();
+  return timingSafeEqual(a, b);
 }

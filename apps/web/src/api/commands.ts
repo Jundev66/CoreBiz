@@ -8,6 +8,7 @@ import type {
   InviteUserInput,
   IssueDeliveryNoteInput,
   MarkDeliveredInput,
+  ReceiveCustomerPaymentInput,
   ReceiveGoodsInput,
   SetCustomerStatusInput,
   SetProductStatusInput,
@@ -16,6 +17,7 @@ import type {
   UpdateProductInput,
   UpdateSupplierInput,
   UpdateTenantSettingsInput,
+  VoidCustomerPaymentInput,
   VoidDeliveryNoteInput,
   VoidGoodsReceiptInput,
 } from '@corebiz/application';
@@ -243,5 +245,28 @@ export function httpCommands() {
         `/v1/purchasing/receipts/${encodeURIComponent(input.goodsReceiptId)}/void`,
         { reason: input.reason },
       ),
+
+    // ── Cobros ────────────────────────────────────────────────────────────────
+    receiveCustomerPayment: (input: ReceiveCustomerPaymentInput) =>
+      send<{ id: string; number: string; amount: string; currency: string }>(
+        'POST',
+        '/v1/payments',
+        {
+          customerId: input.customerId,
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          reference: orUndefined(input.reference),
+          notes: orUndefined(input.notes),
+          allocations: input.allocations.map((a) => ({
+            deliveryNoteId: a.deliveryNoteId,
+            amount: a.amount,
+          })),
+        },
+      ),
+
+    voidCustomerPayment: (input: VoidCustomerPaymentInput) =>
+      send<{ number: string }>('POST', `/v1/payments/${encodeURIComponent(input.paymentId)}/void`, {
+        reason: input.reason,
+      }),
   } as const;
 }

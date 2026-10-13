@@ -13,6 +13,8 @@ import {
   makeRecordAuditExport,
   makeIssueDeliveryNote,
   makeMarkDelivered,
+  makeReceiveCustomerPayment,
+  makeVoidCustomerPayment,
   makeReceiveGoods,
   makeVoidGoodsReceipt,
   makeRemoveMember,
@@ -92,6 +94,8 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     // mueve las cajas es quien sabe que llegaron.
     markDelivered: makeMarkDelivered(shared),
     voidDeliveryNote: makeVoidDeliveryNote(shared),
+    receiveCustomerPayment: makeReceiveCustomerPayment(shared),
+    voidCustomerPayment: makeVoidCustomerPayment(shared),
 
     // Administracion.
     inviteUser: makeInviteUser(withTokens),

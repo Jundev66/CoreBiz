@@ -142,6 +142,10 @@ export class Money {
     return this.minorUnits < 0n;
   }
 
+  get isPositive(): boolean {
+    return this.minorUnits > 0n;
+  }
+
   private sameCurrency(other: Money): Result<true, MoneyError> {
     return this.currency === other.currency
       ? ok(true)

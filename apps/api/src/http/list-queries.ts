@@ -41,6 +41,13 @@ export const deliveryNoteListQuerySchema = paginationSchema
   })
   .strict();
 
+export const paymentListQuerySchema = paginationSchema
+  .extend({
+    customerId: z.string().trim().max(64).optional(),
+    status: z.string().trim().max(32).optional(),
+  })
+  .strict();
+
 export const receiptListQuerySchema = paginationSchema.strict();
 
 export const auditQuerySchema = paginationSchema

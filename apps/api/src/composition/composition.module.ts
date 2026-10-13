@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import {
   ACTIVE_CONTEXT,
   IDENTITY,
+  INTEGRATIONS_RUNTIME,
   MEMBERSHIPS,
   RUNTIME,
   SESSION_INFO,
@@ -16,6 +17,7 @@ import {
   tenantContextProvider,
 } from './context.provider';
 import { runtimeProvider } from './runtime.provider';
+import { integrationsRuntimeProvider } from './integrations-runtime.provider';
 import { useCasesProvider } from './use-cases.provider';
 
 /**
@@ -36,6 +38,7 @@ import { useCasesProvider } from './use-cases.provider';
     tenantContextProvider,
     sessionInfoProvider,
     runtimeProvider,
+    integrationsRuntimeProvider,
     useCasesProvider,
   ],
   exports: [
@@ -45,6 +48,7 @@ import { useCasesProvider } from './use-cases.provider';
     TENANT_CONTEXT,
     SESSION_INFO,
     RUNTIME,
+    INTEGRATIONS_RUNTIME,
     USE_CASES,
   ],
 })

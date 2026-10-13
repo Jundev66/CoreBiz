@@ -14,7 +14,9 @@
     "more": "More",
     "account": "Your account",
     "mobile": "Main navigation",
-    "deliveryNotesShort": "Sales"
+    "deliveryNotesShort": "Sales",
+    "payments": "Payments",
+    "paymentsShort": "Payments"
   },
   "customers": {
     "title": "Customers",
@@ -27,6 +29,7 @@
     "phone": "Phone",
     "creditLimit": "Credit limit",
     "noCreditLimit": "No limit",
+    "outstandingBalance": "Outstanding balance",
     "empty": "No customers registered yet.",
     "created": "Customer created. Its code is {code}.",
     "detail": "Customer details",
@@ -95,12 +98,20 @@
     "InvalidUnitPrice": "One of the prices in this document isn't a valid amount.",
     "DiscountOutOfRange": "The discount is out of range: it has to be between 0% and 100%.",
     "PayloadTooLarge": "What you tried to send is too big.",
-    "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again."
+    "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again.",
+    "PaymentNotFound": "Payment record not found.",
+    "PaymentAlreadyVoided": "Payment has already been voided.",
+    "CustomerMismatch": "The delivery note belongs to another customer.",
+    "PaymentAllocationExceedsBalance": "Allocated amount exceeds delivery note balance.",
+    "PaymentAmountMismatch": "The sum of allocations does not match the payment amount.",
+    "DeliveryNoteNotApplied": "Delivery note is not in issued state.",
+    "InvalidAllocation": "Payment allocation is invalid."
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
     "notice": "CoreBiz issues delivery notes: internal documents with no fiscal value.",
-    "deliveryNoteKind": "Delivery note — internal document"
+    "deliveryNoteKind": "Delivery note — internal document",
+    "paymentReceiptKind": "Payment receipt — internal non-fiscal document"
   },
   "demo": {
     "title": "Try CoreBiz",
@@ -150,7 +161,9 @@
     "notSet": "—",
     "close": "Close",
     "edit": "Edit",
-    "saved": "Changes saved"
+    "saved": "Changes saved",
+    "actions": "Actions",
+    "select": "Select…"
   },
   "products": {
     "title": "Products",
@@ -552,6 +565,68 @@
     "invalidTitle": "This invitation is no longer valid",
     "invalidBody": "It may have expired, been cancelled, or already been used. Ask that business to send you a new one.",
     "needsDatabase": "This installation has no authentication configured yet, so invitations cannot be accepted."
+  },
+  "payments": {
+    "title": "Payments",
+    "subtitle": "Received payments and receivables",
+    "new": "Record payment",
+    "newSubtitle": "Record customer payment and allocate to pending notes",
+    "empty": "No payments recorded yet.",
+    "created": "Payment recorded. Number is {number}.",
+    "number": "Number",
+    "customer": "Customer",
+    "method": "Payment method",
+    "reference": "Reference",
+    "referenceHint": "Transfer, receipt or deposit number",
+    "status": "Status",
+    "amount": "Amount",
+    "paidAt": "Payment date",
+    "notes": "Internal notes",
+    "notesHint": "Additional notes...",
+    "generalInfo": "General payment details",
+    "pendingNotes": "Pending delivery notes",
+    "totalReceivable": "Total receivable",
+    "payAll": "Allocate all",
+    "noReceivablesForCustomer": "This customer has no pending delivery notes.",
+    "selectCustomerFirst": "Select a customer to view their pending notes.",
+    "alreadyPaid": "Paid",
+    "balance": "Balance",
+    "allocateAmount": "Amount to allocate",
+    "payFullNote": "Pay remaining balance of this note",
+    "totalAllocated": "Total allocated",
+    "registerSubmit": "Record payment",
+    "registerPayment": "Record payment",
+    "pay": "Pay",
+    "payFull": "Collect pending",
+    "receivablesTitle": "Accounts receivable (Pending notes)",
+    "noPendingBalance": "Customer has zero pending balance.",
+    "creditLimitExceededNotice": "This customer has exceeded their credit limit of ${limit}. Current balance: ${balance}.",
+    "print": "Print",
+    "printHint": "Print payment receipt",
+    "totalPaid": "Total paid",
+    "receivedBy": "Received by",
+    "paidBy": "Paid by",
+    "allocations": "Delivery note allocations",
+    "allocatedAmount": "Allocated amount",
+    "voidTitle": "Void payment receipt",
+    "voidExplain": "Voiding this payment will restore the outstanding balance of allocated delivery notes ({number}).",
+    "voidReason": "Void reason",
+    "voidReasonHint": "Explain why this payment is being voided...",
+    "voidReasonRequired": "Please enter a void reason (at least 3 characters).",
+    "voidReasonTitle": "Reason required",
+    "voidSubmit": "Void payment",
+    "voidedWithReason": "Payment voided: {reason}",
+    "statuses": {
+      "applied": "Applied",
+      "voided": "Voided"
+    },
+    "methods": {
+      "cash_usd": "Cash (USD)",
+      "cash_ves": "Cash (VES)",
+      "bank_transfer": "Bank transfer",
+      "mobile_pay": "Mobile pay",
+      "other": "Other"
+    }
   },
   "purchases": {
     "title": "Purchases",

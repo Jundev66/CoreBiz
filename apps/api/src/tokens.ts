@@ -26,5 +26,15 @@ export const TENANT_CONTEXT = Symbol('TENANT_CONTEXT');
 
 export const SESSION_INFO = Symbol('SESSION_INFO');
 export const RUNTIME = Symbol('RUNTIME');
+
+/**
+ * Runtime de la integracion externa.
+ *
+ * Es un token PROPIO y no `RUNTIME` porque no nace de una sesion: el contexto se sintetiza
+ * a partir del entorno (clave + empresa), no de la identidad que resuelve `AuthMiddleware`.
+ * Compartir token obligaria a que el guard y el contexto de usuario convivieran, que es
+ * justo lo que la ruta evita.
+ */
+export const INTEGRATIONS_RUNTIME = Symbol('INTEGRATIONS_RUNTIME');
 export const USE_CASES = Symbol('USE_CASES');
 export const JWT_VERIFIER = Symbol('JWT_VERIFIER');

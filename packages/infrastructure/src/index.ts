@@ -13,8 +13,8 @@ export { PrismaDeliveryNoteRepository } from './prisma/delivery-notes';
 export { PrismaDocumentSequences } from './prisma/sequences';
 export { PrismaUsageCounter } from './prisma/usage';
 export { PrismaAuditLogger, type AuditTrace } from './prisma/audit';
-export { PrismaPaymentQueries } from './prisma/payments';
-export { prismaReadModels } from './queries/read-models';
+export { PrismaPaymentRepository } from './prisma/payments';
+export { prismaReadModels, PrismaPaymentQueries } from './queries/read-models';
 export {
   postgresRuntime,
   loadTenantProfile,

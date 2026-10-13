@@ -14,7 +14,9 @@
     "more": "Más",
     "account": "Tu cuenta",
     "mobile": "Navegación principal",
-    "deliveryNotesShort": "Ventas"
+    "deliveryNotesShort": "Ventas",
+    "payments": "Cobros",
+    "paymentsShort": "Cobros"
   },
   "customers": {
     "title": "Clientes",
@@ -27,6 +29,7 @@
     "phone": "Teléfono",
     "creditLimit": "Límite de crédito",
     "noCreditLimit": "Sin límite",
+    "outstandingBalance": "Saldo pendiente",
     "empty": "Aún no hay clientes registrados.",
     "created": "Cliente creado. Su código es {code}.",
     "detail": "Ficha del cliente",
@@ -95,12 +98,20 @@
     "InvalidUnitPrice": "Uno de los precios del documento no es un importe válido.",
     "DiscountOutOfRange": "El descuento está fuera de rango: tiene que estar entre 0 % y 100 %.",
     "PayloadTooLarge": "Lo que intentaste enviar es demasiado grande.",
-    "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo."
+    "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo.",
+    "PaymentNotFound": "El cobro o recibo no existe.",
+    "PaymentAlreadyVoided": "El cobro ya ha sido anulado previamente.",
+    "CustomerMismatch": "La nota de entrega no pertenece a este cliente.",
+    "PaymentAllocationExceedsBalance": "El monto a imputar supera el saldo pendiente de la nota.",
+    "PaymentAmountMismatch": "La suma de las imputaciones no coincide con el monto total del cobro.",
+    "DeliveryNoteNotApplied": "La nota de entrega no está emitida ni pendiente de pago.",
+    "InvalidAllocation": "La imputación del cobro no es válida."
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
     "notice": "CoreBiz genera notas de entrega, documentos internos sin valor fiscal.",
-    "deliveryNoteKind": "Nota de entrega — documento interno"
+    "deliveryNoteKind": "Nota de entrega — documento interno",
+    "paymentReceiptKind": "Recibo de cobro — documento interno no fiscal"
   },
   "demo": {
     "title": "Prueba CoreBiz",
@@ -150,7 +161,9 @@
     "notSet": "—",
     "close": "Cerrar",
     "edit": "Editar",
-    "saved": "Cambios guardados"
+    "saved": "Cambios guardados",
+    "actions": "Acciones",
+    "select": "Seleccionar…"
   },
   "products": {
     "title": "Productos",
@@ -552,6 +565,68 @@
     "invalidTitle": "Esta invitación ya no vale",
     "invalidBody": "Puede que haya caducado, que se haya cancelado o que ya la hayas usado. Pídele a esa empresa que te mande una nueva.",
     "needsDatabase": "Esta instalación todavía no tiene la autenticación configurada, así que no se pueden aceptar invitaciones."
+  },
+  "payments": {
+    "title": "Cobros",
+    "subtitle": "Cobros registrados y cuentas por cobrar",
+    "new": "Registrar cobro",
+    "newSubtitle": "Registrar pago de cliente e imputar a notas pendientes",
+    "empty": "Aún no hay cobros registrados.",
+    "created": "Cobro registrado. Su número es {number}.",
+    "number": "Número",
+    "customer": "Cliente",
+    "method": "Método de pago",
+    "reference": "Referencia",
+    "referenceHint": "Nº de transferencia, comprobante o depósito",
+    "status": "Estado",
+    "amount": "Monto",
+    "paidAt": "Fecha de cobro",
+    "notes": "Notas internas",
+    "notesHint": "Comentarios adicionales...",
+    "generalInfo": "Información general del cobro",
+    "pendingNotes": "Notas de entrega pendientes por cobrar",
+    "totalReceivable": "Total por cobrar",
+    "payAll": "Imputar todo",
+    "noReceivablesForCustomer": "Este cliente no tiene notas de entrega pendientes de pago.",
+    "selectCustomerFirst": "Selecciona un cliente para ver sus notas pendientes.",
+    "alreadyPaid": "Cobrado",
+    "balance": "Saldo pendiente",
+    "allocateAmount": "Monto a abonar",
+    "payFullNote": "Abonar saldo completo de esta nota",
+    "totalAllocated": "Total imputado",
+    "registerSubmit": "Registrar cobro",
+    "registerPayment": "Registrar cobro",
+    "pay": "Cobrar",
+    "payFull": "Cobrar pendientes",
+    "receivablesTitle": "Cuentas por cobrar (Notas pendientes)",
+    "noPendingBalance": "El cliente está al día. No tiene saldo pendiente por cobrar.",
+    "creditLimitExceededNotice": "Este cliente ha superado su límite de crédito de ${limit}. Saldo actual: ${balance}.",
+    "print": "Imprimir",
+    "printHint": "Imprimir recibo de cobro",
+    "totalPaid": "Total cobrado",
+    "receivedBy": "Recibido por",
+    "paidBy": "Pagado por",
+    "allocations": "Imputación a notas de entrega",
+    "allocatedAmount": "Monto imputado",
+    "voidTitle": "Anular recibo de cobro",
+    "voidExplain": "Anular este cobro devolverá el saldo pendiente a las notas de entrega imputadas ({number}).",
+    "voidReason": "Motivo de la anulación",
+    "voidReasonHint": "Explica por qué se anula este cobro...",
+    "voidReasonRequired": "Debe indicar el motivo de la anulación (mínimo 3 caracteres).",
+    "voidReasonTitle": "Motivo requerido",
+    "voidSubmit": "Anular cobro",
+    "voidedWithReason": "Cobro anulado por: {reason}",
+    "statuses": {
+      "applied": "Aplicado",
+      "voided": "Anulado"
+    },
+    "methods": {
+      "cash_usd": "Efectivo (USD)",
+      "cash_ves": "Efectivo (VES)",
+      "bank_transfer": "Transferencia bancaria",
+      "mobile_pay": "Pago móvil",
+      "other": "Otro"
+    }
   },
   "purchases": {
     "title": "Compras",

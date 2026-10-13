@@ -12,6 +12,8 @@ import type {
   DeliveryNote,
   DeliveryNoteId,
   Money,
+  Payment,
+  PaymentId,
   Plan,
   Product,
   ProductId,
@@ -100,7 +102,7 @@ export interface Repositories {
   readonly products: ProductRepository;
   readonly deliveryNotes: DeliveryNoteRepository;
   readonly sequences: DocumentSequences;
-  readonly payments: PaymentQueries;
+  readonly payments: PaymentRepository;
   readonly usage: UsageCounter;
   readonly audit: AuditLogger;
 
@@ -193,9 +195,14 @@ export interface DocumentSequences {
   next(docType: DocumentType, period?: string): Promise<string>;
 }
 
-export interface PaymentQueries {
+export interface PaymentRepository {
+  findById(id: PaymentId): Promise<Payment | null>;
+  findByNumber(number: string): Promise<Payment | null>;
+  save(payment: Payment): Promise<void>;
   /** Saldo pendiente del cliente. Vive fuera del agregado Customer a proposito. */
   outstandingBalanceFor(customerId: CustomerId, currency: 'USD' | 'VES'): Promise<Money>;
+  /** Saldo pendiente de una nota de entrega especifica. */
+  outstandingBalanceForDeliveryNote(deliveryNoteId: DeliveryNoteId): Promise<Money>;
 }
 
 // Se reexporta para no romper los import existentes; la definicion vive en

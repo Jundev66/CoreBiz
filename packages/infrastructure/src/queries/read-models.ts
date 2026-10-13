@@ -6,10 +6,15 @@ import type {
   CustomerListItem,
   CustomerOption,
   CustomerQueries,
+  CustomerReceivableItem,
   DeliveryNoteListItem,
   DeliveryNoteQueries,
   DeliveryNoteView,
   Page,
+  PaymentAllocationView,
+  PaymentListItem,
+  PaymentQueries,
+  PaymentView,
   ProductDetail,
   ProductListItem,
   ProductOption,
@@ -460,6 +465,7 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
           number: row.number,
           status: row.status,
           customerName: row.customers.name,
+          currency: row.currency as Currency,
           total: money(row.total_minor, row.currency as Currency),
           totalSecondary: money(row.total_secondary_minor, row.exchange_rate_to as Currency),
           issuedAt: row.issued_at,
@@ -490,6 +496,7 @@ class PrismaDeliveryNoteQueries implements DeliveryNoteQueries {
         number: note.number,
         status: note.status,
         customerName: note.customers.name,
+        currency,
         issuedAt: note.issued_at,
         // La tasa se muestra con su fecha de captura. Sin la fecha, el dato invita a
         // leerse como la tasa de hoy, que es justo lo que no es.
@@ -623,6 +630,166 @@ class PrismaReportQueries implements ReportQueries {
   }
 }
 
+export class PrismaPaymentQueries implements PaymentQueries {
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly ctx: TenantContext,
+  ) {}
+
+  list(filter: {
+    customerId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<PaymentListItem>> {
+    const limit = pageLimit(filter.limit);
+
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      const rows = await tx.payments.findMany({
+        where: {
+          tenant_id: this.ctx.tenantId,
+          ...(filter.customerId !== undefined ? { customer_id: filter.customerId } : {}),
+          ...(filter.status !== undefined ? { status: filter.status } : {}),
+        },
+        include: {
+          customers: { select: { name: true } },
+        },
+        orderBy: { paid_at: 'desc' },
+        take: limit,
+      });
+
+      return {
+        items: rows.map((r): PaymentListItem => ({
+          id: r.id,
+          number: r.number,
+          status: r.status,
+          customerId: r.customer_id,
+          customerName: r.customers?.name ?? '—',
+          amount: money(r.amount_minor, r.currency as Currency),
+          currency: r.currency,
+          paymentMethod: r.payment_method,
+          reference: r.reference,
+          paidAt: r.paid_at,
+        })),
+        nextCursor: null,
+      };
+    });
+  }
+
+  byId(id: string): Promise<PaymentView | null> {
+    if (!isRowKey(id)) return Promise.resolve(null);
+
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      const row = await tx.payments.findFirst({
+        where: { tenant_id: this.ctx.tenantId, id },
+        include: {
+          customers: { select: { name: true } },
+          payment_allocations: {
+            include: { delivery_notes: { select: { number: true } } },
+          },
+        },
+      });
+
+      if (!row) return null;
+
+      const currency = row.currency as Currency;
+
+      return {
+        id: row.id,
+        number: row.number,
+        status: row.status,
+        customerId: row.customer_id,
+        customerName: row.customers?.name ?? '—',
+        amount: money(row.amount_minor, currency),
+        currency: row.currency,
+        paymentMethod: row.payment_method,
+        reference: row.reference,
+        paidAt: row.paid_at,
+        exchangeRate: `${row.exchange_rate_scaled / 1_000_000n}.${(row.exchange_rate_scaled % 1_000_000n).toString().padStart(6, '0')}`,
+        notes: row.notes,
+        voidReason: row.void_reason,
+        voidedAt: row.voided_at,
+        allocations: row.payment_allocations.map((a): PaymentAllocationView => ({
+          deliveryNoteId: a.delivery_note_id,
+          deliveryNoteNumber: a.delivery_notes?.number ?? '—',
+          amount: money(a.amount_minor, currency),
+        })),
+      };
+    });
+  }
+
+  outstandingBalanceFor(customerId: string, currency: 'USD' | 'VES'): Promise<string> {
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      const notes = await tx.delivery_notes.findMany({
+        where: {
+          tenant_id: this.ctx.tenantId,
+          customer_id: customerId,
+          status: { not: 'voided' },
+        },
+        select: { total_minor: true },
+      });
+      const totalIssued = notes.reduce((acc, n) => acc + BigInt(n.total_minor), 0n);
+
+      const payments = await tx.payments.findMany({
+        where: {
+          tenant_id: this.ctx.tenantId,
+          customer_id: customerId,
+          status: { not: 'voided' },
+        },
+        select: { amount_minor: true },
+      });
+      const totalPaid = payments.reduce((acc, p) => acc + BigInt(p.amount_minor), 0n);
+
+      const balance = totalIssued > totalPaid ? totalIssued - totalPaid : 0n;
+      return money(balance, currency);
+    });
+  }
+
+  customerReceivables(customerId: string): Promise<readonly CustomerReceivableItem[]> {
+    return readOnly(this.prisma, this.ctx, async (tx) => {
+      const activeNotes = await tx.delivery_notes.findMany({
+        where: {
+          tenant_id: this.ctx.tenantId,
+          customer_id: customerId,
+          status: { not: 'voided' },
+        },
+        include: {
+          payment_allocations: {
+            where: {
+              payments: { status: { not: 'voided' } },
+            },
+            select: { amount_minor: true },
+          },
+        },
+        orderBy: { issued_at: 'desc' },
+      });
+
+      const results: CustomerReceivableItem[] = [];
+
+      for (const note of activeNotes) {
+        const total = BigInt(note.total_minor);
+        const paid = note.payment_allocations.reduce((acc, a) => acc + BigInt(a.amount_minor), 0n);
+        const remaining = total > paid ? total - paid : 0n;
+
+        if (remaining > 0n) {
+          const cur = note.currency as Currency;
+          results.push({
+            deliveryNoteId: note.id,
+            number: note.number,
+            issuedAt: note.issued_at,
+            total: money(total, cur),
+            paidAmount: money(paid, cur),
+            balance: money(remaining, cur),
+            currency: note.currency,
+          });
+        }
+      }
+
+      return results;
+    });
+  }
+}
+
 export function prismaReadModels(
   prisma: PrismaClient,
   ctx: TenantContext,
@@ -636,5 +803,6 @@ export function prismaReadModels(
     reports: new PrismaReportQueries(prisma, ctx),
     admin: prismaAdminQueries(prisma, ctx),
     purchasing: prismaPurchasingQueries(prisma, ctx),
+    payments: new PrismaPaymentQueries(prisma, ctx),
   };
 }

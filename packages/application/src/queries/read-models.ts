@@ -1,3 +1,4 @@
+import type { Currency } from '@corebiz/domain';
 import type { Page } from '../ports/page';
 
 /**
@@ -149,6 +150,8 @@ export interface DeliveryNoteListItem {
   readonly number: string;
   readonly status: string;
   readonly customerName: string;
+  /** La moneda del total, para que quien consuma la API no tenga que adivinarla. */
+  readonly currency: Currency;
   readonly total: string;
   /** El mismo total con la tasa CONGELADA del documento, no con la de hoy. */
   readonly totalSecondary: string;
@@ -170,6 +173,8 @@ export interface DeliveryNoteView {
   readonly number: string;
   readonly status: string;
   readonly customerName: string;
+  /** La moneda en que estan expresados los importes del documento. */
+  readonly currency: Currency;
   readonly issuedAt: Date | null;
   /** Tasa congelada al emitir, con la fecha en que se capturo. */
   readonly exchangeRate: string;
@@ -366,6 +371,57 @@ export interface PurchasingQueries {
   receiptById(id: string): Promise<GoodsReceiptView | null>;
 }
 
+// ─── Cobros y Cuentas por Cobrar ─────────────────────────────────────────────
+
+export interface PaymentListItem {
+  readonly id: string;
+  readonly number: string;
+  readonly status: string;
+  readonly customerId: string;
+  readonly customerName: string;
+  readonly amount: string;
+  readonly currency: string;
+  readonly paymentMethod: string;
+  readonly reference: string | null;
+  readonly paidAt: Date;
+}
+
+export interface PaymentAllocationView {
+  readonly deliveryNoteId: string;
+  readonly deliveryNoteNumber: string;
+  readonly amount: string;
+}
+
+export interface PaymentView extends PaymentListItem {
+  readonly exchangeRate: string;
+  readonly notes: string | null;
+  readonly voidReason: string | null;
+  readonly voidedAt: Date | null;
+  readonly allocations: readonly PaymentAllocationView[];
+}
+
+export interface CustomerReceivableItem {
+  readonly deliveryNoteId: string;
+  readonly number: string;
+  readonly issuedAt: Date | null;
+  readonly total: string;
+  readonly paidAmount: string;
+  readonly balance: string;
+  readonly currency: string;
+}
+
+export interface PaymentQueries {
+  list(filter: {
+    customerId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<PaymentListItem>>;
+  byId(id: string): Promise<PaymentView | null>;
+  outstandingBalanceFor(customerId: string, currency: 'USD' | 'VES'): Promise<string>;
+  customerReceivables(customerId: string): Promise<readonly CustomerReceivableItem[]>;
+}
+
 /** Todo el lado de lectura disponible para un request. */
 export interface ReadModels {
   readonly customers: CustomerQueries;
@@ -375,4 +431,5 @@ export interface ReadModels {
   readonly reports: ReportQueries;
   readonly admin: AdminQueries;
   readonly purchasing: PurchasingQueries;
+  readonly payments: PaymentQueries;
 }

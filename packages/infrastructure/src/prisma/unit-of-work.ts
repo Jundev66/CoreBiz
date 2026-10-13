@@ -12,7 +12,7 @@ import { PrismaDeliveryNoteRepository } from './delivery-notes';
 import { PrismaDocumentSequences } from './sequences';
 import { PrismaUsageCounter } from './usage';
 import { PrismaAuditLogger, type AuditTrace } from './audit';
-import { PrismaPaymentQueries } from './payments';
+import { PrismaPaymentRepository } from './payments';
 import {
   PrismaInvitationRepository,
   PrismaMembershipRepository,
@@ -66,7 +66,7 @@ export class PrismaUnitOfWork implements UnitOfWork {
         products: new PrismaProductRepository(tx, ctx.tenantId, ids),
         deliveryNotes: new PrismaDeliveryNoteRepository(tx, ctx.tenantId),
         sequences: new PrismaDocumentSequences(tx, ctx.tenantId),
-        payments: new PrismaPaymentQueries(),
+        payments: new PrismaPaymentRepository(tx, ctx.tenantId),
         usage: new PrismaUsageCounter(tx, ctx.tenantId, clock),
         audit: new PrismaAuditLogger(tx, ctx, ids, clock, trace),
         invitations: new PrismaInvitationRepository(tx, ctx.tenantId),

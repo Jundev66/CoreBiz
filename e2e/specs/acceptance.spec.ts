@@ -37,6 +37,8 @@ const STATIC_ROUTES = [
   '/products/new',
   '/delivery-notes',
   '/delivery-notes/new',
+  '/payments',
+  '/payments/new',
   '/purchases',
   '/purchases/new',
   '/purchases/suppliers',
@@ -230,6 +232,16 @@ test.describe('Aprobacion del sistema', () => {
       await expect(page).toHaveURL(/\/print$/);
       // El documento impreso NO lleva el marco de la aplicacion: lo que sale por la
       // impresora tiene que ser el papel, no una captura de la pantalla.
+      await expect(page.getByRole('navigation')).toHaveCount(0);
+      await expect(page.getByText(/sin valor fiscal|no fiscal value/i)).toBeVisible();
+
+      // Recibo de cobro y su version imprimible.
+      await page.goto('/payments');
+      await page.getByRole('link', { name: /^REC-/ }).first().click();
+      await expect(page).toHaveURL(new RegExp(`/payments${ID_SEGMENT.source}`));
+
+      await page.getByRole('link', { name: /print|imprimir/i }).click();
+      await expect(page).toHaveURL(/\/print$/);
       await expect(page.getByRole('navigation')).toHaveCount(0);
       await expect(page.getByText(/sin valor fiscal|no fiscal value/i)).toBeVisible();
 

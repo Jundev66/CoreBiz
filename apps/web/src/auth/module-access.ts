@@ -23,6 +23,7 @@ export const MODULE_PERMISSION = {
   '/customers': 'customer:read',
   '/products': 'product:read',
   '/delivery-notes': 'delivery_note:read',
+  '/payments': 'payment:read',
   '/purchases': 'purchase:read',
   '/reports': 'report:read',
 } as const satisfies Readonly<Record<string, Permission>>;

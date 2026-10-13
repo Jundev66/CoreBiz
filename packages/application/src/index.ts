@@ -15,6 +15,8 @@ export * from './use-cases/customers/update-customer';
 export * from './use-cases/sales/issue-delivery-note';
 export * from './use-cases/sales/mark-delivered';
 export * from './use-cases/sales/void-delivery-note';
+export * from './use-cases/payments/receive-customer-payment';
+export * from './use-cases/payments/void-customer-payment';
 export * from './use-cases/products/create-product';
 export * from './use-cases/products/update-product';
 export * from './use-cases/products/adjust-stock';

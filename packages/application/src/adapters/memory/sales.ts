@@ -4,6 +4,8 @@ import {
   type CustomerId,
   type DeliveryNote,
   type DeliveryNoteId,
+  type Payment,
+  type PaymentId,
   type Product,
   type ProductId,
   type TenantId,
@@ -13,7 +15,7 @@ import type {
   DocumentSequences,
   DocumentType,
   Page,
-  PaymentQueries,
+  PaymentRepository,
   ProductRepository,
 } from '../../ports/index';
 
@@ -171,10 +173,71 @@ export class InMemoryDocumentSequences implements DocumentSequences {
   }
 }
 
-/** Saldo pendiente. Sin cobros implementados todavia, devuelve cero. */
-export class InMemoryPaymentQueries implements PaymentQueries {
-  outstandingBalanceFor(_customerId: CustomerId, currency: 'USD' | 'VES'): Promise<Money> {
-    return Promise.resolve(Money.zero(currency));
+export class InMemoryPaymentRepository implements PaymentRepository {
+  constructor(
+    private readonly paymentStore: Map<string, Payment>,
+    private readonly deliveryNotesStore: Map<string, DeliveryNote>,
+    private readonly tenantId: TenantId,
+  ) {}
+
+  private scoped(): Payment[] {
+    return [...this.paymentStore.values()].filter((p) => p.tenantId === this.tenantId);
+  }
+
+  findById(id: PaymentId): Promise<Payment | null> {
+    const found = this.paymentStore.get(id);
+    return Promise.resolve(found && found.tenantId === this.tenantId ? found : null);
+  }
+
+  findByNumber(number: string): Promise<Payment | null> {
+    return Promise.resolve(this.scoped().find((p) => p.number === number) ?? null);
+  }
+
+  save(payment: Payment): Promise<void> {
+    this.paymentStore.set(payment.id, payment);
+    return Promise.resolve();
+  }
+
+  outstandingBalanceFor(customerId: CustomerId, currency: 'USD' | 'VES'): Promise<Money> {
+    const activeNotes = [...this.deliveryNotesStore.values()].filter(
+      (n) => n.tenantId === this.tenantId && n.customerId === customerId && !n.isVoided,
+    );
+    const zero = Money.zero(currency);
+    const totalIssued = activeNotes.reduce((acc, note) => {
+      const sum = acc.add(note.totals.total);
+      return sum.ok ? sum.value : acc;
+    }, zero);
+
+    const appliedPayments = this.scoped().filter((p) => p.customerId === customerId && !p.isVoided);
+    const totalPaid = appliedPayments.reduce((acc, pay) => {
+      const sum = acc.add(pay.amount);
+      return sum.ok ? sum.value : acc;
+    }, zero);
+
+    const balance = totalIssued.subtract(totalPaid);
+    return Promise.resolve(balance.ok ? balance.value : zero);
+  }
+
+  outstandingBalanceForDeliveryNote(deliveryNoteId: DeliveryNoteId): Promise<Money> {
+    const note = this.deliveryNotesStore.get(deliveryNoteId);
+    if (!note || note.tenantId !== this.tenantId || note.isVoided) {
+      return Promise.resolve(Money.zero('USD'));
+    }
+
+    const zero = Money.zero(note.currency);
+    const appliedPayments = this.scoped().filter((p) => !p.isVoided);
+    const totalAllocated = appliedPayments.reduce((acc, pay) => {
+      const allocsForNote = pay.allocations.filter((a) => a.deliveryNoteId === deliveryNoteId);
+      const allocSum = allocsForNote.reduce((aSum, a) => {
+        const sum = aSum.add(a.amount);
+        return sum.ok ? sum.value : aSum;
+      }, zero);
+      const total = acc.add(allocSum);
+      return total.ok ? total.value : acc;
+    }, zero);
+
+    const remaining = note.totals.total.subtract(totalAllocated);
+    return Promise.resolve(remaining.ok ? remaining.value : zero);
   }
 }
 
@@ -183,6 +246,7 @@ export interface SalesStores {
   readonly customers: Map<string, Customer>;
   readonly products: Map<string, Product>;
   readonly deliveryNotes: Map<string, DeliveryNote>;
+  readonly payments: Map<string, Payment>;
   readonly usage: Map<string, number>;
   readonly sequences: Map<string, number>;
   /**
@@ -194,12 +258,6 @@ export interface SalesStores {
    * movimientos no se guardan.
    */
   readonly stockMovements: StoredMovement[];
-  // Administracion. Van en el MISMO conjunto de almacenes y no en otro aparte
-  // porque el rollback de la unidad de trabajo los tiene que revertir igual:
-  // invitar consume una plaza del plan, y si la escritura se deshace, la plaza
-  // tiene que volver.
-  // Un ARRAY y no un Map: la auditoria es un registro append-only y el orden
-  // de llegada es parte del dato.
   readonly auditEntries: unknown[];
   readonly invitations: Map<string, unknown>;
   readonly members: Map<string, unknown>;
@@ -225,6 +283,7 @@ export function createSalesStores(): SalesStores {
     customers: new Map(),
     products: new Map(),
     deliveryNotes: new Map(),
+    payments: new Map(),
     usage: new Map(),
     sequences: new Map(),
     stockMovements: [],

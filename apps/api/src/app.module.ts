@@ -10,9 +10,11 @@ import { AdministrationModule } from './modules/administration/administration.mo
 import { AiModule } from './modules/ai/ai.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { DemoModule } from './modules/demo/demo.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { InternalModule } from './modules/internal/internal.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { DeliveryNotesModule } from './modules/delivery-notes/delivery-notes.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { ProductsModule } from './modules/products/products.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
@@ -35,6 +37,7 @@ import { SessionModule } from './modules/session/session.module';
     CustomersModule,
     ProductsModule,
     DeliveryNotesModule,
+    PaymentsModule,
     PurchasingModule,
     AdministrationModule,
     AiModule,
@@ -42,6 +45,7 @@ import { SessionModule } from './modules/session/session.module';
     OnboardingModule,
     DemoModule,
     InternalModule,
+    IntegrationsModule,
   ],
   // Global and singleton on purpose: see the note in `WriteThrottleGuard`.
   providers: [
@@ -84,6 +88,10 @@ export class AppModule implements NestModule {
         // exista una: el limitador protege el propio acceso. Los guarda un secreto
         // compartido entre los dos despliegues.
         'internal/(.*)',
+        // La integracion externa no tiene sesion de usuario: la llama una maquina con
+        // una clave compartida. `IntegrationsApiKeyGuard` y un contexto sintetizado
+        // desde el entorno sustituyen a la identidad, que aqui nunca va a existir.
+        'v1/integrations/(.*)',
       )
       .forRoutes('*');
   }

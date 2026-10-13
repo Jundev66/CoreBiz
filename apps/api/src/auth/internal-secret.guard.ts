@@ -4,7 +4,7 @@ import {
   type CanActivate,
   type ExecutionContext,
 } from '@nestjs/common';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { Request } from 'express';
 import { loadEnv } from '../config/env';
 
@@ -41,15 +41,15 @@ export class InternalSecretGuard implements CanActivate {
 }
 
 /**
- * Comparacion en tiempo constante.
+ * Comparacion en tiempo estrictamente constante usando digests SHA-256.
  *
- * `===` sobre cadenas corta en el primer byte distinto, y esa diferencia de tiempo es
- * medible: basta para reconstruir el secreto byte a byte con suficientes intentos.
- * Las longitudes se comparan antes porque `timingSafeEqual` lanza si diferen — y esa
- * fuga (saber la longitud) no sirve de nada.
+ * Al hashear ambas cadenas antes de `timingSafeEqual`:
+ *  1. Ambos buffers miden exactamente 32 bytes siempre, sin importar la longitud de entrada.
+ *  2. No hay corte temprano por discrepancia de longitud (`a.length === b.length`), lo que
+ *     impide a un atacante inferir siquiera la longitud del secreto por temporizacion.
  */
 function constantTimeEquals(given: string, expected: string): boolean {
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const a = createHash('sha256').update(given).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
 }

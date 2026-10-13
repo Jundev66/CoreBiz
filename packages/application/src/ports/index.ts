@@ -15,9 +15,9 @@ export type {
   UnitOfWork,
   ProductRepository,
   DeliveryNoteRepository,
+  PaymentRepository,
   DocumentSequences,
   DocumentType,
-  PaymentQueries,
 } from './repositories';
 export { inMemoryRateLimiter, RATE_LIMITS } from './rate-limiter';
 export type { RateLimiter, RateLimitDecision, RateLimitPolicy } from './rate-limiter';

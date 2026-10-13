@@ -3,6 +3,7 @@ import {
   type CustomerAddress,
   type Currency,
   type GoodsReceipt,
+  type Payment,
   type Product,
   type Supplier,
   type TenantId,
@@ -13,6 +14,7 @@ import type {
   AuditEntryView,
   AuditFilter,
   BestSeller,
+  CustomerReceivableItem,
   GoodsReceiptLineView,
   GoodsReceiptListItem,
   GoodsReceiptView,
@@ -23,6 +25,10 @@ import type {
   DeliveryNoteListItem,
   DeliveryNoteQueries,
   DeliveryNoteView,
+  PaymentAllocationView,
+  PaymentListItem,
+  PaymentQueries,
+  PaymentView,
   ProductDetail,
   ProductListItem,
   ProductOption,
@@ -284,6 +290,7 @@ class InMemoryDeliveryNoteQueries implements DeliveryNoteQueries {
         number: n.number,
         status: n.status,
         customerName: this.customerName(n.customerId),
+        currency: n.currency,
         total: n.totals.total.toString(),
         totalSecondary: n.totals.totalInSecondaryCurrency.toString(),
         issuedAt: n.issuedAt,
@@ -301,6 +308,7 @@ class InMemoryDeliveryNoteQueries implements DeliveryNoteQueries {
       number: note.number,
       status: note.status,
       customerName: this.customerName(note.customerId),
+      currency: note.currency,
       issuedAt: note.issuedAt,
       exchangeRate: note.exchangeRate.toCompactString(),
       exchangeRateAt: note.exchangeRate.capturedAt,
@@ -528,7 +536,142 @@ export function inMemoryReadModels(
     reports: new InMemoryReportQueries(stores, tenantId, currency),
     admin: new InMemoryAdminQueries(stores, tenantId, viewerId),
     purchasing: new InMemoryPurchasingQueries(stores, tenantId),
+    payments: new InMemoryPaymentQueries(stores, tenantId),
   };
+}
+
+class InMemoryPaymentQueries implements PaymentQueries {
+  constructor(
+    private readonly stores: SalesStores,
+    private readonly tenantId: TenantId,
+  ) {}
+
+  private scopedPayments(): Payment[] {
+    return [...this.stores.payments.values()].filter((p) => p.tenantId === this.tenantId);
+  }
+
+  private customerName(customerId: string): string {
+    return this.stores.customers.get(customerId)?.name ?? '—';
+  }
+
+  private noteNumber(deliveryNoteId: string): string {
+    return this.stores.deliveryNotes.get(deliveryNoteId)?.number ?? '—';
+  }
+
+  list(filter: {
+    customerId?: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<Page<PaymentListItem>> {
+    const items = this.scopedPayments()
+      .filter((p) => filter.customerId === undefined || p.customerId === filter.customerId)
+      .filter((p) => filter.status === undefined || p.status === filter.status)
+      .sort((a, b) => (b.paidAt?.getTime() ?? 0) - (a.paidAt?.getTime() ?? 0))
+      .map((p): PaymentListItem => ({
+        id: p.id,
+        number: p.number,
+        status: p.status,
+        customerId: p.customerId,
+        customerName: this.customerName(p.customerId),
+        amount: p.amount.toString(),
+        currency: p.currency,
+        paymentMethod: p.paymentMethod,
+        reference: p.reference,
+        paidAt: p.paidAt,
+      }));
+
+    return Promise.resolve(paginate(items, filter.limit ?? 25, filter.cursor));
+  }
+
+  byId(id: string): Promise<PaymentView | null> {
+    const found = this.scopedPayments().find((p) => p.id === id);
+    if (!found) return Promise.resolve(null);
+
+    return Promise.resolve({
+      id: found.id,
+      number: found.number,
+      status: found.status,
+      customerId: found.customerId,
+      customerName: this.customerName(found.customerId),
+      amount: found.amount.toString(),
+      currency: found.currency,
+      paymentMethod: found.paymentMethod,
+      reference: found.reference,
+      paidAt: found.paidAt,
+      exchangeRate: found.exchangeRate.toCompactString(),
+      notes: found.notes,
+      voidReason: found.voidReason,
+      voidedAt: found.voidedAt,
+      allocations: found.allocations.map((a): PaymentAllocationView => ({
+        deliveryNoteId: a.deliveryNoteId,
+        deliveryNoteNumber: this.noteNumber(a.deliveryNoteId),
+        amount: a.amount.toString(),
+      })),
+    });
+  }
+
+  outstandingBalanceFor(customerId: string, currency: 'USD' | 'VES'): Promise<string> {
+    const activeNotes = [...this.stores.deliveryNotes.values()].filter(
+      (n) => n.tenantId === this.tenantId && n.customerId === customerId && !n.isVoided,
+    );
+    const zero = Money.zero(currency);
+    const totalIssued = activeNotes.reduce((acc, note) => {
+      const sum = acc.add(note.totals.total);
+      return sum.ok ? sum.value : acc;
+    }, zero);
+
+    const appliedPayments = this.scopedPayments().filter(
+      (p) => p.customerId === customerId && !p.isVoided,
+    );
+    const totalPaid = appliedPayments.reduce((acc, pay) => {
+      const sum = acc.add(pay.amount);
+      return sum.ok ? sum.value : acc;
+    }, zero);
+
+    const balance = totalIssued.subtract(totalPaid);
+    return Promise.resolve((balance.ok ? balance.value : zero).toString());
+  }
+
+  customerReceivables(customerId: string): Promise<readonly CustomerReceivableItem[]> {
+    const activeNotes = [...this.stores.deliveryNotes.values()]
+      .filter((n) => n.tenantId === this.tenantId && n.customerId === customerId && !n.isVoided)
+      .sort((a, b) => (b.issuedAt?.getTime() ?? 0) - (a.issuedAt?.getTime() ?? 0));
+
+    const appliedPayments = this.scopedPayments().filter((p) => !p.isVoided);
+
+    const results: CustomerReceivableItem[] = [];
+
+    for (const note of activeNotes) {
+      const zero = Money.zero(note.currency);
+      const paidMinor = appliedPayments.reduce((acc, pay) => {
+        const noteAllocs = pay.allocations.filter((a) => a.deliveryNoteId === note.id);
+        const allocSum = noteAllocs.reduce((aSum, a) => {
+          const sum = aSum.add(a.amount);
+          return sum.ok ? sum.value : aSum;
+        }, zero);
+        const sum = acc.add(allocSum);
+        return sum.ok ? sum.value : acc;
+      }, zero);
+
+      const balance = note.totals.total.subtract(paidMinor);
+      const remaining = balance.ok ? balance.value : zero;
+
+      if (remaining.minorUnits > 0n) {
+        results.push({
+          deliveryNoteId: note.id,
+          number: note.number,
+          issuedAt: note.issuedAt,
+          total: note.totals.total.toString(),
+          paidAmount: paidMinor.toString(),
+          balance: remaining.toString(),
+          currency: note.currency,
+        });
+      }
+    }
+
+    return Promise.resolve(results);
+  }
 }
 
 /**

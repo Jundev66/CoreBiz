@@ -31,6 +31,7 @@ const MODULE_TONES: Record<string, Tone> = {
   '/customers': 'sky',
   '/products': 'emerald',
   '/delivery-notes': 'violet',
+  '/payments': 'emerald',
   '/purchases': 'amber',
   '/reports': 'rose',
 };

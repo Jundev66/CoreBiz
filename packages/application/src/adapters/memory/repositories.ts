@@ -16,7 +16,7 @@ import {
   InMemoryProductRepository,
   InMemoryDeliveryNoteRepository,
   InMemoryDocumentSequences,
-  InMemoryPaymentQueries,
+  InMemoryPaymentRepository,
   createSalesStores,
   type SalesStores,
 } from './sales';
@@ -198,6 +198,7 @@ export class InMemoryUnitOfWork implements UnitOfWork {
       customers: new Map(this.stores.customers),
       products: new Map(this.stores.products),
       deliveryNotes: new Map(this.stores.deliveryNotes),
+      payments: new Map(this.stores.payments),
       usage: new Map(this.stores.usage),
       sequences: new Map(this.stores.sequences),
       invitations: new Map(this.stores.invitations),
@@ -219,7 +220,11 @@ export class InMemoryUnitOfWork implements UnitOfWork {
         ),
         deliveryNotes: new InMemoryDeliveryNoteRepository(this.stores.deliveryNotes, this.tenantId),
         sequences: new InMemoryDocumentSequences(this.stores.sequences, this.tenantId),
-        payments: new InMemoryPaymentQueries(),
+        payments: new InMemoryPaymentRepository(
+          this.stores.payments,
+          this.stores.deliveryNotes,
+          this.tenantId,
+        ),
         usage: new InMemoryUsageCounter(this.stores.usage, this.tenantId),
         audit: this.audit,
         invitations: new InMemoryInvitationRepository(

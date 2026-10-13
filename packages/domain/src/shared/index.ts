@@ -10,6 +10,7 @@ export type {
   ProductId,
   SupplierId,
   DeliveryNoteId,
+  PaymentId,
   TenantId,
   UserId,
 } from './entity';

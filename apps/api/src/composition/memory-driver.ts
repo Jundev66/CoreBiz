@@ -3,12 +3,14 @@ import {
   DeliveryNote,
   ExchangeRate,
   Money,
+  Payment,
   Product,
   Quantity,
   Supplier,
   asId,
   type CustomerId,
   type DeliveryNoteId,
+  type PaymentId,
   type ProductId,
   type SupplierId,
   type Currency,
@@ -250,6 +252,92 @@ function seed(target: MemoryStore): void {
     }
   });
 
+  // Cobros de demostración:
+  // REC-000001: Cobro total de NE-000001 (Bodega La Esquina, al día).
+  // REC-000002: Cobro parcial de NE-000002 (Ferreteria El Tornillo, abono $40.00 de $65.42).
+  // REC-000003: Cobro anulado de NE-000003 (Supermercado Mi Barrio, evidencia trazabilidad).
+  const note1 = target.deliveryNotes.get(
+    asId<DeliveryNoteId>('00000000-0000-0000-0000-0000000n001'),
+  );
+  if (note1) {
+    const pay1 = Payment.receive({
+      id: asId<PaymentId>('00000000-0000-0000-0000-0000000r001'),
+      tenantId: MEMORY_TENANT,
+      number: 'REC-000001',
+      customerId: note1.customerId,
+      amount: note1.totals.total,
+      currency: 'USD',
+      exchangeRate: RATE,
+      paymentMethod: 'bank_transfer',
+      reference: 'TRANS-849201',
+      notes: 'Cobro total de nota inicial',
+      paidAt: new Date(SEEDED_AT.getTime() + 86_400_000 * 4),
+      allocations: [{ deliveryNoteId: note1.id, amount: note1.totals.total }],
+    });
+    if (pay1.ok) {
+      pay1.value.pullDomainEvents();
+      target.payments.set(pay1.value.id, pay1.value);
+    }
+  }
+
+  const note2 = target.deliveryNotes.get(
+    asId<DeliveryNoteId>('00000000-0000-0000-0000-0000000n002'),
+  );
+  if (note2) {
+    const pay2Amount = Money.of('40.00', 'USD');
+    if (pay2Amount.ok) {
+      const pay2 = Payment.receive({
+        id: asId<PaymentId>('00000000-0000-0000-0000-0000000r002'),
+        tenantId: MEMORY_TENANT,
+        number: 'REC-000002',
+        customerId: note2.customerId,
+        amount: pay2Amount.value,
+        currency: 'USD',
+        exchangeRate: RATE,
+        paymentMethod: 'cash_usd',
+        reference: 'USD-CAJA-01',
+        notes: 'Abono en efectivo en tienda',
+        paidAt: new Date(SEEDED_AT.getTime() + 86_400_000 * 7),
+        allocations: [{ deliveryNoteId: note2.id, amount: pay2Amount.value }],
+      });
+      if (pay2.ok) {
+        pay2.value.pullDomainEvents();
+        target.payments.set(pay2.value.id, pay2.value);
+      }
+    }
+  }
+
+  const note3 = target.deliveryNotes.get(
+    asId<DeliveryNoteId>('00000000-0000-0000-0000-0000000n003'),
+  );
+  if (note3) {
+    const pay3Amount = Money.of('50.00', 'USD');
+    if (pay3Amount.ok) {
+      const pay3 = Payment.receive({
+        id: asId<PaymentId>('00000000-0000-0000-0000-0000000r003'),
+        tenantId: MEMORY_TENANT,
+        number: 'REC-000003',
+        customerId: note3.customerId,
+        amount: pay3Amount.value,
+        currency: 'USD',
+        exchangeRate: RATE,
+        paymentMethod: 'mobile_pay',
+        reference: 'PMOV-4412',
+        notes: 'Pago móvil de prueba',
+        paidAt: new Date(SEEDED_AT.getTime() + 86_400_000 * 9),
+        allocations: [{ deliveryNoteId: note3.id, amount: pay3Amount.value }],
+      });
+      if (pay3.ok) {
+        pay3.value.void(
+          'Pago móvil no liquidado en cuenta receptora',
+          new Date(SEEDED_AT.getTime() + 86_400_000 * 10),
+        );
+        pay3.value.pullDomainEvents();
+        target.payments.set(pay3.value.id, pay3.value);
+      }
+    }
+  }
+
   // El equipo: una sola persona, la duena. Es lo mismo que siembra `seed.sql`, y
   // deja el plan gratuito con una plaza libre — justo la que hace falta para que
   // se pueda probar invitar a alguien y chocar despues con el limite.
@@ -266,12 +354,14 @@ function seed(target: MemoryStore): void {
   target.usage.set(`${MEMORY_TENANT}:products`, target.products.size);
   target.usage.set(`${MEMORY_TENANT}:suppliers`, target.suppliers.size);
   target.usage.set(`${MEMORY_TENANT}:documents_month`, target.deliveryNotes.size);
+  target.usage.set(`${MEMORY_TENANT}:payments`, target.payments.size);
   target.usage.set(`${MEMORY_TENANT}:users`, target.members.size);
   // La clave lleva el PERIODO al final, vacio para los documentos. Se le olvido el
   // sufijo la primera vez y el contador sembrado dejo de contar: las notas nuevas
   // volvian a empezar en NE-000001 y chocaban con las de la semilla. Lo encontro un
   // escenario BDD, no una revision.
   target.sequences.set(`${MEMORY_TENANT}:delivery_note:`, NOTES.length);
+  target.sequences.set(`${MEMORY_TENANT}:payment:`, target.payments.size);
 
   // Los correlativos de los registros maestros, con el ano como periodo. Apuntan al
   // siguiente libre: sin esto, el primer alta chocaria contra un codigo ya usado.

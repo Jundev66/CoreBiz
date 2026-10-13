@@ -208,7 +208,7 @@ describe("another company's id answers 404, never 403", () => {
   const MARCA_AISLADA = 'Proveedor Aislado de la Matriz HTTP';
 
   const deDemo: Record<
-    'cliente' | 'producto' | 'nota' | 'proveedor',
+    'cliente' | 'producto' | 'nota' | 'proveedor' | 'pago',
     { id: string; texto: string }
   > = {} as never;
 
@@ -229,6 +229,7 @@ describe("another company's id answers 404, never 403", () => {
     deDemo.producto = await primera('products', 'name');
     deDemo.nota = await primera('delivery_notes', 'number');
     deDemo.proveedor = await primera('suppliers', 'name');
+    deDemo.pago = await primera('payments', 'number');
 
     await sql`
       insert into public.suppliers (id, tenant_id, code, name)
@@ -313,6 +314,15 @@ describe("another company's id answers 404, never 403", () => {
       tokenDemo,
       'GoodsReceiptNotFound',
       MARCA_AISLADA,
+    );
+  });
+
+  it('payment', async () => {
+    await esAjeno(
+      `/v1/payments/${deDemo.pago.id}`,
+      tokenOther,
+      'PaymentNotFound',
+      deDemo.pago.texto,
     );
   });
 
