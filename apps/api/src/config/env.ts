@@ -183,8 +183,47 @@ const schema = z
     /** Questions to the assistant per user per hour. Each one is a paid provider call. */
     ASSISTANT_CHATS_PER_HOUR: z.coerce.number().int().positive().default(60),
 
+    /**
+     * Raiz del proveedor de embeddings OpenAI-compatible, SIN `/v1`: p. ej. el gateway
+     * `biz` en `http://127.0.0.1:8000`, que traduce a Ollama.
+     *
+     * Es la UNICA condicion para habilitar la busqueda semantica de Synapse Vision: sin
+     * ella no se monta el almacen vectorial y el emparejamiento se queda en texto. Es
+     * configuracion de DESPLIEGUE y no por empresa, porque el indice entero comparte un
+     * mismo espacio vectorial.
+     */
+    VISION_EMBEDDINGS_BASE_URL: z.string().url().optional(),
+
+    /** Clave del gateway de embeddings (`biz_live_*`), si lo exige. NUNCA se registra. */
+    VISION_EMBEDDINGS_API_KEY: z.string().min(1).optional(),
+
+    /**
+     * Modelo de embeddings. `nomic-embed-text` es el de por defecto del despliegue local.
+     * Viaja en cada fila indexada: cambiar de modelo exige reindexar, no solo reconfigurar.
+     */
+    VISION_EMBEDDINGS_MODEL: z.string().trim().min(1).default('nomic-embed-text'),
+
+    /**
+     * Dimension de los vectores. Fija el `vector(N)` del esquema (768 para
+     * `nomic-embed-text`). Cambiarla sin una migracion y un reindexado es un despliegue
+     * roto, no una reconfiguracion.
+     */
+    VISION_EMBEDDINGS_DIMENSIONS: z.coerce.number().int().positive().default(768),
+
     /** Reads per verified user per minute, per API instance. See `ReadThrottleGuard`. */
     API_READS_PER_MINUTE: z.coerce.number().int().positive().default(1_200),
+
+    /**
+     * Largest JSON body the API accepts, in bytes.
+     *
+     * Express defaults to 100 kB, which is fine for every form in the product —and is why
+     * nobody noticed— but not for Synapse Vision: a scanned delivery note arrives base64 and
+     * a legitimate image is measured in megabytes. The API raises the ceiling and keeps it
+     * ONE number, configurable per deployment, rather than a per-route parser: it must stay
+     * above `MAX_IMAGE_BASE64` (20 MB) plus JSON overhead, or the view would reject an image
+     * the package accepts. The per-user throttle, not this limit, is what bounds abuse.
+     */
+    API_MAX_JSON_BYTES: z.coerce.number().int().positive().default(26_000_000),
 
     /**
      * Requests per minute through the external integration (`/v1/integrations/*`). See
@@ -221,6 +260,18 @@ const schema = z
         path: ['INTEGRATIONS_TENANT_ID'],
         message:
           'INTEGRATIONS_TENANT_ID es obligatorio cuando INTEGRATIONS_API_KEY esta configurado.',
+      });
+    }
+
+    // Fail-closed on SSRF: the private-base-url switch is for local development and the test
+    // suite, and a production boot that has it on is a misconfiguration that would let any
+    // admin make the API call the internal network. Refusing to start is the loud failure.
+    if (value.NODE_ENV === 'production' && value.AI_ALLOW_PRIVATE_BASE_URLS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AI_ALLOW_PRIVATE_BASE_URLS'],
+        message:
+          'AI_ALLOW_PRIVATE_BASE_URLS no puede estar activo en produccion: permite que la API llame a direcciones privadas (SSRF).',
       });
     }
   });

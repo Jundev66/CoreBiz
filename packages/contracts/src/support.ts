@@ -145,6 +145,16 @@ export const PLAYBOOK_ROUTES: Readonly<Record<string, string | null>> = {
   InvalidUnitPrice: null,
   DiscountOutOfRange: null,
 
+  // Cobros. Every one of them is a rule about which note a payment may settle, so all of
+  // them are fixed on the payments screen: the receipt is rebuilt with the right note, or
+  // with the right amount, and resubmitted.
+  PaymentNotFound: '/payments',
+  DeliveryNoteCustomerMismatch: '/payments',
+  DeliveryNoteVoided: '/payments',
+  AllocationExceedsBalance: '/payments',
+  AllocationMismatch: '/payments',
+  NoAllocations: '/payments',
+
   // Values the domain rejects as a general notice rather than next to a field.
   InvalidQuantity: null,
   InvalidPrice: null,

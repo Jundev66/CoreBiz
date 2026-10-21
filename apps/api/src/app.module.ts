@@ -19,6 +19,7 @@ import { InsightsModule } from './modules/insights/insights.module';
 import { ProductsModule } from './modules/products/products.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { SessionModule } from './modules/session/session.module';
+import { VisionModule } from './modules/vision/vision.module';
 
 /**
  * Raiz de la aplicacion.
@@ -41,6 +42,7 @@ import { SessionModule } from './modules/session/session.module';
     PurchasingModule,
     AdministrationModule,
     AiModule,
+    VisionModule,
     InsightsModule,
     OnboardingModule,
     DemoModule,

@@ -66,4 +66,13 @@ export {
 export { PrismaAiSettingsRepository } from './prisma/ai-settings';
 export { aesGcmSecretBox } from './crypto/secret-box';
 export { httpAiGateway, type HttpAiGatewayOptions } from './ai/http-ai-gateway';
+export { httpVisionGateway, type HttpVisionGatewayOptions } from './ai/http-vision-gateway';
+export {
+  httpEmbeddingsGateway,
+  type HttpEmbeddingsGatewayOptions,
+} from './ai/http-embeddings-gateway';
+export {
+  prismaVisionVectorStore,
+  type PrismaVisionVectorStoreOptions,
+} from './prisma/vector-store';
 export { isAllowedBaseUrl } from './ai/url-guard';

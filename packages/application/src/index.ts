@@ -32,5 +32,8 @@ export * from './use-cases/purchasing/receive-goods';
 export * from './use-cases/purchasing/void-goods-receipt';
 export * from './use-cases/ai/manage-ai-settings';
 export * from './use-cases/ai/ask-assistant';
+export * from './use-cases/ai/extract-delivery-note';
+export * from './use-cases/ai/reindex-vision-embeddings';
 export * from './use-cases/ai/system-prompt';
 export * from './adapters/synapse/corebiz-bridge';
+export * from './adapters/synapse-vision/corebiz-vision-bridge';

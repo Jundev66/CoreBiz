@@ -20,6 +20,24 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'synapse-vision',
+          root: './synapse-vision/core',
+          environment: 'node',
+          globals: true,
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
+          name: 'synapse-vision-ui',
+          root: './synapse-vision/ui',
+          environment: 'node',
+          globals: true,
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'domain',
           root: './packages/domain',
           environment: 'node',

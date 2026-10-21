@@ -21,9 +21,11 @@ import {
   InMemoryUnitOfWork,
   createSalesStores,
   inMemoryReadModels,
+  memoryVisionVectorStore,
   type ReadModels,
   type SalesStores,
 } from '@corebiz/application';
+import type { VisionVectorStorePort } from '@synapse-vision/core';
 
 /**
  * Almacen en memoria para la suite de pruebas.
@@ -46,6 +48,14 @@ const RATE = ExchangeRate.fromScaled(
 
 interface MemoryStore extends SalesStores {
   seeded: boolean;
+  /**
+   * El indice vectorial del proceso, cuando la busqueda semantica esta configurada.
+   *
+   * Vive con el resto del estado en memoria —y no en una variable de modulo— por la misma
+   * razon: sobrevivir a la recarga en caliente durante el desarrollo. Es UNO para todo el
+   * proceso y lleva el `tenantId` en cada fila, igual que la tabla de Postgres.
+   */
+  visionVectors?: VisionVectorStorePort;
 }
 
 const globalForMemory = globalThis as unknown as { __corebizMemory?: MemoryStore };
@@ -388,4 +398,16 @@ export function memoryReadModels(
   viewerId = '',
 ): ReadModels {
   return inMemoryReadModels(store(), tenantId, currency, viewerId);
+}
+
+/**
+ * El almacen vectorial del proceso, creado la primera vez que se pide.
+ *
+ * Se monta SOLO cuando hay proveedor de embeddings configurado (lo decide el composition
+ * root): sin el, el puente cae a la busqueda por texto, que es el comportamiento de siempre.
+ */
+export function memoryVisionStore(model: string): VisionVectorStorePort {
+  const current = store();
+  current.visionVectors ??= memoryVisionVectorStore({ model });
+  return current.visionVectors;
 }

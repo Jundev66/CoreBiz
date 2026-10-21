@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { cargarEntornoDeDesarrollo } from './config/dotenv';
@@ -26,7 +27,17 @@ export async function createApp(): Promise<{ app: INestApplication; env: Env }> 
   cargarEntornoDeDesarrollo();
 
   const env = loadEnv();
-  const app = await NestFactory.create(AppModule, { bodyParser: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+
+  /*
+   * The body parsers are registered HERE, and not left to `bodyParser: true`, for one reason:
+   * the default 100 kB ceiling rejects the image a person just scanned, with a 413 that says
+   * nothing about the real problem. Turning the default off and registering our own keeps a
+   * single, configurable limit (`API_MAX_JSON_BYTES`); both parsers are registered so nothing
+   * that used to work stops working.
+   */
+  app.useBodyParser('json', { limit: env.API_MAX_JSON_BYTES });
+  app.useBodyParser('urlencoded', { extended: true, limit: env.API_MAX_JSON_BYTES });
 
   // Express announces itself in `X-Powered-By` by default. It stops nothing, but a public
   // API has no reason to hand out its framework for free.

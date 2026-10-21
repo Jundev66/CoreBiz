@@ -144,9 +144,44 @@ module.exports = {
           '(^|/)tsconfig\.json$',
           '(^|/)(babel|webpack)\.config\.(js|cjs|mjs|ts)$',
           '^packages/[^/]+/src/index\.ts$',
+          '^synapse-vision/[^/]+/src/index\.ts$',
         ],
       },
       to: {},
+    },
+
+    // ── Synapse Vision: puro y desacoplado ──────────────────────────────────
+    {
+      name: 'synapse-vision-is-pure',
+      comment:
+        'synapse-vision/core solo puede depender de zod y TypeScript puro. Prohibido importar ' +
+        'otros paquetes del host (packages/*, @corebiz/*), NestJS, Next, Prisma, Supabase, ' +
+        'React, DB, ni otros adaptadores de Synapse Vision.',
+      severity: 'error',
+      from: { path: '^synapse-vision/core/src' },
+      to: {
+        path:
+          '^packages/' +
+          '|^node_modules/(nestjs|@nestjs|next|@prisma|prisma|@supabase|react|react-dom|pg|postgres|@vercel)/' +
+          '|^(@corebiz/.+|@synapse-vision/(?!core$).+|nestjs|@nestjs|@prisma/client|prisma|@supabase/supabase-js|react|react-dom|pg|postgres|@vercel/og)$',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'synapse-vision-ui-decoupled',
+      comment:
+        'synapse-vision/ui solo habla con el contrato de Synapse Vision. No puede importar ' +
+        'otros paquetes del host (packages/*, @corebiz/*), ni Nest, ni ORM, ni otros ' +
+        'adaptadores de Synapse Vision.',
+      severity: 'error',
+      from: { path: '^synapse-vision/ui/src' },
+      to: {
+        path:
+          '^packages/' +
+          '|^node_modules/(nestjs|@nestjs|next|@prisma|prisma|@supabase|pg|postgres)/' +
+          '|^(@corebiz/.+|@synapse-vision/(?!ui$|core$).+|nestjs|@nestjs|@prisma/client|prisma|@supabase/supabase-js|pg|postgres)$',
+        dependencyTypesNot: ['type-only'],
+      },
     },
     {
       name: 'no-dev-dep-in-src',
@@ -155,7 +190,10 @@ module.exports = {
         '`@types/*` son la excepcion legitima: solo existen en tiempo de compilacion, se ' +
         'borran del bundle y no hay forma de que falten en produccion.',
       severity: 'error',
-      from: { path: '^(packages|apps)/[^/]+/src/', pathNot: '\.(spec|test)\.tsx?$' },
+      from: {
+        path: '^(packages|apps|synapse-vision)/[^/]+/src/',
+        pathNot: '\.(spec|test)\.tsx?$',
+      },
       to: { dependencyTypes: ['npm-dev'], pathNot: 'node_modules/@types/' },
     },
     {

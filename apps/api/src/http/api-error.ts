@@ -52,6 +52,8 @@ const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   StockNotTracked: 409,
   NoActiveTenant: 409,
 
+  InvalidFormat: 400,
+  PayloadTooLarge: 413,
   TooManyAttempts: 429,
 
   // The assistant. A provider refusing the key or going quiet is not OUR 5xx: it is a
@@ -64,6 +66,7 @@ const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   AiBaseUrlNotAllowed: 422,
   AiProviderUnreachable: 424,
   AiRateLimited: 429,
+  AiTimeout: 504,
 };
 
 /**

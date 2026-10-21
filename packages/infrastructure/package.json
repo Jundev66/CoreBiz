@@ -14,6 +14,7 @@
     "@corebiz/db": "workspace:*",
     "@corebiz/domain": "workspace:*",
     "@corebiz/prisma-client": "workspace:*",
+    "@synapse-vision/core": "workspace:*",
     "postgres": "^3.4.7"
   },
   "devDependencies": {

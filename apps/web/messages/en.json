@@ -16,7 +16,54 @@
     "mobile": "Main navigation",
     "deliveryNotesShort": "Sales",
     "payments": "Payments",
-    "paymentsShort": "Payments"
+    "paymentsShort": "Payments",
+    "vision": "Vision"
+  },
+  "vision": {
+    "title": "Synapse Vision",
+    "subtitle": "Read a receiving document and extract its data",
+    "heading": "Document reading",
+    "description": "Upload a photo or file of the document you received from your supplier. The system reads its data and matches it against your products. If no AI provider is configured, you will see an example of the capability.",
+    "scanTitle": "Read document",
+    "demoBadge": "Demonstration mode",
+    "sampleDocumentReady": "Sample document",
+    "sampleDocumentHint": "Synthetic document prepared to test automatic extraction and catalog matching.",
+    "sampleDocumentDownload": "Download PDF",
+    "scanSample": "Read document",
+    "uploadCustom": "Upload your own file",
+    "orUpload": "Or upload your own voucher",
+    "dragDropPrompt": "Drag and drop your file here or click to browse",
+    "dragDropHint": "Supported formats: PNG, JPG, WebP or PDF (up to 3.5 MB)",
+    "changeFile": "Change file",
+    "noMatch": "No matching product",
+    "extractionSummary": "Extracted items & inventory matching",
+    "supplier": "Supplier",
+    "reference": "Reference",
+    "date": "Date",
+    "currency": "Currency",
+    "itemDescription": "Description",
+    "quantity": "Qty.",
+    "unit": "Unit",
+    "unitCost": "Cost",
+    "matchedProduct": "Matched product",
+    "confidence": "Match",
+    "generateDeliveryNote": "Generate delivery note",
+    "generating": "Generating in CoreBiz...",
+    "noteGeneratedSuccess": "Delivery note {number} successfully generated for the company",
+    "viewGeneratedNote": "View generated delivery note",
+    "clean": "Reset",
+    "scanning": "Reading document...",
+    "errors": {
+      "invalidFormat": "No recognizable delivery note or invoice data was found in the file. Make sure to upload a clear image or PDF of a valid voucher with items and quantities.",
+      "payloadTooLarge": "The selected file exceeds the maximum allowed size (3.5 MB). Try compressing the image or using a smaller file.",
+      "aiTimeout": "Document processing took longer than expected. Please try again in a moment.",
+      "aiProviderUnreachable": "Could not communicate with the AI service. Check your connection or provider settings.",
+      "aiKeyRejected": "The AI provider API key is invalid or was rejected.",
+      "aiModelUnavailable": "The configured AI model is unavailable or does not support vision extraction.",
+      "aiRateLimited": "AI provider rate limit reached. Please wait a moment before trying again.",
+      "forbidden": "You do not have permission to use document vision extraction.",
+      "unexpected": "An issue occurred while processing the file. Try a clearer image or use the demo document."
+    }
   },
   "customers": {
     "title": "Customers",
@@ -100,12 +147,11 @@
     "PayloadTooLarge": "What you tried to send is too big.",
     "TooManyAttempts": "Too many changes in a row. Wait a few minutes and try again.",
     "PaymentNotFound": "Payment record not found.",
-    "PaymentAlreadyVoided": "Payment has already been voided.",
-    "CustomerMismatch": "The delivery note belongs to another customer.",
-    "PaymentAllocationExceedsBalance": "Allocated amount exceeds delivery note balance.",
-    "PaymentAmountMismatch": "The sum of allocations does not match the payment amount.",
-    "DeliveryNoteNotApplied": "Delivery note is not in issued state.",
-    "InvalidAllocation": "Payment allocation is invalid."
+    "DeliveryNoteCustomerMismatch": "The delivery note belongs to another customer.",
+    "DeliveryNoteVoided": "That delivery note is void and can't take allocations.",
+    "AllocationExceedsBalance": "The allocated amount ({requested}) exceeds the note's outstanding balance ({balance}).",
+    "AllocationMismatch": "The sum of the allocations ({actual}) doesn't match the payment total ({expected}).",
+    "NoAllocations": "A payment with no allocations doesn't say which delivery note it settles."
   },
   "legal": {
     "nonFiscal": "Non-fiscal document / no tax value",
@@ -901,6 +947,30 @@
       "InvalidExchangeRate": {
         "what": "That exchange rate isn't valid: it has to be greater than zero.",
         "do": "Fix it in Settings."
+      },
+      "PaymentNotFound": {
+        "what": "That payment record doesn't exist, or the link is stale.",
+        "do": "Look for it in the payments list."
+      },
+      "DeliveryNoteCustomerMismatch": {
+        "what": "That delivery note belongs to another customer, and a payment only settles notes for the same customer.",
+        "do": "Check that the note you're paying belongs to this payment's customer."
+      },
+      "DeliveryNoteVoided": {
+        "what": "That delivery note is void, and a void note owes nothing.",
+        "do": "Remove it from the allocations and apply the payment only to the notes still outstanding."
+      },
+      "AllocationExceedsBalance": {
+        "what": "One allocation is larger than what its delivery note still has outstanding.",
+        "do": "Lower that allocation to the balance still owed."
+      },
+      "AllocationMismatch": {
+        "what": "The allocations don't add up to the payment total: the rule is that the two amounts have to match exactly.",
+        "do": "Adjust the payment amount or the allocations until they sum to the same total."
+      },
+      "NoAllocations": {
+        "what": "A payment with no allocations doesn't say which note it settles, so it can't be saved.",
+        "do": "Add at least one allocation with the delivery note you're paying and its amount."
       },
       "Unauthenticated": {
         "what": "Your session expired. This happens when a tab has been open for a long time.",

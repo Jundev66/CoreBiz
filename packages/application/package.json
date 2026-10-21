@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@corebiz/domain": "workspace:*",
-    "@corebiz/synapse": "workspace:*"
+    "@corebiz/synapse": "workspace:*",
+    "@synapse-vision/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

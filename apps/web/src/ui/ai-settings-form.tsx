@@ -1,7 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { Bot, RefreshCw, ScanLine, Sparkles } from 'lucide-react';
 import { AI_PROVIDERS, AI_PROVIDER_TRAITS, type AiProvider } from '@corebiz/domain';
 import {
   listAiModelsAction,
@@ -9,6 +10,7 @@ import {
   saveAiSettingsAction,
   type AiFormState,
 } from '@/actions/ai';
+import { reindexEmbeddingsAction } from '@/actions/vision';
 import type { AiSettingsView } from '@/api/ai';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
@@ -52,6 +54,28 @@ export function AiSettingsForm({ saved }: { saved: AiSettingsView | null }) {
   const [listed, listAction, listing] = useActionState(listAiModelsAction, INITIAL);
   const [save, saveAction, saving] = useActionState(saveAiSettingsAction, INITIAL);
   const [removal, removeAction, removing] = useActionState(removeAiSettingsAction, INITIAL);
+  const [isReindexing, startReindex] = useTransition();
+
+  const handleReindex = () => {
+    startReindex(async () => {
+      const res = await reindexEmbeddingsAction();
+      if (res.ok) {
+        toast.success(
+          `Catálogo reindexado: ${res.products ?? 0} productos y ${res.suppliers ?? 0} proveedores.`,
+          { title: 'Búsqueda Semántica' },
+        );
+      } else {
+        if (res.error === 'AiNotConfigured') {
+          toast.info(
+            'Embeddings no disponibles en este despliegue. Synapse Vision usará coincidencia difusa de texto.',
+            { title: 'Embeddings' },
+          );
+        } else {
+          toast.error(`No se pudo reindexar: ${res.error}`, { title: 'Búsqueda Semántica' });
+        }
+      }
+    });
+  };
 
   const traits = AI_PROVIDER_TRAITS[provider];
   const sameAsSaved = saved !== null && saved.provider === provider;
@@ -309,15 +333,65 @@ export function AiSettingsForm({ saved }: { saved: AiSettingsView | null }) {
       </form>
 
       {saved !== null && removal.status !== 'success' && (
-        <form action={removeAction} className="flex justify-end">
-          <button
-            type="submit"
-            disabled={pending}
-            className={buttonClasses({ variant: 'danger', size: 'sm' })}
-          >
-            {removing ? '…' : t('settings.ai.remove')}
-          </button>
-        </form>
+        <div className="rounded-card border border-brand/20 bg-brand-soft/10 p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-brand-ink flex items-center gap-1.5">
+              <Sparkles className="size-3.5 text-brand" />
+              Capacidades habilitadas con este proveedor
+            </h3>
+            <span className="inline-flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-ink">
+              Activo
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-ink">
+            <div className="flex items-start gap-2.5 rounded-control bg-surface border border-line p-3">
+              <Bot className="size-4 text-brand shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block text-sm">Asistente Copiloto</span>
+                <span className="text-muted leading-relaxed">
+                  Responde consultas sobre ventas, deudas y stock en el panel lateral.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-control bg-surface border border-line p-3">
+              <ScanLine className="size-4 text-brand shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block text-sm">Synapse Vision con IA</span>
+                <span className="text-muted leading-relaxed">
+                  Lectura e interpretación de remitos en /vision conectada a tu modelo en vivo.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-line/60 pt-3">
+            <button
+              type="button"
+              onClick={handleReindex}
+              disabled={isReindexing}
+              className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+            >
+              <RefreshCw className={`size-3.5 ${isReindexing ? 'animate-spin' : ''}`} />
+              <span>{isReindexing ? 'Reindexando catálogo…' : 'Reindexar catálogo para IA'}</span>
+            </button>
+
+            <form action={removeAction}>
+              <button
+                type="submit"
+                disabled={pending || isReindexing}
+                className={buttonClasses({
+                  variant: 'ghost',
+                  size: 'sm',
+                  className: 'text-danger hover:text-danger',
+                })}
+              >
+                {removing ? '…' : t('settings.ai.remove')}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

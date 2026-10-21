@@ -7,15 +7,19 @@ import {
   type TenantContext,
   type UnitOfWork,
 } from '@corebiz/application';
+import type { VisionVectorStorePort } from '@synapse-vision/core';
 import { postgresRuntime, type AuditTrace } from '@corebiz/infrastructure';
 import { RUNTIME, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
-import { getMemoryUnitOfWork, memoryReadModels } from './memory-driver';
+import { loadEnv } from '../config/env';
+import { getMemoryUnitOfWork, memoryReadModels, memoryVisionStore } from './memory-driver';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface Runtime {
   readonly uow: UnitOfWork;
   readonly queries: ReadModels;
+  /** Almacen vectorial con contexto de tenant; ausente si no hay RAG configurado. */
+  readonly vectorStore?: VisionVectorStorePort;
 }
 
 /**
@@ -61,17 +65,28 @@ export const runtimeProvider: FactoryProvider = {
   provide: RUNTIME,
   scope: Scope.REQUEST,
   inject: [TENANT_CONTEXT, REQUEST],
-  useFactory: (ctx: TenantContext, req: AuthenticatedRequest): Runtime =>
-    activeDriver() === 'memory'
-      ? {
-          uow: getMemoryUnitOfWork(ctx.tenantId),
-          queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency, ctx.actor.userId),
-        }
-      : postgresRuntime({
-          url: databaseUrl(),
-          ctx,
-          ids: { next: () => uuidv7() },
-          clock: systemClock,
-          trace: traceOf(req),
-        }),
+  useFactory: (ctx: TenantContext, req: AuthenticatedRequest): Runtime => {
+    const env = loadEnv();
+    // Mismo disparador en los dos adaptadores: sin proveedor de embeddings no hay indice,
+    // y el puente se queda en la busqueda por texto. Asi la demostracion y la produccion
+    // ensenan el mismo comportamiento.
+    const semantic = env.VISION_EMBEDDINGS_BASE_URL !== undefined;
+
+    if (activeDriver() === 'memory') {
+      return {
+        uow: getMemoryUnitOfWork(ctx.tenantId),
+        queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency, ctx.actor.userId),
+        ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
+      };
+    }
+
+    return postgresRuntime({
+      url: databaseUrl(),
+      ctx,
+      ids: { next: () => uuidv7() },
+      clock: systemClock,
+      trace: traceOf(req),
+      ...(semantic ? { vectorModel: env.VISION_EMBEDDINGS_MODEL } : {}),
+    });
+  },
 };

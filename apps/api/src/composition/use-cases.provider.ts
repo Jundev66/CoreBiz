@@ -26,6 +26,8 @@ import {
   makeVoidDeliveryNote,
   makeAskAssistant,
   makeAssistantStatus,
+  makeExtractDeliveryNote,
+  makeReindexVisionEmbeddings,
   makeGetAiSettings,
   makeListAiModels,
   makeRemoveAiSettings,
@@ -35,9 +37,16 @@ import {
   type SecretBox,
   type TenantContext,
 } from '@corebiz/application';
-import { aesGcmSecretBox, cryptoTokenFactory, httpAiGateway } from '@corebiz/infrastructure';
+import {
+  aesGcmSecretBox,
+  cryptoTokenFactory,
+  httpAiGateway,
+  httpEmbeddingsGateway,
+  httpVisionGateway,
+} from '@corebiz/infrastructure';
 import { loadEnv } from '../config/env';
 import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../tokens';
+import type { VisionEmbeddingsPort, VisionModelPort } from '@synapse-vision/core';
 import type { Runtime } from './runtime.provider';
 
 /**
@@ -54,13 +63,34 @@ import type { Runtime } from './runtime.provider';
  * The AI adapters hold no per-request state, so they are built once per process. Lazily,
  * because `loadEnv()` must not run at import time in tests that set the environment later.
  */
-let aiAdapters: { gateway: AiGateway; secrets: SecretBox } | null = null;
+let aiAdapters: {
+  gateway: AiGateway;
+  vision: VisionModelPort;
+  secrets: SecretBox;
+  /**
+   * El proveedor de embeddings, o `null` si este despliegue no tiene busqueda semantica
+   * configurada. NO es una lista vacia ni un adaptador que falla: es "no hay RAG", y el
+   * puente lo distingue para caer a la busqueda por texto.
+   */
+  embeddings: VisionEmbeddingsPort | null;
+} | null = null;
 function ai() {
   if (aiAdapters === null) {
     const env = loadEnv();
     aiAdapters = {
       gateway: httpAiGateway({ allowPrivateBaseUrls: env.AI_ALLOW_PRIVATE_BASE_URLS }),
+      vision: httpVisionGateway({ allowPrivateBaseUrls: env.AI_ALLOW_PRIVATE_BASE_URLS }),
       secrets: aesGcmSecretBox(env.AI_KEY_ENCRYPTION_KEY),
+      embeddings:
+        env.VISION_EMBEDDINGS_BASE_URL === undefined
+          ? null
+          : httpEmbeddingsGateway({
+              baseUrl: env.VISION_EMBEDDINGS_BASE_URL,
+              apiKey: env.VISION_EMBEDDINGS_API_KEY ?? null,
+              model: env.VISION_EMBEDDINGS_MODEL,
+              dimensions: env.VISION_EMBEDDINGS_DIMENSIONS,
+              allowPrivateBaseUrls: env.AI_ALLOW_PRIVATE_BASE_URLS,
+            }),
     };
   }
   return aiAdapters;
@@ -79,6 +109,21 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
   const withTokens = { ...shared, tokens: cryptoTokenFactory() };
 
   const withAi = { ...shared, ...ai() };
+
+  // Vision lee del catalogo (read models) ademas de la conexion de IA. El lado de lectura
+  // ya viene acotado por el tenant de la peticion. Los puertos de RAG son OPCIONALES: se
+  // incluyen solo cuando existen, para que `exactOptionalPropertyTypes` no reciba un
+  // `undefined` explicito y para que el puente pueda distinguir "no hay RAG".
+  const embeddings = ai().embeddings;
+  const vectorStore = runtime.vectorStore;
+  const withVision = {
+    ...shared,
+    secrets: ai().secrets,
+    model: ai().vision,
+    queries: runtime.queries,
+    ...(embeddings !== null ? { embeddings } : {}),
+    ...(vectorStore !== undefined ? { vectorStore } : {}),
+  };
 
   return {
     createCustomer: makeCreateCustomer(shared),
@@ -120,6 +165,12 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     removeAiSettings: makeRemoveAiSettings(withAi),
     assistantStatus: makeAssistantStatus(withAi),
     askAssistant: makeAskAssistant(withAi),
+
+    // Synapse Vision: leer una nota de entrega de una imagen. Siempre responde; sin IA
+    // configurada devuelve el modo demo.
+    extractDeliveryNote: makeExtractDeliveryNote(withVision),
+    // (Re)construir el indice vectorial del catalogo. Solo owner/admin.
+    reindexVisionEmbeddings: makeReindexVisionEmbeddings(withVision),
   } as const;
 }
 

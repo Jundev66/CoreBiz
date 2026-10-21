@@ -6,9 +6,11 @@ import type {
   TenantContext,
   UnitOfWork,
 } from '@corebiz/application';
+import type { VisionVectorStorePort } from '@synapse-vision/core';
 import { PrismaUnitOfWork } from './prisma/unit-of-work';
 import type { AuditTrace } from './prisma/audit';
 import { readOnly } from './prisma/session';
+import { prismaVisionVectorStore } from './prisma/vector-store';
 import { prismaReadModels } from './queries/read-models';
 
 /**
@@ -26,11 +28,19 @@ export interface PostgresRuntimeDeps {
   readonly clock: Clock;
   /** Verified email, IP hash and user agent, for audit rows. */
   readonly trace?: AuditTrace;
+  /**
+   * Modelo de embeddings activo, si hay RAG configurado. Sin el no se monta el almacen
+   * vectorial y el emparejamiento de Synapse Vision se queda en la busqueda por texto:
+   * la busqueda semantica es una mejora, no un requisito.
+   */
+  readonly vectorModel?: string;
 }
 
 export interface PostgresRuntime {
   readonly uow: UnitOfWork;
   readonly queries: ReadModels;
+  /** Presente solo si hay un modelo de embeddings configurado. */
+  readonly vectorStore?: VisionVectorStorePort;
 }
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
@@ -45,6 +55,9 @@ export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
       ...(deps.trace !== undefined ? { trace: deps.trace } : {}),
     }),
     queries: prismaReadModels(prisma, deps.ctx, deps.clock),
+    ...(deps.vectorModel !== undefined
+      ? { vectorStore: prismaVisionVectorStore(prisma, deps.ctx, { model: deps.vectorModel }) }
+      : {}),
   };
 }
 

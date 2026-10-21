@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'synapse-vision/*'
   - 'e2e'
 
 # Scripts de instalacion permitidos explicitamente.

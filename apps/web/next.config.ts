@@ -33,7 +33,13 @@ const config: NextConfig = {
 
   // Los paquetes del monorepo se consumen como TypeScript en crudo: sin paso de build,
   // sin carpetas dist/ y con recarga en caliente entre paquetes.
-  transpilePackages: ['@corebiz/domain', '@corebiz/application', '@corebiz/contracts'],
+  transpilePackages: [
+    '@corebiz/domain',
+    '@corebiz/application',
+    '@corebiz/contracts',
+    '@synapse-vision/core',
+    '@synapse-vision/ui',
+  ],
 
   // Un error de tipos tiene que romper el despliegue. Desactivarlo es la via mas rapida
   // a un fallo en produccion que el CI ya habia detectado.

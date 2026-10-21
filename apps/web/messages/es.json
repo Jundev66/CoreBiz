@@ -16,7 +16,54 @@
     "mobile": "Navegación principal",
     "deliveryNotesShort": "Ventas",
     "payments": "Cobros",
-    "paymentsShort": "Cobros"
+    "paymentsShort": "Cobros",
+    "vision": "Visión"
+  },
+  "vision": {
+    "title": "Synapse Visión",
+    "subtitle": "Lee un documento de recepción y extrae sus datos",
+    "heading": "Lectura de documentos",
+    "description": "Sube una foto o un archivo del documento que recibiste del proveedor. El sistema lee sus datos y los empareja con tus productos. Si no hay un proveedor de IA configurado, verás un ejemplo de la capacidad.",
+    "scanTitle": "Leer documento",
+    "demoBadge": "Modo demostración",
+    "sampleDocumentReady": "Documento de ejemplo",
+    "sampleDocumentHint": "Documento sintético preparado para probar la extracción automática y cotejo con tu catálogo.",
+    "sampleDocumentDownload": "Descargar PDF",
+    "scanSample": "Leer documento",
+    "uploadCustom": "Subir archivo propio",
+    "orUpload": "O subir tu propio comprobante",
+    "dragDropPrompt": "Arrastra y suelta tu archivo aquí o haz clic para examinar",
+    "dragDropHint": "Formatos soportados: PNG, JPG, WebP o PDF (hasta 3.5 MB)",
+    "changeFile": "Cambiar archivo",
+    "noMatch": "Sin coincidencia en catálogo",
+    "extractionSummary": "Artículos extraídos y cotejo con inventario",
+    "supplier": "Proveedor",
+    "reference": "Referencia",
+    "date": "Fecha",
+    "currency": "Moneda",
+    "itemDescription": "Descripción",
+    "quantity": "Cant.",
+    "unit": "Unidad",
+    "unitCost": "Costo",
+    "matchedProduct": "Producto en catálogo",
+    "confidence": "Coincidencia",
+    "generateDeliveryNote": "Generar nota de entrega",
+    "generating": "Generando en CoreBiz...",
+    "noteGeneratedSuccess": "Nota de entrega {number} generada con éxito en la empresa",
+    "viewGeneratedNote": "Ver nota de entrega generada",
+    "clean": "Reiniciar",
+    "scanning": "Leyendo documento...",
+    "errors": {
+      "invalidFormat": "No se encontraron datos reconocibles de una nota de entrega o remito en el archivo. Asegúrate de subir una foto nítida o PDF de un comprobante válido con artículos y cantidades.",
+      "payloadTooLarge": "El archivo seleccionado supera el tamaño permitido (máximo 3.5 MB). Intenta comprimir la imagen o usar un archivo más liviano.",
+      "aiTimeout": "El procesamiento del documento tardó más de lo esperado. Por favor, intenta de nuevo en unos momentos.",
+      "aiProviderUnreachable": "No se pudo comunicar con el servicio de IA. Verifica la conexión o la configuración del proveedor.",
+      "aiKeyRejected": "La clave de API del proveedor de IA no es válida o fue rechazada.",
+      "aiModelUnavailable": "El modelo de IA configurado no está disponible o no admite lectura visual.",
+      "aiRateLimited": "Se alcanzó el límite de solicitudes al proveedor de IA. Espera unos momentos antes de reintentar.",
+      "forbidden": "No tienes permiso para utilizar la función de lectura de documentos.",
+      "unexpected": "Ocurrió un inconveniente al procesar el archivo. Prueba con una imagen más clara o utiliza el documento de demostración."
+    }
   },
   "customers": {
     "title": "Clientes",
@@ -100,12 +147,11 @@
     "PayloadTooLarge": "Lo que intentaste enviar es demasiado grande.",
     "TooManyAttempts": "Demasiadas operaciones seguidas. Espera unos minutos y vuelve a intentarlo.",
     "PaymentNotFound": "El cobro o recibo no existe.",
-    "PaymentAlreadyVoided": "El cobro ya ha sido anulado previamente.",
-    "CustomerMismatch": "La nota de entrega no pertenece a este cliente.",
-    "PaymentAllocationExceedsBalance": "El monto a imputar supera el saldo pendiente de la nota.",
-    "PaymentAmountMismatch": "La suma de las imputaciones no coincide con el monto total del cobro.",
-    "DeliveryNoteNotApplied": "La nota de entrega no está emitida ni pendiente de pago.",
-    "InvalidAllocation": "La imputación del cobro no es válida."
+    "DeliveryNoteCustomerMismatch": "La nota de entrega no pertenece a este cliente.",
+    "DeliveryNoteVoided": "Esa nota de entrega está anulada y no admite imputaciones.",
+    "AllocationExceedsBalance": "El monto a imputar ({requested}) supera el saldo pendiente de la nota ({balance}).",
+    "AllocationMismatch": "La suma de las imputaciones ({actual}) no coincide con el monto total del cobro ({expected}).",
+    "NoAllocations": "Un cobro sin imputaciones no dice a qué nota de entrega se aplica."
   },
   "legal": {
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
@@ -901,6 +947,30 @@
       "InvalidExchangeRate": {
         "what": "Esa tasa de cambio no es válida: tiene que ser mayor que cero.",
         "do": "Corrígela en Ajustes."
+      },
+      "PaymentNotFound": {
+        "what": "Ese cobro no existe, o el enlace es antiguo.",
+        "do": "Búscalo en la lista de cobros."
+      },
+      "DeliveryNoteCustomerMismatch": {
+        "what": "Esa nota de entrega pertenece a otro cliente, y un cobro solo se imputa a notas del mismo cliente.",
+        "do": "Revisa que la nota que quieres pagar sea del cliente de este cobro."
+      },
+      "DeliveryNoteVoided": {
+        "what": "Esa nota de entrega está anulada, y una nota anulada no debe nada.",
+        "do": "Quítala de las imputaciones y aplica el cobro solo a las notas que siguen pendientes."
+      },
+      "AllocationExceedsBalance": {
+        "what": "Una de las imputaciones es mayor que lo que su nota de entrega tiene pendiente.",
+        "do": "Baja el importe de esa imputación hasta el saldo que queda por pagar."
+      },
+      "AllocationMismatch": {
+        "what": "La suma de las imputaciones no cuadra con el total del cobro: la regla es que los dos importes coincidan exactamente.",
+        "do": "Ajusta el importe del cobro o el de las imputaciones hasta que sumen lo mismo."
+      },
+      "NoAllocations": {
+        "what": "Un cobro sin imputaciones no dice a qué nota se aplica, y así no se puede guardar.",
+        "do": "Añade al menos una imputación con la nota de entrega que estás pagando y su importe."
       },
       "Unauthenticated": {
         "what": "Tu sesión caducó. Pasa cuando la pestaña lleva mucho rato abierta.",
