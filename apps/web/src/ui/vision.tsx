@@ -49,6 +49,14 @@ const MIME_BY_EXT: Readonly<Record<string, string>> = {
   webp: 'image/webp',
 };
 
+function formatFileBadge(mimeType: string): string {
+  if (mimeType === 'application/pdf') return 'Documento PDF';
+  if (mimeType === 'image/png') return 'Imagen PNG';
+  if (mimeType === 'image/jpeg') return 'Imagen JPG';
+  if (mimeType === 'image/webp') return 'Imagen WebP';
+  return 'Archivo';
+}
+
 function resolveMimeType(file: File): string | null {
   if (['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     return file.type;
@@ -265,9 +273,7 @@ export function VisionScan({
             {title}
           </h3>
           <p className="text-xs text-muted mt-0.5">
-            {isCustomUpload
-              ? 'Sube una imagen o PDF de tu remito para procesarlo con IA.'
-              : 'Documento sintético preparado para probar la extracción sin subir archivos.'}
+            {isCustomUpload ? t('customTabSubtitle') : t('demoTabSubtitle')}
           </p>
         </div>
 
@@ -299,6 +305,30 @@ export function VisionScan({
           </button>
         </div>
       </div>
+
+      {/* Guía contextual para cuando se elige subir un archivo propio pero la empresa no tiene IA conectada */}
+      {isCustomUpload && !aiStatus?.configured && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-card border border-brand/30 bg-brand-soft/20 p-4 text-xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-2.5">
+            <Sparkles className="size-4 text-brand shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-brand-ink">
+                ¿Querés procesar tus propios remitos y facturas con IA real?
+              </p>
+              <p className="text-muted leading-relaxed">{t('needsAiKeyNotice')}</p>
+            </div>
+          </div>
+          {aiStatus?.canConfigure && (
+            <Link
+              href="/settings/ai"
+              className="inline-flex items-center gap-1.5 shrink-0 rounded-control bg-brand px-3 py-1.5 font-semibold text-white shadow-xs hover:bg-brand-hover text-xs transition-colors self-start sm:self-auto"
+            >
+              <span>{t('configureAiCta')}</span>
+              <ArrowRight className="size-3" />
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Zona de Dropzone interactiva cuando se elige subir archivo propio y aún no hay archivo subido */}
       {isCustomUpload && selectedFile.filename === DEMO_FILENAME ? (
@@ -364,13 +394,16 @@ export function VisionScan({
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-pill bg-subtle border border-line px-2 py-0.5 text-xs font-medium text-ink">
-                      Listo
+                      {aiStatus?.configured ? 'Listo para IA' : 'Archivo cargado'}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-muted mt-0.5">
-                  {selectedFile.mimeType} ·{' '}
-                  {!isCustomUpload ? t('sampleDocumentHint') : 'Archivo cargado'}
+                  <span className="font-medium text-ink-soft">
+                    {formatFileBadge(selectedFile.mimeType)}
+                  </span>
+                  {' · '}
+                  {!isCustomUpload ? t('sampleDocumentHint') : t('fileReadyToScan')}
                 </p>
               </div>
             </div>
@@ -491,10 +524,8 @@ export function VisionScan({
                 )}
               </span>
             </div>
-            <span className="text-xs text-muted">
-              {state.result.mode === 'demo'
-                ? 'Datos sintetizados cotejados con tu catálogo real.'
-                : 'Documento procesado en tiempo real con el proveedor de IA de la empresa.'}
+            <span className="text-xs text-muted max-w-md sm:text-right">
+              {state.result.mode === 'demo' ? t('demoResultNotice') : t('customResultNotice')}
             </span>
           </div>
 

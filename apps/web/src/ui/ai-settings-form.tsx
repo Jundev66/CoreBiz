@@ -138,13 +138,29 @@ export function AiSettingsForm({ saved }: { saved: AiSettingsView | null }) {
 
   return (
     <div className="space-y-6">
-      {saved !== null && removal.status !== 'success' && (
+      {saved !== null && removal.status !== 'success' ? (
         <Alert tone="success" title={t('settings.ai.connectedTitle')}>
           {t('settings.ai.connected', {
             provider: t(`settings.ai.providers.${saved.provider}.name`),
             model: saved.model,
           })}
         </Alert>
+      ) : (
+        <div className="rounded-card border border-brand/20 bg-brand-soft/10 p-4 text-xs text-muted space-y-2">
+          <div className="flex items-center gap-2 font-semibold text-ink text-sm">
+            <Sparkles className="size-4 text-brand" />
+            <span>Integración de Inteligencia Artificial</span>
+          </div>
+          <p className="leading-relaxed">
+            Por defecto, CoreBiz opera con un <strong>modo demostración determinista</strong> sin
+            costo ni consumo de tokens para que reclutadores y evaluadores exploren el sistema.
+          </p>
+          <p className="leading-relaxed">
+            Para probar la extracción de remitos y el asistente conversacional con modelos reales en
+            producción, ingresa tu propia clave de API (por ejemplo, la gratuita de{' '}
+            <strong>Google AI Studio</strong> o una clave de <strong>Claude / OpenAI</strong>).
+          </p>
+        </div>
       )}
 
       <form action={saveAction} className="space-y-6">
