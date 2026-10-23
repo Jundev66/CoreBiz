@@ -38,6 +38,15 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'synapse-vision-langchain',
+          root: './synapse-vision/langchain',
+          environment: 'node',
+          globals: true,
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'domain',
           root: './packages/domain',
           environment: 'node',

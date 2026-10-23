@@ -6,6 +6,7 @@ import {
   VisionOrchestrator,
   type VisionActorContext,
   type VisionConnection,
+  type VisionDocumentCachePort,
   type VisionEmbeddingsPort,
   type VisionError,
   type VisionExtractSuccess,
@@ -44,6 +45,7 @@ export interface ExtractDeliveryNoteDeps {
    */
   readonly embeddings?: VisionEmbeddingsPort;
   readonly vectorStore?: VisionVectorStorePort;
+  readonly cache?: VisionDocumentCachePort;
 }
 
 export function makeExtractDeliveryNote(deps: ExtractDeliveryNoteDeps) {
@@ -60,7 +62,11 @@ export function makeExtractDeliveryNote(deps: ExtractDeliveryNoteDeps) {
       deps.queries.products,
       ...(rag !== undefined ? [rag] : []),
     );
-    const orchestrator = new VisionOrchestrator({ bridge, model: deps.model });
+    const orchestrator = new VisionOrchestrator({
+      bridge,
+      model: deps.model,
+      ...(deps.cache !== undefined ? { cache: deps.cache } : {}),
+    });
 
     return orchestrator.extract(actorOf(deps.ctx), connection, image);
   };

@@ -184,6 +184,21 @@ module.exports = {
       },
     },
     {
+      name: 'synapse-vision-langchain-decoupled',
+      comment:
+        'synapse-vision/langchain solo habla con el contrato de Synapse Vision y librerias de orquestacion. ' +
+        'No puede importar otros paquetes del host (packages/*, @corebiz/*), ni Nest, ni ORM, ni DB.',
+      severity: 'error',
+      from: { path: '^synapse-vision/langchain/src' },
+      to: {
+        path:
+          '^packages/' +
+          '|^node_modules/(nestjs|@nestjs|next|@prisma|prisma|@supabase|pg|postgres)/' +
+          '|^(@corebiz/.+|@synapse-vision/(?!langchain$|core$).+|nestjs|@nestjs|@prisma/client|prisma|@supabase/supabase-js|pg|postgres)$',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
       name: 'no-dev-dep-in-src',
       comment:
         'Una devDependency en codigo de produccion revienta el build de Vercel. Los paquetes ' +

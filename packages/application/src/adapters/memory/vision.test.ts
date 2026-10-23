@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VisionActorContext } from '@synapse-vision/core';
-import { memoryVisionVectorStore } from './vision';
+import { memoryVisionDocumentCache, memoryVisionVectorStore } from './vision';
 
 const actor: VisionActorContext = {
   userId: 'u1',
@@ -101,5 +101,32 @@ describe('memoryVisionVectorStore', () => {
       limit: 5,
     });
     expect(suppliers.map((hit) => hit.entityId)).toEqual(['s1']);
+  });
+});
+
+describe('memoryVisionDocumentCache', () => {
+  it('stores and retrieves cached extraction by documentHash', async () => {
+    const cache = memoryVisionDocumentCache();
+    const record = {
+      documentHash: 'hash-abc',
+      extraction: {
+        supplier: 'Proveedor Test',
+        reference: 'REF-1',
+        issuedAt: '2026-10-22',
+        currency: 'USD',
+        lines: [],
+      },
+      matches: [],
+      cachedAt: new Date().toISOString(),
+    };
+
+    await cache.set(actor, record);
+
+    const retrieved = await cache.get(actor, 'hash-abc');
+    expect(retrieved).toEqual(record);
+
+    // No cruza el límite de tenant
+    const crossTenant = await cache.get(other, 'hash-abc');
+    expect(crossTenant).toBeNull();
   });
 });

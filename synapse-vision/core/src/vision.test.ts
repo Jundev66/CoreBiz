@@ -4,6 +4,11 @@ import { parseVisionExtraction, visionExtractionSchema } from './documents';
 import { VisionOrchestrator } from './orchestrator';
 import type { ProductMatch, VisionBridgePort, VisionModelPort } from './ports';
 import { redactExtraction, redactSensitiveData, validateImageInput } from './security';
+import {
+  computeDocumentHash,
+  type VisionDocumentCachePort,
+  type VisionDocumentCacheRecord,
+} from './deduplication';
 import { visionExtractRequestSchema, visionExtractResponseSchema } from './contracts';
 import { visionErr, visionOk, type VisionActorContext, type VisionConnection } from './types';
 
@@ -249,5 +254,59 @@ describe('Synapse Vision — redacción de datos sensibles', () => {
       expect(result.value.extraction.notes).not.toContain('proveedor@secreto.com');
       expect(result.value.extraction.supplier).not.toContain('admin@x.com');
     }
+  });
+});
+
+describe('Synapse Vision — deduplicación determinista y ahorro de tokens', () => {
+  it('calcula hash SHA-256 determinista para una imagen en base64', async () => {
+    const hash1 = await computeDocumentHash('aW1hZ2UtYnl0ZXMtMQ==');
+    const hash2 = await computeDocumentHash('aW1hZ2UtYnl0ZXMtMQ==');
+    const hash3 = await computeDocumentHash('aW1hZ2UtYnl0ZXMtMg==');
+
+    expect(hash1).toHaveLength(64);
+    expect(hash1).toBe(hash2);
+    expect(hash1).not.toBe(hash3);
+  });
+
+  it('devuelve resultado desde caché y no llama al modelo de IA en documento duplicado', async () => {
+    let modelCalls = 0;
+    const model: VisionModelPort = {
+      extract: () => {
+        modelCalls++;
+        return Promise.resolve(visionOk(demoExtraction()));
+      },
+    };
+
+    const cacheStore = new Map<string, VisionDocumentCacheRecord>();
+    const cache: VisionDocumentCachePort = {
+      get: (_act, docHash) => Promise.resolve(cacheStore.get(docHash) ?? null),
+      set: (_act, record) => {
+        cacheStore.set(record.documentHash, record);
+        return Promise.resolve();
+      },
+    };
+
+    const orchestrator = new VisionOrchestrator({ bridge: bridge(), model, cache });
+    const image = { imageBase64: 'ZG9jdW1lbnRvLWlkZW50aWNv', mimeType: 'image/png' };
+
+    // Primera llamada: consume modelo y persiste en cache
+    const firstResult = await orchestrator.extract(actor, connection, image);
+    expect(firstResult.ok).toBe(true);
+    if (firstResult.ok) {
+      expect(firstResult.value.cached).toBe(false);
+      expect(firstResult.value.documentHash).toBeDefined();
+    }
+    expect(modelCalls).toBe(1);
+
+    // Segunda llamada con exactamente la misma imagen: HIT de cache, 0 llamadas a modelo
+    const secondResult = await orchestrator.extract(actor, connection, image);
+    expect(secondResult.ok).toBe(true);
+    if (secondResult.ok) {
+      expect(secondResult.value.cached).toBe(true);
+      expect(secondResult.value.documentHash).toBe(
+        firstResult.ok ? firstResult.value.documentHash : '',
+      );
+    }
+    expect(modelCalls).toBe(1); // Cero llamadas adicionales al modelo -> Ahorro total de tokens
   });
 });

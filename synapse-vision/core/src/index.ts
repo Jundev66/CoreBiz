@@ -17,4 +17,5 @@ export * from './prompt';
 export * from './demo';
 export * from './demo-pdf';
 export * from './security';
+export * from './deduplication';
 export * from './orchestrator';

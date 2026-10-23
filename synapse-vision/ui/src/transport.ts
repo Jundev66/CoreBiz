@@ -16,7 +16,7 @@ export class VisionTransportError extends Error {
   readonly status?: number | undefined;
   readonly errorKind?: string | undefined;
 
-  constructor(message: string, status?: number  , errorKind?: string  ) {
+  constructor(message: string, status?: number, errorKind?: string) {
     super(message);
     this.name = 'VisionTransportError';
     this.status = status;

@@ -6,11 +6,14 @@ import { parseVisionExtraction } from './documents';
 import { buildExtractionPrompt } from './prompt';
 import { demoDocument, demoExtraction } from './demo';
 import { redactExtraction, validateImageInput } from './security';
+import { computeDocumentHash, type VisionDocumentCachePort } from './deduplication';
 
 export interface VisionOrchestratorDeps {
   readonly bridge: VisionBridgePort;
   /** Sin este puerto, el orquestador funciona siempre en modo demo. */
   readonly model?: VisionModelPort;
+  /** Deduplicación y caché de documentos para ahorro de tokens. */
+  readonly cache?: VisionDocumentCachePort;
 }
 
 export interface VisionImageInput {
@@ -21,6 +24,8 @@ export interface VisionImageInput {
 
 export interface VisionExtractSuccess {
   readonly mode: VisionMode;
+  readonly cached?: boolean;
+  readonly documentHash?: string;
   readonly extraction: VisionExtraction;
   /** Productos del catálogo del host candidatos para cada línea, en el mismo orden. */
   readonly matches: readonly (readonly ProductMatch[])[];
@@ -86,6 +91,20 @@ export class VisionOrchestrator {
     const invalid = validateImageInput(image);
     if (invalid !== null) return visionErr({ kind: 'InvalidFormat', message: invalid });
 
+    const documentHash = await computeDocumentHash(image.imageBase64);
+    if (this.deps.cache !== undefined) {
+      const cached = await this.deps.cache.get(actor, documentHash);
+      if (cached !== null) {
+        return visionOk({
+          mode: 'model',
+          cached: true,
+          documentHash,
+          extraction: cached.extraction,
+          matches: cached.matches,
+        });
+      }
+    }
+
     const prompt = buildExtractionPrompt(this.deps.bridge, actor);
     const raw = await model.extract({
       connection,
@@ -111,6 +130,21 @@ export class VisionOrchestrator {
       safeExtraction.lines.map((line) => this.deps.bridge.matchProduct(actor, line.description)),
     );
 
-    return visionOk({ mode: 'model', extraction: safeExtraction, matches });
+    if (this.deps.cache !== undefined) {
+      await this.deps.cache.set(actor, {
+        documentHash,
+        extraction: safeExtraction,
+        matches,
+        cachedAt: new Date().toISOString(),
+      });
+    }
+
+    return visionOk({
+      mode: 'model',
+      cached: false,
+      documentHash,
+      extraction: safeExtraction,
+      matches,
+    });
   }
 }

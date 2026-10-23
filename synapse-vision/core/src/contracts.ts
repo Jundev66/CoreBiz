@@ -43,6 +43,8 @@ export const visionDocumentSchema = z
 export const visionExtractResponseSchema = z
   .object({
     mode: z.enum(['model', 'demo']),
+    cached: z.boolean().optional(),
+    documentHash: z.string().max(64).optional(),
     extraction: visionExtractionSchema,
     matches: z.array(z.array(productMatchSchema).max(10)).max(MAX_CONTRACT_ITEMS),
     document: visionDocumentSchema.optional(),

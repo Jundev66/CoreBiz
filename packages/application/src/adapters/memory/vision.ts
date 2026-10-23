@@ -1,5 +1,7 @@
 import type {
   VisionActorContext,
+  VisionDocumentCachePort,
+  VisionDocumentCacheRecord,
   VisionVectorMatch,
   VisionVectorRecord,
   VisionVectorStorePort,
@@ -127,4 +129,23 @@ function cosine(a: readonly number[], b: readonly number[]): number {
   }
   if (normA === 0 || normB === 0) return 0;
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/**
+ * Caché de deduplicación de documentos en memoria para pruebas y desarrollo.
+ * Aislado estrictamente por tenantId.
+ */
+export function memoryVisionDocumentCache(): VisionDocumentCachePort {
+  const store = new Map<string, VisionDocumentCacheRecord>();
+  const keyOf = (tenantId: string, documentHash: string) => `${tenantId}\u0000${documentHash}`;
+
+  return {
+    get(actor, documentHash) {
+      return Promise.resolve(store.get(keyOf(actor.tenantId, documentHash)) ?? null);
+    },
+    set(actor, record) {
+      store.set(keyOf(actor.tenantId, record.documentHash), record);
+      return Promise.resolve();
+    },
+  };
 }

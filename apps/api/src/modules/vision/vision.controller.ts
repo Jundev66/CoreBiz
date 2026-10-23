@@ -51,6 +51,8 @@ export class VisionController {
 
     return {
       mode: result.mode,
+      ...(result.cached !== undefined ? { cached: result.cached } : {}),
+      ...(result.documentHash !== undefined ? { documentHash: result.documentHash } : {}),
       extraction: result.extraction,
       // Copia a arrays mutables: el contrato Zod declara listas normales y los puertos las
       // devuelven de solo lectura.

@@ -32,6 +32,7 @@ import {
   makeListAiModels,
   makeRemoveAiSettings,
   makeSaveAiSettings,
+  memoryVisionDocumentCache,
   systemClock,
   type AiGateway,
   type SecretBox,
@@ -74,6 +75,7 @@ let aiAdapters: {
    */
   embeddings: VisionEmbeddingsPort | null;
 } | null = null;
+const sharedVisionCache = memoryVisionDocumentCache();
 function ai() {
   if (aiAdapters === null) {
     const env = loadEnv();
@@ -121,6 +123,7 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     secrets: ai().secrets,
     model: ai().vision,
     queries: runtime.queries,
+    cache: sharedVisionCache,
     ...(embeddings !== null ? { embeddings } : {}),
     ...(vectorStore !== undefined ? { vectorStore } : {}),
   };
