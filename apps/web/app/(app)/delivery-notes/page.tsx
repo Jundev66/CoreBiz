@@ -60,16 +60,23 @@ export default async function DeliveryNotesPage({
         ? { toast: t('deliveryNotes.created', { number: createdCode }) }
         : {})}
       action={
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           {can(ctx.actor, 'delivery_note:issue') && (
-            <ButtonLink href="/delivery-notes/new?scan=1" variant="secondary">
-              <ScanLine aria-hidden="true" className="size-4 text-brand" />
-              <span>{t('deliveryNotes.scanAction')}</span>
+            <ButtonLink
+              href="/delivery-notes/scan"
+              variant="secondary"
+              className="justify-center text-xs sm:text-sm px-2.5 sm:px-3"
+            >
+              <ScanLine aria-hidden="true" className="size-4 shrink-0 text-brand" />
+              <span className="truncate">{t('deliveryNotes.scanAction')}</span>
             </ButtonLink>
           )}
-          <PrimaryLink href="/delivery-notes/new">
-            <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-            {t('deliveryNotes.new')}
+          <PrimaryLink
+            href="/delivery-notes/new"
+            className="justify-center text-xs sm:text-sm px-2.5 sm:px-3"
+          >
+            <Plus aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
+            <span className="truncate">{t('deliveryNotes.new')}</span>
           </PrimaryLink>
         </div>
       }
@@ -78,16 +85,21 @@ export default async function DeliveryNotesPage({
         <Empty
           icon={Receipt}
           action={
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="grid w-full max-w-xs grid-cols-1 gap-2 sm:max-w-none sm:grid-cols-2 sm:items-center sm:justify-center">
               {can(ctx.actor, 'delivery_note:issue') && (
-                <ButtonLink href="/delivery-notes/new?scan=1" variant="secondary" size="sm">
+                <ButtonLink
+                  href="/delivery-notes/scan"
+                  variant="secondary"
+                  size="sm"
+                  className="justify-center"
+                >
                   <ScanLine aria-hidden="true" className="size-4 text-brand" />
                   <span>{t('deliveryNotes.scanAction')}</span>
                 </ButtonLink>
               )}
-              <ButtonLink href="/delivery-notes/new" size="sm">
+              <ButtonLink href="/delivery-notes/new" size="sm" className="justify-center">
                 <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-                {t('deliveryNotes.new')}
+                <span>{t('deliveryNotes.new')}</span>
               </ButtonLink>
             </div>
           }

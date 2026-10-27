@@ -6,5 +6,5 @@ import { redirect } from 'next/navigation';
  * como un módulo aislado o huérfano en la navegación principal.
  */
 export default function VisionPage() {
-  redirect('/delivery-notes/new?scan=1');
+  redirect('/delivery-notes/scan');
 }

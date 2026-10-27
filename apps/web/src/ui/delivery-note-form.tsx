@@ -1,11 +1,11 @@
 'use client';
 
-import { useActionState, useState, useEffect, useCallback } from 'react';
-import { Plus, X, ScanLine, Sparkles } from 'lucide-react';
+import { useActionState, useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Plus, X, ScanLine } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { VisionExtractResponse } from '@synapse-vision/core';
-import type { AssistantStatusView } from '@/api/ai';
-import { VisionScan } from '@/ui/vision';
+import { SCANNED_NOTE_STORAGE_KEY } from '@/ui/scan-delivery-note';
 import { issueDeliveryNoteAction, type IssueNoteState } from '@/actions/sales';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
@@ -63,74 +63,76 @@ export function DeliveryNoteForm({
   customers,
   products,
   taxRateBp,
-  aiStatus,
-  initialScanOpen = false,
 }: {
   customers: readonly CustomerOption[];
   products: readonly ProductOption[];
   taxRateBp: number;
-  aiStatus?: AssistantStatusView | null | undefined;
-  initialScanOpen?: boolean | undefined;
 }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(issueDeliveryNoteAction, INITIAL);
   const [customerId, setCustomerId] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
-  const [isScannerOpen, setIsScannerOpen] = useState<boolean>(initialScanOpen);
   const [lines, setLines] = useState<LineDraft[]>([
     { key: 0, productId: '', quantity: '', unitPrice: '', discount: '' },
   ]);
 
-  const handleApplyVision = useCallback(
-    (res: VisionExtractResponse): void => {
-      // 1. Mapear líneas extraídas con productos del catálogo
-      const newLines: LineDraft[] = res.extraction.lines.map((extractedLine, index) => {
-        const match = res.matches[index]?.[0];
-        return {
-          key: Date.now() + index,
-          productId: match?.productId ?? '',
-          quantity: String(extractedLine.quantity),
-          unitPrice: extractedLine.unitCost > 0 ? String(extractedLine.unitCost) : '',
-          discount: '',
-        };
-      });
+  // Si el usuario viene de escanear un remito en /delivery-notes/scan, hidratamos los datos
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(SCANNED_NOTE_STORAGE_KEY);
+      if (stored) {
+        sessionStorage.removeItem(SCANNED_NOTE_STORAGE_KEY);
+        const res = JSON.parse(stored) as VisionExtractResponse;
 
-      if (newLines.length > 0) {
-        setLines(newLines);
-      }
-
-      // 2. Asociar cliente si el documento extrae un proveedor/cliente y coincide con alguno registrado
-      if (!customerId && res.extraction.supplier) {
-        const supplierLower = res.extraction.supplier.toLowerCase().trim();
-        const matchedCustomer = customers.find((c) => {
-          const labelLower = c.label.toLowerCase();
-          return (
-            labelLower.includes(supplierLower) ||
-            supplierLower.includes(labelLower.split('·')[1]?.trim() ?? '')
-          );
+        // 1. Mapear líneas extraídas con productos del catálogo
+        const newLines: LineDraft[] = res.extraction.lines.map((extractedLine, index) => {
+          const match = res.matches[index]?.[0];
+          return {
+            key: Date.now() + index,
+            productId: match?.productId ?? '',
+            quantity: String(extractedLine.quantity),
+            unitPrice: extractedLine.unitCost > 0 ? String(extractedLine.unitCost) : '',
+            discount: '',
+          };
         });
-        if (matchedCustomer) {
-          setCustomerId(matchedCustomer.id);
+
+        if (newLines.length > 0) {
+          setLines(newLines);
         }
-      }
 
-      // 3. Pre-cargar notas con la referencia y fecha del comprobante físico
-      const refParts: string[] = [];
-      if (res.extraction.reference) {
-        refParts.push(`${t('deliveryNotes.notesRefPrefix')}: ${res.extraction.reference}`);
-      }
-      if (res.extraction.issuedAt) {
-        refParts.push(`Fecha: ${res.extraction.issuedAt}`);
-      }
-      if (refParts.length > 0) {
-        setNotes((prev) => (prev ? `${prev}\n${refParts.join(' · ')}` : refParts.join(' · ')));
-      }
+        // 2. Asociar cliente si el documento extrae un proveedor/cliente y coincide con alguno registrado
+        if (res.extraction.supplier) {
+          const supplierLower = res.extraction.supplier.toLowerCase().trim();
+          const matchedCustomer = customers.find((c) => {
+            const labelLower = c.label.toLowerCase();
+            return (
+              labelLower.includes(supplierLower) ||
+              supplierLower.includes(labelLower.split('·')[1]?.trim() ?? '')
+            );
+          });
+          if (matchedCustomer) {
+            setCustomerId(matchedCustomer.id);
+          }
+        }
 
-      setIsScannerOpen(false);
-      toast.success(t('deliveryNotes.scanApplied'));
-    },
-    [customers, customerId, t],
-  );
+        // 3. Pre-cargar notas con la referencia y fecha del comprobante físico
+        const refParts: string[] = [];
+        if (res.extraction.reference) {
+          refParts.push(`${t('deliveryNotes.notesRefPrefix')}: ${res.extraction.reference}`);
+        }
+        if (res.extraction.issuedAt) {
+          refParts.push(`Fecha: ${res.extraction.issuedAt}`);
+        }
+        if (refParts.length > 0) {
+          setNotes(refParts.join(' · '));
+        }
+
+        toast.success(t('deliveryNotes.scanApplied'));
+      }
+    } catch (err) {
+      console.error('Error hydrating scanned delivery note', err);
+    }
+  }, [customers, t]);
 
   const catalogPrice = (productId: string) =>
     Number(products.find((p) => p.id === productId)?.price ?? '0');
@@ -228,56 +230,17 @@ export function DeliveryNoteForm({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Banner / Panel interactivo de escaneo con Synapse Visión */}
-      {isScannerOpen ? (
-        <Card className="p-5 sm:p-6 border-brand/40 shadow-xs">
-          <div className="flex items-center justify-between mb-4 border-b border-line pb-3">
-            <div className="flex items-center gap-2">
-              <ScanLine className="size-4 text-brand" />
-              <h3 className="text-sm font-semibold text-ink">
-                {t('deliveryNotes.scannerHeading')}
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsScannerOpen(false)}
-              className={buttonClasses({ variant: 'ghost', size: 'sm' })}
-            >
-              <X className="size-4" />
-              <span>{t('deliveryNotes.closeScanner')}</span>
-            </button>
-          </div>
-          <VisionScan
-            title={t('vision.scanTitle')}
-            aiStatus={aiStatus}
-            onApplyExtraction={handleApplyVision}
-            applyButtonLabel={t('deliveryNotes.applyExtraction')}
-          />
-        </Card>
-      ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-card border border-brand/20 bg-brand-soft/20 p-4">
-          <div className="flex items-center gap-2.5">
-            <ScanLine className="size-5 text-brand shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-ink">{t('deliveryNotes.scanBannerTitle')}</p>
-              <p className="text-xs text-muted">{t('deliveryNotes.scanBannerHint')}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsScannerOpen(true)}
-            className={buttonClasses({
-              variant: 'secondary',
-              size: 'sm',
-              className: 'shrink-0 self-start sm:self-auto shadow-xs',
-            })}
-          >
-            <Sparkles className="size-3.5 text-brand" />
-            <span>{t('deliveryNotes.openScanner')}</span>
-          </button>
-        </div>
-      )}
+    <div className="space-y-4">
+      {/* Enlace sutil al escáner sin saturar la pantalla móvil */}
+      <div className="flex items-center justify-between pb-1">
+        <Link
+          href="/delivery-notes/scan"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
+        >
+          <ScanLine className="size-3.5" />
+          <span>{t('deliveryNotes.scanPromptLink')}</span>
+        </Link>
+      </div>
 
       <form
         action={handleAction}

@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 import { apiForRequest } from '@/api/session';
-import { assistantStatus } from '@/api/ai';
 import { Screen } from '@/ui/shell';
 import { buttonClasses } from '@/ui/button';
 import { Card } from '@/ui/primitives';
@@ -10,16 +9,9 @@ import { DeliveryNoteForm } from '@/ui/delivery-note-form';
 import { notFound } from 'next/navigation';
 import { can } from '@corebiz/domain';
 
-export default async function NewDeliveryNotePage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ scan?: string; metodo?: string }>;
-}) {
+export default async function NewDeliveryNotePage() {
   const t = await getTranslations();
   const { ctx, queries } = await apiForRequest();
-  const params = (await searchParams) ?? {};
-  const shouldOpenScan =
-    params.scan === '1' || params.scan === 'true' || params.metodo === 'escanear';
 
   // Before reading: the customer list requires `customer:read`, which warehouse lacks, and
   // that 403 broke the issue screen. Whoever can issue can always read customers.
@@ -29,10 +21,6 @@ export default async function NewDeliveryNotePage({
     queries.customers.options(),
     queries.products.options(),
   ]);
-
-  const aiStatus = can(ctx.actor, 'assistant:use')
-    ? await assistantStatus().catch(() => null)
-    : null;
 
   /*
    * Sin tasa de cambio no hay documento posible, y hay que decirlo ANTES.
@@ -78,8 +66,6 @@ export default async function NewDeliveryNotePage({
             unit: p.unit,
             stock: p.stock,
           }))}
-          aiStatus={aiStatus}
-          initialScanOpen={shouldOpenScan}
         />
       )}
     </Screen>

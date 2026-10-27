@@ -427,9 +427,17 @@ function Banner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PrimaryLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function PrimaryLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string | undefined;
+}) {
   return (
-    <Link href={href} className={buttonClasses()}>
+    <Link href={href} className={buttonClasses({ className })}>
       {children}
     </Link>
   );
