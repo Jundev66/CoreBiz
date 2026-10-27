@@ -12,7 +12,6 @@ import {
   MoreHorizontal,
   Inbox,
   UserRound,
-  ScanLine,
   type LucideIcon,
 } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
@@ -103,7 +102,6 @@ export async function AppFrame({
       Icon: Banknote,
     },
     { href: '/purchases', label: t('nav.purchases'), Icon: Truck },
-    { href: '/vision', label: t('nav.vision'), Icon: ScanLine },
     { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
     { href: '/settings', label: t('nav.settings'), Icon: Settings },
   ].filter(({ href }) => canOpen(ctx.actor, href));

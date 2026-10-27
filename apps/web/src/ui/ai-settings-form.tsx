@@ -376,7 +376,8 @@ export function AiSettingsForm({ saved }: { saved: AiSettingsView | null }) {
               <div>
                 <span className="font-semibold block text-sm">Synapse Vision con IA</span>
                 <span className="text-muted leading-relaxed">
-                  Lectura e interpretación de remitos en /vision conectada a tu modelo en vivo.
+                  Lectura e interpretación de remitos en Notas de entrega conectada a tu modelo en
+                  vivo.
                 </span>
               </div>
             </div>

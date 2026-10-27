@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { Plus, Receipt } from 'lucide-react';
+import { Plus, Receipt, ScanLine } from 'lucide-react';
 import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
@@ -60,20 +60,36 @@ export default async function DeliveryNotesPage({
         ? { toast: t('deliveryNotes.created', { number: createdCode }) }
         : {})}
       action={
-        <PrimaryLink href="/delivery-notes/new">
-          <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-          {t('deliveryNotes.new')}
-        </PrimaryLink>
+        <div className="flex items-center gap-2">
+          {can(ctx.actor, 'delivery_note:issue') && (
+            <ButtonLink href="/delivery-notes/new?scan=1" variant="secondary">
+              <ScanLine aria-hidden="true" className="size-4 text-brand" />
+              <span>{t('deliveryNotes.scanAction')}</span>
+            </ButtonLink>
+          )}
+          <PrimaryLink href="/delivery-notes/new">
+            <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+            {t('deliveryNotes.new')}
+          </PrimaryLink>
+        </div>
       }
     >
       {page.items.length === 0 ? (
         <Empty
           icon={Receipt}
           action={
-            <ButtonLink href="/delivery-notes/new" size="sm">
-              <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-              {t('deliveryNotes.new')}
-            </ButtonLink>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {can(ctx.actor, 'delivery_note:issue') && (
+                <ButtonLink href="/delivery-notes/new?scan=1" variant="secondary" size="sm">
+                  <ScanLine aria-hidden="true" className="size-4 text-brand" />
+                  <span>{t('deliveryNotes.scanAction')}</span>
+                </ButtonLink>
+              )}
+              <ButtonLink href="/delivery-notes/new" size="sm">
+                <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+                {t('deliveryNotes.new')}
+              </ButtonLink>
+            </div>
           }
         >
           {t('deliveryNotes.empty')}

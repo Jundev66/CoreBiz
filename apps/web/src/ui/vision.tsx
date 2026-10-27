@@ -99,13 +99,19 @@ function defaultSampleFile(): VisionFileInput {
   };
 }
 
+export interface VisionScanProps {
+  readonly title: string;
+  readonly aiStatus?: AssistantStatusView | null | undefined;
+  readonly onApplyExtraction?: ((res: VisionExtractResponse) => void) | undefined;
+  readonly applyButtonLabel?: string | undefined;
+}
+
 export function VisionScan({
   title,
   aiStatus,
-}: {
-  readonly title: string;
-  readonly aiStatus?: AssistantStatusView | null;
-}): ReactElement {
+  onApplyExtraction,
+  applyButtonLabel,
+}: VisionScanProps): ReactElement {
   const t = useTranslations('vision');
   const fileInputId = useId();
   const { state, scan, reset } = useVision(transport);
@@ -622,48 +628,66 @@ export function VisionScan({
             </div>
           </div>
 
-          {/* Bloque de Acción: Generar Nota de Entrega en el Sistema */}
+          {/* Bloque de Acción: Cargar en el Formulario o Generar Nota */}
           <div className="rounded-card border border-brand/20 bg-brand-soft/20 p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="max-w-md">
                 <h4 className="text-sm font-semibold text-ink flex items-center gap-2">
                   <FileCheck className="size-4 text-brand" />
-                  Demostración del flujo completo de ERP
+                  {onApplyExtraction
+                    ? t('applyToFormTitle')
+                    : 'Demostración del flujo completo de ERP'}
                 </h4>
                 <p className="text-xs text-muted mt-1 leading-relaxed">
-                  Podés emitir automáticamente la nota de entrega en tu empresa activa, afectando
-                  inventario, saldos y correlativos con aislamiento multi-tenant estricto.
+                  {onApplyExtraction
+                    ? t('applyToFormDescription')
+                    : 'Podés emitir automáticamente la nota de entrega en tu empresa activa, afectando inventario, saldos y correlativos con aislamiento multi-tenant estricto.'}
                 </p>
               </div>
 
-              {!generationResult?.ok && (
+              {onApplyExtraction ? (
                 <button
                   type="button"
-                  onClick={() => handleGenerateDeliveryNote(state.result)}
-                  disabled={isGenerating}
+                  onClick={() => onApplyExtraction(state.result)}
                   className={buttonClasses({
                     variant: 'primary',
                     size: 'md',
                     className: 'shrink-0 shadow-xs',
                   })}
                 >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw className="size-4 animate-spin" />
-                      <span>{t('generating')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="size-4" />
-                      <span>{t('generateDeliveryNote')}</span>
-                    </>
-                  )}
+                  <FileCheck className="size-4" />
+                  <span>{applyButtonLabel ?? t('applyToForm')}</span>
                 </button>
+              ) : (
+                !generationResult?.ok && (
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDeliveryNote(state.result)}
+                    disabled={isGenerating}
+                    className={buttonClasses({
+                      variant: 'primary',
+                      size: 'md',
+                      className: 'shrink-0 shadow-xs',
+                    })}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <RefreshCw className="size-4 animate-spin" />
+                        <span>{t('generating')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="size-4" />
+                        <span>{t('generateDeliveryNote')}</span>
+                      </>
+                    )}
+                  </button>
+                )
               )}
             </div>
 
-            {/* Resultado de la Generación */}
-            {generationResult && (
+            {/* Resultado de la Generación directa (cuando no se usa onApplyExtraction) */}
+            {!onApplyExtraction && generationResult && (
               <div
                 className={`mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-control p-3.5 text-sm ${
                   generationResult.ok

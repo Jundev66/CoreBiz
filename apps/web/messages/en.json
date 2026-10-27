@@ -59,6 +59,9 @@
     "generating": "Generating in CoreBiz...",
     "noteGeneratedSuccess": "Delivery note {number} successfully generated for the company",
     "viewGeneratedNote": "View generated delivery note",
+    "applyToFormTitle": "Load extraction into note",
+    "applyToFormDescription": "Injects matched products, quantities, and prices into the form so you can review and confirm them before issuing.",
+    "applyToForm": "Load into form",
     "clean": "Reset",
     "scanning": "Reading document...",
     "errors": {
@@ -315,7 +318,16 @@
     "voidSubmit": "Void the note",
     "needsRateTitle": "Set your exchange rate before issuing",
     "needsRateDetail": "Every note stores the rate of the day it was issued, so the bolívar total is still right six months later. That is why we cannot make one up: tell us once and you are ready to go.",
-    "needsRateAction": "Go to settings"
+    "needsRateAction": "Go to settings",
+    "scanAction": "Scan delivery note",
+    "scanBannerTitle": "Have a physical delivery note or PDF?",
+    "scanBannerHint": "Scan it with Vision to automatically pre-fill products and quantities into this note.",
+    "openScanner": "Scan with Vision",
+    "closeScanner": "Close scanner",
+    "scannerHeading": "Capture and read with Vision",
+    "applyExtraction": "Load into form",
+    "scanApplied": "Document data loaded into form. Please verify the lines before issuing.",
+    "notesRefPrefix": "Doc ref"
   },
   "reports": {
     "title": "Reports",

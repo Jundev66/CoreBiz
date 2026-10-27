@@ -59,6 +59,9 @@
     "generating": "Generando en CoreBiz...",
     "noteGeneratedSuccess": "Nota de entrega {number} generada con éxito en la empresa",
     "viewGeneratedNote": "Ver nota de entrega generada",
+    "applyToFormTitle": "Cargar extracción en la nota",
+    "applyToFormDescription": "Inyecta los productos emparejados, cantidades y precios en el formulario para que puedas revisarlos y confirmarlos antes de emitir.",
+    "applyToForm": "Cargar datos en el formulario",
     "clean": "Reiniciar",
     "scanning": "Leyendo documento...",
     "errors": {
@@ -315,7 +318,16 @@
     "voidSubmit": "Anular la nota",
     "needsRateTitle": "Antes de emitir, configura tu tasa de cambio",
     "needsRateDetail": "Cada nota guarda la tasa del día en que se emite, para que el total en bolívares siga siendo el correcto dentro de seis meses. Por eso no podemos inventarla: dínosla una vez y ya puedes empezar.",
-    "needsRateAction": "Ir a los ajustes"
+    "needsRateAction": "Ir a los ajustes",
+    "scanAction": "Escanear remito",
+    "scanBannerTitle": "¿Tenés un remito o documento físico?",
+    "scanBannerHint": "Escanealo con Visión para pre-cargar los productos y cantidades automáticamente en esta nota.",
+    "openScanner": "Escanear con Visión",
+    "closeScanner": "Cerrar escáner",
+    "scannerHeading": "Captura y lectura con Visión",
+    "applyExtraction": "Cargar datos en el formulario",
+    "scanApplied": "Datos del documento cargados en el formulario. Verificá los renglones antes de emitir.",
+    "notesRefPrefix": "Ref. comprobante"
   },
   "reports": {
     "title": "Reportes",
