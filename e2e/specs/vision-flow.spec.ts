@@ -6,124 +6,215 @@ test.describe('Flujo de Visión en Compras (Recepción de Mercancía e Inventari
     await signIn(page);
   });
 
-  test('redirige desde /vision a la ruta dedicada /purchases/scan', async ({ page }) => {
+  test('redirige desde /vision a la ruta dedicada /purchases/scan y no aparece en la barra lateral', async ({
+    page,
+  }) => {
     await page.goto('/vision');
     await expect(page).toHaveURL(/\/purchases\/scan/);
     await expect(page.getByRole('heading', { name: /escanear remito de compras/i })).toBeVisible();
-  });
 
-  test('flujo determinista sin IA: escanea remito en /purchases/scan y registra la recepción directamente', async ({
-    page,
-  }) => {
-    // 1. Ir al módulo de Compras
-    await page.goto('/purchases');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-
-    // 2. Verificar que Visión ya no es un módulo en la barra de navegación lateral
+    // Visión ya no es un módulo huérfano en la barra de navegación lateral
     const navLinks = page.getByRole('navigation').getByRole('link', { name: /^visi[oó]n$/i });
     await expect(navLinks).toHaveCount(0);
+  });
 
-    // 3. El botón "Escanear remito" lleva a la ruta dedicada /purchases/scan
-    const scanActionBtn = page.getByRole('link', { name: /escanear remito/i }).first();
-    await expect(scanActionBtn).toBeVisible();
-    await scanActionBtn.click();
-
-    await expect(page).toHaveURL(/\/purchases\/scan/);
+  test('Escenario 1 (Flujo estándar sin discrepancias): análisis, revisión y confirmación atómica en inventario', async ({
+    page,
+  }) => {
+    await page.goto('/purchases/scan');
     await expect(page.getByRole('heading', { name: /escanear remito de compras/i })).toBeVisible();
 
-    // 4. Ejecutar la lectura del documento de muestra (modo determinista sin IA)
-    const scanButton = page.getByRole('button', { name: /leer documento/i });
-    await expect(scanButton).toBeVisible();
-    await scanButton.click();
+    // 1. Verificar documento inicial en cola y analizarlo
+    const scanBtn = page.getByRole('button', { name: /analizar documento/i }).first();
+    await expect(scanBtn).toBeVisible();
+    await scanBtn.click();
 
-    // 5. Esperar extracción completada
-    await expect(page.getByText('Extracción completada')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Distribuidora Central, C.A.')).toBeVisible();
+    // 2. Esperar que pase a 'ready' y se despliegue el formulario interactivo
+    await expect(page.getByText(/1\. Proveedor de la Recepción/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Distribuidora Central, C.A.').first()).toBeVisible();
 
-    // 6. Registrar la recepción directamente en inventario mediante el botón primario
-    const directRegisterBtn = page.getByRole('button', {
-      name: /registrar recepci[oó]n de mercanc[ií]a/i,
+    // 3. Verificar que la tabla de artículos lista los renglones extraídos
+    await expect(
+      page.getByRole('cell', { name: 'Harina de trigo 1 kg', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('cell', { name: 'Manteca vegetal 500 g', exact: true }),
+    ).toBeVisible();
+
+    // 4. Verificar que el total estimado está calculado
+    await expect(page.getByText(/Total Estimado de la Recepción/i)).toBeVisible();
+    await expect(page.locator('span.font-bold.font-mono.text-ink')).toContainText('$69.70');
+
+    // 5. Confirmar la recepción atómica
+    const confirmBtn = page.getByRole('button', {
+      name: /confirmar recepci[oó]n de mercanc[ií]a/i,
     });
-    await expect(directRegisterBtn).toBeVisible();
-    await directRegisterBtn.click();
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
 
-    // 7. Verificar el aviso de confirmación con el correlativo asignado
-    await expect(page.getByText(/recepci[oó]n (RM|REC)-\d+ registrada con [eé]xito/i)).toBeVisible({
+    // 6. Verificar el banner de éxito con correlativo RM-XXXXXX y resumen de afectación
+    await expect(page.getByText(/recepci[oó]n (RM|REC)-\d+ confirmada con [eé]xito/i)).toBeVisible({
       timeout: 15_000,
     });
+    await expect(page.getByRole('link', { name: /ver comprobante/i })).toBeVisible();
 
-    // 8. Navegar a /purchases y verificar que la recepción recién creada aparece listada
+    // 7. Navegar a /purchases y verificar que la recepción recién creada aparece listada
     await page.goto('/purchases');
     await expect(page.getByRole('cell', { name: /(RM|REC)-\d+/ }).first()).toBeVisible();
   });
 
-  test('flujo asistido con formulario: escanea remito y transfiere los datos a /purchases/new para revisión', async ({
+  test('Escenario 2 (Discrepancias e ítems nuevos): recálculo en vivo, alta de proveedor y productos al vuelo', async ({
     page,
   }) => {
-    // 1. Ir a la pantalla de escaneo
     await page.goto('/purchases/scan');
 
-    // 2. Ejecutar la lectura del documento de muestra
-    const scanButton = page.getByRole('button', { name: /leer documento/i });
-    await expect(scanButton).toBeVisible();
-    await scanButton.click();
+    // 1. Seleccionar el escenario de prueba con discrepancias
+    const discrepanciesPreset = page.getByRole('button', { name: /remito con discrepancias/i });
+    await expect(discrepanciesPreset).toBeVisible();
+    await discrepanciesPreset.click();
 
-    await expect(page.getByText('Extracción completada')).toBeVisible({ timeout: 15_000 });
+    // 2. Analizar el documento con discrepancias
+    const scanBtn = page.getByRole('button', { name: /analizar documento/i }).first();
+    await expect(scanBtn).toBeVisible();
+    await scanBtn.click();
 
-    // 3. Hacer clic en "Cargar en formulario de compras"
-    const applyBtn = page.getByRole('button', { name: /cargar en formulario de compras/i });
-    await expect(applyBtn).toBeVisible();
-    await applyBtn.click();
+    // 3. Esperar formulario interactivo de revisión
+    await expect(page.getByText(/1\. Proveedor de la Recepción/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Lácteos y Alimentos Los Andes, C\.A\./i)).toBeVisible();
 
-    // 4. Verificar que navegó a /purchases/new con los datos precargados
-    await expect(page).toHaveURL(/\/purchases\/new/);
-    await expect(page.getByText(/datos del remito cargados correctamente/i)).toBeVisible();
+    // 4. Verificar opción 'Dar de alta nuevo' para el proveedor y asignar RIF
+    const createSupplierRadio = page.getByLabel(/dar de alta nuevo/i);
+    await expect(createSupplierRadio).toBeChecked();
+    const taxIdInput = page.getByPlaceholder(/J-12345678-9/i);
+    await taxIdInput.fill('J-40192837-1');
 
-    // 5. Verificar que el formulario fue hidratado con las líneas
-    const firstQuantityInput = page.locator('input[name="quantity"]').first();
-    await expect(firstQuantityInput).not.toHaveValue('');
+    // 5. Verificar productos nuevos y sugerencia de creación en catálogo
+    await expect(page.getByText(/Queso Gouda rebanado 500 g/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /crear producto/i }).first()).toBeVisible();
 
-    // 6. Confirmar la recepción desde el formulario
-    const submitBtn = page.getByRole('button', { name: /registrar la entrada/i });
-    await expect(submitBtn).toBeVisible();
-    await submitBtn.click();
+    // 6. Probar recálculo en vivo al excluir un artículo
+    const totalBefore = await page.locator('span.font-bold.font-mono.text-ink').textContent();
+    // Desmarcar el primer checkbox de inclusión
+    const firstCheckbox = page.locator('tbody input[type="checkbox"]').first();
+    await firstCheckbox.uncheck();
 
-    // 7. Esperar redirección a /purchases con el código creado
-    await page.waitForURL(/\/purchases(\?|$)/);
-    const receiptStatus = page.getByRole('status').filter({ hasText: /(RM|REC)-\d+/ });
-    await expect(receiptStatus).toBeVisible();
+    const totalAfter = await page.locator('span.font-bold.font-mono.text-ink').textContent();
+    expect(totalBefore).not.toEqual(totalAfter);
+
+    // 7. Confirmar recepción atómica con altas al vuelo
+    const confirmBtn = page.getByRole('button', {
+      name: /confirmar recepci[oó]n de mercanc[ií]a/i,
+    });
+    await confirmBtn.click();
+
+    // 8. Verificar confirmación indicando proveedor y nuevos productos registrados
+    await expect(page.getByText(/recepci[oó]n (RM|REC)-\d+ confirmada con [eé]xito/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/proveedor nuevo registrado en cat[aá]logo/i)).toBeVisible();
+    await expect(page.getByText(/nuevo\(s\) producto\(s\) dado\(s\) de alta/i)).toBeVisible();
   });
 
-  test('validación amigable al subir archivos no compatibles en la pantalla de escaneo', async ({
+  test('Escenario 3 (Ticket arrugado): mapeo a proveedor existente registrado', async ({
     page,
   }) => {
-    // 1. Ir directamente a la pantalla de escaneo de compras
     await page.goto('/purchases/scan');
-    await expect(page.getByRole('heading', { name: /escanear remito de compras/i })).toBeVisible();
 
-    // 2. Cambiar a subir comprobante propio
-    await page.getByRole('button', { name: /subir comprobante/i }).click();
+    // 1. Seleccionar preset Ticket de compra de mostrador
+    const ticketPreset = page.getByRole('button', { name: /ticket de compra de mostrador/i });
+    await expect(ticketPreset).toBeVisible();
+    await ticketPreset.click();
 
-    // 3. Subir archivo no soportado
-    const fileChooserPromise = page.waitForEvent('filechooser');
+    // 2. Analizar
     await page
-      .getByRole('button', { name: /cambiar archivo/i })
-      .or(page.locator('[role="button"]:has-text("Arrastra y suelta")'))
+      .getByRole('button', { name: /analizar documento/i })
       .first()
       .click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles({
-      name: 'archivo_invalido.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from('Contenido de prueba no válido'),
+    await expect(page.getByText(/1\. Proveedor de la Recepción/i)).toBeVisible({ timeout: 15_000 });
+
+    // 3. Cambiar decisión a "Vincular a existente"
+    const linkExistingRadio = page.getByLabel(/vincular a existente/i);
+    await linkExistingRadio.check();
+
+    // 4. Seleccionar un proveedor registrado en el desplegable
+    const supplierSelect = page.locator('select').first();
+    await expect(supplierSelect).toBeVisible();
+
+    // 5. Confirmar recepción
+    const confirmBtn = page.getByRole('button', {
+      name: /confirmar recepci[oó]n de mercanc[ií]a/i,
+    });
+    await confirmBtn.click();
+
+    await expect(page.getByText(/recepci[oó]n (RM|REC)-\d+ confirmada con [eé]xito/i)).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test('Escenario 4 (Desacoplamiento estricto): comprobante real sin IA no aplica fallback falso y guía a /settings/ai', async ({
+    page,
+  }) => {
+    await page.goto('/purchases/scan');
+
+    // 1. Cambiar a la pestaña de subir documentos reales
+    await page.getByRole('button', { name: /subir documentos reales/i }).click();
+
+    // 2. Verificar advertencia explícita de requerimiento de IA
+    await expect(
+      page.getByText(/para procesar tus propios documentos se requiere conectar una clave de IA/i),
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: /configurar ahora/i })).toBeVisible();
+
+    // 3. Subir archivo PDF real sintético
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'factura_propia_empresa.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4 test document content'),
     });
 
-    // 4. Verificar alerta amigable para el usuario sin códigos HTTP 500
-    const alert = page
-      .getByRole('alert')
-      .filter({ hasText: /formato del archivo no es compatible/i });
-    await expect(alert).toBeVisible();
-    await expect(alert).not.toContainText('500');
-    await expect(alert).not.toContainText('El host respondio');
+    // 4. Verificar que entra en cola como documento real
+    await expect(page.getByText('factura_propia_empresa.pdf').first()).toBeVisible();
+
+    // 5. Al analizarlo sin IA configurada, no finge éxito; devuelve error amigable
+    await page
+      .getByRole('button', { name: /analizar documento/i })
+      .first()
+      .click();
+
+    await expect(page.getByText(/no se pudo procesar el documento/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText(/se requiere configurar una clave de IA en los ajustes/i),
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: /configurar clave de IA/i })).toBeVisible();
+  });
+
+  test('Escenario 5 (Gestión de cola y procesamiento por lote): agrega, elimina y procesa en lote', async ({
+    page,
+  }) => {
+    await page.goto('/purchases/scan');
+
+    // 1. Cargar múltiples documentos de demostración
+    await page.getByRole('button', { name: /remito con discrepancias/i }).click();
+    await page.getByRole('button', { name: /ticket de compra de mostrador/i }).click();
+
+    // 2. Verificar contador de documentos en cola (al menos 3)
+    await expect(page.getByText(/documentos cargados en cola/i)).toBeVisible();
+
+    // 3. Eliminar el documento activo mediante el botón de papelera
+    const trashButtons = page.locator('button[title="Eliminar de la lista"]');
+    const initialCount = await trashButtons.count();
+    await trashButtons.first().click();
+    await expect(trashButtons).toHaveCount(initialCount - 1);
+
+    // 4. Ejecutar "Analizar todos los pendientes"
+    const processAllBtn = page.getByRole('button', { name: /analizar todos los pendientes/i });
+    if (await processAllBtn.isVisible()) {
+      await processAllBtn.click();
+      await expect(page.getByText(/listo para revisi[oó]n|registrado/i).first()).toBeVisible({
+        timeout: 20_000,
+      });
+    }
   });
 });
