@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { Plus, Receipt, ScanLine } from 'lucide-react';
+import { Plus, Receipt } from 'lucide-react';
 import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
@@ -60,48 +60,24 @@ export default async function DeliveryNotesPage({
         ? { toast: t('deliveryNotes.created', { number: createdCode }) }
         : {})}
       action={
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
-          {can(ctx.actor, 'delivery_note:issue') && (
-            <ButtonLink
-              href="/delivery-notes/scan"
-              variant="secondary"
-              className="justify-center text-xs sm:text-sm px-2.5 sm:px-3"
-            >
-              <ScanLine aria-hidden="true" className="size-4 shrink-0 text-brand" />
-              <span className="truncate">{t('deliveryNotes.scanAction')}</span>
-            </ButtonLink>
-          )}
-          <PrimaryLink
-            href="/delivery-notes/new"
-            className="justify-center text-xs sm:text-sm px-2.5 sm:px-3"
-          >
+        can(ctx.actor, 'delivery_note:issue') ? (
+          <PrimaryLink href="/delivery-notes/new">
             <Plus aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
-            <span className="truncate">{t('deliveryNotes.new')}</span>
+            {t('deliveryNotes.new')}
           </PrimaryLink>
-        </div>
+        ) : undefined
       }
     >
       {page.items.length === 0 ? (
         <Empty
           icon={Receipt}
           action={
-            <div className="grid w-full max-w-xs grid-cols-1 gap-2 sm:max-w-none sm:grid-cols-2 sm:items-center sm:justify-center">
-              {can(ctx.actor, 'delivery_note:issue') && (
-                <ButtonLink
-                  href="/delivery-notes/scan"
-                  variant="secondary"
-                  size="sm"
-                  className="justify-center"
-                >
-                  <ScanLine aria-hidden="true" className="size-4 text-brand" />
-                  <span>{t('deliveryNotes.scanAction')}</span>
-                </ButtonLink>
-              )}
-              <ButtonLink href="/delivery-notes/new" size="sm" className="justify-center">
+            can(ctx.actor, 'delivery_note:issue') ? (
+              <ButtonLink href="/delivery-notes/new" size="sm">
                 <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-                <span>{t('deliveryNotes.new')}</span>
+                {t('deliveryNotes.new')}
               </ButtonLink>
-            </div>
+            ) : undefined
           }
         >
           {t('deliveryNotes.empty')}

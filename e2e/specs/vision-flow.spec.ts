@@ -1,39 +1,35 @@
 import { test, expect } from '@playwright/test';
 import { signIn } from '../session';
 
-test.describe('Flujo de Visión en ruta dedicada para Notas de Entrega', () => {
+test.describe('Flujo de Visión en Compras (Recepción de Mercancía e Inventario)', () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
   });
 
-  test('redirige desde /vision a la ruta dedicada /delivery-notes/scan', async ({ page }) => {
+  test('redirige desde /vision a la ruta dedicada /purchases/scan', async ({ page }) => {
     await page.goto('/vision');
-    await expect(page).toHaveURL(/\/delivery-notes\/scan/);
-    await expect(
-      page.getByRole('heading', { name: /escanear remito con visi[oó]n/i }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/purchases\/scan/);
+    await expect(page.getByRole('heading', { name: /escanear remito de compras/i })).toBeVisible();
   });
 
-  test('flujo normal sin IA: escanea remito en ruta dedicada, transfiere al formulario y emite la nota', async ({
+  test('flujo determinista sin IA: escanea remito en /purchases/scan y registra la recepción directamente', async ({
     page,
   }) => {
-    // 1. Ir al módulo de Notas de Entrega
-    await page.goto('/delivery-notes');
+    // 1. Ir al módulo de Compras
+    await page.goto('/purchases');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     // 2. Verificar que Visión ya no es un módulo en la barra de navegación lateral
     const navLinks = page.getByRole('navigation').getByRole('link', { name: /^visi[oó]n$/i });
     await expect(navLinks).toHaveCount(0);
 
-    // 3. El botón "Escanear remito" lleva a la ruta dedicada /delivery-notes/scan
+    // 3. El botón "Escanear remito" lleva a la ruta dedicada /purchases/scan
     const scanActionBtn = page.getByRole('link', { name: /escanear remito/i }).first();
     await expect(scanActionBtn).toBeVisible();
     await scanActionBtn.click();
 
-    await expect(page).toHaveURL(/\/delivery-notes\/scan/);
-    await expect(
-      page.getByRole('heading', { name: /escanear remito con visi[oó]n/i }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/purchases\/scan/);
+    await expect(page.getByRole('heading', { name: /escanear remito de compras/i })).toBeVisible();
 
     // 4. Ejecutar la lectura del documento de muestra (modo determinista sin IA)
     const scanButton = page.getByRole('button', { name: /leer documento/i });
@@ -44,45 +40,66 @@ test.describe('Flujo de Visión en ruta dedicada para Notas de Entrega', () => {
     await expect(page.getByText('Extracción completada')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Distribuidora Central, C.A.')).toBeVisible();
 
-    // 6. Aplicar los datos extraídos para continuar a la emisión de la nota
-    const applyBtn = page.getByRole('button', { name: /cargar datos en el formulario/i });
+    // 6. Registrar la recepción directamente en inventario mediante el botón primario
+    const directRegisterBtn = page.getByRole('button', {
+      name: /registrar recepci[oó]n de mercanc[ií]a/i,
+    });
+    await expect(directRegisterBtn).toBeVisible();
+    await directRegisterBtn.click();
+
+    // 7. Verificar el aviso de confirmación con el correlativo asignado
+    await expect(page.getByText(/recepci[oó]n (RM|REC)-\d+ registrada con [eé]xito/i)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 8. Navegar a /purchases y verificar que la recepción recién creada aparece listada
+    await page.goto('/purchases');
+    await expect(page.getByRole('cell', { name: /(RM|REC)-\d+/ }).first()).toBeVisible();
+  });
+
+  test('flujo asistido con formulario: escanea remito y transfiere los datos a /purchases/new para revisión', async ({
+    page,
+  }) => {
+    // 1. Ir a la pantalla de escaneo
+    await page.goto('/purchases/scan');
+
+    // 2. Ejecutar la lectura del documento de muestra
+    const scanButton = page.getByRole('button', { name: /leer documento/i });
+    await expect(scanButton).toBeVisible();
+    await scanButton.click();
+
+    await expect(page.getByText('Extracción completada')).toBeVisible({ timeout: 15_000 });
+
+    // 3. Hacer clic en "Cargar en formulario de compras"
+    const applyBtn = page.getByRole('button', { name: /cargar en formulario de compras/i });
     await expect(applyBtn).toBeVisible();
     await applyBtn.click();
 
-    // 7. Verificar que navegó a /delivery-notes/new con el formulario limpio y los datos hidratados
-    await expect(page).toHaveURL(/\/delivery-notes\/new/);
-    await expect(page.getByText(/datos del documento cargados en el formulario/i)).toBeVisible();
+    // 4. Verificar que navegó a /purchases/new con los datos precargados
+    await expect(page).toHaveURL(/\/purchases\/new/);
+    await expect(page.getByText(/datos del remito cargados correctamente/i)).toBeVisible();
 
-    // 8. Verificar que el formulario fue hidratado con las líneas
-    const firstQuantityInput = page.locator('input[name="line-quantity"]').first();
+    // 5. Verificar que el formulario fue hidratado con las líneas
+    const firstQuantityInput = page.locator('input[name="quantity"]').first();
     await expect(firstQuantityInput).not.toHaveValue('');
 
-    // 9. Asegurar cliente seleccionado si la muestra no coincidió con un cliente existente
-    const customerSelect = page.locator('#customerId');
-    const selectedCustomer = await customerSelect.inputValue();
-    if (!selectedCustomer) {
-      await customerSelect.selectOption({ index: 1 });
-    }
-
-    // 10. Emitir la nota de entrega
-    const submitBtn = page.getByRole('button', { name: /emitir/i });
+    // 6. Confirmar la recepción desde el formulario
+    const submitBtn = page.getByRole('button', { name: /registrar la entrada/i });
     await expect(submitBtn).toBeVisible();
     await submitBtn.click();
 
-    // 11. Confirmar que se generó la nota NE-XXXXXX en el ERP
-    await page.waitForURL(/\/delivery-notes(\?|$)/);
-    const noteStatus = page.getByRole('status').filter({ hasText: /NE-\d+/ });
-    await expect(noteStatus).toBeVisible();
+    // 7. Esperar redirección a /purchases con el código creado
+    await page.waitForURL(/\/purchases(\?|$)/);
+    const receiptStatus = page.getByRole('status').filter({ hasText: /(RM|REC)-\d+/ });
+    await expect(receiptStatus).toBeVisible();
   });
 
   test('validación amigable al subir archivos no compatibles en la pantalla de escaneo', async ({
     page,
   }) => {
-    // 1. Ir directamente a la pantalla de escaneo
-    await page.goto('/delivery-notes/scan');
-    await expect(
-      page.getByRole('heading', { name: /escanear remito con visi[oó]n/i }),
-    ).toBeVisible();
+    // 1. Ir directamente a la pantalla de escaneo de compras
+    await page.goto('/purchases/scan');
+    await expect(page.getByRole('heading', { name: /escanear remito de compras/i })).toBeVisible();
 
     // 2. Cambiar a subir comprobante propio
     await page.getByRole('button', { name: /subir comprobante/i }).click();
@@ -101,7 +118,7 @@ test.describe('Flujo de Visión en ruta dedicada para Notas de Entrega', () => {
       buffer: Buffer.from('Contenido de prueba no válido'),
     });
 
-    // 4. Verificar alerta para usuario sin código 500
+    // 4. Verificar alerta amigable para el usuario sin códigos HTTP 500
     const alert = page
       .getByRole('alert')
       .filter({ hasText: /formato del archivo no es compatible/i });

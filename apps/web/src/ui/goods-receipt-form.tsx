@@ -1,14 +1,17 @@
 'use client';
 
 import { useActionState, useState, useEffect } from 'react';
-import { Plus, Truck, X } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, ScanLine, Truck, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import type { VisionExtractResponse } from '@synapse-vision/core';
 import { receiveGoodsAction, type PurchasingState } from '@/actions/purchasing';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, Field, LABEL_CLASSES, TEXTAREA_CLASSES } from '@/ui/field';
 import { Card } from '@/ui/primitives';
 import { toast } from '@/ui/toast';
+import { SCANNED_PURCHASE_RECEIPT_KEY } from '@/ui/scan-purchase-receipt';
 
 const INITIAL: PurchasingState = { status: 'idle' };
 
@@ -55,9 +58,82 @@ export function GoodsReceiptForm({
 }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(receiveGoodsAction, INITIAL);
+  const [supplierId, setSupplierId] = useState<string>('');
+  const [supplierReference, setSupplierReference] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
   const [lines, setLines] = useState<LineDraft[]>([
     { key: 0, productId: '', quantity: '', unitCost: '' },
   ]);
+
+  // Si el usuario viene de escanear un remito en /purchases/scan, hidratamos los datos
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(SCANNED_PURCHASE_RECEIPT_KEY);
+      if (stored) {
+        sessionStorage.removeItem(SCANNED_PURCHASE_RECEIPT_KEY);
+        const res = JSON.parse(stored) as VisionExtractResponse;
+
+        // 1. Mapear líneas extraídas con productos del catálogo
+        const newLines: LineDraft[] = [];
+        const seen = new Set<string>();
+        for (let i = 0; i < res.extraction.lines.length; i++) {
+          const extractedLine = res.extraction.lines[i];
+          if (!extractedLine) continue;
+          const match = res.matches[i]?.[0];
+          const prodId = match?.productId ?? '';
+          if (prodId && !seen.has(prodId)) {
+            seen.add(prodId);
+            newLines.push({
+              key: Date.now() + i,
+              productId: prodId,
+              quantity: String(extractedLine.quantity),
+              unitCost: extractedLine.unitCost > 0 ? String(extractedLine.unitCost) : '',
+            });
+          }
+        }
+
+        if (newLines.length > 0) {
+          setLines(newLines);
+        }
+
+        // 2. Asociar proveedor si coincide con alguno registrado
+        if (res.extraction.supplier) {
+          const supLower = res.extraction.supplier.toLowerCase().trim();
+          const matched = suppliers.find((s) => {
+            const labelLower = s.label.toLowerCase();
+            return (
+              labelLower.includes(supLower) ||
+              supLower.includes(labelLower.split('·')[1]?.trim() ?? '')
+            );
+          });
+          if (matched) {
+            setSupplierId(matched.id);
+          }
+        }
+
+        // 3. Pre-cargar referencia
+        if (res.extraction.reference) {
+          setSupplierReference(res.extraction.reference);
+        }
+
+        // 4. Pre-cargar notas con la fecha del comprobante físico
+        const noteParts: string[] = [];
+        if (res.extraction.issuedAt) {
+          noteParts.push(`Fecha remito: ${res.extraction.issuedAt}`);
+        }
+        if (res.extraction.currency) {
+          noteParts.push(`Moneda: ${res.extraction.currency}`);
+        }
+        if (noteParts.length > 0) {
+          setNotes(noteParts.join(' · '));
+        }
+
+        toast.success(t('purchases.scanApplied'));
+      }
+    } catch (err) {
+      console.error('Error hydrating scanned purchase receipt', err);
+    }
+  }, [suppliers, t]);
 
   const update = (key: number, patch: Partial<LineDraft>) =>
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -153,6 +229,20 @@ export function GoodsReceiptForm({
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
     >
       <div className="min-w-0 space-y-6">
+        {/* Banner para invitar a escanear remito físico */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-control border border-brand/20 bg-brand-soft/20 px-3.5 py-2.5 text-xs text-brand-ink">
+          <div className="flex items-center gap-2">
+            <ScanLine className="size-4 text-brand shrink-0" />
+            <span>{t('purchases.scanNotice')}</span>
+          </div>
+          <Link
+            href="/purchases/scan"
+            className="font-semibold text-brand hover:underline shrink-0 text-xs sm:text-right"
+          >
+            {t('purchases.scanActionInline')}
+          </Link>
+        </div>
+
         <Card className="p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="min-w-0">
@@ -163,7 +253,8 @@ export function GoodsReceiptForm({
                 id="supplierId"
                 name="supplierId"
                 required
-                defaultValue=""
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
                 className={`mt-1.5 ${CONTROL_CLASSES}`}
               >
                 <option value="" disabled>
@@ -178,10 +269,12 @@ export function GoodsReceiptForm({
             </div>
 
             <Field
+              key={`ref-${supplierReference}`}
               name="supplierReference"
               label={t('purchases.reference')}
               optional
               hint={t('purchases.referenceHint')}
+              defaultValue={supplierReference}
             />
 
             {/* Las notas se pintaban en el detalle de la recepcion y no habia forma de
@@ -202,6 +295,8 @@ export function GoodsReceiptForm({
                 maxLength={500}
                 placeholder={t('purchases.notesHint')}
                 className={`mt-1.5 ${TEXTAREA_CLASSES}`}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>

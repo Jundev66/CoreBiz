@@ -763,7 +763,18 @@
     "lineDescription": "Producto",
     "lineQuantity": "Cantidad",
     "lineUnitCost": "Coste unitario",
-    "lineTotal": "Total de la línea"
+    "lineTotal": "Total de la línea",
+    "scanAction": "Escanear remito",
+    "scanPageTitle": "Escanear remito de compras",
+    "scanPageSubtitle": "Lee remitos físicos o facturas de proveedores para registrar la entrada de mercancía.",
+    "scanNotice": "¿Tenés un comprobante físico o PDF de tu proveedor? Podés escanearlo para cargar la recepción automáticamente.",
+    "scanActionInline": "Escanear remito con Visión →",
+    "scanApplied": "Datos del remito cargados correctamente. Verifica los renglones y confirma la recepción.",
+    "applyExtraction": "Cargar en formulario de compras",
+    "registerReceiptDirectly": "Registrar recepción de mercancía",
+    "directRegisterSuccess": "Recepción {number} registrada con éxito",
+    "directRegisterSupplier": "Registrada a nombre de {supplier} en tu inventario activo.",
+    "viewGeneratedReceipt": "Ver recepción registrada"
   },
   "suppliers": {
     "title": "Proveedores",

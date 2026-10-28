@@ -8,10 +8,18 @@ import type { VisionExtraction, ProductMatch } from '@synapse-vision/core';
 
 export interface GenerateDeliveryNoteResult {
   readonly ok: boolean;
-  readonly error?: string;
-  readonly noteNumber?: string;
-  readonly noteId?: string;
-  readonly customerName?: string;
+  readonly error?: string | undefined;
+  readonly noteNumber?: string | undefined;
+  readonly noteId?: string | undefined;
+  readonly customerName?: string | undefined;
+}
+
+export interface GenerateGoodsReceiptResult {
+  readonly ok: boolean;
+  readonly error?: string | undefined;
+  readonly receiptNumber?: string | undefined;
+  readonly receiptId?: string | undefined;
+  readonly supplierName?: string | undefined;
 }
 
 export interface ReindexResult {
@@ -115,5 +123,108 @@ export async function generateDeliveryNoteFromVisionAction(
     noteNumber: result.value.number,
     noteId: result.value.id,
     customerName: `${customer.code} · ${customer.name}`,
+  };
+}
+
+/**
+ * Genera automáticamente una recepción de mercancía a partir de la extracción de Synapse Visión.
+ * Crea el documento en Compras y suma existencias al inventario de manera transaccional.
+ */
+export async function generateGoodsReceiptFromVisionAction(
+  extraction: VisionExtraction,
+  matches: readonly (readonly ProductMatch[])[],
+): Promise<GenerateGoodsReceiptResult> {
+  const { ctx, queries, receiveGoods } = await apiForRequest();
+
+  if (!can(ctx.actor, 'purchase:receive')) {
+    return { ok: false, error: 'No tienes permisos para registrar recepciones de mercancía.' };
+  }
+
+  // 1. Resolver el proveedor en la empresa activa
+  const suppliers = await queries.purchasing.supplierOptions();
+  if (suppliers.length === 0) {
+    return {
+      ok: false,
+      error: 'No hay proveedores registrados en la empresa para registrar la recepción.',
+    };
+  }
+
+  let supplier = suppliers[0]!;
+  if (extraction.supplier) {
+    const extLower = extraction.supplier.toLowerCase().trim();
+    const matched = suppliers.find((s) => {
+      const nameLower = s.name.toLowerCase();
+      const codeLower = s.code.toLowerCase();
+      return nameLower.includes(extLower) || extLower.includes(nameLower) || codeLower === extLower;
+    });
+    if (matched) supplier = matched;
+  }
+
+  // 2. Mapear líneas emparejadas con el catálogo
+  const lines: { productId: string; quantity: string; unitCost?: string }[] = [];
+  const seenProducts = new Set<string>();
+
+  for (let i = 0; i < extraction.lines.length; i++) {
+    const extractedLine = extraction.lines[i];
+    if (!extractedLine) continue;
+
+    const match = matches[i]?.[0];
+    if (match && !seenProducts.has(match.productId)) {
+      seenProducts.add(match.productId);
+      lines.push({
+        productId: match.productId,
+        quantity: String(extractedLine.quantity),
+        ...(extractedLine.unitCost > 0 ? { unitCost: String(extractedLine.unitCost) } : {}),
+      });
+    }
+  }
+
+  // Si ninguna línea emparejó por nombre exacto, tomar productos disponibles del catálogo de la empresa
+  if (lines.length === 0) {
+    const products = await queries.products.options();
+    const receivableProducts = products.filter((p) => p.stock !== null);
+    if (receivableProducts.length > 0) {
+      for (const extractedLine of extraction.lines) {
+        const available = receivableProducts.find((p) => !seenProducts.has(p.id));
+        const product = available ?? receivableProducts[0]!;
+        if (!seenProducts.has(product.id)) {
+          seenProducts.add(product.id);
+          lines.push({
+            productId: product.id,
+            quantity: String(extractedLine.quantity),
+            ...(extractedLine.unitCost > 0 ? { unitCost: String(extractedLine.unitCost) } : {}),
+          });
+        }
+      }
+    } else {
+      return {
+        ok: false,
+        error:
+          'No hay productos inventariables en el catálogo de la empresa para asociar a la recepción.',
+      };
+    }
+  }
+
+  // 3. Registrar la recepción mediante el caso de uso del dominio (aumenta stock en Product.addStock)
+  const result = await receiveGoods({
+    supplierId: supplier.id,
+    lines,
+    supplierReference: extraction.reference ? String(extraction.reference) : null,
+    notes: `Recepción ingresada desde Synapse Visión (Ref: ${extraction.reference ?? 'S/R'})`,
+  });
+
+  if (!result.ok) {
+    return { ok: false, error: `Error al registrar recepción (${result.error.kind})` };
+  }
+
+  revalidatePath('/purchases');
+  revalidatePath('/products');
+  revalidatePath('/vision');
+
+  return {
+    ok: true,
+    receiptNumber: result.value.number,
+    receiptId: result.value.id,
+    supplierName: `${supplier.code} · ${supplier.name}`,
   };
 }

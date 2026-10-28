@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import { Plus, Truck, UsersRound } from 'lucide-react';
+import { Plus, ScanLine, Truck, UsersRound } from 'lucide-react';
 import { withSession } from '@/api/session';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
@@ -65,20 +65,64 @@ export default async function PurchasesPage({
       title={t('purchases.title')}
       subtitle={t('purchases.subtitle')}
       action={
-        <>
-          <ButtonLink href="/purchases/suppliers" variant="secondary">
-            <UsersRound aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            {t('purchases.suppliers')}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+          <ButtonLink
+            href="/purchases/suppliers"
+            variant="secondary"
+            className="justify-center text-xs sm:text-sm px-2.5 sm:px-3"
+          >
+            <UsersRound aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+            <span className="truncate">{t('purchases.suppliers')}</span>
           </ButtonLink>
-          <PrimaryLink href="/purchases/new">
-            <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-            {t('purchases.new')}
-          </PrimaryLink>
-        </>
+          {can(ctx.actor, 'purchase:receive') && (
+            <ButtonLink
+              href="/purchases/scan"
+              variant="secondary"
+              className="justify-center text-xs sm:text-sm px-2.5 sm:px-3"
+            >
+              <ScanLine aria-hidden="true" className="size-4 shrink-0 text-brand" />
+              <span className="truncate">{t('purchases.scanAction')}</span>
+            </ButtonLink>
+          )}
+          {can(ctx.actor, 'purchase:receive') && (
+            <PrimaryLink
+              href="/purchases/new"
+              className="col-span-2 justify-center text-xs sm:text-sm px-2.5 sm:px-3 sm:col-span-1"
+            >
+              <Plus aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
+              <span className="truncate">{t('purchases.new')}</span>
+            </PrimaryLink>
+          )}
+        </div>
       }
     >
       {page.items.length === 0 ? (
-        <Empty icon={Truck}>{t('purchases.empty')}</Empty>
+        <Empty
+          icon={Truck}
+          action={
+            <div className="grid w-full max-w-xs grid-cols-1 gap-2 sm:max-w-none sm:grid-cols-2 sm:items-center sm:justify-center">
+              {can(ctx.actor, 'purchase:receive') && (
+                <ButtonLink
+                  href="/purchases/scan"
+                  variant="secondary"
+                  size="sm"
+                  className="justify-center"
+                >
+                  <ScanLine aria-hidden="true" className="size-4 text-brand" />
+                  <span>{t('purchases.scanAction')}</span>
+                </ButtonLink>
+              )}
+              {can(ctx.actor, 'purchase:receive') && (
+                <ButtonLink href="/purchases/new" size="sm" className="justify-center">
+                  <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+                  <span>{t('purchases.new')}</span>
+                </ButtonLink>
+              )}
+            </div>
+          }
+        >
+          {t('purchases.empty')}
+        </Empty>
       ) : (
         <>
           <DesktopOnly>

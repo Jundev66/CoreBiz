@@ -763,7 +763,18 @@
     "lineDescription": "Product",
     "lineQuantity": "Quantity",
     "lineUnitCost": "Unit cost",
-    "lineTotal": "Line total"
+    "lineTotal": "Line total",
+    "scanAction": "Scan delivery note",
+    "scanPageTitle": "Scan supplier delivery note",
+    "scanPageSubtitle": "Extract physical supplier delivery notes or purchase invoices to receive inventory.",
+    "scanNotice": "Do you have a physical or PDF receipt from your supplier? You can scan it to fill this receipt automatically.",
+    "scanActionInline": "Scan receipt with Vision →",
+    "scanApplied": "Delivery note data loaded successfully. Check lines and confirm receipt.",
+    "applyExtraction": "Load into purchases form",
+    "registerReceiptDirectly": "Receive goods directly",
+    "directRegisterSuccess": "Goods receipt {number} created successfully",
+    "directRegisterSupplier": "Registered to {supplier} in your active inventory.",
+    "viewGeneratedReceipt": "View goods receipt"
   },
   "suppliers": {
     "title": "Suppliers",

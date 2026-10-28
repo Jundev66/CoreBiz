@@ -1,11 +1,8 @@
 'use client';
 
 import { useActionState, useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Plus, X, ScanLine } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { VisionExtractResponse } from '@synapse-vision/core';
-import { SCANNED_NOTE_STORAGE_KEY } from '@/ui/scan-delivery-note';
 import { issueDeliveryNoteAction, type IssueNoteState } from '@/actions/sales';
 import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
@@ -75,64 +72,6 @@ export function DeliveryNoteForm({
   const [lines, setLines] = useState<LineDraft[]>([
     { key: 0, productId: '', quantity: '', unitPrice: '', discount: '' },
   ]);
-
-  // Si el usuario viene de escanear un remito en /delivery-notes/scan, hidratamos los datos
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(SCANNED_NOTE_STORAGE_KEY);
-      if (stored) {
-        sessionStorage.removeItem(SCANNED_NOTE_STORAGE_KEY);
-        const res = JSON.parse(stored) as VisionExtractResponse;
-
-        // 1. Mapear líneas extraídas con productos del catálogo
-        const newLines: LineDraft[] = res.extraction.lines.map((extractedLine, index) => {
-          const match = res.matches[index]?.[0];
-          return {
-            key: Date.now() + index,
-            productId: match?.productId ?? '',
-            quantity: String(extractedLine.quantity),
-            unitPrice: extractedLine.unitCost > 0 ? String(extractedLine.unitCost) : '',
-            discount: '',
-          };
-        });
-
-        if (newLines.length > 0) {
-          setLines(newLines);
-        }
-
-        // 2. Asociar cliente si el documento extrae un proveedor/cliente y coincide con alguno registrado
-        if (res.extraction.supplier) {
-          const supplierLower = res.extraction.supplier.toLowerCase().trim();
-          const matchedCustomer = customers.find((c) => {
-            const labelLower = c.label.toLowerCase();
-            return (
-              labelLower.includes(supplierLower) ||
-              supplierLower.includes(labelLower.split('·')[1]?.trim() ?? '')
-            );
-          });
-          if (matchedCustomer) {
-            setCustomerId(matchedCustomer.id);
-          }
-        }
-
-        // 3. Pre-cargar notas con la referencia y fecha del comprobante físico
-        const refParts: string[] = [];
-        if (res.extraction.reference) {
-          refParts.push(`${t('deliveryNotes.notesRefPrefix')}: ${res.extraction.reference}`);
-        }
-        if (res.extraction.issuedAt) {
-          refParts.push(`Fecha: ${res.extraction.issuedAt}`);
-        }
-        if (refParts.length > 0) {
-          setNotes(refParts.join(' · '));
-        }
-
-        toast.success(t('deliveryNotes.scanApplied'));
-      }
-    } catch (err) {
-      console.error('Error hydrating scanned delivery note', err);
-    }
-  }, [customers, t]);
 
   const catalogPrice = (productId: string) =>
     Number(products.find((p) => p.id === productId)?.price ?? '0');
@@ -230,257 +169,239 @@ export function DeliveryNoteForm({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Enlace sutil al escáner sin saturar la pantalla móvil */}
-      <div className="flex items-center justify-between pb-1">
-        <Link
-          href="/delivery-notes/scan"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
-        >
-          <ScanLine className="size-3.5" />
-          <span>{t('deliveryNotes.scanPromptLink')}</span>
-        </Link>
-      </div>
-
-      <form
-        action={handleAction}
-        className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
-      >
-        <div className="min-w-0 space-y-6">
-          <Card className="p-5 sm:p-6">
-            <label htmlFor="customerId" className={LABEL_CLASSES}>
-              {t('deliveryNotes.customer')}
-              <span aria-hidden="true" className="ml-0.5 text-danger-ink">
-                *
-              </span>
-            </label>
-            <select
-              id="customerId"
-              name="customerId"
-              required
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              className={`mt-1.5 ${CONTROL_CLASSES} sm:max-w-md`}
-            >
-              <option value="" disabled>
-                —
+    <form
+      action={handleAction}
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
+    >
+      <div className="min-w-0 space-y-6">
+        <Card className="p-5 sm:p-6">
+          <label htmlFor="customerId" className={LABEL_CLASSES}>
+            {t('deliveryNotes.customer')}
+            <span aria-hidden="true" className="ml-0.5 text-danger-ink">
+              *
+            </span>
+          </label>
+          <select
+            id="customerId"
+            name="customerId"
+            required
+            value={customerId}
+            onChange={(e) => setCustomerId(e.target.value)}
+            className={`mt-1.5 ${CONTROL_CLASSES} sm:max-w-md`}
+          >
+            <option value="" disabled>
+              —
+            </option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.label}
               </option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.label}
-                </option>
-              ))}
-            </select>
-          </Card>
+            ))}
+          </select>
+        </Card>
 
-          <Card className="p-5 sm:p-6">
-            <fieldset className="space-y-3">
-              <legend className="mb-4 text-base font-semibold text-ink">
-                {t('deliveryNotes.description')}
-              </legend>
+        <Card className="p-5 sm:p-6">
+          <fieldset className="space-y-3">
+            <legend className="mb-4 text-base font-semibold text-ink">
+              {t('deliveryNotes.description')}
+            </legend>
 
-              {/* Column header for the compact row. Decorative: every box carries its own
+            {/* Column header for the compact row. Decorative: every box carries its own
                 label, so a screen reader hears it once per field instead of twice. */}
-              <div
-                aria-hidden="true"
-                className={`hidden gap-3 border-b border-line pb-2 text-xs font-medium text-muted sm:grid ${LINE_GRID}`}
-              >
-                <span>{t('purchases.product')}</span>
-                <span>{t('deliveryNotes.quantity')}</span>
-                <span>{t('deliveryNotes.unitPrice')}</span>
-                <span>{t('deliveryNotes.discount')}</span>
-                <span className="text-right">{t('deliveryNotes.lineTotal')}</span>
-              </div>
+            <div
+              aria-hidden="true"
+              className={`hidden gap-3 border-b border-line pb-2 text-xs font-medium text-muted sm:grid ${LINE_GRID}`}
+            >
+              <span>{t('purchases.product')}</span>
+              <span>{t('deliveryNotes.quantity')}</span>
+              <span>{t('deliveryNotes.unitPrice')}</span>
+              <span>{t('deliveryNotes.discount')}</span>
+              <span className="text-right">{t('deliveryNotes.lineTotal')}</span>
+            </div>
 
-              {lines.map((line, index) => {
-                const product = products.find((p) => p.id === line.productId);
-                return (
-                  <div
-                    key={line.key}
-                    className="rounded-control border border-line bg-canvas p-3 sm:border-0 sm:bg-transparent sm:p-0"
-                  >
-                    <div
-                      className={`grid grid-cols-2 items-end gap-3 sm:items-center ${LINE_GRID}`}
-                    >
-                      <div className="col-span-2 min-w-0 sm:col-span-1">
-                        <label htmlFor={`line-product-${line.key}`} className={LINE_LABEL}>
-                          {t('purchases.product')}
-                          <span className="sr-only"> {index + 1}</span>
-                        </label>
-                        <select
-                          id={`line-product-${line.key}`}
-                          name="line-product"
-                          value={line.productId}
-                          onChange={(e) => updateLine(line.key, { productId: e.target.value })}
-                          className={CONTROL_CLASSES}
-                        >
-                          <option value="">—</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label} · $ {p.price}
-                              {p.stock !== null ? ` · ${p.stock} ${p.unit}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label htmlFor={`line-quantity-${line.key}`} className={LINE_LABEL}>
-                          {t('deliveryNotes.quantity')}
-                          <span className="sr-only"> {index + 1}</span>
-                        </label>
-                        <input
-                          id={`line-quantity-${line.key}`}
-                          name="line-quantity"
-                          inputMode="decimal"
-                          placeholder={t('deliveryNotes.quantity')}
-                          value={line.quantity}
-                          onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
-                          className={CONTROL_CLASSES}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`line-price-${line.key}`} className={LINE_LABEL}>
-                          {t('deliveryNotes.unitPrice')}
-                          <span className="sr-only"> {index + 1}</span>
-                        </label>
-                        <input
-                          id={`line-price-${line.key}`}
-                          name="line-price"
-                          inputMode="decimal"
-                          placeholder={product ? product.price : t('deliveryNotes.unitPrice')}
-                          value={line.unitPrice}
-                          onChange={(e) => updateLine(line.key, { unitPrice: e.target.value })}
-                          className={CONTROL_CLASSES}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`line-discount-${line.key}`} className={LINE_LABEL}>
-                          {t('deliveryNotes.discount')}
-                          <span className="sr-only"> {index + 1}</span>
-                        </label>
-                        <input
-                          id={`line-discount-${line.key}`}
-                          name="line-discount"
-                          inputMode="decimal"
-                          placeholder="% 0"
-                          value={line.discount}
-                          onChange={(e) => updateLine(line.key, { discount: e.target.value })}
-                          className={CONTROL_CLASSES}
-                        />
-                      </div>
-
-                      <div className="text-right">
-                        <span
-                          aria-hidden="true"
-                          className="mb-1 block text-xs font-medium text-muted sm:hidden"
-                        >
-                          {t('deliveryNotes.lineTotal')}
-                        </span>
-                        <span className="flex h-10 items-center justify-end text-sm font-medium text-ink tabular-nums">
-                          {product ? `$ ${lineTotal(line).toFixed(2)}` : '—'}
-                        </span>
-                      </div>
-
-                      {lines.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
-                          aria-label={`${t('common.remove')} ${index + 1}`}
-                          className="col-span-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-control border border-line bg-surface text-sm font-medium text-danger-ink transition-colors hover:bg-danger-soft sm:col-span-1 sm:size-10 sm:border-0 sm:bg-transparent"
-                        >
-                          <X aria-hidden="true" className="size-4" strokeWidth={2} />
-                          <span aria-hidden="true" className="sm:hidden">
-                            {t('common.remove')}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setLines((prev) => [
-                      ...prev,
-                      { key: Date.now(), productId: '', quantity: '', unitPrice: '', discount: '' },
-                    ])
-                  }
-                  className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+            {lines.map((line, index) => {
+              const product = products.find((p) => p.id === line.productId);
+              return (
+                <div
+                  key={line.key}
+                  className="rounded-control border border-line bg-canvas p-3 sm:border-0 sm:bg-transparent sm:p-0"
                 >
-                  <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-                  {t('common.add')}
-                </button>
-              </div>
-            </fieldset>
-          </Card>
+                  <div className={`grid grid-cols-2 items-end gap-3 sm:items-center ${LINE_GRID}`}>
+                    <div className="col-span-2 min-w-0 sm:col-span-1">
+                      <label htmlFor={`line-product-${line.key}`} className={LINE_LABEL}>
+                        {t('purchases.product')}
+                        <span className="sr-only"> {index + 1}</span>
+                      </label>
+                      <select
+                        id={`line-product-${line.key}`}
+                        name="line-product"
+                        value={line.productId}
+                        onChange={(e) => updateLine(line.key, { productId: e.target.value })}
+                        className={CONTROL_CLASSES}
+                      >
+                        <option value="">—</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label} · $ {p.price}
+                            {p.stock !== null ? ` · ${p.stock} ${p.unit}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-          {/* Las notas viajaban en el contrato y en el caso de uso desde el principio, y
+                    <div>
+                      <label htmlFor={`line-quantity-${line.key}`} className={LINE_LABEL}>
+                        {t('deliveryNotes.quantity')}
+                        <span className="sr-only"> {index + 1}</span>
+                      </label>
+                      <input
+                        id={`line-quantity-${line.key}`}
+                        name="line-quantity"
+                        inputMode="decimal"
+                        placeholder={t('deliveryNotes.quantity')}
+                        value={line.quantity}
+                        onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
+                        className={CONTROL_CLASSES}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor={`line-price-${line.key}`} className={LINE_LABEL}>
+                        {t('deliveryNotes.unitPrice')}
+                        <span className="sr-only"> {index + 1}</span>
+                      </label>
+                      <input
+                        id={`line-price-${line.key}`}
+                        name="line-price"
+                        inputMode="decimal"
+                        placeholder={product ? product.price : t('deliveryNotes.unitPrice')}
+                        value={line.unitPrice}
+                        onChange={(e) => updateLine(line.key, { unitPrice: e.target.value })}
+                        className={CONTROL_CLASSES}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor={`line-discount-${line.key}`} className={LINE_LABEL}>
+                        {t('deliveryNotes.discount')}
+                        <span className="sr-only"> {index + 1}</span>
+                      </label>
+                      <input
+                        id={`line-discount-${line.key}`}
+                        name="line-discount"
+                        inputMode="decimal"
+                        placeholder="% 0"
+                        value={line.discount}
+                        onChange={(e) => updateLine(line.key, { discount: e.target.value })}
+                        className={CONTROL_CLASSES}
+                      />
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        aria-hidden="true"
+                        className="mb-1 block text-xs font-medium text-muted sm:hidden"
+                      >
+                        {t('deliveryNotes.lineTotal')}
+                      </span>
+                      <span className="flex h-10 items-center justify-end text-sm font-medium text-ink tabular-nums">
+                        {product ? `$ ${lineTotal(line).toFixed(2)}` : '—'}
+                      </span>
+                    </div>
+
+                    {lines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
+                        aria-label={`${t('common.remove')} ${index + 1}`}
+                        className="col-span-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-control border border-line bg-surface text-sm font-medium text-danger-ink transition-colors hover:bg-danger-soft sm:col-span-1 sm:size-10 sm:border-0 sm:bg-transparent"
+                      >
+                        <X aria-hidden="true" className="size-4" strokeWidth={2} />
+                        <span aria-hidden="true" className="sm:hidden">
+                          {t('common.remove')}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() =>
+                  setLines((prev) => [
+                    ...prev,
+                    { key: Date.now(), productId: '', quantity: '', unitPrice: '', discount: '' },
+                  ])
+                }
+                className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+              >
+                <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+                {t('common.add')}
+              </button>
+            </div>
+          </fieldset>
+        </Card>
+
+        {/* Las notas viajaban en el contrato y en el caso de uso desde el principio, y
             ningun formulario las pedia: llegaban siempre vacias. Es donde va lo que el
             documento necesita decir y no cabe en una linea — «entregar por la puerta de
             atras», «el cliente recoge el lunes». */}
-          <Card className="p-5 sm:p-6">
-            <label htmlFor="notes" className={LABEL_CLASSES}>
-              {t('deliveryNotes.notes')}
-            </label>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={3}
-              maxLength={500}
-              placeholder={t('deliveryNotes.notesHint')}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className={`mt-1.5 ${TEXTAREA_CLASSES}`}
-            />
-          </Card>
-        </div>
+        <Card className="p-5 sm:p-6">
+          <label htmlFor="notes" className={LABEL_CLASSES}>
+            {t('deliveryNotes.notes')}
+          </label>
+          <textarea
+            id="notes"
+            name="notes"
+            rows={3}
+            maxLength={500}
+            placeholder={t('deliveryNotes.notesHint')}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className={`mt-1.5 ${TEXTAREA_CLASSES}`}
+          />
+        </Card>
+      </div>
 
-        {/* The summary and the ONLY submit button. On a phone it stays pinned above the tab
+      {/* The summary and the ONLY submit button. On a phone it stays pinned above the tab
           bar while the lines scroll; from `lg` it sits beside them, pinned to the top. */}
-        <div
-          data-pinned-summary
-          className="sticky bottom-20 z-10 space-y-3 lg:top-6 lg:bottom-auto"
-        >
-          {state.status === 'error' && state.errorKind && (
-            <Alert tone="danger" role="alert" className="shadow-sm">
-              {t(`errors.${state.errorKind}`, state.errorParams ?? {})}
-            </Alert>
-          )}
+      <div data-pinned-summary className="sticky bottom-20 z-10 space-y-3 lg:top-6 lg:bottom-auto">
+        {state.status === 'error' && state.errorKind && (
+          <Alert tone="danger" role="alert" className="shadow-sm">
+            {t(`errors.${state.errorKind}`, state.errorParams ?? {})}
+          </Alert>
+        )}
 
-          {/* On a phone it is ONE compact row — total on the left, the button on the right — so
+        {/* On a phone it is ONE compact row — total on the left, the button on the right — so
             the pinned bar never covers the line being typed. The full card returns at `sm`. */}
-          <Card className="flex items-center gap-4 p-3 shadow-md sm:block sm:p-5 lg:shadow-xs">
-            <dl className="min-w-0 flex-1 space-y-1.5 text-sm">
-              <div className="hidden justify-between gap-4 sm:flex">
-                <dt className="text-muted">{t('deliveryNotes.subtotal')}</dt>
-                <dd className="text-ink tabular-nums">$ {subtotal.toFixed(2)}</dd>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 sm:border-t sm:border-line sm:pt-2">
-                <dt className="text-xs text-muted sm:text-sm sm:font-semibold sm:text-ink">
-                  {t('deliveryNotes.total')}
-                </dt>
-                <dd className="text-lg font-semibold text-ink tabular-nums">
-                  $ {estimatedTotal.toFixed(2)}
-                </dd>
-              </div>
-            </dl>
+        <Card className="flex items-center gap-4 p-3 shadow-md sm:block sm:p-5 lg:shadow-xs">
+          <dl className="min-w-0 flex-1 space-y-1.5 text-sm">
+            <div className="hidden justify-between gap-4 sm:flex">
+              <dt className="text-muted">{t('deliveryNotes.subtotal')}</dt>
+              <dd className="text-ink tabular-nums">$ {subtotal.toFixed(2)}</dd>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 sm:border-t sm:border-line sm:pt-2">
+              <dt className="text-xs text-muted sm:text-sm sm:font-semibold sm:text-ink">
+                {t('deliveryNotes.total')}
+              </dt>
+              <dd className="text-lg font-semibold text-ink tabular-nums">
+                $ {estimatedTotal.toFixed(2)}
+              </dd>
+            </div>
+          </dl>
 
-            <button
-              type="submit"
-              disabled={pending}
-              className={buttonClasses({ size: 'lg', className: 'shrink-0 sm:mt-4 sm:w-full' })}
-            >
-              {pending ? '…' : t('common.issue')}
-            </button>
-          </Card>
-        </div>
-      </form>
-    </div>
+          <button
+            type="submit"
+            disabled={pending}
+            className={buttonClasses({ size: 'lg', className: 'shrink-0 sm:mt-4 sm:w-full' })}
+          >
+            {pending ? '…' : t('common.issue')}
+          </button>
+        </Card>
+      </div>
+    </form>
   );
 }

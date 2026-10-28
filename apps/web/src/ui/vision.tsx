@@ -99,11 +99,27 @@ function defaultSampleFile(): VisionFileInput {
   };
 }
 
+export interface DirectActionResult {
+  readonly ok: boolean;
+  readonly error?: string | undefined;
+  readonly number?: string | undefined;
+  readonly id?: string | undefined;
+  readonly entityName?: string | undefined;
+  readonly viewHref?: string | undefined;
+  readonly successTitle?: string | undefined;
+  readonly successSubtitle?: string | undefined;
+}
+
 export interface VisionScanProps {
   readonly title: string;
   readonly aiStatus?: AssistantStatusView | null | undefined;
   readonly onApplyExtraction?: ((res: VisionExtractResponse) => void) | undefined;
   readonly applyButtonLabel?: string | undefined;
+  readonly onDirectAction?:
+    ((res: VisionExtractResponse) => Promise<DirectActionResult>) | undefined;
+  readonly directActionLabel?: string | undefined;
+  readonly directActionTitle?: string | undefined;
+  readonly directActionDescription?: string | undefined;
 }
 
 export function VisionScan({
@@ -111,6 +127,10 @@ export function VisionScan({
   aiStatus,
   onApplyExtraction,
   applyButtonLabel,
+  onDirectAction,
+  directActionLabel,
+  directActionTitle,
+  directActionDescription,
 }: VisionScanProps): ReactElement {
   const t = useTranslations('vision');
   const fileInputId = useId();
@@ -120,6 +140,7 @@ export function VisionScan({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const [generationResult, setGenerationResult] = useState<GenerateDeliveryNoteResult | null>(null);
+  const [directActionResult, setDirectActionResult] = useState<DirectActionResult | null>(null);
   const [isGenerating, startGenerating] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -200,6 +221,7 @@ export function VisionScan({
     setSelectedFile(defaultSampleFile());
     setIsCustomUpload(false);
     setGenerationResult(null);
+    setDirectActionResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     reset();
   }, [reset]);
@@ -208,12 +230,14 @@ export function VisionScan({
     setClientError(null);
     setIsCustomUpload(true);
     setGenerationResult(null);
+    setDirectActionResult(null);
     reset();
   }, [reset]);
 
   const handleScan = useCallback((): void => {
     setClientError(null);
     setGenerationResult(null);
+    setDirectActionResult(null);
     void scan(selectedFile);
   }, [selectedFile, scan]);
 
@@ -222,16 +246,25 @@ export function VisionScan({
     setSelectedFile(defaultSampleFile());
     setIsCustomUpload(false);
     setGenerationResult(null);
+    setDirectActionResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     reset();
   }, [reset]);
 
-  const handleGenerateDeliveryNote = useCallback((res: VisionExtractResponse): void => {
-    startGenerating(async () => {
-      const result = await generateDeliveryNoteFromVisionAction(res.extraction, res.matches);
-      setGenerationResult(result);
-    });
-  }, []);
+  const handleActionExecute = useCallback(
+    (res: VisionExtractResponse): void => {
+      startGenerating(async () => {
+        if (onDirectAction) {
+          const result = await onDirectAction(res);
+          setDirectActionResult(result);
+        } else {
+          const result = await generateDeliveryNoteFromVisionAction(res.extraction, res.matches);
+          setGenerationResult(result);
+        }
+      });
+    },
+    [onDirectAction],
+  );
 
   return (
     <div className="space-y-5">
@@ -628,66 +661,126 @@ export function VisionScan({
             </div>
           </div>
 
-          {/* Bloque de Acción: Cargar en el Formulario o Generar Nota */}
+          {/* Bloque de Acción: Cargar en el Formulario o Registrar Documento Directamente */}
           <div className="rounded-card border border-brand/20 bg-brand-soft/20 p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="max-w-md">
                 <h4 className="text-sm font-semibold text-ink flex items-center gap-2">
                   <FileCheck className="size-4 text-brand" />
-                  {onApplyExtraction
-                    ? t('applyToFormTitle')
-                    : 'Demostración del flujo completo de ERP'}
+                  {directActionTitle ??
+                    (onApplyExtraction
+                      ? t('applyToFormTitle')
+                      : 'Demostración del flujo completo de ERP')}
                 </h4>
                 <p className="text-xs text-muted mt-1 leading-relaxed">
-                  {onApplyExtraction
-                    ? t('applyToFormDescription')
-                    : 'Podés emitir automáticamente la nota de entrega en tu empresa activa, afectando inventario, saldos y correlativos con aislamiento multi-tenant estricto.'}
+                  {directActionDescription ??
+                    (onApplyExtraction
+                      ? t('applyToFormDescription')
+                      : 'Podés registrar automáticamente el comprobante en tu empresa activa, afectando inventario, saldos y correlativos con aislamiento multi-tenant estricto.')}
                 </p>
               </div>
 
-              {onApplyExtraction ? (
-                <button
-                  type="button"
-                  onClick={() => onApplyExtraction(state.result)}
-                  className={buttonClasses({
-                    variant: 'primary',
-                    size: 'md',
-                    className: 'shrink-0 shadow-xs',
-                  })}
-                >
-                  <FileCheck className="size-4" />
-                  <span>{applyButtonLabel ?? t('applyToForm')}</span>
-                </button>
-              ) : (
-                !generationResult?.ok && (
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                {/* Botón de acción directa (registrar de una vez) */}
+                {(onDirectAction || !onApplyExtraction) &&
+                  !directActionResult?.ok &&
+                  !generationResult?.ok && (
+                    <button
+                      type="button"
+                      onClick={() => handleActionExecute(state.result)}
+                      disabled={isGenerating}
+                      className={buttonClasses({
+                        variant: 'primary',
+                        size: 'md',
+                        className: 'shadow-xs',
+                      })}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw className="size-4 animate-spin" />
+                          <span>{t('generating')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="size-4" />
+                          <span>
+                            {directActionLabel ??
+                              (onDirectAction
+                                ? 'Registrar comprobante'
+                                : t('generateDeliveryNote'))}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                {/* Botón para pre-cargar y revisar en el formulario */}
+                {onApplyExtraction && (
                   <button
                     type="button"
-                    onClick={() => handleGenerateDeliveryNote(state.result)}
-                    disabled={isGenerating}
+                    onClick={() => onApplyExtraction(state.result)}
                     className={buttonClasses({
-                      variant: 'primary',
+                      variant: onDirectAction ? 'secondary' : 'primary',
                       size: 'md',
-                      className: 'shrink-0 shadow-xs',
+                      className: 'shadow-xs',
                     })}
                   >
-                    {isGenerating ? (
-                      <>
-                        <RefreshCw className="size-4 animate-spin" />
-                        <span>{t('generating')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="size-4" />
-                        <span>{t('generateDeliveryNote')}</span>
-                      </>
-                    )}
+                    <FileCheck className="size-4" />
+                    <span>{applyButtonLabel ?? t('applyToForm')}</span>
                   </button>
-                )
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Resultado de la Generación directa (cuando no se usa onApplyExtraction) */}
-            {!onApplyExtraction && generationResult && (
+            {/* Resultado de la acción directa parametrizada (ej. Compras) */}
+            {directActionResult && (
+              <div
+                className={`mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-control p-3.5 text-sm ${
+                  directActionResult.ok
+                    ? 'border border-brand/40 bg-surface text-ink shadow-xs'
+                    : 'border border-danger/40 bg-danger-soft text-danger-ink'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {directActionResult.ok ? (
+                    <CheckCircle2 className="size-5 text-brand shrink-0" />
+                  ) : (
+                    <AlertCircle className="size-5 text-danger shrink-0" />
+                  )}
+                  <div>
+                    <span className="font-semibold block">
+                      {directActionResult.ok
+                        ? (directActionResult.successTitle ??
+                          `Comprobante ${directActionResult.number} registrado con éxito`)
+                        : 'No se pudo completar la operación'}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {directActionResult.ok
+                        ? (directActionResult.successSubtitle ??
+                          `Asignado a ${directActionResult.entityName} en la empresa activa.`)
+                        : directActionResult.error}
+                    </span>
+                  </div>
+                </div>
+
+                {directActionResult.ok && directActionResult.viewHref && (
+                  <Link
+                    href={directActionResult.viewHref}
+                    className={buttonClasses({
+                      variant: 'secondary',
+                      size: 'sm',
+                      className: 'shrink-0',
+                    })}
+                  >
+                    <span>Ver comprobante</span>
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Resultado de la Generación directa clásica (demostración de notas de entrega) */}
+            {!onDirectAction && generationResult && (
               <div
                 className={`mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-control p-3.5 text-sm ${
                   generationResult.ok
