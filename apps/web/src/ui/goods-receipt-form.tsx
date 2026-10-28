@@ -188,9 +188,8 @@ export function GoodsReceiptForm({
 
     const filledLines = lines.filter((l) => l.productId.trim() !== '');
     if (filledLines.length === 0) {
-      toast.error('Debe seleccionar al menos un producto recibido en los renglones.', {
-        title: 'Renglón requerido',
-      });
+      // Delegar al caso de uso del servidor para que devuelva NoLines y muestre el Alert accesible
+      formAction(formData);
       return;
     }
 
