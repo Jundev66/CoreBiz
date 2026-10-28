@@ -2,7 +2,8 @@ import {
   buildExtractionPrompt,
   computeDocumentHash,
   demoDocument,
-  demoExtraction,
+  demoExtractionFor,
+  isDemoFilename,
   parseVisionExtraction,
   redactExtraction,
   validateImageInput,
@@ -62,13 +63,22 @@ export function createVisionNodes(deps: VisionNodesDeps) {
         state.connection.model.trim() !== '';
 
       if (!isAvailable || state.connection === null || deps.model === undefined) {
-        // Fallback en modo demo (garantía de doble modo sin IA)
-        const extraction = redactExtraction(demoExtraction());
+        if (isDemoFilename(state.image.filename)) {
+          const extraction = redactExtraction(demoExtractionFor(state.image.filename));
+          return {
+            mode: 'demo',
+            extraction,
+            document: demoDocument(state.image.filename),
+            status: 'demo',
+          };
+        }
         return {
-          mode: 'demo',
-          extraction,
-          document: demoDocument(),
-          status: 'demo',
+          error: {
+            kind: 'AiNotConfigured',
+            message:
+              'Para procesar tus propios comprobantes necesitas conectar un proveedor de IA en Ajustes.',
+          },
+          status: 'failed',
         };
       }
 

@@ -78,6 +78,7 @@ function getFriendlyVisionErrorMessage(
   if (kind === 'AiModelUnavailable') return t('errors.aiModelUnavailable');
   if (kind === 'AiRateLimited') return t('errors.aiRateLimited');
   if (kind === 'Forbidden') return t('errors.forbidden');
+  if (kind === 'AiNotConfigured') return t('errors.aiNotConfigured');
 
   // Si el mensaje contiene fragmentos técnicos con códigos HTTP, evitar mostrarlos a usuarios no técnicos
   if (
@@ -527,13 +528,26 @@ export function VisionScan({
       {(clientError !== null || state.status === 'error') && (
         <div
           role="alert"
-          className="flex items-start sm:items-center gap-3 rounded-control border border-danger/30 bg-danger-soft p-3.5 text-sm text-danger-ink animate-in fade-in duration-200"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-control border border-danger/30 bg-danger-soft p-3.5 text-sm text-danger-ink animate-in fade-in duration-200"
         >
-          <AlertCircle className="size-5 shrink-0 mt-0.5 sm:mt-0 text-danger" />
-          <p className="font-medium leading-snug">
-            {clientError ??
-              (state.status === 'error' ? getFriendlyVisionErrorMessage(state, t) : null)}
-          </p>
+          <div className="flex items-start sm:items-center gap-3">
+            <AlertCircle className="size-5 shrink-0 mt-0.5 sm:mt-0 text-danger" />
+            <p className="font-medium leading-snug">
+              {clientError ??
+                (state.status === 'error' ? getFriendlyVisionErrorMessage(state, t) : null)}
+            </p>
+          </div>
+          {state.status === 'error' &&
+            state.errorKind === 'AiNotConfigured' &&
+            aiStatus?.canConfigure && (
+              <Link
+                href="/settings/ai"
+                className="inline-flex items-center gap-1.5 shrink-0 rounded-control bg-brand px-3 py-1.5 font-semibold text-white shadow-xs hover:bg-brand-hover text-xs transition-colors self-start sm:self-auto"
+              >
+                <span>Configurar API Key</span>
+                <ArrowRight className="size-3" />
+              </Link>
+            )}
         </div>
       )}
 

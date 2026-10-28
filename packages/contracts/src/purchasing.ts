@@ -119,3 +119,50 @@ export const voidGoodsReceiptSchema = z
   .strict();
 
 export type VoidGoodsReceiptInput = z.infer<typeof voidGoodsReceiptSchema>;
+
+export const confirmVisionReceiptSchema = z
+  .object({
+    supplierDecision: z.discriminatedUnion('mode', [
+      z.object({ mode: z.literal('existing'), supplierId: recordIdSchema }).strict(),
+      z
+        .object({
+          mode: z.literal('create'),
+          name: z.string().trim().min(2, 'TooShort').max(120, 'TooLong'),
+          taxId: z.string().trim().max(24).optional().or(z.literal('')),
+        })
+        .strict(),
+    ]),
+    linesDecision: z.array(
+      z.discriminatedUnion('mode', [
+        z
+          .object({
+            mode: z.literal('existing'),
+            productId: recordIdSchema,
+            quantity: decimalStringSchema,
+            unitCost: decimalStringSchema.optional().or(z.literal('')),
+          })
+          .strict(),
+        z
+          .object({
+            mode: z.literal('create'),
+            name: z.string().trim().min(2, 'TooShort').max(120, 'TooLong'),
+            sku: z.string().trim().max(24).optional().or(z.literal('')),
+            unit: z.string().trim().max(16).optional().or(z.literal('')),
+            quantity: decimalStringSchema,
+            unitCost: decimalStringSchema.optional().or(z.literal('')),
+          })
+          .strict(),
+      ]),
+    ),
+    documentMetadata: z
+      .object({
+        filename: z.string().trim().max(128).optional().or(z.literal('')),
+        documentHash: z.string().trim().max(64).optional().or(z.literal('')),
+        supplierReference: z.string().trim().max(64).optional().or(z.literal('')),
+        notes: z.string().trim().max(500).optional().or(z.literal('')),
+      })
+      .optional(),
+  })
+  .strict();
+
+export type ConfirmVisionReceiptBody = z.infer<typeof confirmVisionReceiptSchema>;

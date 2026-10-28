@@ -16,6 +16,7 @@ import {
   makeReceiveCustomerPayment,
   makeVoidCustomerPayment,
   makeReceiveGoods,
+  makeConfirmVisionReceipt,
   makeVoidGoodsReceipt,
   makeRemoveMember,
   makeRevokeInvitation,
@@ -159,6 +160,7 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     updateSupplier: makeUpdateSupplier(shared),
     setSupplierStatus: makeSetSupplierStatus(shared),
     receiveGoods: makeReceiveGoods(shared),
+    confirmVisionReceipt: makeConfirmVisionReceipt(shared),
     voidGoodsReceipt: makeVoidGoodsReceipt(shared),
 
     // AI assistant. Settings are owner/admin; asking is open to every role.

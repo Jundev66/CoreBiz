@@ -10,6 +10,7 @@ import type {
   MarkDeliveredInput,
   ReceiveCustomerPaymentInput,
   ReceiveGoodsInput,
+  ConfirmVisionReceiptInput,
   SetCustomerStatusInput,
   SetProductStatusInput,
   SetSupplierStatusInput,
@@ -238,6 +239,16 @@ export function httpCommands() {
         supplierReference: orUndefined(input.supplierReference),
         notes: orUndefined(input.notes),
       }),
+
+    confirmVisionReceipt: (input: ConfirmVisionReceiptInput) =>
+      send<{
+        id: string;
+        number: string;
+        total: string;
+        supplierName: string;
+        createdSupplier: boolean;
+        createdProductsCount: number;
+      }>('POST', '/v1/purchasing/receipts/confirm-vision', input),
 
     voidGoodsReceipt: (input: VoidGoodsReceiptInput & { goodsReceiptId: string }) =>
       send<{ number: string }>(

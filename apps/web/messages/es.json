@@ -73,6 +73,7 @@
       "aiModelUnavailable": "El modelo de IA configurado no está disponible o no admite lectura visual.",
       "aiRateLimited": "Se alcanzó el límite de solicitudes al proveedor de IA. Espera unos momentos antes de reintentar.",
       "forbidden": "No tienes permiso para utilizar la función de lectura de documentos.",
+      "aiNotConfigured": "Para procesar documentos reales con visión inteligente necesitas configurar una clave de API (OpenAI, Anthropic o Gemini) en la configuración de la empresa.",
       "unexpected": "Ocurrió un inconveniente al procesar el archivo. Prueba con una imagen más clara o utiliza el documento de demostración."
     }
   },

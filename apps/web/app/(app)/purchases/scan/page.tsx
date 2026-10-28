@@ -8,13 +8,15 @@ import { ScanPurchaseReceipt } from '@/ui/scan-purchase-receipt';
 
 export default async function ScanPurchaseReceiptPage() {
   const t = await getTranslations();
-  const { ctx } = await apiForRequest();
+  const { ctx, queries } = await apiForRequest();
 
   if (!can(ctx.actor, 'purchase:receive')) notFound();
 
-  const aiStatus = can(ctx.actor, 'assistant:use')
-    ? await assistantStatus().catch(() => null)
-    : null;
+  const [aiStatus, suppliers, products] = await Promise.all([
+    can(ctx.actor, 'assistant:use') ? assistantStatus().catch(() => null) : null,
+    queries.purchasing.supplierOptions(),
+    queries.products.options(),
+  ]);
 
   return (
     <Screen
@@ -22,7 +24,19 @@ export default async function ScanPurchaseReceiptPage() {
       subtitle={t('purchases.scanPageSubtitle')}
       back={{ href: '/purchases', label: t('purchases.title') }}
     >
-      <ScanPurchaseReceipt aiStatus={aiStatus} />
+      <ScanPurchaseReceipt
+        aiStatus={aiStatus}
+        suppliers={suppliers.map((s) => ({ id: s.id, code: s.code, name: s.name }))}
+        products={products
+          .filter((p) => p.stock !== null)
+          .map((p) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            unit: p.unit,
+            cost: p.cost ?? null,
+          }))}
+      />
     </Screen>
   );
 }

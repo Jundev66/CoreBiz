@@ -73,6 +73,7 @@
       "aiModelUnavailable": "The configured AI model is unavailable or does not support vision extraction.",
       "aiRateLimited": "AI provider rate limit reached. Please wait a moment before trying again.",
       "forbidden": "You do not have permission to use document vision extraction.",
+      "aiNotConfigured": "To process real documents with intelligent vision, you need to configure an API key (OpenAI, Anthropic, or Gemini) in company settings.",
       "unexpected": "An issue occurred while processing the file. Try a clearer image or use the demo document."
     }
   },

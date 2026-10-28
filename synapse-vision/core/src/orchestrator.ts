@@ -4,7 +4,7 @@ import type { ProductMatch, VisionBridgePort, VisionModelPort } from './ports';
 import type { VisionExtraction } from './documents';
 import { parseVisionExtraction } from './documents';
 import { buildExtractionPrompt } from './prompt';
-import { demoDocument, demoExtraction } from './demo';
+import { demoDocument, demoExtractionFor, isDemoFilename } from './demo';
 import { redactExtraction, validateImageInput } from './security';
 import { computeDocumentHash, type VisionDocumentCachePort } from './deduplication';
 
@@ -58,8 +58,8 @@ export class VisionOrchestrator {
   }
 
   /** El resultado de ejemplo. Es también el fallback cuando no hay IA. */
-  async demo(actor?: VisionActorContext): Promise<VisionExtractSuccess> {
-    const extraction = demoExtraction();
+  async demo(actor?: VisionActorContext, filename?: string): Promise<VisionExtractSuccess> {
+    const extraction = demoExtractionFor(filename);
     const safeExtraction = redactExtraction(extraction);
     const matches =
       actor !== undefined
@@ -74,7 +74,7 @@ export class VisionOrchestrator {
       mode: 'demo',
       extraction: safeExtraction,
       matches,
-      document: demoDocument(),
+      document: demoDocument(filename),
     };
   }
 
@@ -84,8 +84,16 @@ export class VisionOrchestrator {
     image: VisionImageInput,
   ): Promise<VisionExtractResult> {
     const model = this.deps.model;
+    const isSample = isDemoFilename(image.filename);
     if (model === undefined || !this.isModelAvailable(connection) || connection === null) {
-      return visionOk(await this.demo(actor));
+      if (isSample) {
+        return visionOk(await this.demo(actor, image.filename));
+      }
+      return visionErr({
+        kind: 'AiNotConfigured',
+        message:
+          'Para procesar tus propios comprobantes necesitas conectar un proveedor de IA en Ajustes.',
+      });
     }
 
     const invalid = validateImageInput(image);

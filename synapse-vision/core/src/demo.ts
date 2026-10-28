@@ -13,20 +13,109 @@ import { pdfDocument } from './demo-pdf';
 
 export const DEMO_FILENAME = 'nota-de-entrega-ejemplo.pdf';
 
+export interface DemoSamplePreset {
+  readonly id: string;
+  readonly filename: string;
+  readonly label: string;
+  readonly description: string;
+  readonly badge: string;
+  readonly extraction: VisionExtraction;
+}
+
+export const DEMO_PRESETS: readonly DemoSamplePreset[] = [
+  {
+    id: 'happy-path',
+    filename: DEMO_FILENAME,
+    label: 'Remito estándar (coincidencia total)',
+    description:
+      'Proveedor conocido y productos existentes en catálogo. Flujo directo sin discrepancias.',
+    badge: 'Sin discrepancias',
+    extraction: {
+      supplier: 'Distribuidora Central, C.A.',
+      reference: 'NE-4502',
+      issuedAt: '2026-10-14',
+      currency: 'USD',
+      lines: [
+        { description: 'Harina de trigo 1 kg', quantity: 20, unit: 'bolsa', unitCost: 1.2 },
+        { description: 'Manteca vegetal 500 g', quantity: 5, unit: 'pote', unitCost: 3.5 },
+        { description: 'Azucar refinada 1 kg', quantity: 12, unit: 'paquete', unitCost: 0.95 },
+        { description: 'Cafe molido 250 g', quantity: 8, unit: 'paquete', unitCost: 2.1 },
+      ],
+      notes: 'Documento estándar de prueba sin discrepancias con el catálogo.',
+    },
+  },
+  {
+    id: 'discrepancies',
+    filename: 'remito-discrepancias.pdf',
+    label: 'Remito con discrepancias (ítems nuevos)',
+    description:
+      'Proveedor no registrado y artículos fuera de catálogo para confirmar su alta o mapeo.',
+    badge: 'Requiere revisión',
+    extraction: {
+      supplier: 'Lácteos y Alimentos Los Andes, C.A.',
+      reference: 'FAC-8841',
+      issuedAt: '2026-10-20',
+      currency: 'USD',
+      lines: [
+        { description: 'Harina de trigo 1 kg', quantity: 15, unit: 'bolsa', unitCost: 1.25 },
+        { description: 'Queso Gouda rebanado 500 g', quantity: 8, unit: 'paquete', unitCost: 4.8 },
+        {
+          description: 'Crema de leche pasteurizada 250 ml',
+          quantity: 12,
+          unit: 'envase',
+          unitCost: 1.9,
+        },
+        { description: 'Azucar refinada 1 kg', quantity: 10, unit: 'paquete', unitCost: 0.95 },
+      ],
+      notes: 'Comprobante con proveedor e ítems no existentes en el inventario actual.',
+    },
+  },
+  {
+    id: 'wrinkled-ticket',
+    filename: 'ticket-compra-arrugado.pdf',
+    label: 'Ticket de compra de mostrador',
+    description: 'Comprobante de caja con formato compacto, ítems fraccionados y proveedor local.',
+    badge: 'Ticket impreso',
+    extraction: {
+      supplier: 'Supermercado Mayorista El Rincón, S.A.',
+      reference: 'TK-3091',
+      issuedAt: '2026-10-22',
+      currency: 'USD',
+      lines: [
+        { description: 'Cafe molido 250 g', quantity: 6, unit: 'paquete', unitCost: 2.2 },
+        {
+          description: 'Levadura seca instantánea 100 g',
+          quantity: 25,
+          unit: 'sobre',
+          unitCost: 0.65,
+        },
+        {
+          description: 'Aceite vegetal comestible 1 L',
+          quantity: 10,
+          unit: 'botella',
+          unitCost: 2.8,
+        },
+      ],
+      notes: 'Ticket de compras directas de mostrador.',
+    },
+  },
+];
+
+export function isDemoFilename(filename: string | null | undefined): boolean {
+  if (!filename) return false;
+  return filename === DEMO_FILENAME || DEMO_PRESETS.some((p) => p.filename === filename);
+}
+
+export function demoExtractionFor(filename?: string | null): VisionExtraction {
+  if (filename) {
+    const preset = DEMO_PRESETS.find((p) => p.filename === filename);
+    if (preset) return preset.extraction;
+  }
+  return demoExtraction();
+}
+
 export function demoExtraction(): VisionExtraction {
-  return {
-    supplier: 'Distribuidora Central, C.A.',
-    reference: 'NE-4502',
-    issuedAt: '2026-10-14',
-    currency: 'USD',
-    lines: [
-      { description: 'Harina de trigo 1 kg', quantity: 20, unit: 'bolsa', unitCost: 1.2 },
-      { description: 'Manteca vegetal 500 g', quantity: 5, unit: 'pote', unitCost: 3.5 },
-      { description: 'Azucar refinada 1 kg', quantity: 12, unit: 'paquete', unitCost: 0.95 },
-      { description: 'Cafe molido 250 g', quantity: 8, unit: 'paquete', unitCost: 2.1 },
-    ],
-    notes: 'Documento de ejemplo generado por Synapse Vision para la demostracion.',
-  };
+  return DEMO_PRESETS[0]!.extraction;
 }
 
 /**
@@ -62,8 +151,10 @@ export function demoDocumentLines(
 }
 
 /** El documento de ejemplo listo para descargar o servir desde el host. */
-export function demoDocument(): VisionDocument {
-  return pdfDocument(DEMO_FILENAME, demoDocumentLines());
+export function demoDocument(filename?: string | null): VisionDocument {
+  const ext = demoExtractionFor(filename);
+  const name = filename && isDemoFilename(filename) ? filename : DEMO_FILENAME;
+  return pdfDocument(name, demoDocumentLines(ext));
 }
 
 const B64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -88,6 +179,6 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
  * La representación en base64 del documento de ejemplo, utilizable directamente en la UI
  * como documento pre-cargado por defecto para la demostración.
  */
-export function demoDocumentBase64(): string {
-  return uint8ArrayToBase64(demoDocument().bytes);
+export function demoDocumentBase64(filename?: string | null): string {
+  return uint8ArrayToBase64(demoDocument(filename).bytes);
 }

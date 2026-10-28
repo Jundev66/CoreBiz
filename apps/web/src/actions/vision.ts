@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { can } from '@corebiz/domain';
+import type { ConfirmVisionReceiptInput } from '@corebiz/application';
 import { apiForRequest } from '@/api/session';
 import { reindexEmbeddings } from '@/api/vision';
 import type { VisionExtraction, ProductMatch } from '@synapse-vision/core';
@@ -226,5 +227,51 @@ export async function generateGoodsReceiptFromVisionAction(
     receiptNumber: result.value.number,
     receiptId: result.value.id,
     supplierName: `${supplier.code} · ${supplier.name}`,
+  };
+}
+
+export interface ConfirmVisionReceiptActionResult {
+  readonly ok: boolean;
+  readonly error?: string | undefined;
+  readonly receiptNumber?: string | undefined;
+  readonly receiptId?: string | undefined;
+  readonly supplierName?: string | undefined;
+  readonly total?: string | undefined;
+  readonly createdSupplier?: boolean | undefined;
+  readonly createdProductsCount?: number | undefined;
+}
+
+/**
+ * Registra atómicamente la recepción de mercadería resolviendo las decisiones del usuario:
+ * - Creación o mapeo del proveedor.
+ * - Creación en catálogo o mapeo de productos no existentes.
+ * - Registro de GoodsReceipt, incremento de stock en libro mayor y auditoría con trazabilidad de origen.
+ */
+export async function confirmVisionPurchaseReceiptAction(
+  input: ConfirmVisionReceiptInput,
+): Promise<ConfirmVisionReceiptActionResult> {
+  const { ctx, confirmVisionReceipt } = await apiForRequest();
+
+  if (!can(ctx.actor, 'purchase:receive')) {
+    return { ok: false, error: 'No tienes permisos para registrar recepciones de mercancía.' };
+  }
+
+  const result = await confirmVisionReceipt(input);
+  if (!result.ok) {
+    return { ok: false, error: `Error al registrar recepción (${result.error.kind})` };
+  }
+
+  revalidatePath('/purchases');
+  revalidatePath('/products');
+  revalidatePath('/vision');
+
+  return {
+    ok: true,
+    receiptNumber: result.value.number,
+    receiptId: result.value.id,
+    supplierName: result.value.supplierName,
+    total: result.value.total,
+    createdSupplier: result.value.createdSupplier,
+    createdProductsCount: result.value.createdProductsCount,
   };
 }

@@ -18,6 +18,7 @@ import {
   createSupplierSchema,
   updateSupplierBodySchema,
   receiveGoodsSchema,
+  confirmVisionReceiptSchema,
   setStatusSchema,
   voidGoodsReceiptSchema,
 } from '@corebiz/contracts';
@@ -194,6 +195,22 @@ export class PurchasingController {
         lines: body.lines,
         supplierReference: body.supplierReference || null,
         notes: body.notes || null,
+      }),
+    );
+  }
+
+  @Post('receipts/confirm-vision')
+  @RequirePermission('purchase:receive')
+  @ApiOperation({ summary: 'Registrar recepción atómica a partir de la confirmación de Visión' })
+  async confirmVisionReceipt(
+    @Body(new ZodValidationPipe(confirmVisionReceiptSchema))
+    body: z.infer<typeof confirmVisionReceiptSchema>,
+  ): Promise<unknown> {
+    return unwrapOrThrow(
+      await this.useCases.confirmVisionReceipt({
+        supplierDecision: body.supplierDecision,
+        linesDecision: body.linesDecision,
+        documentMetadata: body.documentMetadata,
       }),
     );
   }
