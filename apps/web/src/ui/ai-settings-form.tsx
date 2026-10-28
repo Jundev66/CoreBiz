@@ -351,11 +351,11 @@ export function AiSettingsForm({ saved }: { saved: AiSettingsView | null }) {
       {saved !== null && removal.status !== 'success' && (
         <div className="rounded-card border border-brand/20 bg-brand-soft/10 p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-brand-ink flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-brand flex items-center gap-1.5">
               <Sparkles className="size-3.5 text-brand" />
               Capacidades habilitadas con este proveedor
             </h3>
-            <span className="inline-flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-ink">
+            <span className="inline-flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand">
               Activo
             </span>
           </div>

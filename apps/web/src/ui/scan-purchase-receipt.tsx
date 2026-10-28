@@ -535,17 +535,29 @@ export function ScanPurchaseReceipt({
         <div
           className={`p-3 rounded-card border transition-all ${
             !activeDoc || activeDoc.status === 'pending'
-              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs'
-              : 'border-line bg-surface text-muted'
+              ? 'border-brand bg-brand-soft/20 shadow-xs'
+              : 'border-line bg-surface'
           }`}
         >
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="size-4.5 rounded-full bg-brand text-white text-[10px] grid place-items-center font-bold">
+            <span
+              className={`size-4.5 rounded-full text-[10px] grid place-items-center font-bold ${
+                !activeDoc || activeDoc.status === 'pending'
+                  ? 'bg-brand text-white'
+                  : 'bg-subtle text-ink-soft border border-line'
+              }`}
+            >
               1
             </span>
-            <span className="text-[11px] font-semibold text-ink">Cargar Comprobante</span>
+            <span
+              className={`text-[11px] font-semibold ${
+                !activeDoc || activeDoc.status === 'pending' ? 'text-brand' : 'text-ink'
+              }`}
+            >
+              Cargar Comprobante
+            </span>
           </div>
-          <p className="text-[11px] opacity-80 leading-snug">
+          <p className="text-[11px] text-muted leading-snug">
             Elige un escenario o sube tus propios remitos/facturas.
           </p>
         </div>
@@ -553,17 +565,29 @@ export function ScanPurchaseReceipt({
         <div
           className={`p-3 rounded-card border transition-all ${
             activeDoc?.status === 'scanning'
-              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs animate-pulse'
-              : 'border-line bg-surface text-muted'
+              ? 'border-brand bg-brand-soft/20 shadow-xs animate-pulse'
+              : 'border-line bg-surface'
           }`}
         >
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="size-4.5 rounded-full bg-subtle text-ink text-[10px] grid place-items-center font-bold border border-line">
+            <span
+              className={`size-4.5 rounded-full text-[10px] grid place-items-center font-bold ${
+                activeDoc?.status === 'scanning'
+                  ? 'bg-brand text-white'
+                  : 'bg-subtle text-ink-soft border border-line'
+              }`}
+            >
               2
             </span>
-            <span className="text-[11px] font-semibold text-ink">Lectura Inteligente</span>
+            <span
+              className={`text-[11px] font-semibold ${
+                activeDoc?.status === 'scanning' ? 'text-brand' : 'text-ink'
+              }`}
+            >
+              Lectura Inteligente
+            </span>
           </div>
-          <p className="text-[11px] opacity-80 leading-snug">
+          <p className="text-[11px] text-muted leading-snug">
             Extracción OCR y cotejo inteligente con el catálogo.
           </p>
         </div>
@@ -571,17 +595,29 @@ export function ScanPurchaseReceipt({
         <div
           className={`p-3 rounded-card border transition-all ${
             activeDoc?.status === 'ready'
-              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs'
-              : 'border-line bg-surface text-muted'
+              ? 'border-brand bg-brand-soft/20 shadow-xs'
+              : 'border-line bg-surface'
           }`}
         >
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="size-4.5 rounded-full bg-brand text-white text-[10px] grid place-items-center font-bold">
+            <span
+              className={`size-4.5 rounded-full text-[10px] grid place-items-center font-bold ${
+                activeDoc?.status === 'ready'
+                  ? 'bg-brand text-white'
+                  : 'bg-subtle text-ink-soft border border-line'
+              }`}
+            >
               3
             </span>
-            <span className="text-[11px] font-semibold text-ink">Revisión y Cotejo</span>
+            <span
+              className={`text-[11px] font-semibold ${
+                activeDoc?.status === 'ready' ? 'text-brand' : 'text-ink'
+              }`}
+            >
+              Revisión y Cotejo
+            </span>
           </div>
-          <p className="text-[11px] opacity-80 leading-snug">
+          <p className="text-[11px] text-muted leading-snug">
             Decide si das de alta o vinculas datos faltantes.
           </p>
         </div>
@@ -589,17 +625,29 @@ export function ScanPurchaseReceipt({
         <div
           className={`p-3 rounded-card border transition-all ${
             activeDoc?.status === 'confirmed'
-              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs'
-              : 'border-line bg-surface text-muted'
+              ? 'border-brand bg-brand-soft/20 shadow-xs'
+              : 'border-line bg-surface'
           }`}
         >
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="size-4.5 rounded-full bg-brand text-white text-[10px] grid place-items-center font-bold">
+            <span
+              className={`size-4.5 rounded-full text-[10px] grid place-items-center font-bold ${
+                activeDoc?.status === 'confirmed'
+                  ? 'bg-brand text-white'
+                  : 'bg-subtle text-ink-soft border border-line'
+              }`}
+            >
               4
             </span>
-            <span className="text-[11px] font-semibold text-ink">Entrada en Almacén</span>
+            <span
+              className={`text-[11px] font-semibold ${
+                activeDoc?.status === 'confirmed' ? 'text-brand' : 'text-ink'
+              }`}
+            >
+              Entrada en Almacén
+            </span>
           </div>
-          <p className="text-[11px] opacity-80 leading-snug">
+          <p className="text-[11px] text-muted leading-snug">
             Generación atómica RM-XXXXXX y suma al inventario.
           </p>
         </div>
@@ -608,7 +656,7 @@ export function ScanPurchaseReceipt({
       {/* Banner de estado del proveedor de IA */}
       {aiStatus !== undefined &&
         (aiStatus?.configured ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-card border border-brand/30 bg-brand-soft/20 px-4 py-3 text-xs text-brand-ink">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-card border border-brand/30 bg-brand-soft/20 px-4 py-3 text-xs text-ink">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-brand shrink-0" />
               <span>
@@ -819,7 +867,7 @@ export function ScanPurchaseReceipt({
                   : 'border-line hover:border-brand/50 bg-subtle/30 hover:bg-subtle/60'
               }`}
             >
-              <div className="grid size-10 place-items-center rounded-pill bg-brand-soft text-brand-ink mb-2 shadow-xs">
+              <div className="grid size-10 place-items-center rounded-pill bg-brand-soft text-brand mb-2 shadow-xs">
                 <Upload className="size-5" />
               </div>
               <p className="text-xs font-semibold text-ink">
@@ -992,7 +1040,7 @@ export function ScanPurchaseReceipt({
                   className={`text-[10px] font-semibold px-2 py-0.5 rounded-pill ${
                     !activeDoc.isCustom
                       ? 'bg-warn-soft text-warn-ink border border-warn/30'
-                      : 'bg-brand-soft text-brand-ink border border-brand/30'
+                      : 'bg-brand-soft text-brand border border-brand/30'
                   }`}
                 >
                   {!activeDoc.isCustom ? 'Demostración' : 'Comprobante real'}

@@ -229,7 +229,7 @@ export function GoodsReceiptForm({
     >
       <div className="min-w-0 space-y-6">
         {/* Banner para invitar a escanear remito físico */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-control border border-brand/20 bg-brand-soft/20 px-3.5 py-2.5 text-xs text-brand-ink">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-control border border-brand/20 bg-brand-soft/20 px-3.5 py-2.5 text-xs text-ink">
           <div className="flex items-center gap-2">
             <ScanLine className="size-4 text-brand shrink-0" />
             <span>{t('purchases.scanNotice')}</span>

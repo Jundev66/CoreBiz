@@ -272,7 +272,7 @@ export function VisionScan({
       {/* Banner de estado del proveedor de IA */}
       {aiStatus !== undefined &&
         (aiStatus?.configured ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-card border border-brand/30 bg-brand-soft/20 px-3.5 py-2.5 text-xs text-brand-ink">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-card border border-brand/30 bg-brand-soft/20 px-3.5 py-2.5 text-xs text-ink">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-brand shrink-0" />
               <span>
@@ -352,7 +352,7 @@ export function VisionScan({
           <div className="flex items-start gap-2.5">
             <Sparkles className="size-4 text-brand shrink-0 mt-0.5" />
             <div className="space-y-0.5">
-              <p className="font-semibold text-brand-ink">
+              <p className="font-semibold text-brand">
                 ¿Querés procesar tus propios remitos y facturas con IA real?
               </p>
               <p className="text-muted leading-relaxed">{t('needsAiKeyNotice')}</p>
@@ -391,7 +391,7 @@ export function VisionScan({
             }
           }}
         >
-          <div className="grid size-12 place-items-center rounded-pill bg-brand-soft text-brand-ink mb-3 shadow-xs">
+          <div className="grid size-12 place-items-center rounded-pill bg-brand-soft text-brand mb-3 shadow-xs">
             <Upload className="size-6" />
           </div>
           <p className="text-sm font-semibold text-ink">{t('dragDropPrompt')}</p>
@@ -417,7 +417,7 @@ export function VisionScan({
                   className="size-14 rounded-control border border-line object-cover bg-surface shrink-0 shadow-xs"
                 />
               ) : (
-                <div className="grid size-11 place-items-center rounded-control bg-brand-soft text-brand-ink shrink-0">
+                <div className="grid size-11 place-items-center rounded-control bg-brand-soft text-brand shrink-0">
                   <FileText className="size-5" />
                 </div>
               )}
@@ -428,7 +428,7 @@ export function VisionScan({
                     {selectedFile.filename ?? 'documento'}
                   </span>
                   {!isCustomUpload ? (
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-ink">
+                    <span className="inline-flex items-center gap-1 rounded-pill bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand">
                       <Sparkles className="size-3" />
                       {t('demoBadge')}
                     </span>
@@ -561,7 +561,7 @@ export function VisionScan({
                 className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-0.5 text-xs font-semibold ${
                   state.result.mode === 'demo'
                     ? 'border border-warn/40 bg-warn-soft text-warn-ink'
-                    : 'border border-brand/40 bg-brand-soft text-brand-ink'
+                    : 'border border-brand/40 bg-brand-soft text-brand'
                 }`}
               >
                 {state.result.mode === 'demo' ? (
@@ -656,7 +656,7 @@ export function VisionScan({
                         </td>
                         <td className="px-4 py-2.5">
                           {match ? (
-                            <div className="inline-flex items-center gap-1.5 rounded-pill bg-brand-soft/70 px-2.5 py-1 text-xs font-medium text-brand-ink">
+                            <div className="inline-flex items-center gap-1.5 rounded-pill bg-brand-soft/70 px-2.5 py-1 text-xs font-medium text-brand">
                               <CheckCircle2 className="size-3.5 text-brand shrink-0" />
                               <span className="truncate max-w-[180px]">{match.name}</span>
                               <span className="text-[11px] font-mono opacity-70">
