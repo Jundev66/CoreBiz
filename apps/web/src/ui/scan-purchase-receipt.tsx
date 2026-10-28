@@ -14,23 +14,21 @@ import Link from 'next/link';
 import {
   AlertCircle,
   ArrowRight,
+  Check,
   CheckCircle2,
   Clock,
   FileCheck,
   FileText,
+  HelpCircle,
   Layers,
+  Plus,
   RefreshCw,
   ScanLine,
   Sparkles,
   Trash2,
   Upload,
 } from 'lucide-react';
-import {
-  demoDocumentBase64,
-  DEMO_FILENAME,
-  DEMO_PRESETS,
-  type VisionExtractResponse,
-} from '@synapse-vision/core';
+import { demoDocumentBase64, DEMO_PRESETS, type VisionExtractResponse } from '@synapse-vision/core';
 import {
   createFetchVisionTransport,
   VisionTransportError,
@@ -104,6 +102,7 @@ export interface ScanPurchaseReceiptProps {
 
 interface QueueDocument {
   readonly id: string;
+  readonly presetId?: string | undefined;
   readonly file: VisionFileInput;
   readonly isCustom: boolean;
   status: 'pending' | 'scanning' | 'ready' | 'confirmed' | 'error';
@@ -131,6 +130,7 @@ interface EditableLineDecision {
   createName: string;
   createSku: string;
   createUnit: string;
+  hasMatch: boolean;
 }
 
 export function ScanPurchaseReceipt({
@@ -141,26 +141,27 @@ export function ScanPurchaseReceipt({
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cola de documentos para procesamiento por lote
+  // Inicializar la cola con el primer escenario de demostración de forma determinista
   const [documents, setDocuments] = useState<readonly QueueDocument[]>(() => [
     {
-      id: 'demo-doc-1',
+      id: `demo-${DEMO_PRESETS[0]!.id}`,
+      presetId: DEMO_PRESETS[0]!.id,
       file: {
-        base64: demoDocumentBase64(),
+        base64: demoDocumentBase64(DEMO_PRESETS[0]!.filename),
         mimeType: 'application/pdf',
-        filename: DEMO_FILENAME,
+        filename: DEMO_PRESETS[0]!.filename,
       },
       isCustom: false,
       status: 'pending',
     },
   ]);
 
-  const [activeDocId, setActiveDocId] = useState<string>('demo-doc-1');
+  const [activeDocId, setActiveDocId] = useState<string>(`demo-${DEMO_PRESETS[0]!.id}`);
   const [isProcessingQueue, setIsProcessingQueue] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'demo' | 'custom'>('demo');
 
-  // Estado del formulario interactivo de revisión del documento activo
+  // Estado del formulario interactivo de revisión del comprobante activo
   const [supplierDecision, setSupplierDecision] = useState<EditableSupplierDecision>({
     mode: 'create',
     supplierId: suppliers[0]?.id ?? '',
@@ -229,6 +230,7 @@ export function ScanPurchaseReceipt({
             createName: line.description,
             createSku: generateAutoSku(line.description),
             createUnit: line.unit || 'und',
+            hasMatch: true,
           };
         }
 
@@ -244,6 +246,7 @@ export function ScanPurchaseReceipt({
           createName: line.description,
           createSku: generateAutoSku(line.description),
           createUnit: line.unit || 'und',
+          hasMatch: false,
         };
       });
 
@@ -352,22 +355,31 @@ export function ScanPurchaseReceipt({
     }
   };
 
-  // Cargar preset de demostración
+  // Cargar preset de demostración SIN duplicar si ya existe
   const handleSelectDemoPreset = (presetId: string) => {
     const preset = DEMO_PRESETS.find((p) => p.id === presetId) ?? DEMO_PRESETS[0]!;
-    const newDocId = `demo-${preset.id}-${Date.now()}`;
-    const newDoc: QueueDocument = {
-      id: newDocId,
-      file: {
-        base64: demoDocumentBase64(preset.filename),
-        mimeType: 'application/pdf',
-        filename: preset.filename,
-      },
-      isCustom: false,
-      status: 'pending',
-    };
-    setDocuments((prev) => [newDoc, ...prev]);
-    setActiveDocId(newDocId);
+    const docId = `demo-${preset.id}`;
+    const existing = documents.find((d) => d.id === docId || d.file.filename === preset.filename);
+
+    if (existing) {
+      // Si ya está en cola, lo seleccionamos directamente
+      handleSelectActiveDoc(existing.id);
+    } else {
+      // Si no estaba, lo agregamos y lo seleccionamos
+      const newDoc: QueueDocument = {
+        id: docId,
+        presetId: preset.id,
+        file: {
+          base64: demoDocumentBase64(preset.filename),
+          mimeType: 'application/pdf',
+          filename: preset.filename,
+        },
+        isCustom: false,
+        status: 'pending',
+      };
+      setDocuments((prev) => [...prev, newDoc]);
+      setActiveDocId(docId);
+    }
     setActiveTab('demo');
   };
 
@@ -518,19 +530,94 @@ export function ScanPurchaseReceipt({
 
   return (
     <div className="space-y-6">
-      {/* Banner de estado de IA */}
+      {/* Guía Visual Paso a Paso para el Usuario */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+        <div
+          className={`p-3 rounded-card border transition-all ${
+            !activeDoc || activeDoc.status === 'pending'
+              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs'
+              : 'border-line bg-surface text-muted'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="size-4.5 rounded-full bg-brand text-white text-[10px] grid place-items-center font-bold">
+              1
+            </span>
+            <span className="text-[11px] font-semibold text-ink">Cargar Comprobante</span>
+          </div>
+          <p className="text-[11px] opacity-80 leading-snug">
+            Elige un escenario o sube tus propios remitos/facturas.
+          </p>
+        </div>
+
+        <div
+          className={`p-3 rounded-card border transition-all ${
+            activeDoc?.status === 'scanning'
+              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs animate-pulse'
+              : 'border-line bg-surface text-muted'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="size-4.5 rounded-full bg-subtle text-ink text-[10px] grid place-items-center font-bold border border-line">
+              2
+            </span>
+            <span className="text-[11px] font-semibold text-ink">Lectura Inteligente</span>
+          </div>
+          <p className="text-[11px] opacity-80 leading-snug">
+            Extracción OCR y cotejo inteligente con el catálogo.
+          </p>
+        </div>
+
+        <div
+          className={`p-3 rounded-card border transition-all ${
+            activeDoc?.status === 'ready'
+              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs'
+              : 'border-line bg-surface text-muted'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="size-4.5 rounded-full bg-brand text-white text-[10px] grid place-items-center font-bold">
+              3
+            </span>
+            <span className="text-[11px] font-semibold text-ink">Revisión y Cotejo</span>
+          </div>
+          <p className="text-[11px] opacity-80 leading-snug">
+            Decide si das de alta o vinculas datos faltantes.
+          </p>
+        </div>
+
+        <div
+          className={`p-3 rounded-card border transition-all ${
+            activeDoc?.status === 'confirmed'
+              ? 'border-brand bg-brand-soft/20 text-brand-ink font-semibold shadow-xs'
+              : 'border-line bg-surface text-muted'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="size-4.5 rounded-full bg-brand text-white text-[10px] grid place-items-center font-bold">
+              4
+            </span>
+            <span className="text-[11px] font-semibold text-ink">Entrada en Almacén</span>
+          </div>
+          <p className="text-[11px] opacity-80 leading-snug">
+            Generación atómica RM-XXXXXX y suma al inventario.
+          </p>
+        </div>
+      </div>
+
+      {/* Banner de estado del proveedor de IA */}
       {aiStatus !== undefined &&
         (aiStatus?.configured ? (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-card border border-brand/30 bg-brand-soft/20 px-4 py-3 text-xs text-brand-ink">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-brand shrink-0" />
               <span>
-                Visión Inteligente activa con <strong>{aiStatus.provider}</strong>{' '}
+                Visión Inteligente conectada con <strong>{aiStatus.provider}</strong>{' '}
                 {aiStatus.model ? `(${aiStatus.model})` : ''}
               </span>
             </div>
             <span className="text-[11px] text-muted">
-              Tus documentos reales se interpretan en vivo con este modelo
+              Tus documentos propios se interpretan en vivo con este modelo
             </span>
           </div>
         ) : (
@@ -554,7 +641,7 @@ export function ScanPurchaseReceipt({
         ))}
 
       {/* Selector de modo: Demostración asistida vs Subir comprobantes propios */}
-      <div className="rounded-card border border-line bg-surface p-4 sm:p-5 shadow-xs">
+      <div className="rounded-card border border-line bg-surface p-4 sm:p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-4">
           <div>
             <h3 className="text-base font-semibold text-ink flex items-center gap-2">
@@ -597,37 +684,108 @@ export function ScanPurchaseReceipt({
 
         {/* Pestaña: Casos de Demostración */}
         {activeTab === 'demo' && (
-          <div className="pt-4 space-y-3">
-            <p className="text-xs text-muted">
-              Selecciona uno de los tres escenarios preparados para verificar el flujo de extracción
-              y cotejo:
-            </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted">
+              <HelpCircle className="size-3.5 text-brand shrink-0" />
+              <span>
+                Explora uno de los 3 escenarios preparados. Haz clic para seleccionarlo (si ya está
+                en la cola, cambiará directamente a él sin duplicarlo):
+              </span>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {DEMO_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => handleSelectDemoPreset(preset.id)}
-                  className="flex flex-col items-start p-3.5 rounded-control border border-line bg-surface-raised hover:border-brand/50 hover:bg-subtle/50 transition-all text-left group"
-                >
-                  <div className="flex items-center justify-between w-full mb-1.5">
-                    <span className="text-xs font-semibold text-ink group-hover:text-brand transition-colors">
-                      {preset.label}
-                    </span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-pill bg-brand-soft text-brand-ink">
-                      {preset.badge}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted leading-relaxed">{preset.description}</p>
-                </button>
-              ))}
+              {DEMO_PRESETS.map((preset) => {
+                const docId = `demo-${preset.id}`;
+                const existingDoc = documents.find(
+                  (d) => d.id === docId || d.file.filename === preset.filename,
+                );
+                const isActive =
+                  activeDoc?.id === existingDoc?.id || activeDoc?.file.filename === preset.filename;
+
+                const isHappy = preset.id === 'happy-path';
+                const isDiscrepancy = preset.id === 'discrepancies';
+
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleSelectDemoPreset(preset.id)}
+                    className={`flex flex-col items-start p-3.5 rounded-card border text-left transition-all group relative ${
+                      isActive
+                        ? 'border-brand ring-2 ring-brand/30 bg-brand-soft/20 shadow-xs'
+                        : existingDoc
+                          ? 'border-line bg-surface-raised hover:border-brand/50'
+                          : 'border-line bg-surface hover:border-brand/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1.5 gap-2">
+                      <span className="text-xs font-semibold text-ink group-hover:text-brand transition-colors line-clamp-1">
+                        {preset.label}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-pill shrink-0 ${
+                          isHappy
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                            : isDiscrepancy
+                              ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30'
+                              : 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20'
+                        }`}
+                      >
+                        {isHappy ? (
+                          <CheckCircle2 className="size-3" />
+                        ) : isDiscrepancy ? (
+                          <AlertCircle className="size-3" />
+                        ) : (
+                          <FileText className="size-3" />
+                        )}
+                        <span>{preset.badge}</span>
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-muted leading-relaxed mb-3">
+                      {preset.description}
+                    </p>
+
+                    <div className="mt-auto w-full flex items-center justify-between pt-2 border-t border-line/40 text-[11px]">
+                      {isActive ? (
+                        <span className="inline-flex items-center gap-1 text-brand font-semibold text-[11px]">
+                          <Check className="size-3.5" />
+                          <span>Seleccionado</span>
+                        </span>
+                      ) : existingDoc ? (
+                        <span className="inline-flex items-center gap-1 text-muted text-[11px]">
+                          <Layers className="size-3.5" />
+                          <span>
+                            En cola (
+                            {existingDoc.status === 'ready'
+                              ? 'Listo'
+                              : existingDoc.status === 'confirmed'
+                                ? 'Confirmado'
+                                : 'Pendiente'}
+                            )
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-muted group-hover:text-ink text-[11px]">
+                          <Plus className="size-3.5" />
+                          <span>Cargar en cola</span>
+                        </span>
+                      )}
+
+                      <span className="text-[10px] text-muted font-mono truncate max-w-[120px]">
+                        {preset.filename}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Pestaña: Subir Documentos Reales (Multi-archivo) */}
         {activeTab === 'custom' && (
-          <div className="pt-4 space-y-3">
+          <div className="space-y-3">
             {!aiStatus?.configured && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-control border border-warn/40 bg-warn-soft p-3 text-xs text-warn-ink">
                 <div className="flex items-start gap-2">
@@ -689,11 +847,17 @@ export function ScanPurchaseReceipt({
       {documents.length > 0 && (
         <div className="rounded-card border border-line bg-surface p-4 shadow-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-2.5">
-            <div className="flex items-center gap-2">
-              <Layers className="size-4 text-brand" />
-              <span className="text-xs font-semibold text-ink">
-                Documentos cargados en cola ({documents.length})
-              </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <Layers className="size-4 text-brand" />
+                <span className="text-xs font-semibold text-ink">
+                  Cola de comprobantes ({documents.length})
+                </span>
+              </div>
+              <p className="text-[11px] text-muted mt-0.5">
+                Haz clic en cualquier comprobante para inspeccionarlo, analizarlo o confirmar su
+                recepción.
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -735,7 +899,7 @@ export function ScanPurchaseReceipt({
                   onClick={() => handleSelectActiveDoc(doc.id)}
                   className={`p-3 rounded-control border text-left cursor-pointer transition-all flex flex-col justify-between gap-2 ${
                     isActive
-                      ? 'border-brand bg-brand-soft/20 shadow-xs'
+                      ? 'border-brand bg-brand-soft/20 shadow-xs ring-1 ring-brand/40'
                       : 'border-line bg-surface-raised hover:border-brand/40'
                   }`}
                 >
@@ -746,17 +910,19 @@ export function ScanPurchaseReceipt({
                         {doc.file.filename}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveDoc(doc.id);
-                      }}
-                      className="text-muted hover:text-danger p-0.5"
-                      title="Eliminar de la lista"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                    {documents.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveDoc(doc.id);
+                        }}
+                        className="text-muted hover:text-danger p-0.5"
+                        title="Eliminar de la lista"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between gap-2 text-[11px]">
@@ -1036,7 +1202,20 @@ export function ScanPurchaseReceipt({
                             </td>
 
                             <td className="px-3 py-3 font-medium text-ink max-w-[200px] truncate">
-                              {line.description}
+                              <div>{line.description}</div>
+                              <div className="mt-1">
+                                {line.hasMatch ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-pill bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                    <CheckCircle2 className="size-2.5" />
+                                    <span>Coincide en catálogo</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-pill bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                                    <AlertCircle className="size-2.5" />
+                                    <span>Ítem no registrado</span>
+                                  </span>
+                                )}
+                              </div>
                             </td>
 
                             <td className="px-3 py-3 text-right">
@@ -1080,7 +1259,8 @@ export function ScanPurchaseReceipt({
                             <td className="px-4 py-3">
                               {line.included && (
                                 <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
+                                  {/* Segmented Control de Alta vs Mapeo */}
+                                  <div className="inline-flex p-0.5 rounded-control bg-subtle border border-line text-[11px] font-medium">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1090,14 +1270,16 @@ export function ScanPurchaseReceipt({
                                           ),
                                         )
                                       }
-                                      className={`text-[11px] px-2 py-0.5 rounded-control transition-colors ${
+                                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-control transition-all ${
                                         line.mode === 'existing'
-                                          ? 'bg-brand text-white font-semibold shadow-xs'
-                                          : 'bg-subtle text-muted hover:text-ink'
+                                          ? 'bg-surface text-ink font-semibold shadow-xs border border-line/60'
+                                          : 'text-muted hover:text-ink'
                                       }`}
                                     >
-                                      En Catálogo
+                                      <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+                                      <span>En Catálogo</span>
                                     </button>
+
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1107,13 +1289,14 @@ export function ScanPurchaseReceipt({
                                           ),
                                         )
                                       }
-                                      className={`text-[11px] px-2 py-0.5 rounded-control transition-colors ${
+                                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-control transition-all ${
                                         line.mode === 'create'
-                                          ? 'bg-brand text-white font-semibold shadow-xs'
-                                          : 'bg-subtle text-muted hover:text-ink'
+                                          ? 'bg-surface text-brand font-semibold shadow-xs border border-line/60'
+                                          : 'text-muted hover:text-ink'
                                       }`}
                                     >
-                                      Crear Producto
+                                      <Plus className="size-3 text-brand" />
+                                      <span>Crear Producto</span>
                                     </button>
                                   </div>
 
@@ -1137,32 +1320,38 @@ export function ScanPurchaseReceipt({
                                     </select>
                                   ) : (
                                     <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                                      <input
-                                        type="text"
-                                        placeholder="Nombre del producto"
-                                        value={line.createName}
-                                        onChange={(e) =>
-                                          setLinesDecision((prev) =>
-                                            prev.map((l, i) =>
-                                              i === idx ? { ...l, createName: e.target.value } : l,
-                                            ),
-                                          )
-                                        }
-                                        className="text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand"
-                                      />
-                                      <input
-                                        type="text"
-                                        placeholder="SKU"
-                                        value={line.createSku}
-                                        onChange={(e) =>
-                                          setLinesDecision((prev) =>
-                                            prev.map((l, i) =>
-                                              i === idx ? { ...l, createSku: e.target.value } : l,
-                                            ),
-                                          )
-                                        }
-                                        className="text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand font-mono"
-                                      />
+                                      <div>
+                                        <input
+                                          type="text"
+                                          placeholder="Nombre en catálogo"
+                                          value={line.createName}
+                                          onChange={(e) =>
+                                            setLinesDecision((prev) =>
+                                              prev.map((l, i) =>
+                                                i === idx
+                                                  ? { ...l, createName: e.target.value }
+                                                  : l,
+                                              ),
+                                            )
+                                          }
+                                          className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand"
+                                        />
+                                      </div>
+                                      <div>
+                                        <input
+                                          type="text"
+                                          placeholder="SKU"
+                                          value={line.createSku}
+                                          onChange={(e) =>
+                                            setLinesDecision((prev) =>
+                                              prev.map((l, i) =>
+                                                i === idx ? { ...l, createSku: e.target.value } : l,
+                                              ),
+                                            )
+                                          }
+                                          className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand font-mono"
+                                        />
+                                      </div>
                                     </div>
                                   )}
                                 </div>

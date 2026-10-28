@@ -34,12 +34,8 @@ test.describe('Flujo de Visión en Compras (Recepción de Mercancía e Inventari
     await expect(page.getByText('Distribuidora Central, C.A.').first()).toBeVisible();
 
     // 3. Verificar que la tabla de artículos lista los renglones extraídos
-    await expect(
-      page.getByRole('cell', { name: 'Harina de trigo 1 kg', exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('cell', { name: 'Manteca vegetal 500 g', exact: true }),
-    ).toBeVisible();
+    await expect(page.getByRole('cell', { name: /Harina de trigo 1 kg/i }).first()).toBeVisible();
+    await expect(page.getByRole('cell', { name: /Manteca vegetal 500 g/i }).first()).toBeVisible();
 
     // 4. Verificar que el total estimado está calculado
     await expect(page.getByText(/Total Estimado de la Recepción/i)).toBeVisible();
@@ -200,7 +196,7 @@ test.describe('Flujo de Visión en Compras (Recepción de Mercancía e Inventari
     await page.getByRole('button', { name: /ticket de compra de mostrador/i }).click();
 
     // 2. Verificar contador de documentos en cola (al menos 3)
-    await expect(page.getByText(/documentos cargados en cola/i)).toBeVisible();
+    await expect(page.getByText(/cola de comprobantes/i)).toBeVisible();
 
     // 3. Eliminar el documento activo mediante el botón de papelera
     const trashButtons = page.locator('button[title="Eliminar de la lista"]');
