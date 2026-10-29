@@ -25,6 +25,8 @@ test('a signed-in session alone cannot set a new password', async ({ page }) => 
   await page.getByLabel(/nueva contraseña|new password/i).fill('corebiz-demo');
   await page.getByRole('button', { name: /guardar la contraseña|save the password/i }).click();
 
-  await expect(page.getByText(/el enlace caducó|the link expired/i)).toBeVisible();
+  await expect(
+    page.getByRole('main').getByText(/el enlace caducó|the link expired/i),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/reset-password/);
 });
