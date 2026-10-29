@@ -28,6 +28,7 @@ export const ESCALATE_ONLY_KINDS = [
   'UnexpectedWithIncident',
   'ApiUnavailable',
   'AuthUnavailable',
+  'AiTimeout',
 ] as const;
 
 export type EscalateOnlyKind = (typeof ESCALATE_ONLY_KINDS)[number];
