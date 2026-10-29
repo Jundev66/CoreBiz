@@ -47,7 +47,7 @@ const STATIC_ROUTES = [
   '/settings/team',
   '/settings/audit',
   '/settings/ai',
-  '/vision',
+  '/purchases/scan',
 ] as const;
 
 /** Pantallas de cuenta. Se visitan SIN sesion, que es como las ve quien llega. */
