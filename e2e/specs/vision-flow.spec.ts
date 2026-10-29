@@ -163,13 +163,13 @@ test.describe('Flujo de Visión en Compras (Recepción de Mercancía e Inventari
 
     // 3. Subir archivo PDF real sintético
     await page.locator('input[type="file"]').setInputFiles({
-      name: 'factura_propia_empresa.pdf',
+      name: 'comprobante_propia_empresa.pdf',
       mimeType: 'application/pdf',
       buffer: Buffer.from('%PDF-1.4 test document content'),
     });
 
     // 4. Verificar que entra en cola como documento real
-    await expect(page.getByText('factura_propia_empresa.pdf').first()).toBeVisible();
+    await expect(page.getByText('comprobante_propia_empresa.pdf').first()).toBeVisible();
 
     // 5. Al analizarlo sin IA configurada, no finge éxito; devuelve error amigable
     await page

@@ -141,7 +141,7 @@ describe('confirmVisionReceipt', () => {
         },
       ],
       documentMetadata: {
-        filename: 'factura_molinos.pdf',
+        filename: 'comprobante_molinos.pdf',
         documentHash: 'hash1234567890',
       },
     });

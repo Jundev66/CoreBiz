@@ -558,7 +558,7 @@ export function ScanPurchaseReceipt({
             </span>
           </div>
           <p className="text-[11px] text-muted leading-snug">
-            Elige un escenario o sube tus propios remitos/facturas.
+            Elige un escenario o sube tus propios remitos/comprobantes.
           </p>
         </div>
 
@@ -697,8 +697,8 @@ export function ScanPurchaseReceipt({
               Ingesta y Lectura de Documentos de Compra
             </h3>
             <p className="text-xs text-muted mt-0.5">
-              Procesa remitos, albaranes o facturas individuales o en lote con trazabilidad y alta
-              atómica en inventario.
+              Procesa remitos, albaranes o comprobantes de compra individuales o en lote con
+              trazabilidad y alta atómica en inventario.
             </p>
           </div>
 
@@ -871,7 +871,7 @@ export function ScanPurchaseReceipt({
                 <Upload className="size-5" />
               </div>
               <p className="text-xs font-semibold text-ink">
-                Arrastra aquí tus remitos o facturas, o haz clic para seleccionar
+                Arrastra aquí tus remitos o comprobantes, o haz clic para seleccionar
               </p>
               <p className="text-[11px] text-muted mt-0.5">
                 Formatos compatibles: PDF, PNG, JPG, WebP (admite selección múltiple hasta 3.5 MB

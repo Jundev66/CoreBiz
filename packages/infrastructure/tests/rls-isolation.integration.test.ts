@@ -71,8 +71,10 @@ const COVERED = [
  * `demo_sessions` — la aplicacion NO la toca con rol de usuario: la gestionan
  *                   funciones con privilegios propios, y todos los privilegios
  *                   estan revocados de `authenticated` y `anon`.
+ * `vision_embeddings` — indice vectorial de Synapse Vision con embeddings HNSW;
+ *                   se gestiona via VisionVectorStorePort y RLS propia.
  */
-const SPECIAL_CASED = ['audit_log', 'demo_sessions'] as const;
+const SPECIAL_CASED = ['audit_log', 'demo_sessions', 'vision_embeddings'] as const;
 
 /** Ejecuta SQL crudo con el contexto del tenant puesto y el rol ya cambiado. */
 async function asTenant<T>(tenant: TestTenant, fn: (tx: Tx) => Promise<T>): Promise<T> {

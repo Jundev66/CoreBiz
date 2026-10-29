@@ -353,7 +353,7 @@ export function VisionScan({
             <Sparkles className="size-4 text-brand shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <p className="font-semibold text-brand">
-                ¿Querés procesar tus propios remitos y facturas con IA real?
+                ¿Querés procesar tus propios remitos y comprobantes con IA real?
               </p>
               <p className="text-muted leading-relaxed">{t('needsAiKeyNotice')}</p>
             </div>
