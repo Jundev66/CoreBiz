@@ -1307,98 +1307,71 @@ export function ScanPurchaseReceipt({
                             <td className="px-4 py-3">
                               {line.included && (
                                 <div className="space-y-2">
-                                  {/* Segmented Control de Alta vs Mapeo */}
-                                  <div className="inline-flex p-0.5 rounded-control bg-subtle border border-line text-[11px] font-medium">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setLinesDecision((prev) =>
-                                          prev.map((l, i) =>
-                                            i === idx ? { ...l, mode: 'existing' } : l,
-                                          ),
-                                        )
-                                      }
-                                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-control transition-all ${
-                                        line.mode === 'existing'
-                                          ? 'bg-surface text-ink font-semibold shadow-xs border border-line/60'
-                                          : 'text-muted hover:text-ink'
-                                      }`}
-                                    >
-                                      <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
-                                      <span>En Catálogo</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setLinesDecision((prev) =>
-                                          prev.map((l, i) =>
-                                            i === idx ? { ...l, mode: 'create' } : l,
-                                          ),
-                                        )
-                                      }
-                                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-control transition-all ${
-                                        line.mode === 'create'
-                                          ? 'bg-surface text-brand font-semibold shadow-xs border border-line/60'
-                                          : 'text-muted hover:text-ink'
-                                      }`}
-                                    >
-                                      <Plus className="size-3 text-brand" />
-                                      <span>Crear Producto</span>
-                                    </button>
-                                  </div>
-
-                                  {line.mode === 'existing' ? (
-                                    <select
-                                      value={line.productId}
-                                      onChange={(e) =>
-                                        setLinesDecision((prev) =>
-                                          prev.map((l, i) =>
-                                            i === idx ? { ...l, productId: e.target.value } : l,
-                                          ),
-                                        )
-                                      }
-                                      className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand"
-                                    >
-                                      {products.map((p) => (
-                                        <option key={p.id} value={p.id}>
-                                          {p.sku} · {p.name}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                                      <div>
-                                        <input
-                                          type="text"
-                                          placeholder="Nombre en catálogo"
-                                          value={line.createName}
-                                          onChange={(e) =>
-                                            setLinesDecision((prev) =>
-                                              prev.map((l, i) =>
-                                                i === idx
-                                                  ? { ...l, createName: e.target.value }
-                                                  : l,
-                                              ),
-                                            )
-                                          }
-                                          className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand"
-                                        />
+                                  {line.hasMatch ? (
+                                    <div className="space-y-1">
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium border border-emerald-500/20">
+                                        <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+                                        <span>En Catálogo</span>
                                       </div>
-                                      <div>
-                                        <input
-                                          type="text"
-                                          placeholder="SKU"
-                                          value={line.createSku}
-                                          onChange={(e) =>
-                                            setLinesDecision((prev) =>
-                                              prev.map((l, i) =>
-                                                i === idx ? { ...l, createSku: e.target.value } : l,
-                                              ),
-                                            )
-                                          }
-                                          className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand font-mono"
-                                        />
+                                      <select
+                                        value={line.productId}
+                                        onChange={(e) =>
+                                          setLinesDecision((prev) =>
+                                            prev.map((l, i) =>
+                                              i === idx ? { ...l, productId: e.target.value } : l,
+                                            ),
+                                          )
+                                        }
+                                        className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand"
+                                      >
+                                        {products.map((p) => (
+                                          <option key={p.id} value={p.id}>
+                                            {p.sku} · {p.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1.5">
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-brand-soft text-brand text-[11px] font-medium border border-brand/30">
+                                        <Plus className="size-3 text-brand" />
+                                        <span>Crear Producto (Alta en catálogo)</span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                                        <div>
+                                          <input
+                                            type="text"
+                                            placeholder="Nombre en catálogo"
+                                            value={line.createName}
+                                            onChange={(e) =>
+                                              setLinesDecision((prev) =>
+                                                prev.map((l, i) =>
+                                                  i === idx
+                                                    ? { ...l, createName: e.target.value }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand"
+                                          />
+                                        </div>
+                                        <div>
+                                          <input
+                                            type="text"
+                                            placeholder="SKU"
+                                            value={line.createSku}
+                                            onChange={(e) =>
+                                              setLinesDecision((prev) =>
+                                                prev.map((l, i) =>
+                                                  i === idx
+                                                    ? { ...l, createSku: e.target.value }
+                                                    : l,
+                                                ),
+                                              )
+                                            }
+                                            className="w-full text-[11px] rounded-control border border-line bg-surface px-2 py-1 text-ink focus:outline-hidden focus:border-brand font-mono"
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   )}

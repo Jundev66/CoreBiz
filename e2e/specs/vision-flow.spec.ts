@@ -86,7 +86,7 @@ test.describe('Flujo de Visión en Compras (Recepción de Mercancía e Inventari
 
     // 5. Verificar productos nuevos y sugerencia de creación en catálogo
     await expect(page.getByText(/Queso Gouda rebanado 500 g/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /crear producto/i }).first()).toBeVisible();
+    await expect(page.getByText(/crear producto \(alta en cat[aá]logo\)/i).first()).toBeVisible();
 
     // 6. Probar recálculo en vivo al excluir un artículo
     const totalBefore = await page.locator('span.font-bold.font-mono.text-ink').textContent();
