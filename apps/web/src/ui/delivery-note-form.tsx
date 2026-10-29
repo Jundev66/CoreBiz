@@ -122,55 +122,9 @@ export function DeliveryNoteForm({
     }
   }, [state, t]);
 
-  const handleAction = (formData: FormData) => {
-    const customerId = formData.get('customerId');
-    if (typeof customerId !== 'string' || !customerId.trim()) {
-      toast.error('Debe seleccionar un cliente antes de emitir la nota de entrega.', {
-        title: 'Cliente requerido',
-      });
-      return;
-    }
-
-    const filledLines = lines.filter((l) => l.productId.trim() !== '');
-    if (filledLines.length === 0) {
-      toast.error('Debe seleccionar al menos un producto en los renglones de la nota.', {
-        title: 'Renglón requerido',
-      });
-      return;
-    }
-
-    for (const line of filledLines) {
-      const q = line.quantity.trim().replace(',', '.');
-      if (!q || isNaN(Number(q)) || Number(q) <= 0) {
-        const prod = products.find((p) => p.id === line.productId);
-        toast.warning(
-          `Debe indicar una cantidad válida mayor a cero para el producto "${prod?.label ?? 'seleccionado'}".`,
-          { title: 'Cantidad requerida' },
-        );
-        return;
-      }
-    }
-
-    // Check for duplicate products
-    const seen = new Set<string>();
-    for (const line of filledLines) {
-      if (seen.has(line.productId)) {
-        const prod = products.find((p) => p.id === line.productId);
-        toast.warning(
-          `El producto "${prod?.label ?? 'seleccionado'}" está duplicado en la nota. Combine las cantidades en una sola línea.`,
-          { title: 'Producto repetido' },
-        );
-        return;
-      }
-      seen.add(line.productId);
-    }
-
-    formAction(formData);
-  };
-
   return (
     <form
-      action={handleAction}
+      action={formAction}
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
     >
       <div className="min-w-0 space-y-6">

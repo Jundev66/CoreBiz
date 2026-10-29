@@ -33,37 +33,9 @@ export function StockAdjustForm({ productId, sku, name, onHand, unit }: StockAdj
     }
   }, [state, t, unit]);
 
-  const handleAction = (formData: FormData) => {
-    const balance = formData.get('newBalance');
-    if (typeof balance !== 'string' || balance.trim() === '') {
-      toast.error('Debe indicar el nuevo saldo contado en existencia.', {
-        title: 'Conteo requerido',
-      });
-      return;
-    }
-
-    const b = Number(balance.trim().replace(',', '.'));
-    if (isNaN(b) || b < 0) {
-      toast.warning('La cantidad de inventario debe ser un número mayor o igual a 0.', {
-        title: 'Cantidad inválida',
-      });
-      return;
-    }
-
-    const reason = formData.get('reason');
-    if (typeof reason !== 'string' || reason.trim().length < 3) {
-      toast.error('El motivo del ajuste de inventario es obligatorio (mínimo 3 caracteres).', {
-        title: 'Motivo requerido',
-      });
-      return;
-    }
-
-    formAction(formData);
-  };
-
   return (
     <form
-      action={handleAction}
+      action={formAction}
       className="rounded-card border border-line bg-surface p-5 shadow-xs sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

@@ -338,12 +338,7 @@ function Chat({
                     aria-hidden="true"
                     className="size-3.5 text-amber-600 dark:text-amber-400 shrink-0"
                   />
-                  <span>
-                    {t('assistant.errorDetected')}:{' '}
-                    <code className="font-mono text-[11px] bg-surface px-1 py-0.5 rounded border border-line">
-                      {activeError.kind}
-                    </code>
-                  </span>
+                  <span>{t('assistant.errorDetected')}</span>
                 </span>
                 {activeError.incidentId && (
                   <span className="font-mono text-[10px] bg-surface px-1.5 py-0.5 rounded border border-line text-muted">
@@ -422,6 +417,7 @@ function Chat({
                       err: { kind: 'DuplicateSku', incidentId: null },
                     },
                     { label: '👥 Gestión de Clientes', query: '¿Cómo creo un cliente?' },
+                    { label: '📦 Catálogo de Productos', query: '¿Cómo añado un producto?' },
                     {
                       label: '📋 Ventas y Notas de Entrega',
                       query: '¿Cómo emito una nota de entrega?',

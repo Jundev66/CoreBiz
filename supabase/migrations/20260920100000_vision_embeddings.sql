@@ -84,3 +84,8 @@ create policy vision_embeddings_delete on public.vision_embeddings for delete to
   using (tenant_id = app.current_tenant() and app.can_write());
 
 grant select, insert, update, delete on public.vision_embeddings to authenticated;
+
+-- Disparador trg_guard_demo_template para proteger la plantilla de la demo
+drop trigger if exists trg_guard_demo_template on public.vision_embeddings;
+create trigger trg_guard_demo_template before insert or update or delete on public.vision_embeddings
+  for each row execute function public.guard_demo_template();

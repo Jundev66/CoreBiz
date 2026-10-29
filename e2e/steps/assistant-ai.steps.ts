@@ -4,7 +4,7 @@ import { When, Then } from './fixtures';
 /** Steps for the AI half of the help panel. The panel itself is opened by `assistant.steps`. */
 
 function panel(page: Page) {
-  return page.getByRole('group', { name: /ayuda|help/i });
+  return page.getByRole('group', { name: /ayuda|asistente|assistant|help/i });
 }
 
 Then('it explains how to turn on the AI assistant', async ({ page }) => {

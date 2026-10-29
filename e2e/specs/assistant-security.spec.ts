@@ -35,7 +35,7 @@ async function plant(context: BrowserContext, baseURL: string | undefined, value
 }
 
 function panel(page: Page) {
-  return page.getByRole('group', { name: /ayuda|help/i });
+  return page.getByRole('group', { name: /ayuda|asistente|assistant|help/i });
 }
 
 async function openPanel(page: Page) {

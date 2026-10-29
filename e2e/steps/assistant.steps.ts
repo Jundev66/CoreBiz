@@ -11,7 +11,7 @@ import { When, Then } from './fixtures';
  */
 
 function panel(page: Page) {
-  return page.getByRole('group', { name: /ayuda|help/i });
+  return page.getByRole('group', { name: /ayuda|asistente|assistant|help/i });
 }
 
 When('I open the help panel', async ({ page }) => {

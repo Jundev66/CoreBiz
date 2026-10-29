@@ -151,7 +151,7 @@ test('the panel stops explaining an error that is already solved', async ({ page
   await page.locator('select[name="customerId"]').selectOption({ index: 1 });
   await page.getByRole('button', { name: 'Emitir' }).click();
 
-  const panel = page.getByRole('group', { name: /ayuda|help/i });
+  const panel = page.getByRole('group', { name: /ayuda|asistente|assistant|help/i });
   await panel.locator('summary').click();
   await expect(panel.getByRole('heading', { name: /qué ha pasado|what happened/i })).toBeVisible();
 
