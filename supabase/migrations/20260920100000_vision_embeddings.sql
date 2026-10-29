@@ -88,4 +88,4 @@ grant select, insert, update, delete on public.vision_embeddings to authenticate
 -- Disparador trg_guard_demo_template para proteger la plantilla de la demo
 drop trigger if exists trg_guard_demo_template on public.vision_embeddings;
 create trigger trg_guard_demo_template before insert or update or delete on public.vision_embeddings
-  for each row execute function public.guard_demo_template();
+  for each row execute function app.guard_demo_template();
