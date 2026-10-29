@@ -23,6 +23,10 @@ interface Credentials {
 /** Abre la demostracion y devuelve las credenciales que entrega la pantalla. */
 async function start(page: Page): Promise<Credentials> {
   await page.goto('/demo');
+  const emailInput = page.getByLabel(/correo|email/i);
+  if (await emailInput.isVisible()) {
+    await emailInput.fill(`visitante-${Date.now()}@corebiz.test`);
+  }
   await page.getByRole('button', { name: /demo|demostración/i }).click();
 
   const panel = page.getByRole('status').first();

@@ -112,6 +112,7 @@ export default defineConfig({
         NODE_ENV: 'production',
         PORT: String(API_PORT),
         INTERNAL_API_SECRET: INTERNAL_SECRET,
+        SIGNUP_ENABLED: 'true',
         // The suite writes far more per hour, from one user, than any person would.
         API_WRITES_PER_HOUR: '100000',
         ...(DRIVER === 'postgres'
@@ -141,6 +142,7 @@ export default defineConfig({
         NODE_ENV: 'production',
         API_BASE_URL: API_URL,
         INTERNAL_API_SECRET: INTERNAL_SECRET,
+        SIGNUP_ENABLED: 'true',
         // Mandatory under NODE_ENV=production since the public-salt fallback was removed.
         REQUEST_HASH_SECRET: 'e2e-only-request-hash-secret',
         ...(DRIVER === 'postgres'

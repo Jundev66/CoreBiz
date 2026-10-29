@@ -428,10 +428,11 @@ test.describe('Cobros y Cuentas por Cobrar (E2E)', () => {
     await page.getByRole('button', { name: /guardar|save/i }).click();
 
     // Debe mostrar error de regla de negocio CreditLimitBelowBalance
-    await expect(page.getByRole('alert')).toBeVisible();
-    await expect(
-      page.getByText(/no puede quedar por debajo del saldo pendiente|CreditLimitBelowBalance/i),
-    ).toBeVisible();
+    const alert = page.getByRole('alert').first();
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(
+      /no puede quedar por debajo del saldo pendiente|CreditLimitBelowBalance/i,
+    );
 
     // 5. Cobrar la nota completa
     await page.goto(`/payments/new?customerId=${customerId}`);
