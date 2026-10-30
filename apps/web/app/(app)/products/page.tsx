@@ -49,10 +49,19 @@ export default async function ProductsPage({
       subtitle={t('products.subtitle')}
       {...(createdCode !== null ? { toast: t('products.created', { sku: createdCode }) } : {})}
       action={
-        <PrimaryLink href="/products/new">
-          <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-          {t('products.new')}
-        </PrimaryLink>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/conflicts"
+            className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          >
+            <AlertTriangle className="size-3.5 text-amber-500" />
+            Inconsistencias POS
+          </Link>
+          <PrimaryLink href="/products/new">
+            <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+            {t('products.new')}
+          </PrimaryLink>
+        </div>
       }
     >
       <div className="space-y-4">

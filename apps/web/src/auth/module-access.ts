@@ -26,6 +26,7 @@ export const MODULE_PERMISSION = {
   '/payments': 'payment:read',
   '/purchases': 'purchase:read',
   '/reports': 'report:read',
+  '/conflicts': 'stock:read',
 } as const satisfies Readonly<Record<string, Permission>>;
 
 export type ModuleRoute = keyof typeof MODULE_PERMISSION;
