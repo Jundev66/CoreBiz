@@ -54,6 +54,8 @@ export interface FieldProps {
   /** Clave de error del dominio. Se traduce aqui, con el nombre del campo. */
   readonly error?: string | undefined;
   readonly defaultValue?: string;
+  readonly value?: string;
+  readonly onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   readonly placeholder?: string;
   readonly autoComplete?: string;
   readonly inputMode?: 'decimal' | 'text' | 'numeric';

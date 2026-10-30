@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createProductAction, updateProductAction } from '@/actions/sales';
 import type { ActionState } from '@/actions/customers';
@@ -9,6 +9,12 @@ import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
 import { toast } from '@/ui/toast';
+import { Camera, Sparkles, X } from 'lucide-react';
+import {
+  generateInternalBarcode,
+  detectBarcodeFromMedia,
+  createKeyboardWedgeListener,
+} from '@/pos/barcode';
 
 const INITIAL: ActionState = { status: 'idle' };
 
@@ -27,6 +33,10 @@ export interface ProductFormValues {
 export function ProductForm({ product }: { product?: ProductFormValues }) {
   const t = useTranslations();
   const editing = product !== undefined;
+  const [sku, setSku] = useState(product?.sku ?? '');
+  const [showScanner, setShowScanner] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const [state, formAction, pending] = useActionState(
     editing ? updateProductAction : createProductAction,
     INITIAL,
@@ -34,6 +44,63 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
 
   const valor = (v: string | null | undefined) => v ?? '';
   const fieldError = (field: string) => state.fieldErrors?.[field];
+
+  useEffect(() => {
+    if (editing) return;
+    const cleanup = createKeyboardWedgeListener((code) => {
+      setSku(code);
+      toast.success(`Código escaneado: ${code}`);
+    });
+    return cleanup;
+  }, [editing]);
+
+  useEffect(() => {
+    if (!showScanner) return;
+    let stream: MediaStream | null = null;
+    let animFrame: number;
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+
+          const scanLoop = () => {
+            void (async () => {
+              if (
+                videoRef.current &&
+                videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA
+              ) {
+                const code = await detectBarcodeFromMedia(videoRef.current);
+                if (code) {
+                  setSku(code);
+                  setShowScanner(false);
+                  toast.success(`Código escaneado: ${code}`);
+                  return;
+                }
+              }
+              animFrame = requestAnimationFrame(scanLoop);
+            })();
+          };
+          animFrame = requestAnimationFrame(scanLoop);
+        }
+      } catch {
+        setShowScanner(false);
+      }
+    }
+
+    void startCamera();
+
+    return () => {
+      cancelAnimationFrame(animFrame);
+      if (stream) {
+        stream.getTracks().forEach((trk) => trk.stop());
+      }
+    };
+  }, [showScanner]);
 
   useEffect(() => {
     if (state.status === 'error') {
@@ -102,13 +169,37 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {!editing && (
-          <Field
-            name="sku"
-            label={t('products.sku')}
-            hint={t('products.skuHint')}
-            autoComplete="off"
-            error={fieldError('sku')}
-          />
+          <div className="space-y-1.5">
+            <Field
+              name="sku"
+              label={t('products.sku')}
+              hint={t('products.skuHint')}
+              autoComplete="off"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              error={fieldError('sku')}
+            />
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => setSku(generateInternalBarcode())}
+                className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Generar código de barras GS1/EAN-13 interno automático"
+              >
+                <Sparkles className="size-3.5 text-brand" />
+                Generar EAN-13
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Escanear código de barras con la cámara del dispositivo"
+              >
+                <Camera className="size-3.5 text-muted" />
+                Escanear con Cámara
+              </button>
+            </div>
+          </div>
         )}
         <Field
           name="name"
@@ -209,6 +300,38 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
           {pending ? '…' : t('common.save')}
         </button>
       </div>
+
+      {showScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-sm overflow-hidden rounded-card border border-line bg-surface p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3">
+              <h3 className="text-sm font-semibold text-ink">Escanear Código de Barras</h3>
+              <button
+                type="button"
+                onClick={() => setShowScanner(false)}
+                className="rounded-lg p-1 text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="h-full w-full object-cover"
+              />
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="h-24 w-52 rounded-lg border-2 border-brand/80 shadow-[0_0_15px_rgba(var(--brand),0.5)]" />
+              </div>
+            </div>
+            <p className="mt-3 text-center text-xs text-muted">
+              Apunta la cámara al código de barras del producto
+            </p>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
