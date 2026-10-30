@@ -454,9 +454,15 @@ model users {
   sessions                                   sessions[]
   webauthn_challenges                        webauthn_challenges[]
   webauthn_credentials                       webauthn_credentials[]
-  invitations_invitations_accepted_byTousers invitations[]          @relation("invitations_accepted_byTousers")
-  invitations_invitations_invited_byTousers  invitations[]          @relation("invitations_invited_byTousers")
+  invitations_invitations_accepted_byTousers invitations[]                  @relation("invitations_accepted_byTousers")
+  invitations_invitations_invited_byTousers  invitations[]                  @relation("invitations_invited_byTousers")
   memberships                                memberships[]
+  pos_register_assignments                  pos_register_assignments[]
+  pos_cash_shifts_opened_by                 pos_cash_shifts[]              @relation("pos_cash_shifts_opened_by")
+  pos_cash_shifts_closed_by                 pos_cash_shifts[]              @relation("pos_cash_shifts_closed_by")
+  pos_sales                                 pos_sales[]
+  inventory_conflicts_assigned_to           inventory_conflicts[]          @relation("inventory_conflicts_assigned_to")
+  inventory_conflicts_resolved_by           inventory_conflicts[]          @relation("inventory_conflicts_resolved_by")
 
   @@index([instance_id])
   @@index([is_anonymous])
@@ -798,6 +804,8 @@ model products {
   updated_at          DateTime              @default(now()) @db.Timestamptz(6)
   delivery_note_lines delivery_note_lines[]
   goods_receipt_lines goods_receipt_lines[]
+  pos_sale_lines      pos_sale_lines[]
+  inventory_conflicts inventory_conflicts[]
   tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   stock_movements     stock_movements[]
 
@@ -919,9 +927,19 @@ model tenants {
   goods_receipts       goods_receipts[]
   invitations          invitations[]
   memberships          memberships[]
-  payment_allocations  payment_allocations[]
-  payments             payments[]
-  products             products[]
+  payment_allocations          payment_allocations[]
+  payments                     payments[]
+  pos_registers                pos_registers[]
+  pos_devices                  pos_devices[]
+  pos_register_assignments     pos_register_assignments[]
+  pos_cash_shifts              pos_cash_shifts[]
+  pos_cash_movements           pos_cash_movements[]
+  pos_sales                    pos_sales[]
+  pos_sale_lines               pos_sale_lines[]
+  pos_sync_operations          pos_sync_operations[]
+  inventory_conflicts          inventory_conflicts[]
+  inventory_conflict_movements inventory_conflict_movements[]
+  products                     products[]
   stock_movements      stock_movements[]
   suppliers            suppliers[]
   tenant_ai_settings   tenant_ai_settings?
@@ -939,6 +957,220 @@ model rate_limits {
   @@id([bucket, window_start])
   @@index([window_start], map: "rate_limits_window_idx")
   @@schema("security")
+}
+
+model pos_registers {
+  id                        String                     @id @db.Uuid
+  tenant_id                 String                     @db.Uuid
+  name                      String
+  code                      String
+  status                    String                     @default("active")
+  created_at                DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                   @default(now()) @db.Timestamptz(6)
+  tenants                   tenants                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pos_register_assignments pos_register_assignments[]
+  pos_cash_shifts           pos_cash_shifts[]
+  pos_sales                 pos_sales[]
+
+  @@unique([tenant_id, code], map: "pos_registers_tenant_code_key")
+  @@index([tenant_id], map: "pos_registers_tenant_idx")
+  @@schema("public")
+}
+
+model pos_devices {
+  id                        String                     @id @db.Uuid
+  tenant_id                 String                     @db.Uuid
+  installation_id           String                     @db.Uuid
+  name                      String
+  platform                  String?
+  browser                   String?
+  status                    String                     @default("pending")
+  device_token_hash         String?
+  registered_at             DateTime                   @default(now()) @db.Timestamptz(6)
+  last_seen_at              DateTime?                  @db.Timestamptz(6)
+  tenants                   tenants                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pos_register_assignments pos_register_assignments[]
+  pos_cash_shifts           pos_cash_shifts[]
+  pos_sales                 pos_sales[]
+  pos_sync_operations       pos_sync_operations[]
+
+  @@unique([tenant_id, installation_id], map: "pos_devices_tenant_installation_key")
+  @@index([tenant_id], map: "pos_devices_tenant_idx")
+  @@schema("public")
+}
+
+model pos_register_assignments {
+  id          String        @id @db.Uuid
+  tenant_id   String        @db.Uuid
+  register_id String        @db.Uuid
+  device_id   String        @db.Uuid
+  assigned_at DateTime      @default(now()) @db.Timestamptz(6)
+  revoked_at  DateTime?     @db.Timestamptz(6)
+  assigned_by String        @db.Uuid
+  tenants     tenants       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  register    pos_registers @relation(fields: [register_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  device      pos_devices   @relation(fields: [device_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assigner    users         @relation(fields: [assigned_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([tenant_id, register_id], map: "pos_register_assignments_active_idx")
+  @@schema("public")
+}
+
+model pos_cash_shifts {
+  id                  String               @id @db.Uuid
+  tenant_id           String               @db.Uuid
+  register_id         String               @db.Uuid
+  device_id           String               @db.Uuid
+  opened_by_user_id   String               @db.Uuid
+  opened_at           DateTime             @db.Timestamptz(6)
+  initial_float_minor BigInt
+  status              String               @default("open")
+  closed_by_user_id   String?              @db.Uuid
+  closed_at           DateTime?            @db.Timestamptz(6)
+  declared_cash_minor BigInt?
+  system_cash_minor   BigInt?
+  cash_variance_minor BigInt?
+  notes               String?
+  created_at          DateTime             @default(now()) @db.Timestamptz(6)
+  tenants             tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  register            pos_registers        @relation(fields: [register_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  device              pos_devices          @relation(fields: [device_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  opened_by           users                @relation("pos_cash_shifts_opened_by", fields: [opened_by_user_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  closed_by           users?               @relation("pos_cash_shifts_closed_by", fields: [closed_by_user_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cash_movements      pos_cash_movements[]
+  sales               pos_sales[]
+
+  @@index([tenant_id, register_id, status], map: "pos_cash_shifts_tenant_register_status_idx")
+  @@schema("public")
+}
+
+model pos_cash_movements {
+  id            String          @id @db.Uuid
+  tenant_id     String          @db.Uuid
+  shift_id      String          @db.Uuid
+  movement_type String
+  amount_minor  BigInt
+  reason        String
+  occurred_at   DateTime        @db.Timestamptz(6)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  tenants       tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  shift         pos_cash_shifts @relation(fields: [shift_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenant_id, shift_id], map: "pos_cash_movements_tenant_shift_idx")
+  @@schema("public")
+}
+
+model pos_sales {
+  id                 String                         @id @db.Uuid
+  tenant_id          String                         @db.Uuid
+  register_id        String                         @db.Uuid
+  device_id          String                         @db.Uuid
+  shift_id           String                         @db.Uuid
+  cashier_user_id    String                         @db.Uuid
+  operation_id       String                         @db.Uuid
+  ticket_number      String
+  status             String                         @default("completed")
+  subtotal_minor     BigInt
+  tax_minor          BigInt                         @default(0)
+  total_minor        BigInt
+  payment_method     String
+  occurred_at        DateTime                       @db.Timestamptz(6)
+  received_at        DateTime                       @default(now()) @db.Timestamptz(6)
+  posted_at          DateTime                       @default(now()) @db.Timestamptz(6)
+  tenants            tenants                        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  register           pos_registers                  @relation(fields: [register_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  device             pos_devices                    @relation(fields: [device_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  shift              pos_cash_shifts                @relation(fields: [shift_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cashier            users                          @relation(fields: [cashier_user_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  lines              pos_sale_lines[]
+  conflict_movements inventory_conflict_movements[]
+
+  @@unique([tenant_id, operation_id], map: "pos_sales_tenant_operation_key")
+  @@index([tenant_id, register_id, occurred_at(sort: Desc)], map: "pos_sales_tenant_occurred_idx")
+  @@schema("public")
+}
+
+model pos_sale_lines {
+  id               String    @id @db.Uuid
+  tenant_id        String    @db.Uuid
+  sale_id          String    @db.Uuid
+  product_id       String?   @db.Uuid
+  temporary_name   String?
+  barcode_scanned  String?
+  quantity         BigInt
+  unit_price_minor BigInt
+  line_total_minor BigInt
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  tenants          tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sale             pos_sales @relation(fields: [sale_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product          products? @relation(fields: [product_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([tenant_id, sale_id], map: "pos_sale_lines_tenant_sale_idx")
+  @@schema("public")
+}
+
+model pos_sync_operations {
+  id             String      @id @db.Uuid
+  tenant_id      String      @db.Uuid
+  operation_id   String      @db.Uuid
+  device_id      String      @db.Uuid
+  operation_type String
+  sequence       BigInt
+  payload_hash   String
+  status         String      @default("received")
+  received_at    DateTime    @default(now()) @db.Timestamptz(6)
+  processed_at   DateTime?   @db.Timestamptz(6)
+  error_message  String?
+  tenants        tenants     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  device         pos_devices @relation(fields: [device_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, operation_id], map: "pos_sync_operations_tenant_operation_key")
+  @@unique([tenant_id, device_id, sequence], map: "pos_sync_operations_tenant_device_seq_key")
+  @@index([tenant_id, status], map: "pos_sync_operations_tenant_status_idx")
+  @@schema("public")
+}
+
+model inventory_conflicts {
+  id                 String                         @id @db.Uuid
+  tenant_id          String                         @db.Uuid
+  product_id         String?                        @db.Uuid
+  conflict_type      String
+  status             String                         @default("open")
+  detected_at        DateTime                       @default(now()) @db.Timestamptz(6)
+  stock_before       BigInt                         @default(0)
+  quantity_attempted BigInt                         @default(0)
+  stock_after        BigInt                         @default(0)
+  shortage_quantity  BigInt                         @default(0)
+  assigned_to        String?                        @db.Uuid
+  resolution_type    String?
+  resolution_notes   String?
+  resolved_by        String?                        @db.Uuid
+  resolved_at        DateTime?                      @db.Timestamptz(6)
+  created_at         DateTime                       @default(now()) @db.Timestamptz(6)
+  tenants            tenants                        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product            products?                      @relation(fields: [product_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  assignee           users?                         @relation("inventory_conflicts_assigned_to", fields: [assigned_to], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  resolver           users?                         @relation("inventory_conflicts_resolved_by", fields: [resolved_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  conflict_movements inventory_conflict_movements[]
+
+  @@index([tenant_id, status, product_id], map: "inventory_conflicts_tenant_status_idx")
+  @@schema("public")
+}
+
+model inventory_conflict_movements {
+  id                String              @id @db.Uuid
+  tenant_id         String              @db.Uuid
+  conflict_id       String              @db.Uuid
+  stock_movement_id String?             @db.Uuid
+  sale_id           String?             @db.Uuid
+  relation_type     String
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  tenants           tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  conflict          inventory_conflicts @relation(fields: [conflict_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sale              pos_sales?          @relation(fields: [sale_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([tenant_id, conflict_id], map: "conflict_movements_tenant_conflict_idx")
+  @@schema("public")
 }
 
 enum aal_level {
