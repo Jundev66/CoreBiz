@@ -42,3 +42,12 @@ export type {
   AiGatewayError,
   AiGateway,
 } from './ai';
+export type {
+  PosRegisterRepository,
+  PosDeviceRepository,
+  CashShiftRepository,
+  PosSaleRepository,
+  InventoryConflictRepository,
+  PosSyncOperation,
+  PosSyncOperationRepository,
+} from './pos';

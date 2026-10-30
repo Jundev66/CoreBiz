@@ -38,3 +38,4 @@ export * from './use-cases/ai/reindex-vision-embeddings';
 export * from './use-cases/ai/system-prompt';
 export * from './adapters/synapse/corebiz-bridge';
 export * from './adapters/synapse-vision/corebiz-vision-bridge';
+export * from './use-cases/pos/index';

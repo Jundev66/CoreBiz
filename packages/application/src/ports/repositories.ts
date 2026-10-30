@@ -7,6 +7,14 @@ import type {
   TenantSettingsRepository,
 } from './administration';
 import type {
+  PosRegisterRepository,
+  PosDeviceRepository,
+  CashShiftRepository,
+  PosSaleRepository,
+  InventoryConflictRepository,
+  PosSyncOperationRepository,
+} from './pos';
+import type {
   Customer,
   CustomerId,
   DeliveryNote,
@@ -124,6 +132,13 @@ export interface Repositories {
   // The AI connection. In the unit of work so that changing it and auditing the change
   // commit together: an audit row for a key that was never saved is a lie.
   readonly aiSettings: AiSettingsRepository;
+
+  readonly posRegisters: PosRegisterRepository;
+  readonly posDevices: PosDeviceRepository;
+  readonly cashShifts: CashShiftRepository;
+  readonly posSales: PosSaleRepository;
+  readonly inventoryConflicts: InventoryConflictRepository;
+  readonly posSyncOperations: PosSyncOperationRepository;
 }
 
 /**
