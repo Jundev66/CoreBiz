@@ -1,6 +1,3 @@
-'use client';
-
-import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import {
   Wifi,
@@ -22,11 +19,11 @@ import {
   ArrowLeft,
   X,
 } from 'lucide-react';
-import { usePos } from '../../src/pos/use-pos';
-import { detectBarcodeFromMedia, generateInternalBarcode } from '../../src/pos/barcode';
-import type { LocalProduct } from '../../src/pos/db';
+import { usePos } from './use-pos';
+import { detectBarcodeFromMedia, generateInternalBarcode } from './barcode';
+import type { LocalProduct } from './db';
 
-export default function PosPage() {
+export function App() {
   const {
     isOnline,
     pendingOutboxCount,
@@ -64,13 +61,13 @@ export default function PosPage() {
   const [enrollDeviceName, setEnrollDeviceName] = useState('Mostrador Principal');
 
   const [lastSaleSuccess, setLastSaleSuccess] = useState<{
-    ticketNumber: string;
-    total: string;
+    readonly ticketNumber: string;
+    readonly total: string;
   } | null>(null);
 
   const [shiftReconciliationResult, setShiftReconciliationResult] = useState<{
-    declared: string;
-    variance: string;
+    readonly declared: string;
+    readonly variance: string;
   } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -269,14 +266,14 @@ export default function PosPage() {
             </button>
           )}
 
-          <Link
-            href="/products"
+          <a
+            href="/"
             className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
-            title="Volver al panel administrativo de CoreBiz ERP"
+            title="Ir al panel ERP"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Volver al ERP
-          </Link>
+            ERP
+          </a>
         </div>
       </header>
 
@@ -726,3 +723,4 @@ export default function PosPage() {
     </div>
   );
 }
+export default App;

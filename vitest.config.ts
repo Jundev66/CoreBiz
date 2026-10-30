@@ -96,6 +96,14 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'pos',
+          root: './apps/pos',
+          environment: 'node',
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           // Levanta la API de verdad contra Supabase local y le habla por HTTP. Es el
           // unico sitio donde se comprueba que dos identidades distintas atendidas por
           // el MISMO proceso no se ven la una a la otra.

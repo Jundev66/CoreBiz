@@ -10,11 +10,8 @@ import { Alert } from '@/ui/feedback';
 import { Field } from '@/ui/field';
 import { toast } from '@/ui/toast';
 import { Camera, Sparkles, X } from 'lucide-react';
-import {
-  generateInternalBarcode,
-  detectBarcodeFromMedia,
-  createKeyboardWedgeListener,
-} from '@/pos/barcode';
+import { generateInternalBarcode } from '@corebiz/domain';
+import { detectBarcodeFromMedia, createKeyboardWedgeListener } from '@/ui/barcode-scanner';
 
 const INITIAL: ActionState = { status: 'idle' };
 

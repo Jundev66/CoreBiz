@@ -53,6 +53,20 @@ const config: NextConfig = {
     // Los datos de un tenant NUNCA se sirven desde cache compartida.
     staleTimes: { dynamic: 0, static: 180 },
   },
+
+  rewrites() {
+    const posUrl = process.env.POS_URL ?? 'http://localhost:3025';
+    return Promise.resolve([
+      {
+        source: '/pos',
+        destination: posUrl,
+      },
+      {
+        source: '/pos/:path*',
+        destination: `${posUrl}/:path*`,
+      },
+    ]);
+  },
 };
 
 export default withNextIntl(config);

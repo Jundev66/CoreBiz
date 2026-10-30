@@ -1,5 +1,3 @@
-'use client';
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { posDb, type LocalProduct, type LocalShift } from './db';
 import {
@@ -21,7 +19,7 @@ export interface CartLine {
   readonly lineTotalMinor: bigint;
 }
 
-export function usePos(apiBaseUrl = '/api') {
+export function usePos(apiBaseUrl = '') {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [pendingOutboxCount, setPendingOutboxCount] = useState<number>(0);
   const [currentShift, setCurrentShift] = useState<LocalShift | null>(null);
@@ -47,24 +45,6 @@ export function usePos(apiBaseUrl = '/api') {
     setDeviceToken(token?.value ?? null);
   }, []);
 
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    void refreshState();
-
-    const cleanupOnline = registerOnlineSyncListener(() => {
-      setIsOnline(true);
-      void triggerSync();
-    });
-
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      cleanupOnline();
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [refreshState]);
-
   const triggerSync = useCallback(async () => {
     if (!navigator.onLine) return;
     setIsSyncing(true);
@@ -84,6 +64,24 @@ export function usePos(apiBaseUrl = '/api') {
       await refreshState();
     }
   }, [apiBaseUrl, refreshState]);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    void refreshState();
+
+    const cleanupOnline = registerOnlineSyncListener(() => {
+      setIsOnline(true);
+      void triggerSync();
+    });
+
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      cleanupOnline();
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [refreshState, triggerSync]);
 
   const searchCatalog = useCallback(async (query: string): Promise<LocalProduct[]> => {
     const trimmed = query.trim().toLowerCase();
