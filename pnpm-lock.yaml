@@ -154,6 +154,9 @@ importers:
       '@synapse-vision/ui':
         specifier: workspace:*
         version: link:../../synapse-vision/ui
+      dexie:
+        specifier: ^4.4.7
+        version: 4.4.7
       lucide-react:
         specifier: ^1.45.0
         version: 1.45.0(@types/react@19.3.0)(react@19.3.0)
@@ -2422,6 +2425,9 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  dexie@4.4.7:
+    resolution: {integrity: sha512-wemFiCl3DTCnfzyqepUTX1ugbYbkTrw3aEZOG7YjAOUoEQB5g5PrEywPzk5JpbX/SxqQ9IvjUpxCDIEjoOWEfA==}
 
   dir-glob@3.0.1:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
@@ -5914,6 +5920,8 @@ snapshots:
   destr@2.0.5: {}
 
   detect-libc@2.1.2: {}
+
+  dexie@4.4.7: {}
 
   dir-glob@3.0.1:
     dependencies:
