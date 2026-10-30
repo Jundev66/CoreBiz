@@ -55,10 +55,15 @@ describe('POS Offline ATDD Queue & Zero Data Loss Acceptance Tests', () => {
       ],
     };
 
-    const parsedOpen = openCashShiftSchema.safeParse(batchInput.operations[0].payload);
+    const firstOp = batchInput.operations[0];
+    const secondOp = batchInput.operations[1];
+    expect(firstOp).toBeDefined();
+    expect(secondOp).toBeDefined();
+
+    const parsedOpen = openCashShiftSchema.safeParse(firstOp?.payload);
     expect(parsedOpen.success).toBe(true);
 
-    const parsedSale = issuePosSaleSchema.safeParse(batchInput.operations[1].payload);
+    const parsedSale = issuePosSaleSchema.safeParse(secondOp?.payload);
     expect(parsedSale.success).toBe(true);
 
     const jobs = batchInput.operations.map((op) => ({

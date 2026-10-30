@@ -44,6 +44,7 @@ import {
   CloseCashShiftCommandHandler,
   ProcessPosSaleCommandHandler,
   DirectPosSyncQueue,
+  type PosSyncQueue,
   memoryVisionDocumentCache,
   systemClock,
   type AiGateway,
@@ -203,7 +204,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       bus.register(new ProcessPosSaleCommandHandler(shared));
       return bus;
     })(),
-    posSyncQueue: (() => {
+    posSyncQueue: ((): PosSyncQueue => {
       const redisUrl = process.env.REDIS_URL;
       if (process.env.QUEUE_DRIVER === 'bullmq' && redisUrl && redisUrl.trim().length > 0) {
         return new BullMqPosSyncQueue({ redisUrl });
