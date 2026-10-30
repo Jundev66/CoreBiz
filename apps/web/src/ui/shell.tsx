@@ -12,6 +12,8 @@ import {
   MoreHorizontal,
   Inbox,
   UserRound,
+  AlertTriangle,
+  ShoppingCart,
   type LucideIcon,
 } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
@@ -103,6 +105,7 @@ export async function AppFrame({
     },
     { href: '/purchases', label: t('nav.purchases'), Icon: Truck },
     { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
+    { href: '/conflicts', label: 'Inconsistencias POS', short: 'POS', Icon: AlertTriangle },
     { href: '/settings', label: t('nav.settings'), Icon: Settings },
   ].filter(({ href }) => canOpen(ctx.actor, href));
 
@@ -150,7 +153,15 @@ export async function AppFrame({
           ))}
         </nav>
 
-        <div className="mt-auto border-t border-line p-4">
+        <div className="mt-auto border-t border-line p-4 space-y-3">
+          <Link
+            href="/pos"
+            target="_blank"
+            className="flex items-center justify-center gap-2 rounded-control bg-brand-soft px-3 py-2 text-xs font-semibold text-brand transition hover:bg-brand/20"
+          >
+            <ShoppingCart className="size-4" />
+            Terminal POS PWA
+          </Link>
           <AccountArea session={session} activeTenantId={ctx.tenantId} />
         </div>
       </aside>

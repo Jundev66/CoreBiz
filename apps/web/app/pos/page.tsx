@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import {
   Wifi,
@@ -18,6 +19,7 @@ import {
   Unlock,
   CheckCircle2,
   AlertTriangle,
+  ArrowLeft,
   X,
 } from 'lucide-react';
 import { usePos } from '../../src/pos/use-pos';
@@ -266,6 +268,15 @@ export default function PosPage() {
               Abrir Turno
             </button>
           )}
+
+          <Link
+            href="/products"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
+            title="Volver al panel administrativo de CoreBiz ERP"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver al ERP
+          </Link>
         </div>
       </header>
 
