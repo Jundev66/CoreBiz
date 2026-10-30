@@ -78,7 +78,7 @@ export async function syncOutbox(
     const data = (await res.json()) as {
       results: Array<{
         operationId: string;
-        status: 'processed' | 'duplicate' | 'failed';
+        status: 'processed' | 'duplicate' | 'failed' | 'enqueued';
         error?: string;
         conflictId?: string;
       }>;
@@ -92,7 +92,11 @@ export async function syncOutbox(
       const match = pendingItems.find((p) => p.operationId === result.operationId);
       if (!match || match.id === undefined) continue;
 
-      if (result.status === 'processed' || result.status === 'duplicate') {
+      if (
+        result.status === 'processed' ||
+        result.status === 'duplicate' ||
+        result.status === 'enqueued'
+      ) {
         await posDb.outbox.update(match.id, {
           status: 'synced',
           errorMessage: null,

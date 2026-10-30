@@ -142,7 +142,7 @@ export type PosSyncBatchInput = z.infer<typeof posSyncBatchSchema>;
 export const posSyncItemResultSchema = z
   .object({
     operationId: z.string().uuid(),
-    status: z.enum(['processed', 'duplicate', 'failed']),
+    status: z.enum(['processed', 'duplicate', 'failed', 'enqueued']),
     error: z.string().optional(),
     conflictId: recordIdSchema.optional(),
   })

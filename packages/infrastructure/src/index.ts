@@ -83,4 +83,10 @@ export {
   PrismaInventoryConflictRepository,
   PrismaPosSyncOperationRepository,
 } from './prisma/pos';
+export { BullMqPosSyncQueue, type BullMqPosQueueConfig } from './queue/bullmq-pos-queue';
+export {
+  PosSyncWorker,
+  type PosSyncWorkerConfig,
+  type PosSyncJobHandler,
+} from './queue/pos-sync-worker';
 export { isAllowedBaseUrl } from './ai/url-guard';

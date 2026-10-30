@@ -51,3 +51,4 @@ export type {
   PosSyncOperation,
   PosSyncOperationRepository,
 } from './pos';
+export type { PosSyncQueue, PosQueueJobData, PosQueueError } from './pos-queue';

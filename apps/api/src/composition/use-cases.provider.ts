@@ -43,6 +43,7 @@ import {
   RecordCashMovementCommandHandler,
   CloseCashShiftCommandHandler,
   ProcessPosSaleCommandHandler,
+  DirectPosSyncQueue,
   memoryVisionDocumentCache,
   systemClock,
   type AiGateway,
@@ -55,6 +56,7 @@ import {
   httpAiGateway,
   httpEmbeddingsGateway,
   httpVisionGateway,
+  BullMqPosSyncQueue,
 } from '@corebiz/infrastructure';
 import { loadEnv } from '../config/env';
 import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../tokens';
@@ -109,7 +111,7 @@ function ai() {
   return aiAdapters;
 }
 
-function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
+export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
   const shared = {
     uow: runtime.uow,
     ctx,
@@ -200,6 +202,13 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       bus.register(new CloseCashShiftCommandHandler(shared));
       bus.register(new ProcessPosSaleCommandHandler(shared));
       return bus;
+    })(),
+    posSyncQueue: (() => {
+      const redisUrl = process.env.REDIS_URL;
+      if (process.env.QUEUE_DRIVER === 'bullmq' && redisUrl && redisUrl.trim().length > 0) {
+        return new BullMqPosSyncQueue({ redisUrl });
+      }
+      return new DirectPosSyncQueue();
     })(),
   } as const;
 }

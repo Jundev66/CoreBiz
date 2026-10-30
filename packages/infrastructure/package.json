@@ -15,6 +15,8 @@
     "@corebiz/domain": "workspace:*",
     "@corebiz/prisma-client": "workspace:*",
     "@synapse-vision/core": "workspace:*",
+    "bullmq": "^6.5.2",
+    "ioredis": "^6.0.0",
     "postgres": "^3.4.7"
   },
   "devDependencies": {

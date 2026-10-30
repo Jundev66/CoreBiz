@@ -18,3 +18,4 @@ export * from './purchasing';
 export * from './ai';
 export * from './vision';
 export * from './pos';
+export * from './direct-pos-queue';

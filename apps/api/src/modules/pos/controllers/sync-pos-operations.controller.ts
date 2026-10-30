@@ -10,16 +10,17 @@ import {
   type PosSyncBatchResponse,
   type PosSyncItemResult,
 } from '@corebiz/contracts';
+import type { PosQueueJobData, TenantContext } from '@corebiz/application';
 import { PermissionsGuard } from '../../../auth/permissions.guard';
 import { RequirePermission } from '../../../auth/require-permission.decorator';
 import { ZodValidationPipe } from '../../../http/zod-validation.pipe';
-import { USE_CASES } from '../../../tokens';
+import { TENANT_CONTEXT, USE_CASES } from '../../../tokens';
 import type { UseCases } from '../../../composition/use-cases.provider';
 
-type SyncOperationItem = PosSyncBatchInput['operations'][number];
-type CommandBuilder = (op: SyncOperationItem) => { type: string } & Record<string, unknown>;
+export type SyncOperationItem = PosSyncBatchInput['operations'][number];
+export type CommandBuilder = (op: SyncOperationItem) => { type: string } & Record<string, unknown>;
 
-const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
+export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
   'shift.open': (op) => ({
     type: 'shift.open',
     ...openCashShiftSchema.parse(op.payload),
@@ -46,7 +47,10 @@ const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
 @UseGuards(PermissionsGuard)
 @Controller('v1/pos')
 export class SyncPosOperationsController {
-  constructor(@Inject(USE_CASES) private readonly useCases: UseCases) {}
+  constructor(
+    @Inject(USE_CASES) private readonly useCases: UseCases,
+    @Inject(TENANT_CONTEXT) private readonly ctx: TenantContext,
+  ) {}
 
   @Post('sync')
   @RequirePermission('payment:receive')
@@ -54,6 +58,29 @@ export class SyncPosOperationsController {
   async run(
     @Body(new ZodValidationPipe(posSyncBatchSchema)) body: PosSyncBatchInput,
   ): Promise<PosSyncBatchResponse> {
+    const isAsyncMode = process.env.QUEUE_DRIVER === 'bullmq';
+
+    if (isAsyncMode) {
+      const queueJobs: PosQueueJobData[] = body.operations.map((op) => ({
+        tenantId: this.ctx.tenantId,
+        userId: this.ctx.actor.userId,
+        deviceId: body.deviceId,
+        operation: op,
+      }));
+
+      const queueResult = await this.useCases.posSyncQueue.enqueueBatch(queueJobs);
+
+      if (queueResult.ok) {
+        return {
+          results: body.operations.map((op) => ({
+            operationId: op.operationId,
+            status: 'enqueued',
+          })),
+          syncedAt: new Date().toISOString(),
+        };
+      }
+    }
+
     const results: PosSyncItemResult[] = [];
 
     for (const op of body.operations) {
