@@ -16,6 +16,31 @@ import { ZodValidationPipe } from '../../../http/zod-validation.pipe';
 import { USE_CASES } from '../../../tokens';
 import type { UseCases } from '../../../composition/use-cases.provider';
 
+type SyncOperationItem = PosSyncBatchInput['operations'][number];
+type CommandBuilder = (op: SyncOperationItem) => { type: string } & Record<string, unknown>;
+
+const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
+  'shift.open': (op) => ({
+    type: 'shift.open',
+    ...openCashShiftSchema.parse(op.payload),
+  }),
+  'cash.movement': (op) => {
+    const parsed = recordCashMovementSchema.parse(op.payload);
+    const { type: movementType, ...rest } = parsed;
+    return { type: 'cash.movement', movementType, ...rest };
+  },
+  'shift.close': (op) => ({
+    type: 'shift.close',
+    ...closeCashShiftSchema.parse(op.payload),
+  }),
+  'sale.issue': (op) => ({
+    type: 'sale.issue',
+    ...issuePosSaleSchema.parse(op.payload),
+    sequence: op.sequence,
+    payloadHash: op.payloadHash,
+  }),
+};
+
 @ApiTags('pos')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
@@ -33,27 +58,8 @@ export class SyncPosOperationsController {
 
     for (const op of body.operations) {
       try {
-        let cmd: { type: string } & Record<string, unknown>;
-
-        if (op.type === 'shift.open') {
-          const parsed = openCashShiftSchema.parse(op.payload);
-          cmd = { type: 'shift.open', ...parsed };
-        } else if (op.type === 'cash.movement') {
-          const parsed = recordCashMovementSchema.parse(op.payload);
-          const { type: movementType, ...restMovement } = parsed;
-          cmd = { type: 'cash.movement', movementType, ...restMovement };
-        } else if (op.type === 'shift.close') {
-          const parsed = closeCashShiftSchema.parse(op.payload);
-          cmd = { type: 'shift.close', ...parsed };
-        } else if (op.type === 'sale.issue') {
-          const parsed = issuePosSaleSchema.parse(op.payload);
-          cmd = {
-            type: 'sale.issue',
-            ...parsed,
-            sequence: op.sequence,
-            payloadHash: op.payloadHash,
-          };
-        } else {
+        const buildCommand = COMMAND_DESERIALIZERS[op.type];
+        if (!buildCommand) {
           results.push({
             operationId: op.operationId,
             status: 'failed',
@@ -62,6 +68,7 @@ export class SyncPosOperationsController {
           continue;
         }
 
+        const cmd = buildCommand(op);
         const dispatchResult = await this.useCases.posCommandBus.dispatch(cmd);
 
         if (!dispatchResult.ok) {
