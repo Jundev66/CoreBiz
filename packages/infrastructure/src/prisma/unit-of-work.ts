@@ -20,6 +20,14 @@ import {
 } from './administration';
 import { PrismaGoodsReceiptRepository, PrismaSupplierRepository } from './purchasing';
 import { PrismaAiSettingsRepository } from './ai-settings';
+import {
+  PrismaPosRegisterRepository,
+  PrismaPosDeviceRepository,
+  PrismaCashShiftRepository,
+  PrismaPosSaleRepository,
+  PrismaInventoryConflictRepository,
+  PrismaPosSyncOperationRepository,
+} from './pos';
 import { withTenant } from './session';
 
 export interface UnitOfWorkDeps {
@@ -75,6 +83,12 @@ export class PrismaUnitOfWork implements UnitOfWork {
         suppliers: new PrismaSupplierRepository(tx, ctx.tenantId),
         goodsReceipts: new PrismaGoodsReceiptRepository(tx, ctx.tenantId),
         aiSettings: new PrismaAiSettingsRepository(tx, ctx.tenantId, ctx.actor.userId),
+        posRegisters: new PrismaPosRegisterRepository(tx, ctx.tenantId),
+        posDevices: new PrismaPosDeviceRepository(tx, ctx.tenantId),
+        cashShifts: new PrismaCashShiftRepository(tx, ctx.tenantId),
+        posSales: new PrismaPosSaleRepository(tx, ctx.tenantId),
+        inventoryConflicts: new PrismaInventoryConflictRepository(tx, ctx.tenantId),
+        posSyncOperations: new PrismaPosSyncOperationRepository(tx, ctx.tenantId),
       }),
     );
   }

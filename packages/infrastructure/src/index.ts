@@ -75,4 +75,12 @@ export {
   prismaVisionVectorStore,
   type PrismaVisionVectorStoreOptions,
 } from './prisma/vector-store';
+export {
+  PrismaPosRegisterRepository,
+  PrismaPosDeviceRepository,
+  PrismaCashShiftRepository,
+  PrismaPosSaleRepository,
+  PrismaInventoryConflictRepository,
+  PrismaPosSyncOperationRepository,
+} from './prisma/pos';
 export { isAllowedBaseUrl } from './ai/url-guard';
