@@ -43,11 +43,11 @@ export function makeRecordCashMovement(deps: RecordCashMovementDeps) {
   return async function recordCashMovement(
     input: RecordCashMovementInput,
   ): Promise<Result<RecordCashMovementOutput, RecordCashMovementError>> {
-    if (!can(deps.ctx.actor, 'deliveryNotes:create')) {
+    if (!can(deps.ctx.actor, 'payment:receive')) {
       return err({ kind: 'Forbidden' });
     }
 
-    const shiftId: PosShiftId = asId(input.shiftId);
+    const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
     const movementId = input.movementId ?? deps.ids.next();
     const amount = Money.fromMinor(BigInt(input.amountMinor), input.currency);
     const occurredAt = input.occurredAt ? new Date(input.occurredAt) : deps.clock.now();

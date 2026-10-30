@@ -13,6 +13,7 @@ import {
   type PosDeviceId,
   type PosShiftId,
   type ProductId,
+  type UserId,
   type InventoryConflictId,
   type PosPaymentMethod,
   type PosSaleError,
@@ -67,7 +68,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
   return async function processPosSale(
     input: ProcessPosSaleInput,
   ): Promise<Result<ProcessPosSaleOutput, ProcessPosSaleError>> {
-    if (!can(deps.ctx.actor, 'deliveryNotes:create')) {
+    if (!can(deps.ctx.actor, 'delivery_note:issue')) {
       return err({ kind: 'Forbidden' });
     }
 
@@ -84,7 +85,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         });
       }
 
-      const shiftId: PosShiftId = asId(input.shiftId);
+      const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
       const shift = await repos.cashShifts.findById(shiftId);
       if (!shift) {
         return err({ kind: 'ShiftNotFound', shiftId: input.shiftId });
@@ -93,9 +94,11 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         return err({ kind: 'ShiftNotOpen', shiftId: input.shiftId });
       }
 
-      const saleId: PosSaleId = input.saleId ? asId(input.saleId) : asId(deps.ids.next());
-      const registerId: PosRegisterId = asId(input.registerId);
-      const deviceId: PosDeviceId = asId(input.deviceId);
+      const saleId: PosSaleId = input.saleId
+        ? asId<PosSaleId>(input.saleId)
+        : asId<PosSaleId>(deps.ids.next());
+      const registerId: PosRegisterId = asId<PosRegisterId>(input.registerId);
+      const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
       const occurredAt = new Date(input.occurredAt);
       const postedAt = deps.clock.now();
 
@@ -106,7 +109,11 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       for (const line of input.lines) {
         const qty = Quantity.of(line.quantity);
         if (!qty.ok) {
-          return err({ kind: 'FieldRequired', field: 'quantity' });
+          return err({
+            kind: 'InvalidFormat',
+            field: 'quantity',
+            expected: 'valid decimal quantity',
+          });
         }
 
         const unitPrice = Money.fromMinor(
@@ -114,7 +121,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
           deps.ctx.settings.baseCurrency,
         );
 
-        const prodId: ProductId | null = line.productId ? asId(line.productId) : null;
+        const prodId: ProductId | null = line.productId ? asId<ProductId>(line.productId) : null;
 
         if (!prodId) {
           const conflictId = asId<InventoryConflictId>(deps.ids.next());
@@ -179,7 +186,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         registerId,
         deviceId,
         shiftId,
-        cashierUserId: deps.ctx.actor.userId,
+        cashierUserId: asId<UserId>(deps.ctx.actor.userId),
         operationId: input.operationId,
         ticketNumber: input.ticketNumber,
         paymentMethod: input.paymentMethod,
@@ -236,7 +243,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         status: 'processed',
         saleId: sale.id,
         ticketNumber: sale.ticketNumber,
-        conflictId: detectedConflictId,
+        ...(detectedConflictId ? { conflictId: detectedConflictId } : {}),
       });
     });
   };

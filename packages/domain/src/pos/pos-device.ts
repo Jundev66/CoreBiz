@@ -57,20 +57,26 @@ export class PosDevice {
     browser?: string | null;
   }): Result<PosDevice, PosDeviceError> {
     const trimmedName = params.name.trim();
-    if (trimmedName.length === 0 || trimmedName.length > 100) {
+    if (trimmedName.length === 0) {
       return err({
-        kind: 'FieldTooLong',
+        kind: 'Required',
+        field: 'name',
+      });
+    }
+    if (trimmedName.length > 100) {
+      return err({
+        kind: 'TooLong',
         field: 'name',
         max: 100,
-        actual: trimmedName.length,
       });
     }
 
     const trimmedInstallId = params.installationId.trim();
     if (!/^[0-9a-fA-F-]{36}$/.test(trimmedInstallId)) {
       return err({
-        kind: 'FieldRequired',
+        kind: 'InvalidFormat',
         field: 'installationId',
+        expected: 'UUID format',
       });
     }
 

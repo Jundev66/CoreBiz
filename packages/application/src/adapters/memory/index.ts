@@ -17,3 +17,4 @@ export * from './administration';
 export * from './purchasing';
 export * from './ai';
 export * from './vision';
+export * from './pos';

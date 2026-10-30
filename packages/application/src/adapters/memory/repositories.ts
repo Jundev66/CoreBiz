@@ -21,6 +21,14 @@ import {
   type SalesStores,
 } from './sales';
 import { InMemoryAiSettingsRepository } from './ai';
+import {
+  InMemoryPosRegisterRepository,
+  InMemoryPosDeviceRepository,
+  InMemoryCashShiftRepository,
+  InMemoryPosSaleRepository,
+  InMemoryInventoryConflictRepository,
+  InMemoryPosSyncOperationRepository,
+} from './pos';
 import type {
   AuditEntry,
   AuditLogger,
@@ -207,6 +215,12 @@ export class InMemoryUnitOfWork implements UnitOfWork {
       suppliers: new Map(this.stores.suppliers),
       goodsReceipts: new Map(this.stores.goodsReceipts),
       aiSettings: new Map(this.stores.aiSettings),
+      posRegisters: new Map(this.stores.posRegisters),
+      posDevices: new Map(this.stores.posDevices),
+      cashShifts: new Map(this.stores.cashShifts),
+      posSales: new Map(this.stores.posSales),
+      inventoryConflicts: new Map(this.stores.inventoryConflicts),
+      posSyncOperations: new Map(this.stores.posSyncOperations),
     };
     const auditLength = this.audit.entries.length;
 
@@ -246,6 +260,15 @@ export class InMemoryUnitOfWork implements UnitOfWork {
           this.stores.aiSettings as never,
           this.tenantId,
         ),
+        posRegisters: new InMemoryPosRegisterRepository(this.stores.posRegisters, this.tenantId),
+        posDevices: new InMemoryPosDeviceRepository(this.stores.posDevices, this.tenantId),
+        cashShifts: new InMemoryCashShiftRepository(this.stores.cashShifts, this.tenantId),
+        posSales: new InMemoryPosSaleRepository(this.stores.posSales, this.tenantId),
+        inventoryConflicts: new InMemoryInventoryConflictRepository(
+          this.stores.inventoryConflicts,
+          this.tenantId,
+        ),
+        posSyncOperations: new InMemoryPosSyncOperationRepository(this.stores.posSyncOperations),
       });
     } catch (error) {
       // Rollback: se restaura cada almacen a su estado previo.

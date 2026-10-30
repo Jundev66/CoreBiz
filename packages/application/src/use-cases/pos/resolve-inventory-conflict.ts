@@ -8,6 +8,7 @@ import {
   type InventoryConflictId,
   type ConflictResolutionType,
   type InventoryConflictError,
+  type UserId,
 } from '@corebiz/domain';
 import type { Clock } from '../../ports/clock';
 import type { IdGenerator } from '../../ports/id-generator';
@@ -44,11 +45,11 @@ export function makeResolveInventoryConflict(deps: ResolveInventoryConflictDeps)
   return async function resolveInventoryConflict(
     input: ResolveInventoryConflictInput,
   ): Promise<Result<ResolveInventoryConflictOutput, ResolveInventoryConflictError>> {
-    if (!can(deps.ctx.actor, 'products:manage')) {
+    if (!can(deps.ctx.actor, 'stock:adjust')) {
       return err({ kind: 'Forbidden' });
     }
 
-    const conflictId: InventoryConflictId = asId(input.conflictId);
+    const conflictId: InventoryConflictId = asId<InventoryConflictId>(input.conflictId);
     const now = deps.clock.now();
 
     return deps.uow.run(async (repos) => {
@@ -81,7 +82,7 @@ export function makeResolveInventoryConflict(deps: ResolveInventoryConflictDeps)
       const resolveResult = conflict.resolve({
         resolutionType: input.resolutionType,
         notes: input.notes,
-        resolvedBy: deps.ctx.actor.userId,
+        resolvedBy: asId<UserId>(deps.ctx.actor.userId),
         resolvedAt: now,
         resolutionMovementId: movementId,
       });

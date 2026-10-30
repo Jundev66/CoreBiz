@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { asId } from '../shared/entity';
+import { asId, type TenantId, type UserId, type ProductId } from '../shared/entity';
 import { Money } from '../shared/value-objects/money';
 import { Quantity } from '../shared/value-objects/quantity';
 import { PosRegister } from './pos-register';
@@ -7,10 +7,17 @@ import { PosDevice } from './pos-device';
 import { CashShift } from './cash-shift';
 import { PosSale } from './pos-sale';
 import { InventoryConflict } from './inventory-conflict';
+import type {
+  PosRegisterId,
+  PosDeviceId,
+  PosShiftId,
+  PosSaleId,
+  InventoryConflictId,
+} from './pos-ids';
 
 describe('PosRegister Aggregate', () => {
-  const tenantId = asId('018e245a-0000-7000-8000-000000000001');
-  const registerId = asId('018e245a-0000-7000-8000-000000000002');
+  const tenantId = asId<TenantId>('018e245a-0000-7000-8000-000000000001');
+  const registerId = asId<PosRegisterId>('018e245a-0000-7000-8000-000000000002');
   const testDate = new Date('2026-10-30T10:00:00Z');
 
   it('creates an active register with valid code and name', () => {
@@ -67,8 +74,8 @@ describe('PosRegister Aggregate', () => {
 });
 
 describe('PosDevice Aggregate', () => {
-  const tenantId = asId('018e245a-0000-7000-8000-000000000001');
-  const deviceId = asId('018e245a-0000-7000-8000-000000000003');
+  const tenantId = asId<TenantId>('018e245a-0000-7000-8000-000000000001');
+  const deviceId = asId<PosDeviceId>('018e245a-0000-7000-8000-000000000003');
   const installationId = '018e245a-1111-7000-8000-000000000000';
   const testDate = new Date('2026-10-30T10:00:00Z');
 
@@ -132,11 +139,11 @@ describe('PosDevice Aggregate', () => {
 });
 
 describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
-  const tenantId = asId('018e245a-0000-7000-8000-000000000001');
-  const shiftId = asId('018e245a-0000-7000-8000-000000000010');
-  const registerId = asId('018e245a-0000-7000-8000-000000000002');
-  const deviceId = asId('018e245a-0000-7000-8000-000000000003');
-  const cashierId = asId('018e245a-0000-7000-8000-000000000004');
+  const tenantId = asId<TenantId>('018e245a-0000-7000-8000-000000000001');
+  const shiftId = asId<PosShiftId>('018e245a-0000-7000-8000-000000000010');
+  const registerId = asId<PosRegisterId>('018e245a-0000-7000-8000-000000000002');
+  const deviceId = asId<PosDeviceId>('018e245a-0000-7000-8000-000000000003');
+  const cashierId = asId<UserId>('018e245a-0000-7000-8000-000000000004');
   const initialFloat = Money.fromMinor(10_000n, 'USD');
   const testDate = new Date('2026-10-30T08:00:00Z');
 
@@ -161,11 +168,11 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
 
     const events = shift.pullDomainEvents();
     expect(events.length).toBe(1);
-    expect(events[0].type).toBe('pos.shift.opened');
+    expect(events[0]?.type).toBe('pos.shift.opened');
   });
 
   it('tracks cash sales and cash movements correctly', () => {
-    const shift = CashShift.open({
+    const shiftRes = CashShift.open({
       id: shiftId,
       tenantId,
       registerId,
@@ -173,7 +180,9 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
       openedByUserId: cashierId,
       initialFloat,
       now: testDate,
-    }).value as CashShift;
+    });
+    if (!shiftRes.ok) throw new Error('Setup failed');
+    const shift = shiftRes.value;
 
     shift.recordCashSale(Money.fromMinor(5_000n, 'USD'));
     expect(shift.currentExpectedCash().minorUnits).toBe(15_000n);
@@ -198,7 +207,7 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
   });
 
   it('rejects cash withdrawals greater than current cash', () => {
-    const shift = CashShift.open({
+    const shiftRes = CashShift.open({
       id: shiftId,
       tenantId,
       registerId,
@@ -206,7 +215,9 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
       openedByUserId: cashierId,
       initialFloat,
       now: testDate,
-    }).value as CashShift;
+    });
+    if (!shiftRes.ok) throw new Error('Setup failed');
+    const shift = shiftRes.value;
 
     const withdrawal = shift.recordCashMovement({
       id: 'mov-fail',
@@ -220,7 +231,7 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
   });
 
   it('performs blind cash reconciliation calculating variance accurately', () => {
-    const shift = CashShift.open({
+    const shiftRes = CashShift.open({
       id: shiftId,
       tenantId,
       registerId,
@@ -228,7 +239,9 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
       openedByUserId: cashierId,
       initialFloat,
       now: testDate,
-    }).value as CashShift;
+    });
+    if (!shiftRes.ok) throw new Error('Setup failed');
+    const shift = shiftRes.value;
 
     shift.recordCashSale(Money.fromMinor(15_000n, 'USD'));
     expect(shift.currentExpectedCash().minorUnits).toBe(25_000n);
@@ -250,11 +263,11 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
     const events = shift.pullDomainEvents();
     const closeEvent = events.find((e) => e.type === 'pos.shift.closed');
     expect(closeEvent).toBeDefined();
-    expect(closeEvent?.payload.varianceMinor).toBe('-500');
+    expect(closeEvent?.payload['varianceMinor']).toBe('-500');
   });
 
   it('rejects operations after shift is closed', () => {
-    const shift = CashShift.open({
+    const shiftRes = CashShift.open({
       id: shiftId,
       tenantId,
       registerId,
@@ -262,7 +275,9 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
       openedByUserId: cashierId,
       initialFloat,
       now: testDate,
-    }).value as CashShift;
+    });
+    if (!shiftRes.ok) throw new Error('Setup failed');
+    const shift = shiftRes.value;
 
     shift.close({
       declaredCash: initialFloat,
@@ -283,19 +298,21 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
 });
 
 describe('PosSale Aggregate', () => {
-  const tenantId = asId('018e245a-0000-7000-8000-000000000001');
-  const saleId = asId('018e245a-0000-7000-8000-000000000020');
-  const shiftId = asId('018e245a-0000-7000-8000-000000000010');
-  const registerId = asId('018e245a-0000-7000-8000-000000000002');
-  const deviceId = asId('018e245a-0000-7000-8000-000000000003');
-  const cashierId = asId('018e245a-0000-7000-8000-000000000004');
-  const productId = asId('018e245a-0000-7000-8000-000000000005');
+  const tenantId = asId<TenantId>('018e245a-0000-7000-8000-000000000001');
+  const saleId = asId<PosSaleId>('018e245a-0000-7000-8000-000000000020');
+  const shiftId = asId<PosShiftId>('018e245a-0000-7000-8000-000000000010');
+  const registerId = asId<PosRegisterId>('018e245a-0000-7000-8000-000000000002');
+  const deviceId = asId<PosDeviceId>('018e245a-0000-7000-8000-000000000003');
+  const cashierId = asId<UserId>('018e245a-0000-7000-8000-000000000004');
+  const productId = asId<ProductId>('018e245a-0000-7000-8000-000000000005');
   const occurredAt = new Date('2026-10-30T10:30:00Z');
   const receivedAt = new Date('2026-10-30T10:30:05Z');
   const postedAt = new Date('2026-10-30T10:30:06Z');
 
   it('computes line totals, tax and grand total with high precision', () => {
-    const quantity = Quantity.of('3').value as Quantity;
+    const qtyRes = Quantity.of('3');
+    if (!qtyRes.ok) throw new Error('Quantity setup failed');
+    const quantity = qtyRes.value;
     const unitPrice = Money.fromMinor(250n, 'USD');
 
     const result = PosSale.create({
@@ -327,7 +344,7 @@ describe('PosSale Aggregate', () => {
 
     const sale = result.value;
     expect(sale.lines.length).toBe(1);
-    expect(sale.lines[0].lineTotal.minorUnits).toBe(750n);
+    expect(sale.lines[0]?.lineTotal.minorUnits).toBe(750n);
     expect(sale.subtotal.minorUnits).toBe(750n);
     expect(sale.tax.minorUnits).toBe(120n);
     expect(sale.total.minorUnits).toBe(870n);
@@ -335,7 +352,9 @@ describe('PosSale Aggregate', () => {
   });
 
   it('supports uncataloged contingent sale items', () => {
-    const quantity = Quantity.of('1').value as Quantity;
+    const qtyRes = Quantity.of('1');
+    if (!qtyRes.ok) throw new Error('Quantity setup failed');
+    const quantity = qtyRes.value;
     const unitPrice = Money.fromMinor(1_500n, 'USD');
 
     const result = PosSale.create({
@@ -367,16 +386,18 @@ describe('PosSale Aggregate', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.value.lines[0].productId).toBeNull();
-    expect(result.value.lines[0].temporaryName).toBe('Articulo manual no catalogado');
-    expect(result.value.lines[0].barcodeScanned).toBe('7791234567890');
+    expect(result.value.lines[0]?.productId).toBeNull();
+    expect(result.value.lines[0]?.temporaryName).toBe('Articulo manual no catalogado');
+    expect(result.value.lines[0]?.barcodeScanned).toBe('7791234567890');
   });
 
   it('allows voiding a completed sale with audit event', () => {
-    const quantity = Quantity.of('1').value as Quantity;
+    const qtyRes = Quantity.of('1');
+    if (!qtyRes.ok) throw new Error('Quantity setup failed');
+    const quantity = qtyRes.value;
     const unitPrice = Money.fromMinor(500n, 'USD');
 
-    const sale = PosSale.create({
+    const saleRes = PosSale.create({
       id: saleId,
       tenantId,
       registerId,
@@ -398,7 +419,9 @@ describe('PosSale Aggregate', () => {
       occurredAt,
       receivedAt,
       postedAt,
-    }).value as PosSale;
+    });
+    if (!saleRes.ok) throw new Error('Sale setup failed');
+    const sale = saleRes.value;
 
     const voidResult = sale.void(cashierId, 'Error en digitacion de medio de pago', postedAt);
     expect(voidResult.ok).toBe(true);
@@ -407,15 +430,15 @@ describe('PosSale Aggregate', () => {
     const events = sale.pullDomainEvents();
     const voidEvent = events.find((e) => e.type === 'pos.sale.voided');
     expect(voidEvent).toBeDefined();
-    expect(voidEvent?.payload.reason).toBe('Error en digitacion de medio de pago');
+    expect(voidEvent?.payload['reason']).toBe('Error en digitacion de medio de pago');
   });
 });
 
 describe('InventoryConflict Aggregate', () => {
-  const tenantId = asId('018e245a-0000-7000-8000-000000000001');
-  const conflictId = asId('018e245a-0000-7000-8000-000000000030');
-  const productId = asId('018e245a-0000-7000-8000-000000000005');
-  const adminId = asId('018e245a-0000-7000-8000-000000000099');
+  const tenantId = asId<TenantId>('018e245a-0000-7000-8000-000000000001');
+  const conflictId = asId<InventoryConflictId>('018e245a-0000-7000-8000-000000000030');
+  const productId = asId<ProductId>('018e245a-0000-7000-8000-000000000005');
+  const adminId = asId<UserId>('018e245a-0000-7000-8000-000000000099');
   const testDate = new Date('2026-10-30T10:00:00Z');
 
   it('creates and investigates a negative stock conflict', () => {
@@ -448,7 +471,7 @@ describe('InventoryConflict Aggregate', () => {
   });
 
   it('resolves conflict with compensatory inventory movement', () => {
-    const conflict = InventoryConflict.createNegativeStock({
+    const conflictRes = InventoryConflict.createNegativeStock({
       id: conflictId,
       tenantId,
       productId,
@@ -457,7 +480,9 @@ describe('InventoryConflict Aggregate', () => {
       stockAfter: -10_000n,
       shortageQuantity: 10_000n,
       detectedAt: testDate,
-    }).value as InventoryConflict;
+    });
+    if (!conflictRes.ok) throw new Error('Conflict setup failed');
+    const conflict = conflictRes.value;
 
     const resolveResult = conflict.resolve({
       resolutionType: 'adjustment_in',

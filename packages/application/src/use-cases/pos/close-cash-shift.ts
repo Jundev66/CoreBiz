@@ -7,6 +7,7 @@ import {
   type Result,
   type PosShiftId,
   type CashShiftError,
+  type UserId,
 } from '@corebiz/domain';
 import type { Clock } from '../../ports/clock';
 import type { TenantContext, UnitOfWork } from '../../ports/repositories';
@@ -39,11 +40,11 @@ export function makeCloseCashShift(deps: CloseCashShiftDeps) {
   return async function closeCashShift(
     input: CloseCashShiftInput,
   ): Promise<Result<CloseCashShiftOutput, CloseCashShiftError>> {
-    if (!can(deps.ctx.actor, 'deliveryNotes:create')) {
+    if (!can(deps.ctx.actor, 'payment:receive')) {
       return err({ kind: 'Forbidden' });
     }
 
-    const shiftId: PosShiftId = asId(input.shiftId);
+    const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
     const closedAt = input.closedAt ? new Date(input.closedAt) : deps.clock.now();
 
     return deps.uow.run(async (repos) => {
@@ -59,9 +60,9 @@ export function makeCloseCashShift(deps: CloseCashShiftDeps) {
 
       const closeResult = shift.close({
         declaredCash,
-        closedByUserId: deps.ctx.actor.userId,
+        closedByUserId: asId<UserId>(deps.ctx.actor.userId),
         closedAt,
-        notes: input.notes,
+        notes: input.notes ?? null,
       });
 
       if (!closeResult.ok) {

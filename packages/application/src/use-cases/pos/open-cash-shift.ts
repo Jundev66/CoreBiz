@@ -50,12 +50,14 @@ export function makeOpenCashShift(deps: OpenCashShiftDeps) {
   return async function openCashShift(
     input: OpenCashShiftInput,
   ): Promise<Result<OpenCashShiftOutput, OpenCashShiftError>> {
-    if (!can(deps.ctx.actor, 'deliveryNotes:create')) {
+    if (!can(deps.ctx.actor, 'payment:receive')) {
       return err({ kind: 'Forbidden' });
     }
 
     const initialFloat = Money.fromMinor(BigInt(input.initialFloatMinor), input.currency);
-    const shiftId: PosShiftId = input.shiftId ? asId(input.shiftId) : asId(deps.ids.next());
+    const shiftId: PosShiftId = input.shiftId
+      ? asId<PosShiftId>(input.shiftId)
+      : asId<PosShiftId>(deps.ids.next());
     const registerId = asId<PosRegisterId>(input.registerId);
     const deviceId = asId<PosDeviceId>(input.deviceId);
     const now = deps.clock.now();

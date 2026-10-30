@@ -1,4 +1,4 @@
-import type { Result } from '@corebiz/domain';
+import type { CashMovementType, Result } from '@corebiz/domain';
 import type { Command, CommandHandler } from '../command-bus';
 import {
   makeRecordCashMovement,
@@ -8,8 +8,9 @@ import {
   type RecordCashMovementError,
 } from '../record-cash-movement';
 
-export interface RecordCashMovementCommand extends Command, RecordCashMovementInput {
+export interface RecordCashMovementCommand extends Command, Omit<RecordCashMovementInput, 'type'> {
   readonly type: 'cash.movement';
+  readonly movementType: CashMovementType;
 }
 
 export class RecordCashMovementCommandHandler implements CommandHandler<
@@ -29,6 +30,10 @@ export class RecordCashMovementCommandHandler implements CommandHandler<
   async handle(
     command: RecordCashMovementCommand,
   ): Promise<Result<RecordCashMovementOutput, RecordCashMovementError>> {
-    return this.useCase(command);
+    const { type: _cmdType, movementType, ...rest } = command;
+    return this.useCase({
+      ...rest,
+      type: movementType,
+    });
   }
 }

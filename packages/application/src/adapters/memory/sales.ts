@@ -9,6 +9,11 @@ import {
   type Product,
   type ProductId,
   type TenantId,
+  type PosRegister,
+  type PosDevice,
+  type CashShift,
+  type PosSale,
+  type InventoryConflict,
 } from '@corebiz/domain';
 import type {
   DeliveryNoteRepository,
@@ -17,6 +22,7 @@ import type {
   Page,
   PaymentRepository,
   ProductRepository,
+  PosSyncOperation,
 } from '../../ports/index';
 
 /**
@@ -265,6 +271,12 @@ export interface SalesStores {
   readonly suppliers: Map<string, unknown>;
   readonly goodsReceipts: Map<string, unknown>;
   readonly aiSettings: Map<string, unknown>;
+  readonly posRegisters: Map<string, PosRegister>;
+  readonly posDevices: Map<string, PosDevice>;
+  readonly cashShifts: Map<string, CashShift>;
+  readonly posSales: Map<string, PosSale>;
+  readonly inventoryConflicts: Map<string, InventoryConflict>;
+  readonly posSyncOperations: Map<string, PosSyncOperation>;
 }
 
 /** Un movimiento ya consumido del agregado, listo para leer. */
@@ -294,5 +306,11 @@ export function createSalesStores(): SalesStores {
     suppliers: new Map(),
     goodsReceipts: new Map(),
     aiSettings: new Map(),
+    posRegisters: new Map(),
+    posDevices: new Map(),
+    cashShifts: new Map(),
+    posSales: new Map(),
+    inventoryConflicts: new Map(),
+    posSyncOperations: new Map(),
   };
 }

@@ -4,22 +4,22 @@ import {
   Money,
   Quantity,
   Product,
+  Plan,
   PosRegister,
   PosDevice,
   type CashShift,
   type PosSale,
   InventoryConflict,
-  type TenantContext,
-  type Repositories,
-  type UnitOfWork,
+  type TenantId,
+  type UserId,
   type PosRegisterId,
   type PosDeviceId,
   type ProductId,
   type PosShiftId,
   type PosSaleId,
   type InventoryConflictId,
-  type AuditEntry,
 } from '@corebiz/domain';
+import type { TenantContext, Repositories, UnitOfWork, AuditEntry } from '../../ports/repositories';
 import { fixedClock } from '../../ports/clock';
 import { sequentialIdGenerator } from '../../ports/id-generator';
 import type { PosSyncOperation } from '../../ports/pos';
@@ -37,17 +37,17 @@ describe('POS Application Use Cases & Command Bus', () => {
   const clock = fixedClock(fixedNow);
   let idGen: ReturnType<typeof sequentialIdGenerator>;
 
-  const tenantId = asId('018e245a-0000-7000-8000-000000000001');
-  const userId = asId('018e245a-0000-7000-8000-000000000002');
-  const registerId: PosRegisterId = asId('018e245a-0000-7000-8000-000000000010');
-  const deviceId: PosDeviceId = asId('018e245a-0000-7000-8000-000000000020');
-  const productId: ProductId = asId('018e245a-0000-7000-8000-000000000030');
+  const tenantId = asId<TenantId>('018e245a-0000-7000-8000-000000000001');
+  const userId = asId<UserId>('018e245a-0000-7000-8000-000000000002');
+  const registerId = asId<PosRegisterId>('018e245a-0000-7000-8000-000000000010');
+  const deviceId = asId<PosDeviceId>('018e245a-0000-7000-8000-000000000020');
+  const productId = asId<ProductId>('018e245a-0000-7000-8000-000000000030');
 
   const ctx: TenantContext = {
     tenantId,
     tenantSlug: 'demo-tenant',
     actor: { userId, role: 'owner' },
-    plan: 'enterprise',
+    plan: Plan.of('pro'),
     settings: {
       taxLabel: 'IVA',
       taxRateBp: 1600,
@@ -81,26 +81,30 @@ describe('POS Application Use Cases & Command Bus', () => {
     fakeProducts = new Map();
     recordedAudits = [];
 
-    const reg = PosRegister.create({
+    const regRes = PosRegister.create({
       id: registerId,
       tenantId,
       name: 'Caja 1',
       code: 'POS-01',
       now: fixedNow,
-    }).value as PosRegister;
+    });
+    if (!regRes.ok) throw new Error('Register setup failed');
+    const reg = regRes.value;
     fakeRegisters.set(reg.id, reg);
 
-    const dev = PosDevice.create({
+    const devRes = PosDevice.create({
       id: deviceId,
       tenantId,
       installationId: '018e245a-1111-7000-8000-000000000000',
       name: 'Tablet 1',
       now: fixedNow,
-    }).value as PosDevice;
+    });
+    if (!devRes.ok) throw new Error('Device setup failed');
+    const dev = devRes.value;
     dev.authorize('token-hash', fixedNow);
     fakeDevices.set(dev.id, dev);
 
-    const prod = Product.create({
+    const prodRes = Product.create({
       id: productId,
       tenantId,
       sku: 'HAR-001',
@@ -108,9 +112,14 @@ describe('POS Application Use Cases & Command Bus', () => {
       unit: 'kg',
       price: Money.fromMinor(250n, 'USD'),
       stockPolicy: 'allow_negative',
-      now: fixedNow,
-    }).value as Product;
-    prod.addStock(Quantity.of('50').value as Quantity, fixedNow, {
+      createdAt: fixedNow,
+    });
+    if (!prodRes.ok) throw new Error('Product setup failed');
+    const prod = prodRes.value;
+
+    const qtyRes = Quantity.of('50');
+    if (!qtyRes.ok) throw new Error('Quantity setup failed');
+    prod.addStock(qtyRes.value, fixedNow, {
       type: 'init',
       id: 'init-1',
     });
@@ -195,6 +204,7 @@ describe('POS Application Use Cases & Command Bus', () => {
           Promise.resolve({
             items: Array.from(fakeProducts.values()),
             total: fakeProducts.size,
+            nextCursor: null,
           }),
         save: (p: Product) => {
           fakeProducts.set(p.id, p);
@@ -211,7 +221,7 @@ describe('POS Application Use Cases & Command Bus', () => {
           return Promise.resolve();
         },
       },
-    };
+    } as unknown as Repositories;
 
     uow = {
       run: <T>(fn: (r: Repositories) => Promise<T>): Promise<T> => fn(repos),
@@ -366,8 +376,8 @@ describe('POS Application Use Cases & Command Bus', () => {
   });
 
   it('resolves negative stock conflict with compensatory adjustment', async () => {
-    const conflict = InventoryConflict.createNegativeStock({
-      id: asId('conflict-1'),
+    const conflictRes = InventoryConflict.createNegativeStock({
+      id: asId<InventoryConflictId>('conflict-1'),
       tenantId,
       productId,
       stockBefore: 0n,
@@ -375,7 +385,9 @@ describe('POS Application Use Cases & Command Bus', () => {
       stockAfter: -30_000n,
       shortageQuantity: 30_000n,
       detectedAt: fixedNow,
-    }).value as InventoryConflict;
+    });
+    if (!conflictRes.ok) throw new Error('Conflict setup failed');
+    const conflict = conflictRes.value;
     fakeConflicts.set(conflict.id, conflict);
 
     const resolveUseCase = makeResolveInventoryConflict({ uow, ctx, clock, ids: idGen });

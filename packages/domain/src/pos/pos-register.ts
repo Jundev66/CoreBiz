@@ -45,20 +45,26 @@ export class PosRegister {
     now: Date;
   }): Result<PosRegister, PosRegisterError> {
     const trimmedName = params.name.trim();
-    if (trimmedName.length === 0 || trimmedName.length > 100) {
+    if (trimmedName.length === 0) {
       return err({
-        kind: 'FieldTooLong',
+        kind: 'Required',
+        field: 'name',
+      });
+    }
+    if (trimmedName.length > 100) {
+      return err({
+        kind: 'TooLong',
         field: 'name',
         max: 100,
-        actual: trimmedName.length,
       });
     }
 
     const trimmedCode = params.code.trim().toUpperCase();
     if (!/^[A-Z0-9_-]{2,20}$/.test(trimmedCode)) {
       return err({
-        kind: 'FieldRequired',
+        kind: 'InvalidFormat',
         field: 'code',
+        expected: '^[A-Z0-9_-]{2,20}$',
       });
     }
 
@@ -111,12 +117,17 @@ export class PosRegister {
 
   rename(newName: string, now: Date): Result<void, PosRegisterError> {
     const trimmed = newName.trim();
-    if (trimmed.length === 0 || trimmed.length > 100) {
+    if (trimmed.length === 0) {
       return err({
-        kind: 'FieldTooLong',
+        kind: 'Required',
+        field: 'name',
+      });
+    }
+    if (trimmed.length > 100) {
+      return err({
+        kind: 'TooLong',
         field: 'name',
         max: 100,
-        actual: trimmed.length,
       });
     }
     this._name = trimmed;

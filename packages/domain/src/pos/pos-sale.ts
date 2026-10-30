@@ -100,12 +100,18 @@ export class PosSale extends AggregateRoot<PosSaleId> {
     const trimmedTicket = params.ticketNumber.trim();
     if (!/^[A-Z0-9_-]+-\d{4,}$/.test(trimmedTicket)) {
       return err({
-        kind: 'FieldRequired',
+        kind: 'InvalidFormat',
         field: 'ticketNumber',
+        expected: '^[A-Z0-9_-]+-\\d{4,}$',
       });
     }
 
-    const currency = params.lines[0].unitPrice.currency;
+    const firstLine = params.lines[0];
+    if (!firstLine) {
+      return err({ kind: 'EmptySaleLines' });
+    }
+
+    const currency = firstLine.unitPrice.currency;
     let subtotalMinor = 0n;
     const computedLines: PosSaleLine[] = [];
 
