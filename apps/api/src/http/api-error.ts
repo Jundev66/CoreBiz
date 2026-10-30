@@ -45,6 +45,9 @@ const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   MemberNotFound: 404,
   DeliveryNoteNotFound: 404,
   InvitationNotFound: 404,
+  ShiftNotFound: 404,
+  ConflictNotFound: 404,
+  RegisterNotFound: 404,
 
   InsufficientStock: 409,
   DuplicateProduct: 409,

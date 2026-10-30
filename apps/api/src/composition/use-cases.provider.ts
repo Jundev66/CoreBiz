@@ -33,6 +33,16 @@ import {
   makeListAiModels,
   makeRemoveAiSettings,
   makeSaveAiSettings,
+  makeOpenCashShift,
+  makeRecordCashMovement,
+  makeCloseCashShift,
+  makeProcessPosSale,
+  makeResolveInventoryConflict,
+  PosCommandBus,
+  OpenCashShiftCommandHandler,
+  RecordCashMovementCommandHandler,
+  CloseCashShiftCommandHandler,
+  ProcessPosSaleCommandHandler,
   memoryVisionDocumentCache,
   systemClock,
   type AiGateway,
@@ -176,6 +186,21 @@ function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     extractDeliveryNote: makeExtractDeliveryNote(withVision),
     // (Re)construir el indice vectorial del catalogo. Solo owner/admin.
     reindexVisionEmbeddings: makeReindexVisionEmbeddings(withVision),
+
+    // POS Offline.
+    openCashShift: makeOpenCashShift(shared),
+    recordCashMovement: makeRecordCashMovement(shared),
+    closeCashShift: makeCloseCashShift(shared),
+    processPosSale: makeProcessPosSale(shared),
+    resolveInventoryConflict: makeResolveInventoryConflict(shared),
+    posCommandBus: (() => {
+      const bus = new PosCommandBus();
+      bus.register(new OpenCashShiftCommandHandler(shared));
+      bus.register(new RecordCashMovementCommandHandler(shared));
+      bus.register(new CloseCashShiftCommandHandler(shared));
+      bus.register(new ProcessPosSaleCommandHandler(shared));
+      return bus;
+    })(),
   } as const;
 }
 

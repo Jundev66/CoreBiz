@@ -20,6 +20,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { SessionModule } from './modules/session/session.module';
 import { VisionModule } from './modules/vision/vision.module';
+import { PosModule } from './modules/pos/pos.module';
 
 /**
  * Raiz de la aplicacion.
@@ -48,6 +49,7 @@ import { VisionModule } from './modules/vision/vision.module';
     DemoModule,
     InternalModule,
     IntegrationsModule,
+    PosModule,
   ],
   // Global and singleton on purpose: see the note in `WriteThrottleGuard`.
   providers: [
