@@ -84,6 +84,12 @@ export function App() {
   const [showCashCheckoutModal, setShowCashCheckoutModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const [checkoutCustomerType, setCheckoutCustomerType] = useState<'none' | 'generic' | 'custom'>(
+    'none',
+  );
+  const [checkoutDocInput, setCheckoutDocInput] = useState('');
+  const [checkoutNameInput, setCheckoutNameInput] = useState('');
+
   const [selectedCustomer, setSelectedCustomer] = useState<{
     id?: string;
     name: string;
@@ -272,13 +278,45 @@ export function App() {
     setShowEnrollModal(false);
   };
 
+  const handleOpenCheckoutModal = (mode: 'usd' | 'ves') => {
+    setCheckoutCurrencyMode(mode);
+    if (selectedCustomer.taxId !== 'V-00000000') {
+      setCheckoutCustomerType('custom');
+      setCheckoutDocInput(selectedCustomer.taxId);
+      setCheckoutNameInput(selectedCustomer.name);
+    } else {
+      setCheckoutCustomerType('none');
+      setCheckoutDocInput('');
+      setCheckoutNameInput('');
+    }
+    if (mode === 'usd') {
+      setCashTenderedInput(totalDecimal.toFixed(2));
+    } else {
+      setVesTenderedInput(totalVesDecimal.toFixed(2));
+    }
+    setShowCashCheckoutModal(true);
+  };
+
+  const isCustomerVerified =
+    checkoutCustomerType === 'generic' ||
+    (checkoutCustomerType === 'custom' &&
+      checkoutDocInput.trim().length >= 3 &&
+      checkoutNameInput.trim().length >= 2);
+
   const handleCheckout = async (
     method: 'cash' | 'card' | 'transfer' | 'split',
     changeAmount?: string,
   ) => {
+    const customerName =
+      checkoutCustomerType === 'generic'
+        ? 'Consumidor Final'
+        : checkoutNameInput.trim() || 'Consumidor Final';
+    const customerDoc =
+      checkoutCustomerType === 'generic' ? 'V-00000000' : checkoutDocInput.trim() || 'V-00000000';
+
     const res = await checkoutSale(method, {
-      name: selectedCustomer.name || 'Consumidor Final',
-      doc: selectedCustomer.taxId || 'V-00000000',
+      name: customerName,
+      doc: customerDoc,
     });
 
     if (res) {
@@ -308,6 +346,13 @@ export function App() {
         change: changeAmount,
       });
 
+      setSelectedCustomer({
+        name: 'Consumidor Final',
+        taxId: 'V-00000000',
+      });
+      setCheckoutCustomerType('none');
+      setCheckoutDocInput('');
+      setCheckoutNameInput('');
       setCashTenderedInput('');
       setVesTenderedInput('');
       setShowCashCheckoutModal(false);
@@ -374,15 +419,13 @@ export function App() {
       if (e.key === 'F4') {
         e.preventDefault();
         if (cart.length > 0 && currentShift) {
-          setCheckoutCurrencyMode('usd');
-          setCashTenderedInput(totalDecimal.toFixed(2));
-          setShowCashCheckoutModal(true);
+          handleOpenCheckoutModal('usd');
         }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [cart.length, currentShift, totalDecimal]);
+  }, [cart.length, currentShift, totalDecimal, totalVesDecimal]);
 
   return (
     <div className="flex h-screen w-screen flex-col bg-canvas font-sans text-ink antialiased select-none">
@@ -521,7 +564,8 @@ export function App() {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Escanear código o buscar por SKU / Nombre (Enter para agregar)..."
+                data-barcode-receiver="true"
+                placeholder="Escanear con pistola USB / teclear SKU o Nombre (Enter agrega)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -540,10 +584,10 @@ export function App() {
             <button
               onClick={() => setShowCameraModal(true)}
               className="flex h-11 items-center gap-1.5 rounded-2xl border border-line bg-surface px-3.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
-              title="Escanear con cámara"
+              title="Escanear con cámara (Móvil / Tablet)"
             >
               <Camera className="h-4 w-4 text-brand" />
-              <span className="hidden md:inline">Cámara</span>
+              <span className="hidden md:inline">Cámara (Móvil)</span>
             </button>
 
             <button
@@ -697,28 +741,28 @@ export function App() {
         </section>
 
         <section className="w-full lg:w-96 shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-line bg-surface shadow-xs">
-          <div className="p-4 border-b border-line bg-canvas/30 space-y-2.5">
+          <div className="p-4 border-b border-line bg-canvas/30 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-muted flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-brand" />
-                Cliente Activo
+                Facturación Fiscal
               </span>
-              <button
-                onClick={() => setShowCustomerModal(true)}
-                className="text-xs font-bold text-brand hover:underline cursor-pointer"
-              >
-                Cambiar / Nuevo
-              </button>
+              <span className="text-[10px] font-bold text-brand bg-brand-soft px-2 py-0.5 rounded-pill">
+                Se verifica al cobrar
+              </span>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-2.5 shadow-xs">
-              <div>
-                <p className="text-xs font-bold text-ink">{selectedCustomer.name}</p>
-                <p className="font-mono text-[11px] text-muted">{selectedCustomer.taxId}</p>
-              </div>
-              <span className="rounded-md bg-subtle px-2 py-0.5 text-[10px] font-bold text-muted">
-                {selectedCustomer.taxId === 'V-00000000' ? 'Genérico' : 'Registrado'}
-              </span>
+            <div className="rounded-xl border border-dashed border-line bg-surface p-2.5 shadow-xs text-xs text-muted">
+              <p className="font-semibold text-ink">
+                {selectedCustomer.taxId === 'V-00000000'
+                  ? 'Validación obligatoria por venta'
+                  : `${selectedCustomer.name} (${selectedCustomer.taxId})`}
+              </p>
+              <p className="text-[11px] text-muted">
+                {selectedCustomer.taxId === 'V-00000000'
+                  ? 'Al presionar Cobrar, se confirma explícitamente si se emite a Consumidor Final o con C.I./RIF.'
+                  : 'Cliente pre-asignado para la siguiente venta.'}
+              </p>
             </div>
           </div>
 
@@ -779,11 +823,7 @@ export function App() {
             <div className="mt-4 pt-3 border-t border-line/60">
               <button
                 disabled={cart.length === 0 || !currentShift}
-                onClick={() => {
-                  setCheckoutCurrencyMode('usd');
-                  setCashTenderedInput(totalDecimal.toFixed(2));
-                  setShowCashCheckoutModal(true);
-                }}
+                onClick={() => handleOpenCheckoutModal('usd')}
                 className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 text-sm font-black text-white shadow-md transition hover:bg-emerald-700 active:scale-98 disabled:opacity-40 cursor-pointer"
               >
                 <Banknote className="h-5 w-5" />
@@ -1273,21 +1313,127 @@ export function App() {
               </button>
             </div>
 
-            <div className="mt-3 rounded-2xl border border-line bg-canvas/60 p-3 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-muted uppercase">Cliente Asignado</p>
-                <p className="text-xs font-bold text-ink">{selectedCustomer.name}</p>
-                <p className="font-mono text-[11px] text-muted">{selectedCustomer.taxId}</p>
+            <div className="mt-3 rounded-2xl border border-line bg-canvas/60 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
+                  <User className="h-4 w-4 text-brand" />
+                  <span>Datos Fiscales del Cliente</span>
+                </div>
+                <span className="rounded-md bg-warn-soft px-1.5 py-0.2 text-[10px] font-bold text-warn-ink uppercase">
+                  Obligatorio
+                </span>
               </div>
-              <button
-                onClick={() => {
-                  setShowCashCheckoutModal(false);
-                  setShowCustomerModal(true);
-                }}
-                className="text-xs font-bold text-brand hover:underline cursor-pointer"
-              >
-                Cambiar
-              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCheckoutCustomerType('generic');
+                    setCheckoutDocInput('V-00000000');
+                    setCheckoutNameInput('Consumidor Final');
+                  }}
+                  className={`flex flex-col items-center justify-center rounded-xl border p-2.5 text-center transition cursor-pointer ${
+                    checkoutCustomerType === 'generic'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold ring-2 ring-emerald-600'
+                      : 'border-line bg-surface text-ink hover:bg-subtle'
+                  }`}
+                >
+                  <span className="text-xs font-bold">Consumidor Final</span>
+                  <span className="font-mono text-[10px] text-muted">V-00000000</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCheckoutCustomerType('custom');
+                    if (checkoutDocInput === 'V-00000000') {
+                      setCheckoutDocInput('');
+                      setCheckoutNameInput('');
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center rounded-xl border p-2.5 text-center transition cursor-pointer ${
+                    checkoutCustomerType === 'custom'
+                      ? 'border-brand bg-brand-soft/40 text-brand font-bold ring-2 ring-brand'
+                      : 'border-line bg-surface text-ink hover:bg-subtle'
+                  }`}
+                >
+                  <span className="text-xs font-bold">Factura con Datos</span>
+                  <span className="text-[10px] text-muted">C.I. / RIF</span>
+                </button>
+              </div>
+
+              {checkoutCustomerType === 'none' && (
+                <div className="rounded-xl border border-warn/40 bg-warn-soft p-2.5 text-center text-[11px] font-bold text-warn-ink">
+                  ⚠️ Por favor seleccioná a nombre de quién se emitirá la factura para continuar.
+                </div>
+              )}
+
+              {checkoutCustomerType === 'generic' && (
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  <span className="font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Emitir a: Consumidor Final
+                  </span>
+                  <span className="font-mono text-[11px] font-semibold text-emerald-700">
+                    V-00000000
+                  </span>
+                </div>
+              )}
+
+              {checkoutCustomerType === 'custom' && (
+                <div className="space-y-2 pt-1 border-t border-line/60">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold text-muted uppercase">
+                        C.I. / RIF (DNI) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. V-18765432 o J-12345678"
+                        value={checkoutDocInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCheckoutDocInput(val);
+                          if (val.trim().length >= 5) {
+                            void (async () => {
+                              const results = await searchCustomers(val.trim());
+                              if (results.length > 0 && results[0]) {
+                                setCheckoutNameInput(results[0].name);
+                              }
+                            })();
+                          }
+                        }}
+                        className="mt-0.5 w-full rounded-xl border border-line bg-surface px-2.5 py-1.5 font-mono text-xs font-bold text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-muted uppercase">
+                        Nombre o Razón Social *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Pedro Pérez"
+                        value={checkoutNameInput}
+                        onChange={(e) => setCheckoutNameInput(e.target.value)}
+                        className="mt-0.5 w-full rounded-xl border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  {checkoutDocInput.trim().length >= 3 && checkoutNameInput.trim().length >= 2 ? (
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>
+                        Verificado: Se emitirá a {checkoutNameInput.trim()} (
+                        {checkoutDocInput.trim()})
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted">
+                      Ingresá Cédula/RIF y Nombre para personalizar y verificar el comprobante.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {checkoutCurrencyMode === 'usd' ? (
@@ -1351,7 +1497,7 @@ export function App() {
                     Cancelar
                   </button>
                   <button
-                    disabled={tenderedNumber < totalDecimal}
+                    disabled={!isCustomerVerified || tenderedNumber < totalDecimal}
                     onClick={() => {
                       void handleCheckout('cash', `$${changeValue.toFixed(2)}`);
                     }}
@@ -1456,7 +1602,8 @@ export function App() {
                   </button>
                   <button
                     disabled={
-                      vesPaymentSubtype === 'cash_ves' && vesTenderedNumber < totalVesDecimal
+                      !isCustomerVerified ||
+                      (vesPaymentSubtype === 'cash_ves' && vesTenderedNumber < totalVesDecimal)
                     }
                     onClick={() => {
                       if (vesPaymentSubtype === 'pago_movil') {
@@ -1864,12 +2011,12 @@ export function App() {
       )}
 
       {showCameraModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-line bg-surface p-5 shadow-2xl">
             <div className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2">
                 <Camera className="h-4 w-4 text-brand" />
-                <h3 className="text-sm font-bold text-ink">Escanear Código de Barras</h3>
+                <h3 className="text-sm font-bold text-ink">Escanear Código (Cámara Móvil)</h3>
               </div>
               <button
                 onClick={() => setShowCameraModal(false)}
@@ -1879,11 +2026,18 @@ export function App() {
               </button>
             </div>
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
-              <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
+              <video
+                ref={videoRef}
+                playsInline
+                autoPlay
+                muted
+                className="h-full w-full object-cover"
+              />
               <div className="pointer-events-none absolute inset-x-12 inset-y-8 rounded-xl border-2 border-dashed border-brand" />
             </div>
             <p className="mt-3 text-center text-xs text-muted">
-              Apuntá la cámara al código de barras del producto
+              Apuntá la cámara al código. En PC con pistola de código de barras USB, escaneá directo
+              sin abrir la cámara.
             </p>
           </div>
         </div>
