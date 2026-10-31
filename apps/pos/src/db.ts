@@ -27,6 +27,35 @@ export interface LocalShift {
   readonly notes?: string | null;
 }
 
+export interface LocalSaleLine {
+  readonly id: string;
+  readonly productId: string | null;
+  readonly sku?: string | null;
+  readonly name: string;
+  readonly quantity: number;
+  readonly unitPriceMinor: string;
+  readonly lineTotalMinor: string;
+}
+
+export interface LocalSale {
+  readonly id: string;
+  readonly operationId: string;
+  readonly ticketNumber: string;
+  readonly invoiceControlNumber: string;
+  readonly customerName: string;
+  readonly customerDoc: string;
+  readonly shiftId: string;
+  readonly registerCode: string;
+  readonly paymentMethod: 'cash' | 'card' | 'transfer' | 'split';
+  readonly subtotalMinor: string;
+  readonly taxMinor: string;
+  readonly totalMinor: string;
+  readonly exchangeRateBcv: string;
+  readonly lines: readonly LocalSaleLine[];
+  readonly occurredAt: string;
+  readonly syncStatus: 'pending' | 'synced' | 'failed';
+}
+
 export interface OutboxItem {
   readonly id?: number;
   readonly operationId: string;
@@ -49,6 +78,7 @@ export class CorebizPosDatabase extends Dexie {
   catalog!: Table<LocalProduct, string>;
   shifts!: Table<LocalShift, string>;
   outbox!: Table<OutboxItem, number>;
+  sales!: Table<LocalSale, string>;
   config!: Table<LocalConfig, string>;
 
   constructor() {
@@ -57,6 +87,13 @@ export class CorebizPosDatabase extends Dexie {
       catalog: 'id, sku, name, barcode',
       shifts: 'id, registerId, status, openedAt',
       outbox: '++id, operationId, type, sequence, status, createdAt',
+      config: 'key',
+    });
+    this.version(2).stores({
+      catalog: 'id, sku, name, barcode',
+      shifts: 'id, registerId, status, openedAt',
+      outbox: '++id, operationId, type, sequence, status, createdAt',
+      sales: 'id, operationId, ticketNumber, occurredAt, syncStatus',
       config: 'key',
     });
   }

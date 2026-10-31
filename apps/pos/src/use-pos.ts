@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { posDb, type LocalProduct, type LocalShift } from './db';
+import {
+  posDb,
+  type LocalProduct,
+  type LocalShift,
+  type LocalSale,
+  type LocalSaleLine,
+} from './db';
 import { seedDemoDataIfEmpty, fetchErpDemoCatalog } from './demo-seed';
 import {
   queueOutboxOperation,
@@ -20,15 +26,36 @@ export interface CartLine {
   readonly lineTotalMinor: bigint;
 }
 
+export interface CustomerCheckoutInput {
+  readonly name?: string;
+  readonly doc?: string;
+}
+
 export function usePos(apiBaseUrl = '') {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [pendingOutboxCount, setPendingOutboxCount] = useState<number>(0);
   const [currentShift, setCurrentShift] = useState<LocalShift | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [sales, setSales] = useState<LocalSale[]>([]);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [registerCode, setRegisterCode] = useState<string | null>(null);
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const cartTotals = useMemo(() => {
+    let subtotal = 0n;
+    for (const item of cart) {
+      subtotal += item.lineTotalMinor;
+    }
+    const tax = (subtotal * 1600n) / 10000n;
+    const total = subtotal + tax;
+
+    return {
+      subtotalMinor: subtotal,
+      taxMinor: tax,
+      totalMinor: total,
+    };
+  }, [cart]);
 
   const refreshState = useCallback(async () => {
     const shift = await posDb.shifts.where('status').equals('open').first();
@@ -44,6 +71,9 @@ export function usePos(apiBaseUrl = '') {
     setDeviceId(devId?.value ?? null);
     setRegisterCode(regCode?.value ?? null);
     setDeviceToken(token?.value ?? null);
+
+    const recentSales = await posDb.sales.orderBy('occurredAt').reverse().limit(100).toArray();
+    setSales(recentSales);
   }, []);
 
   const triggerSync = useCallback(async () => {
@@ -75,27 +105,6 @@ export function usePos(apiBaseUrl = '') {
       await refreshState();
     }
   }, [apiBaseUrl, refreshState]);
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    void (async () => {
-      await seedDemoDataIfEmpty();
-      await refreshState();
-    })();
-
-    const cleanupOnline = registerOnlineSyncListener(() => {
-      setIsOnline(true);
-      void triggerSync();
-    });
-
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      cleanupOnline();
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [refreshState, triggerSync]);
 
   const searchCatalog = useCallback(async (query: string): Promise<LocalProduct[]> => {
     const trimmed = query.trim().toLowerCase();
@@ -187,25 +196,12 @@ export function usePos(apiBaseUrl = '') {
     setCart([]);
   }, []);
 
-  const cartTotals = useMemo(() => {
-    let subtotal = 0n;
-    for (const item of cart) {
-      subtotal += item.lineTotalMinor;
-    }
-    const tax = (subtotal * 1600n) / 10000n;
-    const total = subtotal + tax;
-
-    return {
-      subtotalMinor: subtotal,
-      taxMinor: tax,
-      totalMinor: total,
-    };
-  }, [cart]);
-
   const openShift = useCallback(
     async (initialFloatMinor: string, currency = 'USD') => {
-      const regId = (await posDb.config.get('register_id'))?.value ?? 'reg-default';
-      const devId = (await posDb.config.get('device_id'))?.value ?? 'dev-default';
+      const regId =
+        (await posDb.config.get('register_id'))?.value ?? '00000000-0000-0000-0000-000000000099';
+      const devId =
+        (await posDb.config.get('device_id'))?.value ?? '018e245a-0000-7000-8000-000000000001';
       const shiftId = crypto.randomUUID();
       const openedAt = new Date().toISOString();
 
@@ -274,7 +270,10 @@ export function usePos(apiBaseUrl = '') {
   );
 
   const checkoutSale = useCallback(
-    async (paymentMethod: 'cash' | 'card' | 'transfer' | 'split') => {
+    async (
+      paymentMethod: 'cash' | 'card' | 'transfer' | 'split',
+      customer?: CustomerCheckoutInput,
+    ) => {
       if (!currentShift || cart.length === 0) return null;
 
       const regId = currentShift.registerId;
@@ -284,9 +283,22 @@ export function usePos(apiBaseUrl = '') {
       const operationId = crypto.randomUUID();
       const occurredAt = new Date().toISOString();
 
-      const ticketNumber = `${registerCode ?? 'POS-01'}-${Date.now().toString().slice(-6)}`;
+      const ticketNumber = `${registerCode ?? 'CAJA-01'}-${Date.now().toString().slice(-6)}`;
+      const invoiceControlNumber = `00-${Date.now().toString().slice(-8)}`;
+      const customerName = customer?.name?.trim() || 'Consumidor Final';
+      const customerDoc = customer?.doc?.trim() || 'V-00000000';
 
-      const lines = cart.map((item) => ({
+      const saleLines: LocalSaleLine[] = cart.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        sku: item.sku,
+        name: item.name,
+        quantity: item.quantity,
+        unitPriceMinor: item.unitPriceMinor.toString(),
+        lineTotalMinor: item.lineTotalMinor.toString(),
+      }));
+
+      const outboxLines = cart.map((item) => ({
         id: item.id,
         productId: item.productId,
         temporaryName: item.productId ? null : item.name,
@@ -295,6 +307,27 @@ export function usePos(apiBaseUrl = '') {
         unitPriceMinor: item.unitPriceMinor.toString(),
       }));
 
+      const localSaleRecord: LocalSale = {
+        id: saleId,
+        operationId,
+        ticketNumber,
+        invoiceControlNumber,
+        customerName,
+        customerDoc,
+        shiftId,
+        registerCode: registerCode ?? 'CAJA-01',
+        paymentMethod,
+        subtotalMinor: cartTotals.subtotalMinor.toString(),
+        taxMinor: cartTotals.taxMinor.toString(),
+        totalMinor: cartTotals.totalMinor.toString(),
+        exchangeRateBcv: '36.50',
+        lines: saleLines,
+        occurredAt,
+        syncStatus: 'pending',
+      };
+
+      await posDb.sales.put(localSaleRecord);
+
       await queueOutboxOperation(operationId, 'sale.issue', {
         saleId,
         operationId,
@@ -302,8 +335,11 @@ export function usePos(apiBaseUrl = '') {
         deviceId: devId,
         shiftId,
         ticketNumber,
+        invoiceControlNumber,
+        customerName,
+        customerDoc,
         paymentMethod,
-        lines,
+        lines: outboxLines,
         occurredAt,
       });
 
@@ -324,9 +360,21 @@ export function usePos(apiBaseUrl = '') {
       await refreshState();
       void triggerSync();
 
-      return { saleId, ticketNumber, totalMinor: cartTotals.totalMinor };
+      return {
+        saleId,
+        ticketNumber,
+        invoiceControlNumber,
+        totalMinor: cartTotals.totalMinor,
+        subtotalMinor: cartTotals.subtotalMinor,
+        taxMinor: cartTotals.taxMinor,
+        customerName,
+        customerDoc,
+        lines: saleLines,
+        paymentMethod,
+        occurredAt,
+      };
     },
-    [currentShift, cart, registerCode, cartTotals.totalMinor, clearCart, refreshState, triggerSync],
+    [currentShift, cart, registerCode, cartTotals, clearCart, refreshState, triggerSync],
   );
 
   const enrollDevice = useCallback(
@@ -372,6 +420,27 @@ export function usePos(apiBaseUrl = '') {
   );
 
   useEffect(() => {
+    setIsOnline(navigator.onLine);
+    void (async () => {
+      await seedDemoDataIfEmpty();
+      await refreshState();
+    })();
+
+    const cleanupOnline = registerOnlineSyncListener(() => {
+      setIsOnline(true);
+      void triggerSync();
+    });
+
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      cleanupOnline();
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [refreshState, triggerSync]);
+
+  useEffect(() => {
     const cleanupWedge = createKeyboardWedgeListener((scannedCode) => {
       void (async () => {
         const match = await posDb.catalog
@@ -396,6 +465,7 @@ export function usePos(apiBaseUrl = '') {
     pendingOutboxCount,
     currentShift,
     cart,
+    sales,
     deviceId,
     registerCode,
     deviceToken,
@@ -413,5 +483,6 @@ export function usePos(apiBaseUrl = '') {
     reloadDemoCatalog,
     enrollDevice,
     searchCatalog,
+    refreshState,
   };
 }

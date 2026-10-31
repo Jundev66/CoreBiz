@@ -101,6 +101,10 @@ export async function syncOutbox(
           status: 'synced',
           errorMessage: null,
         });
+        const localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
+        if (localSale) {
+          await posDb.sales.update(localSale.id, { syncStatus: 'synced' });
+        }
         syncedCount++;
       } else {
         await posDb.outbox.update(match.id, {
@@ -108,6 +112,10 @@ export async function syncOutbox(
           retryCount: match.retryCount + 1,
           errorMessage: result.error ?? 'Unknown error',
         });
+        const localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
+        if (localSale) {
+          await posDb.sales.update(localSale.id, { syncStatus: 'failed' });
+        }
         failedCount++;
         if (result.error) errors.push(result.error);
       }
