@@ -644,26 +644,52 @@ export class PrismaPosSyncOperationRepository implements PosSyncOperationReposit
   }
 
   async save(operation: PosSyncOperation): Promise<void> {
-    await this.tx.pos_sync_operations.upsert({
-      where: { id: operation.id },
-      create: {
-        id: operation.id,
+    const existing = await this.tx.pos_sync_operations.findFirst({
+      where: { tenant_id: this.tenantId, operation_id: operation.operationId },
+    });
+
+    let seqToUse = BigInt(operation.sequence);
+    const existingSeq = await this.tx.pos_sync_operations.findFirst({
+      where: {
         tenant_id: this.tenantId,
-        operation_id: operation.operationId,
         device_id: operation.deviceId,
-        operation_type: operation.operationType,
-        sequence: BigInt(operation.sequence),
-        payload_hash: operation.payloadHash,
-        status: operation.status,
-        received_at: operation.receivedAt,
-        processed_at: operation.processedAt,
-        error_message: operation.errorMessage,
-      },
-      update: {
-        status: operation.status,
-        processed_at: operation.processedAt,
-        error_message: operation.errorMessage,
+        sequence: seqToUse,
       },
     });
+
+    if (existingSeq && existingSeq.operation_id !== operation.operationId) {
+      const maxRow = await this.tx.pos_sync_operations.findFirst({
+        where: { tenant_id: this.tenantId, device_id: operation.deviceId },
+        orderBy: { sequence: 'desc' },
+      });
+      seqToUse = (maxRow?.sequence ?? 0n) + 1n;
+    }
+
+    if (existing) {
+      await this.tx.pos_sync_operations.update({
+        where: { id: existing.id },
+        data: {
+          status: operation.status,
+          processed_at: operation.processedAt,
+          error_message: operation.errorMessage,
+        },
+      });
+    } else {
+      await this.tx.pos_sync_operations.create({
+        data: {
+          id: operation.id,
+          tenant_id: this.tenantId,
+          operation_id: operation.operationId,
+          device_id: operation.deviceId,
+          operation_type: operation.operationType,
+          sequence: seqToUse,
+          payload_hash: operation.payloadHash,
+          status: operation.status,
+          received_at: operation.receivedAt,
+          processed_at: operation.processedAt,
+          error_message: operation.errorMessage,
+        },
+      });
+    }
   }
 }

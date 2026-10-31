@@ -16,7 +16,9 @@ export async function queueOutboxOperation(
 ): Promise<OutboxItem> {
   const payloadHash = await computePayloadHash(payload);
   const lastOp = await posDb.outbox.orderBy('sequence').last();
-  const nextSeq = lastOp ? lastOp.sequence + 1 : 1;
+  const lastSeq = lastOp ? lastOp.sequence : 0;
+  const now = Date.now();
+  const nextSeq = now > lastSeq ? now : lastSeq + 1;
 
   const item: OutboxItem = {
     operationId,
@@ -53,12 +55,13 @@ export async function syncOutbox(
     return { syncedCount: 0, failedCount: 0, errors: [] };
   }
 
+  const now = Date.now();
   const batchPayload = {
     deviceId,
-    operations: pendingItems.map((item) => ({
+    operations: pendingItems.map((item, idx) => ({
       operationId: item.operationId,
       type: item.type,
-      sequence: item.sequence,
+      sequence: item.sequence < 1000 ? now + idx : item.sequence,
       payloadHash: item.payloadHash,
       payload: item.payload,
     })),
@@ -75,7 +78,9 @@ export async function syncOutbox(
     });
 
     if (!res.ok) {
-      throw new Error(`Sync HTTP error: ${res.status}`);
+      const errText = await res.text();
+      console.error('POS Sync HTTP error:', res.status, errText);
+      throw new Error(`Sync HTTP error: ${res.status} - ${errText}`);
     }
 
     const data = (await res.json()) as {
