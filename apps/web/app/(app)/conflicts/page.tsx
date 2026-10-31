@@ -19,9 +19,7 @@ export default async function ConflictsPage() {
     );
   }
 
-  const conflicts = await get<readonly ConflictViewItem[]>('/v1/pos/conflicts').catch(
-    () => [] as readonly ConflictViewItem[],
-  );
+  const conflicts = await get<readonly ConflictViewItem[]>('/v1/pos/conflicts');
 
   const openCount = conflicts.filter((c) => c.status === 'open').length;
 
