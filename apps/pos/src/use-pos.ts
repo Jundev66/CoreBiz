@@ -12,6 +12,7 @@ import {
   queueOutboxOperation,
   syncCatalog,
   syncOutbox,
+  syncCustomersFromErp,
   registerOnlineSyncListener,
 } from './sync-engine';
 import { createKeyboardWedgeListener } from './barcode';
@@ -99,6 +100,8 @@ export function usePos(apiBaseUrl = '') {
     setIsSyncing(true);
 
     try {
+      await syncCustomersFromErp(apiBaseUrl);
+
       const devIdEntry = await posDb.config.get('device_id');
       const tokenEntry = await posDb.config.get('device_token');
 

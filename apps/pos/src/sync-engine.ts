@@ -1,4 +1,4 @@
-import { posDb, type OutboxItem, type LocalProduct } from './db';
+import { posDb, type OutboxItem, type LocalProduct, type LocalCustomer } from './db';
 
 export async function computePayloadHash(payload: unknown): Promise<string> {
   const jsonStr = JSON.stringify(payload);
@@ -187,6 +187,22 @@ export async function syncCatalog(
   });
 
   return { updatedCount: localItems.length };
+}
+
+export async function syncCustomersFromErp(apiBaseUrl = ''): Promise<number> {
+  try {
+    const res = await fetch(`${apiBaseUrl}/v1/pos/demo-customers`);
+    if (res.ok) {
+      const data = (await res.json()) as { items: LocalCustomer[] };
+      if (data.items && data.items.length > 0) {
+        await posDb.customers.bulkPut(data.items);
+        return data.items.length;
+      }
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
 }
 
 export function registerOnlineSyncListener(onReconnect: () => void): () => void {
