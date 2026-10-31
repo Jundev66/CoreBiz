@@ -28,6 +28,8 @@ import {
   FileText,
   User,
   Clock,
+  TrendingUp,
+  Smartphone,
 } from 'lucide-react';
 import { usePos } from './use-pos';
 import { detectBarcodeFromMedia, generateInternalBarcode } from './barcode';
@@ -44,12 +46,15 @@ export function App() {
     registerCode,
     isSyncing,
     totals,
+    activeExchangeRate,
+    defaultExchangeRate,
     addToCart,
     addUncatalogedItem,
     updateCartQuantity,
     removeFromCart,
     clearCart,
     openShift,
+    updateShiftExchangeRate,
     closeShift,
     checkoutSale,
     triggerSync,
@@ -65,14 +70,23 @@ export function App() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [showRateModal, setShowRateModal] = useState(false);
   const [showVariosModal, setShowVariosModal] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showCashCheckoutModal, setShowCashCheckoutModal] = useState(false);
 
   const [initialFloatInput, setInitialFloatInput] = useState('50.00');
+  const [openShiftRateInput, setOpenShiftRateInput] = useState('36.50');
+  const [newRateInput, setNewRateInput] = useState('');
+  const [rateChangeReasonInput, setRateChangeReasonInput] = useState('');
   const [declaredCashInput, setDeclaredCashInput] = useState('');
   const [cashTenderedInput, setCashTenderedInput] = useState('');
+  const [checkoutCurrencyMode, setCheckoutCurrencyMode] = useState<'usd' | 'ves'>('usd');
+  const [vesPaymentSubtype, setVesPaymentSubtype] = useState<
+    'pago_movil' | 'punto_debito' | 'cash_ves'
+  >('pago_movil');
+  const [vesTenderedInput, setVesTenderedInput] = useState('');
   const [customerNameInput, setCustomerNameInput] = useState('');
   const [customerDocInput, setCustomerDocInput] = useState('');
   const [variosName, setVariosName] = useState('Artículo Varios');
@@ -92,7 +106,16 @@ export function App() {
   const [shiftReconciliationResult, setShiftReconciliationResult] = useState<{
     readonly declared: string;
     readonly variance: string;
+    readonly openRate: string;
+    readonly closeRate: string;
+    readonly rateHistoryCount: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (defaultExchangeRate) {
+      setOpenShiftRateInput(defaultExchangeRate);
+    }
+  }, [defaultExchangeRate]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -158,8 +181,17 @@ export function App() {
 
   const handleOpenShift = async () => {
     const minor = Math.round(parseFloat(initialFloatInput || '0') * 100).toString();
-    await openShift(minor);
+    const rate = openShiftRateInput.trim() || defaultExchangeRate || '36.50';
+    await openShift(minor, rate);
     setShowOpenShiftModal(false);
+  };
+
+  const handleUpdateRate = async () => {
+    if (!newRateInput.trim()) return;
+    await updateShiftExchangeRate(newRateInput, rateChangeReasonInput);
+    setShowRateModal(false);
+    setNewRateInput('');
+    setRateChangeReasonInput('');
   };
 
   const handleCloseShift = async () => {
@@ -169,6 +201,9 @@ export function App() {
       setShiftReconciliationResult({
         declared: (parseFloat(res.declaredCashMinor) / 100).toFixed(2),
         variance: (parseFloat(res.varianceMinor) / 100).toFixed(2),
+        openRate: res.openExchangeRateBcv,
+        closeRate: res.closeExchangeRateBcv,
+        rateHistoryCount: res.rateAuditHistory.length,
       });
     }
     setShowCloseShiftModal(false);
@@ -211,7 +246,7 @@ export function App() {
         subtotalMinor: res.subtotalMinor.toString(),
         taxMinor: res.taxMinor.toString(),
         totalMinor: res.totalMinor.toString(),
-        exchangeRateBcv: '36.50',
+        exchangeRateBcv: res.exchangeRateBcv,
         lines: res.lines,
         occurredAt: res.occurredAt,
         syncStatus: res.syncStatus,
@@ -227,11 +262,14 @@ export function App() {
       setCustomerNameInput('');
       setCustomerDocInput('');
       setCashTenderedInput('');
+      setVesTenderedInput('');
       setShowCashCheckoutModal(false);
     }
   };
 
+  const rateNum = parseFloat(activeExchangeRate || '36.50') || 36.5;
   const totalDecimal = Number(totals.totalMinor) / 100;
+  const totalVesDecimal = totalDecimal * rateNum;
   const totalItemCount = cart.reduce((acc, l) => acc + l.quantity, 0);
 
   const displayedProducts = searchResults.filter((p) => {
@@ -248,6 +286,9 @@ export function App() {
 
   const tenderedNumber = parseFloat(cashTenderedInput || '0');
   const changeValue = Math.max(0, tenderedNumber - totalDecimal);
+
+  const vesTenderedNumber = parseFloat(vesTenderedInput || '0');
+  const vesChangeValue = Math.max(0, vesTenderedNumber - totalVesDecimal);
 
   const totalSalesAmount = sales.reduce((acc, s) => acc + Number(s.totalMinor) / 100, 0);
   const syncedSalesCount = sales.filter((s) => s.syncStatus === 'synced').length;
@@ -329,20 +370,42 @@ export function App() {
 
         <div className="flex items-center gap-2">
           {currentShift ? (
-            <button
-              onClick={() => setShowCloseShiftModal(true)}
-              className="hidden sm:flex items-center gap-1.5 rounded-xl border border-success/30 bg-success-soft px-3 py-1.5 text-xs font-bold text-success-ink transition hover:bg-success-soft/80"
-              title="Turno abierto. Click para cerrar y arquear."
-            >
-              <Unlock className="h-3.5 w-3.5 text-success" />
-              <span>
-                Caja Abierta (${(parseFloat(currentShift.initialFloatMinor) / 100).toFixed(0)})
-              </span>
-            </button>
+            <>
+              <button
+                onClick={() => setShowCloseShiftModal(true)}
+                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-success/30 bg-success-soft px-3 py-1.5 text-xs font-bold text-success-ink transition hover:bg-success-soft/80"
+                title="Turno abierto. Click para cerrar y arquear."
+              >
+                <Unlock className="h-3.5 w-3.5 text-success" />
+                <span>
+                  Caja Abierta (${(parseFloat(currentShift.initialFloatMinor) / 100).toFixed(0)})
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setNewRateInput(activeExchangeRate);
+                  setShowRateModal(true);
+                }}
+                className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-ink transition hover:border-brand/40 shadow-xs cursor-pointer"
+                title="Tasa oficial BCV activa del turno. Hacé clic para auditar o ajustar."
+              >
+                <TrendingUp className="h-3.5 w-3.5 text-brand" />
+                <span className="font-mono text-ink text-[11px] sm:text-xs">
+                  Bs. {activeExchangeRate}
+                </span>
+                {(currentShift.rateAuditHistory?.length ?? 0) > 1 && (
+                  <span className="hidden sm:inline-block rounded-md bg-warn-soft px-1.5 py-0.2 text-[10px] font-bold text-warn-ink">
+                    {currentShift.rateAuditHistory!.length - 1}{' '}
+                    {currentShift.rateAuditHistory!.length - 1 === 1 ? 'ajuste' : 'ajustes'}
+                  </span>
+                )}
+              </button>
+            </>
           ) : (
             <button
               onClick={() => setShowOpenShiftModal(true)}
-              className="hidden sm:flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700"
+              className="hidden sm:flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 cursor-pointer"
             >
               <Lock className="h-3.5 w-3.5" />
               <span>Abrir Turno</span>
@@ -468,9 +531,14 @@ export function App() {
                         </div>
 
                         <div className="mt-2.5 flex items-baseline justify-between border-t border-line/60 pt-2">
-                          <span className="font-mono text-sm font-extrabold text-ink">
-                            ${parseFloat(product.price).toFixed(2)}
-                          </span>
+                          <div className="flex flex-col text-left">
+                            <span className="font-mono text-sm font-extrabold text-ink">
+                              ${parseFloat(product.price).toFixed(2)}
+                            </span>
+                            <span className="font-mono text-[10px] text-muted font-semibold">
+                              Bs. {(parseFloat(product.price) * rateNum).toFixed(2)}
+                            </span>
+                          </div>
 
                           {qtyInCart > 0 ? (
                             <span className="flex items-center gap-1 rounded-pill bg-brand px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-xs">
@@ -804,7 +872,12 @@ export function App() {
               </div>
               <div className="flex justify-between border-t border-line pt-2 text-xl font-black text-ink">
                 <span>Total a Cobrar</span>
-                <span className="font-mono text-brand">${totalDecimal.toFixed(2)}</span>
+                <div className="text-right">
+                  <span className="font-mono text-brand">${totalDecimal.toFixed(2)}</span>
+                  <div className="text-xs font-semibold text-muted font-mono">
+                    ≈ Bs. {totalVesDecimal.toFixed(2)}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -812,24 +885,27 @@ export function App() {
               <button
                 disabled={cart.length === 0 || !currentShift}
                 onClick={() => {
+                  setCheckoutCurrencyMode('usd');
                   setCashTenderedInput(totalDecimal.toFixed(2));
                   setShowCashCheckoutModal(true);
                 }}
                 className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-emerald-700 active:scale-98 disabled:opacity-40 cursor-pointer"
               >
                 <Coins className="h-4 w-4" />
-                Efectivo
+                Dólares ($)
               </button>
 
               <button
                 disabled={cart.length === 0 || !currentShift}
                 onClick={() => {
-                  void handleCheckout('card');
+                  setCheckoutCurrencyMode('ves');
+                  setVesTenderedInput(totalVesDecimal.toFixed(2));
+                  setShowCashCheckoutModal(true);
                 }}
                 className="flex items-center justify-center gap-2 rounded-2xl bg-brand py-3.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-brand-hover active:scale-98 disabled:opacity-40 cursor-pointer"
               >
                 <CreditCard className="h-4 w-4" />
-                Tarjeta / Pago
+                Bolívares / Punto
               </button>
             </div>
           </div>
@@ -980,36 +1056,63 @@ export function App() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-ink">Apertura de Turno</h3>
-                <p className="text-xs text-muted">Fondo inicial de cambio para la caja</p>
+                <p className="text-xs text-muted">Fondo inicial y tasa oficial para la jornada</p>
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="text-xs font-bold text-ink">Fondo de Efectivo ($)</label>
-              <div className="relative mt-1.5">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
-                  $
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={initialFloatInput}
-                  onChange={(e) => setInitialFloatInput(e.target.value)}
-                  className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                />
+            <div className="mt-4 space-y-3.5">
+              <div>
+                <label className="text-xs font-bold text-ink">Fondo de Efectivo ($)</label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={initialFloatInput}
+                    onChange={(e) => setInitialFloatInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+
+                <div className="mt-2 flex gap-1.5">
+                  {['20.00', '50.00', '100.00'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setInitialFloatInput(preset)}
+                      className="flex-1 rounded-xl border border-line bg-subtle py-1.5 text-xs font-bold text-ink hover:bg-surface transition"
+                    >
+                      ${preset}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="mt-2.5 flex gap-1.5">
-                {['20.00', '50.00', '100.00'].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setInitialFloatInput(preset)}
-                    className="flex-1 rounded-xl border border-line bg-subtle py-1.5 text-xs font-bold text-ink hover:bg-surface transition"
-                  >
-                    ${preset}
-                  </button>
-                ))}
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-ink">
+                    Tasa Oficial BCV (Bs/USD) <span className="text-danger">*</span>
+                  </label>
+                  <span className="text-[10px] text-brand font-semibold">Obligatoria</span>
+                </div>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
+                    Bs.
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="36.50"
+                    value={openShiftRateInput}
+                    onChange={(e) => setOpenShiftRateInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-muted">
+                  Tasa con la que se abrirá el turno para conversiones y fiscalización.
+                </p>
               </div>
             </div>
 
@@ -1021,10 +1124,11 @@ export function App() {
                 Cancelar
               </button>
               <button
+                disabled={!openShiftRateInput || parseFloat(openShiftRateInput) <= 0}
                 onClick={() => {
                   void handleOpenShift();
                 }}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition"
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
               >
                 Abrir Caja
               </button>
@@ -1046,20 +1150,41 @@ export function App() {
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="text-xs font-bold text-ink">Efectivo en Gaveta ($)</label>
-              <div className="relative mt-1.5">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
-                  $
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={declaredCashInput}
-                  onChange={(e) => setDeclaredCashInput(e.target.value)}
-                  className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                />
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-line bg-canvas/60 p-3 space-y-1 text-xs">
+                <div className="flex justify-between text-muted">
+                  <span>Tasa Apertura Turno:</span>
+                  <span className="font-mono font-bold text-ink">
+                    Bs. {currentShift?.openExchangeRateBcv ?? '36.50'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted">
+                  <span>Tasa Cierre Turno:</span>
+                  <span className="font-mono font-bold text-brand">Bs. {activeExchangeRate}</span>
+                </div>
+                {(currentShift?.rateAuditHistory?.length ?? 0) > 1 && (
+                  <div className="pt-1 text-[11px] text-warn-ink font-medium">
+                    ⚠️ Esta tasa fue modificada {currentShift!.rateAuditHistory!.length - 1} veces
+                    durante la jornada.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">Efectivo en Gaveta ($)</label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={declaredCashInput}
+                    onChange={(e) => setDeclaredCashInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1074,9 +1199,116 @@ export function App() {
                 onClick={() => {
                   void handleCloseShift();
                 }}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition"
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
               >
                 Cerrar y Conciliar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRateModal && currentShift && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-ink">Ajuste de Tasa BCV</h3>
+                  <p className="text-xs text-muted">Trazabilidad oficial durante el turno</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRateModal(false)}
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-line bg-canvas/60 p-3 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted">Tasa de Apertura:</span>
+                  <span className="font-mono font-bold text-ink">
+                    Bs. {currentShift.openExchangeRateBcv}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Tasa Actual Vigente:</span>
+                  <span className="font-mono font-bold text-brand">Bs. {activeExchangeRate}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">
+                  Nueva Tasa Oficial BCV (Bs/USD) <span className="text-danger">*</span>
+                </label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
+                    Bs.
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="36.50"
+                    value={newRateInput}
+                    onChange={(e) => setNewRateInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">Motivo del Ajuste (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Publicación BCV 4:30 PM"
+                  value={rateChangeReasonInput}
+                  onChange={(e) => setRateChangeReasonInput(e.target.value)}
+                  className="mt-1.5 w-full rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
+                />
+              </div>
+
+              {currentShift.rateAuditHistory && currentShift.rateAuditHistory.length > 0 && (
+                <div className="mt-2 rounded-2xl border border-line/60 bg-subtle/50 p-2.5">
+                  <p className="text-[10px] font-bold text-muted uppercase">Historial del Turno</p>
+                  <div className="mt-1.5 max-h-24 overflow-y-auto space-y-1 text-[11px]">
+                    {currentShift.rateAuditHistory.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-muted font-mono">
+                        <span>
+                          {new Date(item.changedAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}{' '}
+                          - {item.reason ?? 'Ajuste'}
+                        </span>
+                        <span className="font-bold text-ink">Bs. {item.rate}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2.5">
+              <button
+                onClick={() => setShowRateModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!newRateInput || parseFloat(newRateInput) <= 0}
+                onClick={() => {
+                  void handleUpdateRate();
+                }}
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
+              >
+                Actualizar Tasa
               </button>
             </div>
           </div>
@@ -1145,21 +1377,62 @@ export function App() {
       {showCashCheckoutModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
           <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-2">
+            <div className="flex items-center justify-between pb-2 border-b border-line/60">
               <div className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
                   <Banknote className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-ink">Cobro en Efectivo</h3>
-                  <p className="text-xs text-muted">Total a pagar: ${totalDecimal.toFixed(2)}</p>
+                  <h3 className="text-base font-bold text-ink">Cobro y Facturación</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-black text-brand">
+                      ${totalDecimal.toFixed(2)}
+                    </span>
+                    <span className="text-xs text-muted">|</span>
+                    <span className="font-mono text-xs font-bold text-ink">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </span>
+                    <span className="rounded-md bg-subtle px-1.5 py-0.2 text-[10px] font-mono text-muted">
+                      Tasa {activeExchangeRate}
+                    </span>
+                  </div>
                 </div>
               </div>
               <button
                 onClick={() => setShowCashCheckoutModal(false)}
-                className="rounded-xl p-1.5 text-muted hover:bg-subtle"
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer"
               >
                 <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-3 flex rounded-xl bg-subtle p-1 border border-line">
+              <button
+                type="button"
+                onClick={() => setCheckoutCurrencyMode('usd')}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition cursor-pointer ${
+                  checkoutCurrencyMode === 'usd'
+                    ? 'bg-surface text-ink shadow-xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Dólares ($ USD)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckoutCurrencyMode('ves');
+                  if (!vesTenderedInput) {
+                    setVesTenderedInput(totalVesDecimal.toFixed(2));
+                  }
+                }}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition cursor-pointer ${
+                  checkoutCurrencyMode === 'ves'
+                    ? 'bg-surface text-ink shadow-xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Bolívares (VES)
               </button>
             </div>
 
@@ -1192,69 +1465,190 @@ export function App() {
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="text-xs font-bold text-ink">Monto recibido del cliente ($)</label>
-              <div className="relative mt-1.5">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-lg font-bold text-muted">
-                  $
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={cashTenderedInput}
-                  onChange={(e) => setCashTenderedInput(e.target.value)}
-                  className="w-full rounded-2xl border border-line bg-surface py-3 pl-9 pr-4 font-mono text-xl font-black text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                />
-              </div>
+            {checkoutCurrencyMode === 'usd' ? (
+              <div className="mt-3.5 space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-ink">Monto recibido en USD ($)</label>
+                  <div className="relative mt-1.5">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-lg font-bold text-muted">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={cashTenderedInput}
+                      onChange={(e) => setCashTenderedInput(e.target.value)}
+                      className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-9 pr-4 font-mono text-xl font-black text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                    />
+                  </div>
 
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {[totalDecimal, 5, 10, 20, 50, 100].map((amount) => {
-                  if (amount < totalDecimal && amount !== totalDecimal) return null;
-                  const label = amount === totalDecimal ? 'Exacto' : `$${amount.toFixed(0)}`;
-                  return (
-                    <button
-                      key={amount}
-                      type="button"
-                      onClick={() => setCashTenderedInput(amount.toFixed(2))}
-                      className="rounded-xl border border-line bg-subtle px-3 py-1.5 text-xs font-bold text-ink hover:bg-surface transition"
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[totalDecimal, 5, 10, 20, 50, 100].map((amount) => {
+                      if (amount < totalDecimal && amount !== totalDecimal) return null;
+                      const label = amount === totalDecimal ? 'Exacto' : `$${amount.toFixed(0)}`;
+                      return (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => setCashTenderedInput(amount.toFixed(2))}
+                          className="rounded-xl border border-line bg-subtle px-3 py-1 text-xs font-bold text-ink hover:bg-surface transition cursor-pointer"
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-line bg-canvas p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-muted">Vuelto a Entregar:</p>
+                      <p className="text-[11px] font-mono text-muted">
+                        ≈ Bs. {(changeValue * rateNum).toFixed(2)}
+                      </p>
+                    </div>
+                    <span
+                      className={`font-mono text-2xl font-black ${
+                        tenderedNumber >= totalDecimal ? 'text-emerald-600' : 'text-danger'
+                      }`}
                     >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                      ${changeValue.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
 
-            <div className="mt-4 rounded-2xl border border-line bg-canvas p-3.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-muted">Vuelto a Entregar:</span>
-                <span
-                  className={`font-mono text-2xl font-black ${
-                    tenderedNumber >= totalDecimal ? 'text-emerald-600' : 'text-danger'
-                  }`}
-                >
-                  ${changeValue.toFixed(2)}
-                </span>
+                <div className="mt-4 flex justify-end gap-2.5">
+                  <button
+                    onClick={() => setShowCashCheckoutModal(false)}
+                    className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    disabled={tenderedNumber < totalDecimal}
+                    onClick={() => {
+                      void handleCheckout('cash', `$${changeValue.toFixed(2)}`);
+                    }}
+                    className="rounded-2xl bg-emerald-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-emerald-700 disabled:opacity-40 cursor-pointer"
+                  >
+                    Confirmar Cobro ($)
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mt-3.5 space-y-3">
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setVesPaymentSubtype('pago_movil')}
+                    className={`flex flex-col items-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      vesPaymentSubtype === 'pago_movil'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold'
+                        : 'border-line bg-surface text-muted hover:text-ink'
+                    }`}
+                  >
+                    <Smartphone className="h-4 w-4 mb-1" />
+                    <span className="text-[11px]">Pago Móvil</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVesPaymentSubtype('punto_debito')}
+                    className={`flex flex-col items-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      vesPaymentSubtype === 'punto_debito'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold'
+                        : 'border-line bg-surface text-muted hover:text-ink'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4 mb-1" />
+                    <span className="text-[11px]">Punto Débito</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVesPaymentSubtype('cash_ves')}
+                    className={`flex flex-col items-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      vesPaymentSubtype === 'cash_ves'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold'
+                        : 'border-line bg-surface text-muted hover:text-ink'
+                    }`}
+                  >
+                    <Coins className="h-4 w-4 mb-1" />
+                    <span className="text-[11px]">Efectivo Bs.</span>
+                  </button>
+                </div>
 
-            <div className="mt-5 flex justify-end gap-2.5">
-              <button
-                onClick={() => setShowCashCheckoutModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-bold text-muted hover:text-ink transition"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={tenderedNumber < totalDecimal}
-                onClick={() => {
-                  void handleCheckout('cash', changeValue.toFixed(2));
-                }}
-                className="rounded-2xl bg-emerald-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-emerald-700 disabled:opacity-40"
-              >
-                Confirmar Cobro
-              </button>
-            </div>
+                {vesPaymentSubtype === 'cash_ves' ? (
+                  <div className="space-y-2.5">
+                    <div>
+                      <label className="text-xs font-bold text-ink">Efectivo recibido en Bs.</label>
+                      <div className="relative mt-1.5">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
+                          Bs.
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={vesTenderedInput}
+                          onChange={(e) => setVesTenderedInput(e.target.value)}
+                          className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-4 font-mono text-xl font-black text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-line bg-canvas p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-muted">Vuelto en Bolívares:</span>
+                        <span
+                          className={`font-mono text-2xl font-black ${
+                            vesTenderedNumber >= totalVesDecimal
+                              ? 'text-emerald-600'
+                              : 'text-danger'
+                          }`}
+                        >
+                          Bs. {vesChangeValue.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-line bg-canvas p-4 text-center space-y-1">
+                    <p className="text-xs text-muted">Monto total a procesar en Bolívares:</p>
+                    <p className="font-mono text-2xl font-black text-brand">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </p>
+                    <p className="text-[11px] text-muted">
+                      Calculado a Tasa Oficial BCV: {activeExchangeRate} Bs/USD
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 flex justify-end gap-2.5">
+                  <button
+                    onClick={() => setShowCashCheckoutModal(false)}
+                    className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    disabled={
+                      vesPaymentSubtype === 'cash_ves' && vesTenderedNumber < totalVesDecimal
+                    }
+                    onClick={() => {
+                      if (vesPaymentSubtype === 'pago_movil') {
+                        void handleCheckout('transfer');
+                      } else if (vesPaymentSubtype === 'punto_debito') {
+                        void handleCheckout('card');
+                      } else {
+                        void handleCheckout('cash', `Bs. ${vesChangeValue.toFixed(2)}`);
+                      }
+                    }}
+                    className="rounded-2xl bg-brand px-6 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
+                  >
+                    Confirmar Cobro (Bs.)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1530,14 +1924,14 @@ export function App() {
               Resultado de la conciliación a ciegas contra el sistema:
             </p>
 
-            <div className="mt-4 rounded-2xl border border-line bg-canvas p-4 text-xs">
+            <div className="mt-4 rounded-2xl border border-line bg-canvas p-4 text-xs space-y-2">
               <div className="flex justify-between py-1 text-ink-soft">
                 <span>Efectivo Contado Declarado:</span>
                 <span className="font-mono font-bold text-ink">
                   ${shiftReconciliationResult.declared}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-line pt-2 text-ink-soft">
+              <div className="flex justify-between border-t border-line/60 pt-2 text-ink-soft">
                 <span>Diferencia / Desvío:</span>
                 <span
                   className={`font-mono font-bold ${
@@ -1551,6 +1945,24 @@ export function App() {
                   ${shiftReconciliationResult.variance}
                 </span>
               </div>
+              <div className="flex justify-between border-t border-line/60 pt-2 text-ink-soft">
+                <span>Tasa BCV Apertura:</span>
+                <span className="font-mono font-bold text-ink">
+                  Bs. {shiftReconciliationResult.openRate}
+                </span>
+              </div>
+              <div className="flex justify-between text-ink-soft">
+                <span>Tasa BCV Cierre:</span>
+                <span className="font-mono font-bold text-brand">
+                  Bs. {shiftReconciliationResult.closeRate}
+                </span>
+              </div>
+              {shiftReconciliationResult.rateHistoryCount > 1 && (
+                <div className="border-t border-line/60 pt-1 text-[11px] text-warn-ink font-semibold">
+                  Trazabilidad: {shiftReconciliationResult.rateHistoryCount - 1} ajuste(s) de tasa
+                  durante la jornada.
+                </div>
+              )}
             </div>
 
             <button

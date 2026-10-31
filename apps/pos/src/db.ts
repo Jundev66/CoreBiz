@@ -12,12 +12,22 @@ export interface LocalProduct {
   readonly updatedAt?: string | null;
 }
 
+export interface ExchangeRateAudit {
+  readonly rate: string;
+  readonly changedAt: string;
+  readonly reason?: string | null;
+}
+
 export interface LocalShift {
   readonly id: string;
   readonly registerId: string;
   readonly deviceId: string;
   readonly initialFloatMinor: string;
   readonly currency: string;
+  readonly openExchangeRateBcv: string;
+  readonly currentExchangeRateBcv: string;
+  readonly closeExchangeRateBcv?: string | null;
+  readonly rateAuditHistory?: readonly ExchangeRateAudit[];
   readonly status: 'open' | 'closed';
   readonly openedAt: string;
   readonly closedAt?: string | null;

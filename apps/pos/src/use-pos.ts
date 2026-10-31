@@ -41,6 +41,16 @@ export function usePos(apiBaseUrl = '') {
   const [registerCode, setRegisterCode] = useState<string | null>(null);
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [defaultExchangeRate, setDefaultExchangeRate] = useState<string>('36.50');
+
+  const activeExchangeRate = useMemo(() => {
+    return (
+      currentShift?.currentExchangeRateBcv ||
+      currentShift?.openExchangeRateBcv ||
+      defaultExchangeRate ||
+      '36.50'
+    );
+  }, [currentShift, defaultExchangeRate]);
 
   const cartTotals = useMemo(() => {
     let subtotal = 0n;
@@ -67,10 +77,14 @@ export function usePos(apiBaseUrl = '') {
     const devId = await posDb.config.get('device_id');
     const regCode = await posDb.config.get('register_code');
     const token = await posDb.config.get('device_token');
+    const rateEntry = await posDb.config.get('exchange_rate_bcv');
 
     setDeviceId(devId?.value ?? null);
     setRegisterCode(regCode?.value ?? null);
     setDeviceToken(token?.value ?? null);
+    if (rateEntry?.value) {
+      setDefaultExchangeRate(rateEntry.value);
+    }
 
     const recentSales = await posDb.sales.orderBy('occurredAt').reverse().limit(100).toArray();
     setSales(recentSales);
@@ -197,13 +211,14 @@ export function usePos(apiBaseUrl = '') {
   }, []);
 
   const openShift = useCallback(
-    async (initialFloatMinor: string, currency = 'USD') => {
+    async (initialFloatMinor: string, exchangeRateBcv?: string, currency = 'USD') => {
       const regId =
         (await posDb.config.get('register_id'))?.value ?? '00000000-0000-0000-0000-000000000099';
       const devId =
         (await posDb.config.get('device_id'))?.value ?? '018e245a-0000-7000-8000-000000000001';
       const shiftId = crypto.randomUUID();
       const openedAt = new Date().toISOString();
+      const rate = exchangeRateBcv?.trim() || defaultExchangeRate || '36.50';
 
       const newShift: LocalShift = {
         id: shiftId,
@@ -211,11 +226,21 @@ export function usePos(apiBaseUrl = '') {
         deviceId: devId,
         initialFloatMinor,
         currency,
+        openExchangeRateBcv: rate,
+        currentExchangeRateBcv: rate,
+        rateAuditHistory: [
+          {
+            rate,
+            changedAt: openedAt,
+            reason: 'Apertura de turno',
+          },
+        ],
         status: 'open',
         openedAt,
       };
 
       await posDb.shifts.put(newShift);
+      await posDb.config.put({ key: 'exchange_rate_bcv', value: rate });
 
       await queueOutboxOperation(crypto.randomUUID(), 'shift.open', {
         shiftId,
@@ -223,13 +248,45 @@ export function usePos(apiBaseUrl = '') {
         deviceId: devId,
         initialFloatMinor,
         currency,
+        openExchangeRateBcv: rate,
         openedAt,
       });
 
       await refreshState();
       void triggerSync();
     },
-    [refreshState, triggerSync],
+    [defaultExchangeRate, refreshState, triggerSync],
+  );
+
+  const updateShiftExchangeRate = useCallback(
+    async (newRate: string, reason?: string) => {
+      const trimmed = newRate.trim();
+      if (!trimmed || parseFloat(trimmed) <= 0) return;
+
+      await posDb.config.put({ key: 'exchange_rate_bcv', value: trimmed });
+      setDefaultExchangeRate(trimmed);
+
+      if (currentShift) {
+        const changedAt = new Date().toISOString();
+        const history = currentShift.rateAuditHistory ?? [];
+        const updatedHistory = [
+          ...history,
+          {
+            rate: trimmed,
+            changedAt,
+            reason: reason?.trim() || 'Ajuste manual durante el turno',
+          },
+        ];
+
+        await posDb.shifts.update(currentShift.id, {
+          currentExchangeRateBcv: trimmed,
+          rateAuditHistory: updatedHistory,
+        });
+      }
+
+      await refreshState();
+    },
+    [currentShift, refreshState],
   );
 
   const closeShift = useCallback(
@@ -241,10 +298,13 @@ export function usePos(apiBaseUrl = '') {
       const declared = BigInt(declaredCashMinor);
 
       const variance = declared - initialFloat;
+      const finalRate =
+        currentShift.currentExchangeRateBcv || currentShift.openExchangeRateBcv || '36.50';
 
       await posDb.shifts.update(currentShift.id, {
         status: 'closed',
         closedAt,
+        closeExchangeRateBcv: finalRate,
         declaredCashMinor,
         varianceMinor: variance.toString(),
         notes: notes ?? null,
@@ -254,6 +314,9 @@ export function usePos(apiBaseUrl = '') {
         shiftId: currentShift.id,
         declaredCashMinor,
         closedAt,
+        openExchangeRateBcv: currentShift.openExchangeRateBcv,
+        closeExchangeRateBcv: finalRate,
+        rateAuditHistory: currentShift.rateAuditHistory ?? [],
         ...(notes ? { notes } : {}),
       });
 
@@ -264,6 +327,9 @@ export function usePos(apiBaseUrl = '') {
         varianceMinor: variance.toString(),
         declaredCashMinor,
         initialFloatMinor: currentShift.initialFloatMinor,
+        openExchangeRateBcv: currentShift.openExchangeRateBcv,
+        closeExchangeRateBcv: finalRate,
+        rateAuditHistory: currentShift.rateAuditHistory ?? [],
       };
     },
     [currentShift, refreshState, triggerSync],
@@ -307,6 +373,12 @@ export function usePos(apiBaseUrl = '') {
         unitPriceMinor: item.unitPriceMinor.toString(),
       }));
 
+      const activeRate =
+        currentShift.currentExchangeRateBcv ||
+        currentShift.openExchangeRateBcv ||
+        defaultExchangeRate ||
+        '36.50';
+
       const localSaleRecord: LocalSale = {
         id: saleId,
         operationId,
@@ -320,7 +392,7 @@ export function usePos(apiBaseUrl = '') {
         subtotalMinor: cartTotals.subtotalMinor.toString(),
         taxMinor: cartTotals.taxMinor.toString(),
         totalMinor: cartTotals.totalMinor.toString(),
-        exchangeRateBcv: '36.50',
+        exchangeRateBcv: activeRate,
         lines: saleLines,
         occurredAt,
         syncStatus: 'pending',
@@ -371,6 +443,7 @@ export function usePos(apiBaseUrl = '') {
         totalMinor: cartTotals.totalMinor,
         subtotalMinor: cartTotals.subtotalMinor,
         taxMinor: cartTotals.taxMinor,
+        exchangeRateBcv: activeRate,
         customerName,
         customerDoc,
         lines: saleLines,
@@ -379,7 +452,16 @@ export function usePos(apiBaseUrl = '') {
         syncStatus: latestSale?.syncStatus ?? 'pending',
       };
     },
-    [currentShift, cart, registerCode, cartTotals, clearCart, refreshState, triggerSync],
+    [
+      currentShift,
+      cart,
+      registerCode,
+      cartTotals,
+      clearCart,
+      refreshState,
+      triggerSync,
+      defaultExchangeRate,
+    ],
   );
 
   const enrollDevice = useCallback(
@@ -476,6 +558,8 @@ export function usePos(apiBaseUrl = '') {
     registerCode,
     deviceToken,
     isSyncing,
+    activeExchangeRate,
+    defaultExchangeRate,
     totals: cartTotals,
     addToCart,
     addUncatalogedItem,
@@ -483,6 +567,7 @@ export function usePos(apiBaseUrl = '') {
     removeFromCart,
     clearCart,
     openShift,
+    updateShiftExchangeRate,
     closeShift,
     checkoutSale,
     triggerSync,
