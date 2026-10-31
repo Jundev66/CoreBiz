@@ -22,6 +22,7 @@ import { can, type Actor, type Permission } from '@corebiz/domain';
 export const MODULE_PERMISSION = {
   '/customers': 'customer:read',
   '/products': 'product:read',
+  '/pos-sales': 'delivery_note:read',
   '/delivery-notes': 'delivery_note:read',
   '/payments': 'payment:read',
   '/purchases': 'purchase:read',

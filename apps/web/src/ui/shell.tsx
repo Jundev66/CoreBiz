@@ -14,12 +14,15 @@ import {
   UserRound,
   AlertTriangle,
   ShoppingCart,
+  Receipt,
+  Building2,
   type LucideIcon,
 } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
 import { canOpen } from '@/auth/module-access';
 import { Toast } from '@/ui/toast';
 import { AssistantPanel } from '@/ui/assistant-panel';
+import { SidebarNav, type SidebarNavItem } from '@/ui/sidebar-nav';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
@@ -29,7 +32,6 @@ import { buttonClasses } from '@/ui/button';
 import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
 import { MoreSummary, NavDetails, NavLink } from '@/ui/nav-link';
-import { NAV_ICON, moduleTone } from '@/ui/module-tone';
 import { ThemeToggle } from '@/ui/theme-toggle';
 
 /**
@@ -87,30 +89,85 @@ export async function AppFrame({
    * page depending on who clicked. Hiding the entry is NOT the control: the use case enforces
    * the limit and every screen checks again before reading (`NoAccess`).
    */
-  const nav: NavItem[] = [
+  const sidebarItems: SidebarNavItem[] = [
+    {
+      type: 'link' as const,
+      item: { href: '/', label: t('nav.home'), Icon: LayoutDashboard, exact: true },
+    },
+    {
+      type: 'group' as const,
+      group: {
+        id: 'ventas',
+        label: 'Ventas',
+        Icon: ShoppingCart,
+        items: [
+          { href: '/pos-sales', label: 'Tickets POS (Mostrador)', Icon: Receipt },
+          { href: '/delivery-notes', label: 'Notas de Entrega', Icon: FileText },
+          { href: '/payments', label: 'Cobros', Icon: Banknote },
+        ].filter(({ href }) => canOpen(ctx.actor, href)),
+      },
+    },
+    {
+      type: 'group' as const,
+      group: {
+        id: 'inventario',
+        label: 'Inventario',
+        Icon: Package,
+        items: [
+          { href: '/products', label: 'Productos & Stock', Icon: Package },
+          { href: '/conflicts', label: 'Inconsistencias POS', Icon: AlertTriangle },
+        ].filter(({ href }) => canOpen(ctx.actor, href)),
+      },
+    },
+    {
+      type: 'group' as const,
+      group: {
+        id: 'compras',
+        label: 'Compras',
+        Icon: Truck,
+        items: [
+          { href: '/purchases', label: 'Recepciones', Icon: Truck },
+          { href: '/purchases/suppliers', label: 'Proveedores', Icon: Building2 },
+        ].filter(({ href }) => canOpen(ctx.actor, href)),
+      },
+    },
+    {
+      type: 'link' as const,
+      item: { href: '/customers', label: t('nav.customers'), Icon: Users },
+    },
+    {
+      type: 'group' as const,
+      group: {
+        id: 'admin',
+        label: 'Gestión',
+        Icon: Settings,
+        items: [
+          { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
+          { href: '/settings', label: t('nav.settings'), Icon: Settings },
+        ].filter(({ href }) => canOpen(ctx.actor, href)),
+      },
+    },
+  ].filter((entry: SidebarNavItem) => {
+    if (entry.type === 'link') return canOpen(ctx.actor, entry.item.href);
+    return entry.group.items.length > 0;
+  });
+
+  const mobileNav: NavItem[] = [
     { href: '/', label: t('nav.home'), Icon: LayoutDashboard, exact: true },
-    { href: '/customers', label: t('nav.customers'), Icon: Users },
-    { href: '/products', label: t('nav.products'), Icon: Package },
-    {
-      href: '/delivery-notes',
-      label: t('nav.deliveryNotes'),
-      short: t('nav.deliveryNotesShort'),
-      Icon: FileText,
-    },
-    {
-      href: '/payments',
-      label: t('nav.payments'),
-      short: t('nav.paymentsShort'),
-      Icon: Banknote,
-    },
-    { href: '/purchases', label: t('nav.purchases'), Icon: Truck },
-    { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
-    { href: '/conflicts', label: 'Inconsistencias POS', short: 'POS', Icon: AlertTriangle },
-    { href: '/settings', label: t('nav.settings'), Icon: Settings },
+    { href: '/pos-sales', label: 'Ventas', short: 'Ventas', Icon: ShoppingCart },
+    { href: '/products', label: 'Stock', short: 'Stock', Icon: Package },
+    { href: '/customers', label: t('nav.customers'), short: 'Clientes', Icon: Users },
+    { href: '/delivery-notes', label: t('nav.deliveryNotes'), short: 'Despachos', Icon: FileText },
+    { href: '/payments', label: t('nav.payments'), short: 'Cobros', Icon: Banknote },
+    { href: '/purchases', label: t('nav.purchases'), short: 'Compras', Icon: Truck },
+    { href: '/reports', label: t('nav.reports'), short: 'Reportes', Icon: BarChart3 },
+    { href: '/conflicts', label: 'Inconsistencias', short: 'Inconsist.', Icon: AlertTriangle },
+    { href: '/settings', label: t('nav.settings'), short: 'Ajustes', Icon: Settings },
   ].filter(({ href }) => canOpen(ctx.actor, href));
 
-  const tabItems = nav.length <= TAB_BAR_SLOTS ? nav : nav.slice(0, TAB_BAR_SLOTS - 1);
-  const moreItems = nav.length <= TAB_BAR_SLOTS ? [] : nav.slice(TAB_BAR_SLOTS - 1);
+  const tabItems =
+    mobileNav.length <= TAB_BAR_SLOTS ? mobileNav : mobileNav.slice(0, TAB_BAR_SLOTS - 1);
+  const moreItems = mobileNav.length <= TAB_BAR_SLOTS ? [] : mobileNav.slice(TAB_BAR_SLOTS - 1);
 
   return (
     <div className="min-h-screen lg:flex">
@@ -131,27 +188,9 @@ export async function AppFrame({
           </Link>
         </div>
 
-        <nav aria-label={t('app.name')} className="flex flex-col gap-0.5 px-3 py-2">
-          {nav.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              {...(item.exact === true ? { exact: true } : {})}
-              hint="inline"
-              className="group flex items-center gap-3 rounded-control px-3 py-2 text-sm transition-colors"
-              activeClassName="bg-brand font-medium text-brand-ink shadow-sm"
-              idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
-            >
-              {/* Each module keeps its colour while idle; the current one takes the link's. */}
-              <item.Icon
-                aria-hidden="true"
-                className={`size-[18px] shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(item.href)]}`}
-                strokeWidth={1.75}
-              />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="flex-1 overflow-y-auto">
+          <SidebarNav items={sidebarItems} />
+        </div>
 
         <div className="mt-auto border-t border-line p-4 space-y-3">
           <Link

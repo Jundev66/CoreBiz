@@ -33,6 +33,7 @@ export interface CashShiftRepository {
 export interface PosSaleRepository {
   findById(id: PosSaleId): Promise<PosSale | null>;
   findByOperationId(operationId: string): Promise<PosSale | null>;
+  list(filter?: { limit?: number; cursor?: string }): Promise<readonly PosSale[]>;
   save(sale: PosSale): Promise<void>;
 }
 

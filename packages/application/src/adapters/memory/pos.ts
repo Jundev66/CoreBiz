@@ -127,6 +127,12 @@ export class InMemoryPosSaleRepository implements PosSaleRepository {
     return Promise.resolve(found ?? null);
   }
 
+  list(filter?: { limit?: number; cursor?: string }): Promise<readonly PosSale[]> {
+    const list = this.scoped().sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+    const limit = Math.min(100, Math.max(1, filter?.limit ?? 50));
+    return Promise.resolve(list.slice(0, limit));
+  }
+
   save(sale: PosSale): Promise<void> {
     this.store.set(sale.id, sale);
     return Promise.resolve();

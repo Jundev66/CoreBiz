@@ -410,6 +410,47 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
     });
   }
 
+  async list(filter?: { limit?: number; cursor?: string }): Promise<readonly PosSale[]> {
+    const limit = Math.min(100, Math.max(1, filter?.limit ?? 50));
+    const rows = await this.tx.pos_sales.findMany({
+      where: { tenant_id: this.tenantId },
+      include: { lines: true },
+      orderBy: { occurred_at: 'desc' },
+      take: limit,
+      ...(filter?.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
+    });
+
+    return rows.map((row) =>
+      PosSale.rehydrate({
+        id: asId<PosSaleId>(row.id),
+        tenantId: asId<TenantId>(row.tenant_id),
+        registerId: asId<PosRegisterId>(row.register_id),
+        deviceId: asId<PosDeviceId>(row.device_id),
+        shiftId: asId<PosShiftId>(row.shift_id),
+        cashierUserId: asId<UserId>(row.cashier_user_id),
+        operationId: row.operation_id,
+        ticketNumber: row.ticket_number,
+        status: row.status as PosSaleStatus,
+        subtotal: Money.fromMinor(row.subtotal_minor, 'USD'),
+        tax: Money.fromMinor(row.tax_minor, 'USD'),
+        total: Money.fromMinor(row.total_minor, 'USD'),
+        paymentMethod: row.payment_method as PosPaymentMethod,
+        occurredAt: row.occurred_at,
+        receivedAt: row.received_at,
+        postedAt: row.posted_at,
+        lines: row.lines.map((l) => ({
+          id: l.id,
+          productId: l.product_id ? asId<ProductId>(l.product_id) : null,
+          temporaryName: l.temporary_name,
+          barcodeScanned: l.barcode_scanned,
+          quantity: Quantity.fromScaled(l.quantity),
+          unitPrice: Money.fromMinor(l.unit_price_minor, 'USD'),
+          lineTotal: Money.fromMinor(l.line_total_minor, 'USD'),
+        })),
+      }),
+    );
+  }
+
   async save(sale: PosSale): Promise<void> {
     await this.tx.pos_sales.upsert({
       where: { id: sale.id },

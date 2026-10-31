@@ -591,6 +591,13 @@ class PrismaReportQueries implements ReportQueries {
          where tenant_id = ${tenantId}::uuid and status <> 'voided'
       `;
 
+      const [posSales] = await tx.$queryRaw<{ total: string; documents: string }[]>`
+        select coalesce(sum(total_minor), 0)::text as total,
+               count(*)::text                      as documents
+          from public.pos_sales
+         where tenant_id = ${tenantId}::uuid and status <> 'voided'
+      `;
+
       const [inventory] = await tx.$queryRaw<{ value: string }[]>`
         select coalesce(sum(round(price_minor::numeric * on_hand / 1000)), 0)::text as value
           from public.products
@@ -598,19 +605,35 @@ class PrismaReportQueries implements ReportQueries {
       `;
 
       const ranking = await tx.$queryRaw<{ name: string; units: string; revenue: string }[]>`
-        select l.description_snapshot        as name,
-               sum(l.quantity)::text         as units,
-               sum(l.line_total_minor)::text as revenue
-          from public.delivery_note_lines l
-          join public.delivery_notes n on n.id = l.delivery_note_id
-         where l.tenant_id = ${tenantId}::uuid and n.status <> 'voided'
-         group by l.description_snapshot
-         order by sum(l.quantity) desc
+        with unified_lines as (
+          select l.description_snapshot        as name,
+                 l.quantity                    as quantity,
+                 l.line_total_minor            as line_total_minor
+            from public.delivery_note_lines l
+            join public.delivery_notes n on n.id = l.delivery_note_id
+           where l.tenant_id = ${tenantId}::uuid and n.status <> 'voided'
+          union all
+          select coalesce(l.temporary_name, p.name, 'Producto POS') as name,
+                 l.quantity                                         as quantity,
+                 l.line_total_minor                                 as line_total_minor
+            from public.pos_sale_lines l
+            join public.pos_sales s on s.id = l.sale_id
+            left join public.products p on p.id = l.product_id
+           where l.tenant_id = ${tenantId}::uuid and s.status <> 'voided'
+        )
+        select name,
+               sum(quantity)::text         as units,
+               sum(line_total_minor)::text as revenue
+          from unified_lines
+         group by name
+         order by sum(quantity) desc
          limit 5
       `;
 
-      const salesTotal = toMinor(sales?.total ?? null);
-      const documentCount = Number(sales?.documents ?? '0');
+      const notesTotal = toMinor(sales?.total ?? null);
+      const posTotal = toMinor(posSales?.total ?? null);
+      const salesTotal = notesTotal + posTotal;
+      const documentCount = Number(sales?.documents ?? '0') + Number(posSales?.documents ?? '0');
 
       return {
         currency,
