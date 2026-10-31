@@ -1,4 +1,4 @@
-import { posDb, type LocalProduct } from './db';
+import { posDb, type LocalProduct, type LocalCustomer } from './db';
 
 export const DEMO_REGISTER_CODE = 'CAJA-01';
 export const DEMO_REGISTER_ID = '00000000-0000-0000-0000-000000000099';
@@ -138,8 +138,44 @@ export const DEMO_CATALOG_PRODUCTS: readonly LocalProduct[] = [
   },
 ];
 
+export const DEMO_CUSTOMERS: readonly LocalCustomer[] = [
+  {
+    id: '10000000-0000-4000-8000-000000000001',
+    code: 'CLI-0001',
+    name: 'Consumidor Final',
+    taxId: 'V-00000000',
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000002',
+    code: 'CLI-0002',
+    name: 'Inversiones Los Andes C.A.',
+    taxId: 'J-12345678-9',
+    phone: '0414-1234567',
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000003',
+    code: 'CLI-0003',
+    name: 'Distribuidora El Sol S.R.L.',
+    taxId: 'J-98765432-1',
+    phone: '0424-9876543',
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000004',
+    code: 'CLI-0004',
+    name: 'Juan Carlos Rodríguez',
+    taxId: 'V-15678901',
+    phone: '0412-5551234',
+  },
+];
+
 export async function seedDemoDataIfEmpty(force = false): Promise<boolean> {
   const count = await posDb.catalog.count();
+  const custCount = await posDb.customers.count();
+
+  if (custCount === 0 || force) {
+    await posDb.customers.bulkPut([...DEMO_CUSTOMERS]);
+  }
+
   if (count === 0 || force) {
     await posDb.catalog.bulkPut([...DEMO_CATALOG_PRODUCTS]);
 
@@ -162,6 +198,23 @@ export async function seedDemoDataIfEmpty(force = false): Promise<boolean> {
 }
 
 export async function fetchErpDemoCatalog(apiBaseUrl = ''): Promise<number> {
+  try {
+    const custRes = await fetch(`${apiBaseUrl}/v1/pos/demo-customers`);
+    if (custRes.ok) {
+      const custData = (await custRes.json()) as {
+        items: LocalCustomer[];
+      };
+      if (custData.items && custData.items.length > 0) {
+        await posDb.customers.bulkPut(custData.items);
+      }
+    }
+  } catch {
+    const custCount = await posDb.customers.count();
+    if (custCount === 0) {
+      await posDb.customers.bulkPut([...DEMO_CUSTOMERS]);
+    }
+  }
+
   try {
     const res = await fetch(`${apiBaseUrl}/v1/pos/demo-catalog`);
     if (!res.ok) {

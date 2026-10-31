@@ -44,7 +44,10 @@ export async function syncOutbox(
   token: string,
   deviceId: string,
 ): Promise<SyncResult> {
-  const pendingItems = await posDb.outbox.where('status').equals('pending').sortBy('sequence');
+  const pendingItems = await posDb.outbox
+    .where('status')
+    .anyOf(['pending', 'failed'])
+    .sortBy('sequence');
 
   if (pendingItems.length === 0) {
     return { syncedCount: 0, failedCount: 0, errors: [] };

@@ -52,9 +52,10 @@ export const openCashShiftSchema = z
     deviceId: recordIdSchema,
     initialFloatMinor: z.string().regex(/^\d+$/),
     currency: currencySchema,
+    openExchangeRateBcv: z.string().optional(),
     openedAt: z.string().datetime(),
   })
-  .strict();
+  .passthrough();
 export type OpenCashShiftInput = z.infer<typeof openCashShiftSchema>;
 
 export const cashMovementTypeSchema = z.enum(['cash_in', 'cash_out']);
@@ -69,7 +70,7 @@ export const recordCashMovementSchema = z
     reason: z.string().trim().min(1).max(200),
     occurredAt: z.string().datetime(),
   })
-  .strict();
+  .passthrough();
 export type RecordCashMovementInput = z.infer<typeof recordCashMovementSchema>;
 
 export const closeCashShiftSchema = z
@@ -78,8 +79,11 @@ export const closeCashShiftSchema = z
     declaredCashMinor: z.string().regex(/^\d+$/),
     closedAt: z.string().datetime(),
     notes: z.string().trim().max(500).optional(),
+    openExchangeRateBcv: z.string().optional(),
+    closeExchangeRateBcv: z.string().optional(),
+    rateAuditHistory: z.array(z.any()).optional(),
   })
-  .strict();
+  .passthrough();
 export type CloseCashShiftInput = z.infer<typeof closeCashShiftSchema>;
 
 export const posPaymentMethodSchema = z.enum(['cash', 'card', 'transfer', 'split']);
@@ -94,7 +98,7 @@ export const posSaleLineSchema = z
     quantity: decimalStringSchema,
     unitPriceMinor: z.string().regex(/^\d+$/),
   })
-  .strict();
+  .passthrough();
 export type PosSaleLineInput = z.infer<typeof posSaleLineSchema>;
 
 export const issuePosSaleSchema = z
@@ -105,11 +109,15 @@ export const issuePosSaleSchema = z
     deviceId: recordIdSchema,
     shiftId: recordIdSchema,
     ticketNumber: z.string().trim().min(3).max(50),
+    invoiceControlNumber: z.string().optional(),
+    customerName: z.string().optional(),
+    customerDoc: z.string().optional(),
+    exchangeRateBcv: z.string().optional(),
     paymentMethod: posPaymentMethodSchema,
     lines: z.array(posSaleLineSchema).min(1),
     occurredAt: z.string().datetime(),
   })
-  .strict();
+  .passthrough();
 export type IssuePosSaleInput = z.infer<typeof issuePosSaleSchema>;
 
 export const posSyncOperationTypeSchema = z.enum([

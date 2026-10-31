@@ -4,6 +4,8 @@ import {
   can,
   asId,
   PosSale,
+  CashShift,
+  Customer,
   Quantity,
   Money,
   InventoryConflict,
@@ -12,6 +14,7 @@ import {
   type PosRegisterId,
   type PosDeviceId,
   type PosShiftId,
+  type CustomerId,
   type ProductId,
   type UserId,
   type InventoryConflictId,
@@ -31,6 +34,10 @@ export interface ProcessPosSaleInput {
   readonly deviceId: string;
   readonly shiftId: string;
   readonly ticketNumber: string;
+  readonly invoiceControlNumber?: string | null;
+  readonly customerName?: string | null;
+  readonly customerDoc?: string | null;
+  readonly exchangeRateBcv?: string | null;
   readonly paymentMethod: PosPaymentMethod;
   readonly lines: readonly {
     readonly id: string;
@@ -86,12 +93,51 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       }
 
       const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
-      const shift = await repos.cashShifts.findById(shiftId);
+      let shift = await repos.cashShifts.findById(shiftId);
       if (!shift) {
-        return err({ kind: 'ShiftNotFound', shiftId: input.shiftId });
+        const registerId: PosRegisterId = asId<PosRegisterId>(input.registerId);
+        const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
+        const autoShift = CashShift.open({
+          id: shiftId,
+          tenantId: deps.ctx.tenantId,
+          registerId,
+          deviceId,
+          openedByUserId: asId<UserId>(deps.ctx.actor.userId),
+          initialFloat: Money.zero(deps.ctx.settings.baseCurrency),
+          now: new Date(input.occurredAt),
+        });
+        if (autoShift.ok) {
+          await repos.cashShifts.save(autoShift.value);
+          shift = autoShift.value;
+        } else {
+          return err({ kind: 'ShiftNotFound', shiftId: input.shiftId });
+        }
       }
       if (shift.status !== 'open') {
         return err({ kind: 'ShiftNotOpen', shiftId: input.shiftId });
+      }
+
+      if (
+        input.customerDoc &&
+        input.customerDoc.trim() &&
+        input.customerDoc.trim() !== 'V-00000000'
+      ) {
+        const cleanDoc = input.customerDoc.trim();
+        const existing = await repos.customers.list({ search: cleanDoc, limit: 1 });
+        if (existing.items.length === 0) {
+          const custCode = `CLI-${cleanDoc.replace(/[^A-Za-z0-9]/g, '').slice(-8) || Date.now().toString().slice(-6)}`;
+          const custResult = Customer.create({
+            id: asId<CustomerId>(deps.ids.next()),
+            tenantId: deps.ctx.tenantId,
+            code: custCode,
+            name: input.customerName?.trim() || 'Cliente POS',
+            taxId: cleanDoc,
+            createdAt: deps.clock.now(),
+          });
+          if (custResult.ok) {
+            await repos.customers.save(custResult.value);
+          }
+        }
       }
 
       const saleId: PosSaleId = input.saleId

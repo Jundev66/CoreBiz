@@ -27,14 +27,17 @@ import {
   Eye,
   FileText,
   User,
+  Users,
   Clock,
   TrendingUp,
   Smartphone,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { usePos } from './use-pos';
 import { detectBarcodeFromMedia, generateInternalBarcode } from './barcode';
 import { printInvoice, downloadInvoiceFile } from './invoice';
-import type { LocalProduct, LocalSale } from './db';
+import type { LocalProduct, LocalSale, LocalCustomer } from './db';
 
 export function App() {
   const {
@@ -61,12 +64,16 @@ export function App() {
     reloadDemoCatalog,
     enrollDevice,
     searchCatalog,
+    searchCustomers,
+    saveCustomer,
   } = usePos();
 
-  const [activeTab, setActiveTab] = useState<'catalog' | 'sales' | 'cart'>('catalog');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'in_stock'>('all');
   const [searchResults, setSearchResults] = useState<LocalProduct[]>([]);
+  const [catalogFilterMode, setCatalogFilterMode] = useState<'all' | 'in_stock'>('all');
+  const [showCatalogDrawer, setShowCatalogDrawer] = useState(false);
+  const [showSalesModal, setShowSalesModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
@@ -75,6 +82,23 @@ export function App() {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showCashCheckoutModal, setShowCashCheckoutModal] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    id?: string;
+    name: string;
+    taxId: string;
+  }>({
+    name: 'Consumidor Final',
+    taxId: 'V-00000000',
+  });
+
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState<LocalCustomer[]>([]);
+  const [customerModalTab, setCustomerModalTab] = useState<'search' | 'create'>('search');
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustTaxId, setNewCustTaxId] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
 
   const [initialFloatInput, setInitialFloatInput] = useState('50.00');
   const [openShiftRateInput, setOpenShiftRateInput] = useState('36.50');
@@ -87,8 +111,6 @@ export function App() {
     'pago_movil' | 'punto_debito' | 'cash_ves'
   >('pago_movil');
   const [vesTenderedInput, setVesTenderedInput] = useState('');
-  const [customerNameInput, setCustomerNameInput] = useState('');
-  const [customerDocInput, setCustomerDocInput] = useState('');
   const [variosName, setVariosName] = useState('Artículo Varios');
   const [variosPrice, setVariosPrice] = useState('10.00');
   const [enrollPairingCode, setEnrollPairingCode] = useState('CAJA-01');
@@ -111,13 +133,14 @@ export function App() {
     readonly rateHistoryCount: number;
   } | null>(null);
 
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
     if (defaultExchangeRate) {
       setOpenShiftRateInput(defaultExchangeRate);
     }
   }, [defaultExchangeRate]);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -125,6 +148,32 @@ export function App() {
       setSearchResults(results);
     })();
   }, [searchQuery, searchCatalog, isSyncing]);
+
+  useEffect(() => {
+    if (!showCustomerModal) return;
+    void (async () => {
+      const results = await searchCustomers(customerSearchQuery);
+      setCustomerSearchResults(results);
+    })();
+  }, [customerSearchQuery, searchCustomers, showCustomerModal]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   useEffect(() => {
     if (!showCameraModal) return;
@@ -228,8 +277,8 @@ export function App() {
     changeAmount?: string,
   ) => {
     const res = await checkoutSale(method, {
-      name: customerNameInput || 'Consumidor Final',
-      doc: customerDocInput || 'V-00000000',
+      name: selectedCustomer.name || 'Consumidor Final',
+      doc: selectedCustomer.taxId || 'V-00000000',
     });
 
     if (res) {
@@ -259,12 +308,28 @@ export function App() {
         change: changeAmount,
       });
 
-      setCustomerNameInput('');
-      setCustomerDocInput('');
       setCashTenderedInput('');
       setVesTenderedInput('');
       setShowCashCheckoutModal(false);
     }
+  };
+
+  const handleCreateAndSelectCustomer = async () => {
+    if (!newCustName.trim() || !newCustTaxId.trim()) return;
+    const saved = await saveCustomer({
+      name: newCustName.trim(),
+      taxId: newCustTaxId.trim(),
+      phone: newCustPhone.trim() || null,
+    });
+    setSelectedCustomer({
+      id: saved.id,
+      name: saved.name,
+      taxId: saved.taxId,
+    });
+    setShowCustomerModal(false);
+    setNewCustName('');
+    setNewCustTaxId('');
+    setNewCustPhone('');
   };
 
   const rateNum = parseFloat(activeExchangeRate || '36.50') || 36.5;
@@ -272,8 +337,8 @@ export function App() {
   const totalVesDecimal = totalDecimal * rateNum;
   const totalItemCount = cart.reduce((acc, l) => acc + l.quantity, 0);
 
-  const displayedProducts = searchResults.filter((p) => {
-    if (filterMode === 'in_stock') {
+  const displayedCatalog = searchResults.filter((p) => {
+    if (catalogFilterMode === 'in_stock') {
       return parseFloat(p.onHand) > 0;
     }
     return true;
@@ -292,14 +357,39 @@ export function App() {
 
   const totalSalesAmount = sales.reduce((acc, s) => acc + Number(s.totalMinor) / 100, 0);
   const syncedSalesCount = sales.filter((s) => s.syncStatus === 'synced').length;
-  const pendingSalesCount = sales.filter((s) => s.syncStatus === 'pending').length;
+  const pendingSalesCount = sales.filter((s) => s.syncStatus !== 'synced').length;
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchResults.length > 0 && searchResults[0]) {
+        addToCart(searchResults[0]);
+        setSearchQuery('');
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F4') {
+        e.preventDefault();
+        if (cart.length > 0 && currentShift) {
+          setCheckoutCurrencyMode('usd');
+          setCashTenderedInput(totalDecimal.toFixed(2));
+          setShowCashCheckoutModal(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [cart.length, currentShift, totalDecimal]);
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-canvas font-sans text-ink antialiased">
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-line bg-surface px-4 sm:px-6 shadow-xs">
+    <div className="flex h-screen w-screen flex-col bg-canvas font-sans text-ink antialiased select-none">
+      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-line bg-surface px-3 sm:px-6 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand font-black text-white shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand font-black text-white shadow-xs">
               CB
             </span>
             <div>
@@ -317,55 +407,20 @@ export function App() {
                   {isOnline ? 'En línea' : 'Offline'}
                 </span>
                 {pendingOutboxCount > 0 && (
-                  <span className="rounded-pill bg-brand-soft px-1.5 py-0.2 text-[10px] font-bold text-brand">
-                    {pendingOutboxCount} pend.
-                  </span>
+                  <button
+                    onClick={() => {
+                      void triggerSync();
+                    }}
+                    className="flex items-center gap-1 rounded-pill bg-warn-soft border border-warn/30 px-2 py-0.2 text-[10px] font-bold text-warn-ink hover:bg-warn-soft/80 transition cursor-pointer"
+                    title="Hay ventas u operaciones en cola local. Hacé clic para reintentar sincronización."
+                  >
+                    <Clock className="h-2.5 w-2.5" />
+                    {pendingOutboxCount} en cola
+                  </button>
                 )}
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-1 rounded-2xl bg-subtle p-1 border border-line">
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-              activeTab === 'catalog'
-                ? 'bg-surface text-ink shadow-xs'
-                : 'text-muted hover:text-ink'
-            }`}
-          >
-            <Package className="h-3.5 w-3.5 text-brand" />
-            <span>Catálogo</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('sales')}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-              activeTab === 'sales' ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink'
-            }`}
-          >
-            <FileText className="h-3.5 w-3.5 text-brand" />
-            <span>Ventas</span>
-            {sales.length > 0 && (
-              <span className="rounded-pill bg-brand-soft px-1.5 py-0.2 text-[10px] font-bold text-brand">
-                {sales.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('cart')}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-              activeTab === 'cart' ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink'
-            }`}
-          >
-            <ReceiptText className="h-3.5 w-3.5 text-brand" />
-            <span>Ticket</span>
-            {totalItemCount > 0 && (
-              <span className="rounded-pill bg-brand px-1.5 py-0.2 text-[10px] font-bold text-white">
-                {totalItemCount}
-              </span>
-            )}
-          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -373,7 +428,7 @@ export function App() {
             <>
               <button
                 onClick={() => setShowCloseShiftModal(true)}
-                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-success/30 bg-success-soft px-3 py-1.5 text-xs font-bold text-success-ink transition hover:bg-success-soft/80"
+                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-success/30 bg-success-soft px-3 py-1.5 text-xs font-bold text-success-ink transition hover:bg-success-soft/80 cursor-pointer"
                 title="Turno abierto. Click para cerrar y arquear."
               >
                 <Unlock className="h-3.5 w-3.5 text-success" />
@@ -388,24 +443,18 @@ export function App() {
                   setShowRateModal(true);
                 }}
                 className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-1.5 text-xs font-bold text-ink transition hover:border-brand/40 shadow-xs cursor-pointer"
-                title="Tasa oficial BCV activa del turno. Hacé clic para auditar o ajustar."
+                title="Tasa oficial BCV activa del turno. Click para auditar o ajustar."
               >
                 <TrendingUp className="h-3.5 w-3.5 text-brand" />
                 <span className="font-mono text-ink text-[11px] sm:text-xs">
                   Bs. {activeExchangeRate}
                 </span>
-                {(currentShift.rateAuditHistory?.length ?? 0) > 1 && (
-                  <span className="hidden sm:inline-block rounded-md bg-warn-soft px-1.5 py-0.2 text-[10px] font-bold text-warn-ink">
-                    {currentShift.rateAuditHistory!.length - 1}{' '}
-                    {currentShift.rateAuditHistory!.length - 1 === 1 ? 'ajuste' : 'ajustes'}
-                  </span>
-                )}
               </button>
             </>
           ) : (
             <button
               onClick={() => setShowOpenShiftModal(true)}
-              className="hidden sm:flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 cursor-pointer"
             >
               <Lock className="h-3.5 w-3.5" />
               <span>Abrir Turno</span>
@@ -413,340 +462,142 @@ export function App() {
           )}
 
           <button
+            onClick={() => setShowCatalogDrawer(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
+            title="Abrir catálogo visual"
+          >
+            <Package className="h-3.5 w-3.5 text-brand" />
+            <span className="hidden sm:inline">Catálogo</span>
+          </button>
+
+          <button
+            onClick={() => setShowSalesModal(true)}
+            className="relative flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
+            title="Historial de ventas y comprobantes"
+          >
+            <FileText className="h-3.5 w-3.5 text-brand" />
+            <span className="hidden sm:inline">Ventas</span>
+            {sales.length > 0 && (
+              <span className="rounded-pill bg-brand-soft px-1.5 py-0.2 text-[10px] font-bold text-brand">
+                {sales.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={toggleFullscreen}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft transition hover:bg-subtle cursor-pointer"
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Modo pantalla completa'}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+
+          <button
             onClick={() => {
               void triggerSync();
             }}
             disabled={isSyncing || !isOnline}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft transition hover:bg-subtle disabled:opacity-50"
-            title="Sincronizar datos"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft transition hover:bg-subtle disabled:opacity-50 cursor-pointer"
+            title="Sincronizar con ERP"
           >
             <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin text-brand' : ''}`} />
           </button>
 
           <button
             onClick={() => setShowMobileMenu(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-ink transition hover:bg-subtle"
-            title="Menú de opciones"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-ink transition hover:bg-subtle cursor-pointer"
+            title="Opciones del sistema"
           >
             <Menu className="h-4 w-4" />
           </button>
         </div>
       </header>
 
-      <main className="relative flex flex-1 overflow-hidden pb-16 md:pb-0">
-        {activeTab === 'catalog' && (
-          <section className="flex flex-1 flex-col p-3 sm:p-6 overflow-hidden">
-            <div className="flex flex-wrap items-center gap-2.5 pb-3">
-              <div className="relative min-w-[180px] flex-1">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre, SKU o código..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-4 text-xs font-medium text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand shadow-xs"
-                />
-              </div>
-
-              <div className="flex items-center gap-1.5">
+      <main className="relative flex flex-1 flex-col lg:flex-row overflow-hidden">
+        <section className="flex flex-1 flex-col p-3 sm:p-5 overflow-hidden">
+          <div className="relative mb-3 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Escanear código o buscar por SKU / Nombre (Enter para agregar)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-4 text-xs sm:text-sm font-medium text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand shadow-xs"
+              />
+              {searchQuery && (
                 <button
-                  onClick={() => setShowCameraModal(true)}
-                  className="flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs"
-                  title="Escanear con cámara"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:text-ink cursor-pointer"
                 >
-                  <Camera className="h-4 w-4 text-brand" />
-                  <span className="hidden sm:inline">Escanear</span>
+                  <X className="h-4 w-4" />
                 </button>
-
-                <button
-                  onClick={() => setShowVariosModal(true)}
-                  className="flex h-9 items-center gap-1.5 rounded-xl border border-brand-line bg-brand-soft px-3 text-xs font-bold text-brand hover:bg-brand-soft/80 transition shadow-xs"
-                  title="Artículo varios fuera de catálogo"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span className="hidden sm:inline">Varios</span>
-                </button>
-
-                <div className="flex rounded-xl border border-line bg-surface p-0.5 shadow-xs">
-                  <button
-                    onClick={() => setFilterMode('all')}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                      filterMode === 'all'
-                        ? 'bg-brand text-white shadow-xs'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    onClick={() => setFilterMode('in_stock')}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                      filterMode === 'in_stock'
-                        ? 'bg-brand text-white shadow-xs'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    Con stock
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-1">
-              {displayedProducts.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                  {displayedProducts.map((product) => {
-                    const isAvailable = parseFloat(product.onHand) > 0;
-                    const qtyInCart = getCartQuantity(product.id);
-
-                    return (
-                      <button
-                        key={product.id}
-                        onClick={() => addToCart(product)}
-                        className={`group relative flex flex-col justify-between rounded-2xl border p-3 text-left transition duration-150 active:scale-97 cursor-pointer ${
-                          qtyInCart > 0
-                            ? 'border-brand bg-brand-soft/30 shadow-xs'
-                            : 'border-line bg-surface hover:border-brand/50 hover:shadow-sm'
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between pb-1.5">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted">
-                              {product.sku}
-                            </span>
-                            <span
-                              className={`rounded-pill px-1.5 py-0.2 text-[9px] font-bold ${
-                                isAvailable
-                                  ? 'bg-success-soft text-success-ink'
-                                  : 'bg-warn-soft text-warn-ink'
-                              }`}
-                            >
-                              {isAvailable ? `${product.onHand} ${product.unit}` : 'Sin stock'}
-                            </span>
-                          </div>
-
-                          <h3 className="line-clamp-2 text-xs font-bold text-ink group-hover:text-brand transition">
-                            {product.name}
-                          </h3>
-                        </div>
-
-                        <div className="mt-2.5 flex items-baseline justify-between border-t border-line/60 pt-2">
-                          <div className="flex flex-col text-left">
-                            <span className="font-mono text-sm font-extrabold text-ink">
-                              ${parseFloat(product.price).toFixed(2)}
-                            </span>
-                            <span className="font-mono text-[10px] text-muted font-semibold">
-                              Bs. {(parseFloat(product.price) * rateNum).toFixed(2)}
-                            </span>
-                          </div>
-
-                          {qtyInCart > 0 ? (
-                            <span className="flex items-center gap-1 rounded-pill bg-brand px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-xs">
-                              <Check className="h-3 w-3 stroke-[3]" />
-                              {qtyInCart}
-                            </span>
-                          ) : (
-                            <span className="flex h-6 w-6 items-center justify-center rounded-xl bg-brand-soft text-brand group-hover:bg-brand group-hover:text-white transition shadow-xs">
-                              <Plus className="h-3.5 w-3.5" />
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface/40 p-8 text-center text-muted">
-                  <Package className="h-12 w-12 stroke-1 text-muted/60" />
-                  <p className="mt-3 text-sm font-bold text-ink">
-                    {searchQuery ? 'No encontramos coincidencias' : 'Catálogo listo'}
-                  </p>
-                  <p className="mt-1 max-w-xs text-xs text-muted">
-                    {searchQuery
-                      ? 'Probá buscando por otro término o agregá un artículo fuera de catálogo.'
-                      : 'Podés buscar por nombre, escanear o ingresar artículos varios.'}
-                  </p>
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    <button
-                      onClick={() => {
-                        void reloadDemoCatalog();
-                      }}
-                      className="rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-brand-hover"
-                    >
-                      Cargar Catálogo Demo ERP
-                    </button>
-                    <button
-                      onClick={() => setShowVariosModal(true)}
-                      className="rounded-xl border border-brand-line bg-brand-soft px-4 py-2 text-xs font-bold text-brand transition hover:bg-brand-soft/80"
-                    >
-                      + Agregar Artículo Varios
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
-          </section>
-        )}
 
-        {activeTab === 'sales' && (
-          <section className="flex flex-1 flex-col p-3 sm:p-6 overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
-              <div>
-                <h2 className="text-base sm:text-lg font-black tracking-tight text-ink">
-                  Historial de Ventas POS
-                </h2>
-                <p className="text-xs text-muted">
-                  Registro local de comprobantes fiscales digitales (Providencia SNAT/2026/00093)
-                </p>
+            <button
+              onClick={() => setShowCameraModal(true)}
+              className="flex h-11 items-center gap-1.5 rounded-2xl border border-line bg-surface px-3.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
+              title="Escanear con cámara"
+            >
+              <Camera className="h-4 w-4 text-brand" />
+              <span className="hidden md:inline">Cámara</span>
+            </button>
+
+            <button
+              onClick={() => setShowVariosModal(true)}
+              className="flex h-11 items-center gap-1.5 rounded-2xl border border-brand-line bg-brand-soft px-3.5 text-xs font-bold text-brand hover:bg-brand-soft/80 transition shadow-xs cursor-pointer"
+              title="Agregar ítem varios fuera de catálogo"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden md:inline">+ Varios</span>
+            </button>
+          </div>
+
+          {searchQuery.trim().length > 0 && searchResults.length > 0 && (
+            <div className="absolute top-16 left-3 right-3 lg:right-[400px] z-20 max-h-64 overflow-y-auto rounded-2xl border border-line bg-surface p-2 shadow-2xl space-y-1">
+              <div className="px-2 py-1 text-[11px] font-bold text-muted uppercase">
+                Resultados coincidentes ({searchResults.length}) — Enter agrega el primero
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="rounded-xl border border-line bg-surface px-3 py-1.5 text-center shadow-xs">
-                  <p className="text-[10px] font-bold text-muted uppercase">Ventas</p>
-                  <p className="font-mono text-sm font-black text-ink">{sales.length}</p>
-                </div>
-                <div className="rounded-xl border border-line bg-surface px-3 py-1.5 text-center shadow-xs">
-                  <p className="text-[10px] font-bold text-muted uppercase">Facturado</p>
-                  <p className="font-mono text-sm font-black text-brand">
-                    ${totalSalesAmount.toFixed(2)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-success/30 bg-success-soft px-3 py-1.5 text-center shadow-xs">
-                  <p className="text-[10px] font-bold text-success-ink uppercase">Sync</p>
-                  <p className="font-mono text-sm font-black text-success-ink">
-                    {syncedSalesCount}
-                  </p>
-                </div>
-                {pendingSalesCount > 0 && (
-                  <div className="rounded-xl border border-warn/30 bg-warn-soft px-3 py-1.5 text-center shadow-xs">
-                    <p className="text-[10px] font-bold text-warn-ink uppercase">En Cola</p>
-                    <p className="font-mono text-sm font-black text-warn-ink">
-                      {pendingSalesCount}
-                    </p>
+              {searchResults.slice(0, 8).map((prod) => (
+                <button
+                  key={prod.id}
+                  onClick={() => {
+                    addToCart(prod);
+                    setSearchQuery('');
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl p-2.5 text-left hover:bg-subtle transition cursor-pointer"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-brand">{prod.sku}</span>
+                      <span className="text-xs font-bold text-ink">{prod.name}</span>
+                    </div>
+                    {prod.barcode && (
+                      <span className="font-mono text-[10px] text-muted">
+                        Barcode: {prod.barcode}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
+                  <div className="text-right">
+                    <span className="font-mono text-sm font-black text-ink">
+                      ${parseFloat(prod.price).toFixed(2)}
+                    </span>
+                    <span className="block font-mono text-[10px] text-muted">
+                      Bs. {(parseFloat(prod.price) * rateNum).toFixed(2)}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
+          )}
 
-            <div className="flex-1 overflow-y-auto pt-3 pr-1">
-              {sales.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted">
-                  <FileText className="h-12 w-12 stroke-1 text-muted/60" />
-                  <p className="mt-3 text-sm font-bold text-ink">Sin ventas registradas</p>
-                  <p className="mt-1 max-w-xs text-xs text-muted">
-                    Las ventas que emitas desde esta terminal quedarán registradas aquí para
-                    impresión y descarga.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('catalog')}
-                    className="mt-4 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-brand-hover"
-                  >
-                    Ir al Catálogo a Vender
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {sales.map((sale) => {
-                    const isSynced = sale.syncStatus === 'synced';
-                    const totalUsd = (Number(sale.totalMinor) / 100).toFixed(2);
-                    const rate = parseFloat(sale.exchangeRateBcv || '36.50');
-                    const totalVes = (parseFloat(totalUsd) * rate).toFixed(2);
-                    const dateFormatted = new Date(sale.occurredAt).toLocaleString('es-VE', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
-
-                    return (
-                      <div
-                        key={sale.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-line bg-surface p-3.5 hover:border-line-strong transition shadow-xs gap-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 pb-1">
-                            <span className="font-mono text-xs font-black text-brand">
-                              {sale.ticketNumber}
-                            </span>
-                            <span className="font-mono text-[10px] text-muted">
-                              Ctrl: {sale.invoiceControlNumber}
-                            </span>
-                            <span
-                              className={`flex items-center gap-1 rounded-pill px-2 py-0.2 text-[9px] font-bold ${
-                                isSynced
-                                  ? 'bg-success-soft text-success-ink'
-                                  : 'bg-warn-soft text-warn-ink'
-                              }`}
-                            >
-                              {isSynced ? (
-                                <CheckCircle2 className="h-2.5 w-2.5" />
-                              ) : (
-                                <Clock className="h-2.5 w-2.5" />
-                              )}
-                              {isSynced ? 'Sincronizada' : 'En cola (Offline)'}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-x-3 text-xs text-ink font-medium">
-                            <span>{sale.customerName}</span>
-                            <span className="font-mono text-muted text-[11px]">
-                              {sale.customerDoc}
-                            </span>
-                            <span className="text-muted text-[11px]">{dateFormatted}</span>
-                            <span className="rounded-md bg-subtle px-1.5 py-0.2 text-[10px] font-bold text-muted uppercase">
-                              {sale.paymentMethod}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 border-line/60 pt-2 sm:pt-0">
-                          <div className="text-left sm:text-right">
-                            <p className="font-mono text-base font-black text-ink">${totalUsd}</p>
-                            <p className="font-mono text-[11px] text-muted">Bs. {totalVes}</p>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setSelectedSaleDetail(sale)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-canvas text-ink hover:bg-subtle transition"
-                              title="Ver detalle del ticket"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => printInvoice(sale)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-canvas text-ink hover:bg-subtle transition"
-                              title="Imprimir factura digital (SENIAT 00093)"
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => downloadInvoiceFile(sale)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-canvas text-ink hover:bg-subtle transition"
-                              title="Descargar comprobante digital"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        <section
-          className={`w-full lg:w-96 shrink-0 flex-col border-l border-line bg-surface shadow-xs ${
-            activeTab === 'cart' ? 'flex' : 'hidden lg:flex'
-          }`}
-        >
-          <div className="flex h-14 items-center justify-between border-b border-line px-4 sm:px-5">
+          <div className="flex items-center justify-between border-b border-line pb-2 mb-2">
             <div className="flex items-center gap-2">
               <ReceiptText className="h-4 w-4 text-brand" />
-              <h2 className="text-sm font-bold text-ink">Ticket de Venta</h2>
+              <h2 className="text-sm font-bold text-ink">Ticket en Curso</h2>
               {totalItemCount > 0 && (
                 <span className="rounded-pill bg-brand-soft px-2 py-0.5 text-[11px] font-extrabold text-brand">
                   {totalItemCount} {totalItemCount === 1 ? 'ítem' : 'ítems'}
@@ -754,98 +605,86 @@ export function App() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            {cart.length > 0 && (
               <button
-                onClick={() => setActiveTab('catalog')}
-                className="lg:hidden text-xs font-bold text-brand"
+                onClick={clearCart}
+                className="text-xs font-bold text-muted hover:text-danger transition cursor-pointer"
               >
-                + Productos
+                Vaciar Ticket
               </button>
-              {cart.length > 0 && (
-                <button
-                  onClick={clearCart}
-                  className="text-xs font-semibold text-muted transition hover:text-danger"
-                >
-                  Vaciar
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
-          {!currentShift && (
-            <div className="mx-4 mt-3 rounded-2xl border border-warn/40 bg-warn-soft p-3.5 text-xs text-warn-ink shadow-xs">
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-warn-ink mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-bold">Caja cerrada</p>
-                  <p className="mt-0.5 text-muted">
-                    Para cobrar ventas, abrí el turno indicando tu fondo de efectivo.
-                  </p>
-                  <button
-                    onClick={() => setShowOpenShiftModal(true)}
-                    className="mt-2.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700"
-                  >
-                    Abrir Turno Ahora
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-6 text-center text-muted">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-canvas">
                   <ShoppingCart className="h-7 w-7 text-muted/60" />
                 </div>
-                <p className="mt-3 text-sm font-bold text-ink">Ticket en blanco</p>
-                <p className="mt-1 text-xs text-muted max-w-[200px]">
-                  Tocá los productos del catálogo o usá el lector de código de barras.
+                <p className="mt-3 text-sm font-bold text-ink">Terminal de Venta Lista</p>
+                <p className="mt-1 text-xs text-muted max-w-sm">
+                  Escaneá códigos con tu lector, buscá por SKU/nombre arriba o tocá en Catálogo para
+                  agregar productos.
                 </p>
                 <button
-                  onClick={() => setActiveTab('catalog')}
-                  className="mt-4 rounded-xl border border-line bg-surface px-4 py-2 text-xs font-bold text-brand shadow-xs hover:bg-subtle"
+                  onClick={() => setShowCatalogDrawer(true)}
+                  className="mt-4 rounded-xl border border-line bg-surface px-4 py-2 text-xs font-bold text-brand shadow-xs hover:bg-subtle cursor-pointer"
                 >
-                  Explorar Catálogo
+                  Abrir Catálogo Visual
                 </button>
               </div>
             ) : (
               cart.map((line) => (
                 <div
                   key={line.id}
-                  className="flex items-center justify-between rounded-2xl border border-line bg-canvas/40 p-3 hover:border-line-strong transition shadow-xs"
+                  className="flex items-center justify-between rounded-2xl border border-line bg-surface p-3 hover:border-line-strong transition shadow-xs"
                 >
                   <div className="min-w-0 flex-1 pr-3">
-                    <h4 className="truncate text-xs font-bold text-ink">{line.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="truncate text-xs sm:text-sm font-bold text-ink">
+                        {line.name}
+                      </h4>
+                      {line.sku && (
+                        <span className="rounded-md bg-subtle px-1.5 py-0.2 font-mono text-[10px] font-bold text-muted">
+                          {line.sku}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] font-mono text-muted">
-                      ${(Number(line.unitPriceMinor) / 100).toFixed(2)} c/u
+                      ${(Number(line.unitPriceMinor) / 100).toFixed(2)} | Bs.{' '}
+                      {((Number(line.unitPriceMinor) / 100) * rateNum).toFixed(2)} c/u
                     </p>
                   </div>
 
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => updateCartQuantity(line.id, line.quantity - 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-xl border border-line bg-surface text-ink transition hover:bg-subtle active:scale-95 cursor-pointer"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-canvas text-ink transition hover:bg-subtle active:scale-95 cursor-pointer"
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
-                    <span className="w-6 text-center font-mono text-xs font-bold text-ink">
+                    <span className="w-7 text-center font-mono text-xs font-bold text-ink">
                       {line.quantity}
                     </span>
                     <button
                       onClick={() => updateCartQuantity(line.id, line.quantity + 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-xl border border-line bg-surface text-ink transition hover:bg-subtle active:scale-95 cursor-pointer"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-canvas text-ink transition hover:bg-subtle active:scale-95 cursor-pointer"
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </button>
 
-                    <span className="ml-2 w-16 text-right font-mono text-xs font-black text-ink">
-                      ${(Number(line.lineTotalMinor) / 100).toFixed(2)}
-                    </span>
+                    <div className="ml-2 w-20 text-right">
+                      <span className="font-mono text-xs sm:text-sm font-black text-ink">
+                        ${(Number(line.lineTotalMinor) / 100).toFixed(2)}
+                      </span>
+                      <span className="block font-mono text-[10px] text-muted">
+                        Bs. {((Number(line.lineTotalMinor) / 100) * rateNum).toFixed(2)}
+                      </span>
+                    </div>
 
                     <button
                       onClick={() => removeFromCart(line.id)}
-                      className="ml-1 p-1 text-muted transition hover:text-danger cursor-pointer"
+                      className="ml-2 p-1.5 text-muted transition hover:text-danger cursor-pointer"
                       title="Eliminar artículo"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -855,9 +694,56 @@ export function App() {
               ))
             )}
           </div>
+        </section>
 
-          <div className="border-t border-line bg-surface p-4 sm:p-5 shadow-xs">
-            <div className="space-y-1.5 pb-4 text-xs text-muted">
+        <section className="w-full lg:w-96 shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-line bg-surface shadow-xs">
+          <div className="p-4 border-b border-line bg-canvas/30 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-brand" />
+                Cliente Activo
+              </span>
+              <button
+                onClick={() => setShowCustomerModal(true)}
+                className="text-xs font-bold text-brand hover:underline cursor-pointer"
+              >
+                Cambiar / Nuevo
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-2.5 shadow-xs">
+              <div>
+                <p className="text-xs font-bold text-ink">{selectedCustomer.name}</p>
+                <p className="font-mono text-[11px] text-muted">{selectedCustomer.taxId}</p>
+              </div>
+              <span className="rounded-md bg-subtle px-2 py-0.5 text-[10px] font-bold text-muted">
+                {selectedCustomer.taxId === 'V-00000000' ? 'Genérico' : 'Registrado'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 p-4 flex flex-col justify-between">
+            {!currentShift && (
+              <div className="mb-3 rounded-2xl border border-warn/40 bg-warn-soft p-3.5 text-xs text-warn-ink shadow-xs">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-warn-ink mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold">Caja cerrada</p>
+                    <p className="mt-0.5 text-muted">
+                      Para cobrar ventas, abrí el turno indicando el fondo de efectivo.
+                    </p>
+                    <button
+                      onClick={() => setShowOpenShiftModal(true)}
+                      className="mt-2 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
+                    >
+                      Abrir Turno Ahora
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 text-xs text-muted">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span className="font-mono text-ink">
@@ -870,18 +756,27 @@ export function App() {
                   ${(Number(totals.taxMinor) / 100).toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-line pt-2 text-xl font-black text-ink">
-                <span>Total a Cobrar</span>
-                <div className="text-right">
-                  <span className="font-mono text-brand">${totalDecimal.toFixed(2)}</span>
-                  <div className="text-xs font-semibold text-muted font-mono">
-                    ≈ Bs. {totalVesDecimal.toFixed(2)}
+              <div className="flex justify-between">
+                <span>Tasa Oficial BCV</span>
+                <span className="font-mono text-brand font-bold">Bs. {activeExchangeRate}</span>
+              </div>
+
+              <div className="border-t border-line pt-3 mt-3">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-base font-extrabold text-ink">Total a Cobrar</span>
+                  <div className="text-right">
+                    <span className="font-mono text-2xl font-black text-brand">
+                      ${totalDecimal.toFixed(2)}
+                    </span>
+                    <div className="font-mono text-xs font-bold text-ink">
+                      ≈ Bs. {totalVesDecimal.toFixed(2)}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="mt-4 pt-3 border-t border-line/60">
               <button
                 disabled={cart.length === 0 || !currentShift}
                 onClick={() => {
@@ -889,486 +784,428 @@ export function App() {
                   setCashTenderedInput(totalDecimal.toFixed(2));
                   setShowCashCheckoutModal(true);
                 }}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-emerald-700 active:scale-98 disabled:opacity-40 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 text-sm font-black text-white shadow-md transition hover:bg-emerald-700 active:scale-98 disabled:opacity-40 cursor-pointer"
               >
-                <Coins className="h-4 w-4" />
-                Dólares ($)
-              </button>
-
-              <button
-                disabled={cart.length === 0 || !currentShift}
-                onClick={() => {
-                  setCheckoutCurrencyMode('ves');
-                  setVesTenderedInput(totalVesDecimal.toFixed(2));
-                  setShowCashCheckoutModal(true);
-                }}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-brand py-3.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-brand-hover active:scale-98 disabled:opacity-40 cursor-pointer"
-              >
-                <CreditCard className="h-4 w-4" />
-                Bolívares / Punto
+                <Banknote className="h-5 w-5" />
+                <span>COBRAR TICKET (F4)</span>
               </button>
             </div>
           </div>
         </section>
       </main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 flex h-14 items-center justify-around border-t border-line bg-surface px-2 shadow-lg">
-        <button
-          onClick={() => setActiveTab('catalog')}
-          className={`flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold transition ${
-            activeTab === 'catalog' ? 'text-brand' : 'text-muted'
-          }`}
-        >
-          <Package className="h-5 w-5" />
-          <span>Catálogo</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('sales')}
-          className={`relative flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold transition ${
-            activeTab === 'sales' ? 'text-brand' : 'text-muted'
-          }`}
-        >
-          <FileText className="h-5 w-5" />
-          <span>Ventas</span>
-          {sales.length > 0 && (
-            <span className="absolute top-1 right-1/4 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white">
-              {sales.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('cart')}
-          className={`relative flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold transition ${
-            activeTab === 'cart' ? 'text-brand' : 'text-muted'
-          }`}
-        >
-          <ReceiptText className="h-5 w-5" />
-          <span>Ticket</span>
-          {totalItemCount > 0 && (
-            <span className="absolute top-1 right-1/4 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">
-              {totalItemCount}
-            </span>
-          )}
-        </button>
-      </nav>
-
-      {showMobileMenu && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
-            <div className="flex items-center justify-between pb-3">
-              <h3 className="text-base font-bold text-ink">Configuración de Terminal POS</h3>
+      {showCatalogDrawer && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+          <div className="w-full sm:max-w-xl h-full border-l border-line bg-surface p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-brand" />
+                <h3 className="text-base font-bold text-ink">Catálogo de Productos</h3>
+              </div>
               <button
-                onClick={() => setShowMobileMenu(false)}
-                className="rounded-xl p-1.5 text-muted hover:bg-subtle"
+                onClick={() => setShowCatalogDrawer(false)}
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="mt-3 space-y-2">
-              <button
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  void triggerSync();
-                }}
-                disabled={isSyncing || !isOnline}
-                className="flex w-full items-center justify-between rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <RefreshCw className={`h-4 w-4 text-brand ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span>Sincronizar Catálogo y Ventas</span>
-                </div>
-                <span className="text-muted text-[11px] font-normal">
-                  {pendingOutboxCount} pendientes
-                </span>
-              </button>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="flex rounded-xl border border-line bg-canvas p-0.5 shadow-xs">
+                <button
+                  onClick={() => setCatalogFilterMode('all')}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
+                    catalogFilterMode === 'all'
+                      ? 'bg-brand text-white shadow-xs'
+                      : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setCatalogFilterMode('in_stock')}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
+                    catalogFilterMode === 'in_stock'
+                      ? 'bg-brand text-white shadow-xs'
+                      : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  Con stock
+                </button>
+              </div>
 
               <button
                 onClick={() => {
-                  setShowMobileMenu(false);
                   void reloadDemoCatalog();
                 }}
-                disabled={isSyncing}
-                className="flex w-full items-center justify-between rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
+                className="text-xs font-bold text-brand hover:underline cursor-pointer"
               >
-                <div className="flex items-center gap-2.5">
-                  <Sparkles className="h-4 w-4 text-brand" />
-                  <span>Cargar Catálogo Demo ERP</span>
-                </div>
-                <span className="text-muted text-[11px] font-normal">Semilla ERP</span>
+                Recargar Catálogo ERP
               </button>
+            </div>
 
-              {currentShift ? (
-                <button
-                  onClick={() => {
-                    setShowMobileMenu(false);
-                    setShowCloseShiftModal(true);
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
-                >
-                  <Lock className="h-4 w-4 text-warn-ink" />
-                  <span>Cerrar Turno y Realizar Arqueo</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setShowMobileMenu(false);
-                    setShowOpenShiftModal(true);
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
-                >
-                  <Unlock className="h-4 w-4 text-success" />
-                  <span>Abrir Turno de Caja</span>
-                </button>
-              )}
+            <div className="mt-3 flex-1 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {displayedCatalog.map((product) => {
+                  const isAvailable = parseFloat(product.onHand) > 0;
+                  const qtyInCart = getCartQuantity(product.id);
 
-              <button
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  setShowEnrollModal(true);
-                }}
-                className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
-              >
-                <Barcode className="h-4 w-4 text-brand" />
-                <span>Vincular Código de Caja ({registerCode ?? 'Ninguna'})</span>
-              </button>
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className={`flex flex-col justify-between rounded-2xl border p-3 text-left transition duration-150 active:scale-97 cursor-pointer ${
+                        qtyInCart > 0
+                          ? 'border-brand bg-brand-soft/30 shadow-xs'
+                          : 'border-line bg-surface hover:border-brand/50 hover:shadow-sm'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between pb-1.5">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted">
+                            {product.sku}
+                          </span>
+                          <span
+                            className={`rounded-pill px-1.5 py-0.2 text-[9px] font-bold ${
+                              isAvailable
+                                ? 'bg-success-soft text-success-ink'
+                                : 'bg-warn-soft text-warn-ink'
+                            }`}
+                          >
+                            {isAvailable ? `${product.onHand} ${product.unit}` : 'Sin stock'}
+                          </span>
+                        </div>
 
-              <a
-                href="/"
-                className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
-              >
-                <ArrowLeft className="h-4 w-4 text-muted" />
-                <span>Volver al Panel ERP CoreBiz</span>
-              </a>
+                        <h3 className="line-clamp-2 text-xs font-bold text-ink">{product.name}</h3>
+                      </div>
+
+                      <div className="mt-2.5 flex items-baseline justify-between border-t border-line/60 pt-2">
+                        <div className="flex flex-col text-left">
+                          <span className="font-mono text-sm font-extrabold text-ink">
+                            ${parseFloat(product.price).toFixed(2)}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted font-semibold">
+                            Bs. {(parseFloat(product.price) * rateNum).toFixed(2)}
+                          </span>
+                        </div>
+
+                        {qtyInCart > 0 ? (
+                          <span className="flex items-center gap-1 rounded-pill bg-brand px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-xs">
+                            <Check className="h-3 w-3 stroke-[3]" />
+                            {qtyInCart}
+                          </span>
+                        ) : (
+                          <span className="flex h-6 w-6 items-center justify-center rounded-xl bg-brand-soft text-brand shadow-xs">
+                            <Plus className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {showOpenShiftModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
-            <div className="flex items-center gap-2.5 pb-1">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-success-soft text-success-ink">
-                <Unlock className="h-5 w-5" />
+      {showCustomerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-3xl border border-line bg-surface p-6 shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-brand" />
+                <h3 className="text-base font-bold text-ink">Seleccionar o Registrar Cliente</h3>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-ink">Apertura de Turno</h3>
-                <p className="text-xs text-muted">Fondo inicial y tasa oficial para la jornada</p>
-              </div>
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="mt-4 space-y-3.5">
-              <div>
-                <label className="text-xs font-bold text-ink">Fondo de Efectivo ($)</label>
-                <div className="relative mt-1.5">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
-                    $
-                  </span>
+            <div className="mt-3 flex rounded-xl bg-subtle p-1 border border-line">
+              <button
+                type="button"
+                onClick={() => setCustomerModalTab('search')}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition cursor-pointer ${
+                  customerModalTab === 'search'
+                    ? 'bg-surface text-ink shadow-xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Buscar en Base de Datos
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomerModalTab('create')}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition cursor-pointer ${
+                  customerModalTab === 'create'
+                    ? 'bg-surface text-ink shadow-xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                + Registrar Nuevo Cliente
+              </button>
+            </div>
+
+            {customerModalTab === 'search' ? (
+              <div className="mt-4 flex-1 flex flex-col overflow-hidden">
+                <div className="relative mb-3">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                   <input
-                    type="number"
-                    step="0.01"
-                    value={initialFloatInput}
-                    onChange={(e) => setInitialFloatInput(e.target.value)}
-                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                    type="text"
+                    placeholder="Buscar por Nombre, C.I. o RIF..."
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-canvas py-2.5 pl-10 pr-4 text-xs font-medium text-ink focus:border-brand focus:outline-none"
                   />
                 </div>
 
-                <div className="mt-2 flex gap-1.5">
-                  {['20.00', '50.00', '100.00'].map((preset) => (
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                  <button
+                    onClick={() => {
+                      setSelectedCustomer({
+                        name: 'Consumidor Final',
+                        taxId: 'V-00000000',
+                      });
+                      setShowCustomerModal(false);
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl border border-dashed border-brand/50 bg-brand-soft/20 p-3 text-left hover:bg-brand-soft/40 transition cursor-pointer"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-ink">Consumidor Final</p>
+                      <p className="font-mono text-[11px] text-muted">V-00000000 (Genérico)</p>
+                    </div>
+                    <span className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold text-white">
+                      Por Defecto
+                    </span>
+                  </button>
+
+                  {customerSearchResults.map((cust) => (
                     <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setInitialFloatInput(preset)}
-                      className="flex-1 rounded-xl border border-line bg-subtle py-1.5 text-xs font-bold text-ink hover:bg-surface transition"
+                      key={cust.id}
+                      onClick={() => {
+                        setSelectedCustomer({
+                          id: cust.id,
+                          name: cust.name,
+                          taxId: cust.taxId,
+                        });
+                        setShowCustomerModal(false);
+                      }}
+                      className="w-full flex items-center justify-between rounded-xl border border-line bg-surface p-3 text-left hover:border-brand transition cursor-pointer"
                     >
-                      ${preset}
+                      <div>
+                        <p className="text-xs font-bold text-ink">{cust.name}</p>
+                        <p className="font-mono text-[11px] text-muted">
+                          {cust.taxId} | {cust.code}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-brand">Seleccionar</span>
                     </button>
                   ))}
                 </div>
               </div>
-
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-ink">
-                    Tasa Oficial BCV (Bs/USD) <span className="text-danger">*</span>
-                  </label>
-                  <span className="text-[10px] text-brand font-semibold">Obligatoria</span>
-                </div>
-                <div className="relative mt-1.5">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
-                    Bs.
-                  </span>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-ink">Nombre o Razón Social *</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    placeholder="36.50"
-                    value={openShiftRateInput}
-                    onChange={(e) => setOpenShiftRateInput(e.target.value)}
-                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                    type="text"
+                    placeholder="Ej. Inversiones La Cascada C.A."
+                    value={newCustName}
+                    onChange={(e) => setNewCustName(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-muted">
-                  Tasa con la que se abrirá el turno para conversiones y fiscalización.
+
+                <div>
+                  <label className="text-xs font-bold text-ink">C.I. / RIF / DNI *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. J-12345678-9 o V-12345678"
+                    value={newCustTaxId}
+                    onChange={(e) => setNewCustTaxId(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-ink">Teléfono (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 0414-1234567"
+                    value={newCustPhone}
+                    onChange={(e) => setNewCustPhone(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
+                  />
+                </div>
+
+                <div className="mt-4 flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setCustomerModalTab('search')}
+                    className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink cursor-pointer"
+                  >
+                    Volver a Búsqueda
+                  </button>
+                  <button
+                    disabled={!newCustName.trim() || !newCustTaxId.trim()}
+                    onClick={() => {
+                      void handleCreateAndSelectCustomer();
+                    }}
+                    className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover disabled:opacity-40 cursor-pointer"
+                  >
+                    Guardar y Asignar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showSalesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-3 sm:p-6">
+          <div className="w-full max-w-4xl h-[90vh] rounded-3xl border border-line bg-surface p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
+              <div>
+                <h3 className="text-base sm:text-lg font-black tracking-tight text-ink">
+                  Historial de Ventas Emitidas
+                </h3>
+                <p className="text-xs text-muted">
+                  Comprobantes fiscales digitales (Providencia SNAT/2026/00093)
                 </p>
               </div>
-            </div>
 
-            <div className="mt-6 flex justify-end gap-2.5">
-              <button
-                onClick={() => setShowOpenShiftModal(false)}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={!openShiftRateInput || parseFloat(openShiftRateInput) <= 0}
-                onClick={() => {
-                  void handleOpenShift();
-                }}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
-              >
-                Abrir Caja
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCloseShiftModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
-            <div className="flex items-center gap-2.5 pb-1">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-warn-soft text-warn-ink">
-                <Lock className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-ink">Arqueo Ciego y Cierre de Turno</h3>
-                <p className="text-xs text-muted">Contá el efectivo en gaveta e ingresá el total</p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl border border-line bg-canvas/60 p-3 space-y-1 text-xs">
-                <div className="flex justify-between text-muted">
-                  <span>Tasa Apertura Turno:</span>
-                  <span className="font-mono font-bold text-ink">
-                    Bs. {currentShift?.openExchangeRateBcv ?? '36.50'}
-                  </span>
+              <div className="flex items-center gap-2">
+                <div className="rounded-xl border border-line bg-canvas px-3 py-1.5 text-center shadow-xs">
+                  <p className="text-[10px] font-bold text-muted uppercase">Total Facturado</p>
+                  <p className="font-mono text-sm font-black text-brand">
+                    ${totalSalesAmount.toFixed(2)}
+                  </p>
                 </div>
-                <div className="flex justify-between text-muted">
-                  <span>Tasa Cierre Turno:</span>
-                  <span className="font-mono font-bold text-brand">Bs. {activeExchangeRate}</span>
+                <div className="rounded-xl border border-success/30 bg-success-soft px-3 py-1.5 text-center shadow-xs">
+                  <p className="text-[10px] font-bold text-success-ink uppercase">Sincronizadas</p>
+                  <p className="font-mono text-sm font-black text-success-ink">
+                    {syncedSalesCount}
+                  </p>
                 </div>
-                {(currentShift?.rateAuditHistory?.length ?? 0) > 1 && (
-                  <div className="pt-1 text-[11px] text-warn-ink font-medium">
-                    ⚠️ Esta tasa fue modificada {currentShift!.rateAuditHistory!.length - 1} veces
-                    durante la jornada.
+                {pendingSalesCount > 0 && (
+                  <div className="rounded-xl border border-warn/30 bg-warn-soft px-3 py-1.5 text-center shadow-xs">
+                    <p className="text-[10px] font-bold text-warn-ink uppercase">En Cola</p>
+                    <p className="font-mono text-sm font-black text-warn-ink">
+                      {pendingSalesCount}
+                    </p>
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-ink">Efectivo en Gaveta ($)</label>
-                <div className="relative mt-1.5">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={declaredCashInput}
-                    onChange={(e) => setDeclaredCashInput(e.target.value)}
-                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </div>
+                <button
+                  onClick={() => setShowSalesModal(false)}
+                  className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer ml-2"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-2.5">
-              <button
-                onClick={() => setShowCloseShiftModal(false)}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  void handleCloseShift();
-                }}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
-              >
-                Cerrar y Conciliar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showRateModal && currentShift && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
-            <div className="flex items-center justify-between pb-1">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-soft text-brand">
-                  <TrendingUp className="h-5 w-5" />
+            <div className="flex-1 overflow-y-auto pt-3 pr-1 space-y-2.5">
+              {sales.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted">
+                  <FileText className="h-12 w-12 stroke-1 text-muted/60" />
+                  <p className="mt-3 text-sm font-bold text-ink">Sin ventas registradas aún</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Cada venta emitida desde esta terminal quedará registrada aquí para consulta,
+                    impresión y descarga.
+                  </p>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-ink">Ajuste de Tasa BCV</h3>
-                  <p className="text-xs text-muted">Trazabilidad oficial durante el turno</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowRateModal(false)}
-                className="rounded-xl p-1.5 text-muted hover:bg-subtle"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+              ) : (
+                sales.map((sale) => {
+                  const isSynced = sale.syncStatus === 'synced';
+                  const totalUsd = (Number(sale.totalMinor) / 100).toFixed(2);
+                  const rate = parseFloat(sale.exchangeRateBcv || '36.50');
+                  const totalVes = (parseFloat(totalUsd) * rate).toFixed(2);
+                  const dateFormatted = new Date(sale.occurredAt).toLocaleString('es-VE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
 
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl border border-line bg-canvas/60 p-3 text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted">Tasa de Apertura:</span>
-                  <span className="font-mono font-bold text-ink">
-                    Bs. {currentShift.openExchangeRateBcv}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Tasa Actual Vigente:</span>
-                  <span className="font-mono font-bold text-brand">Bs. {activeExchangeRate}</span>
-                </div>
-              </div>
+                  return (
+                    <div
+                      key={sale.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-line bg-canvas p-3.5 hover:border-line-strong transition shadow-xs gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 pb-1">
+                          <span className="font-mono text-xs font-black text-brand">
+                            {sale.ticketNumber}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted">
+                            Ctrl: {sale.invoiceControlNumber}
+                          </span>
+                          <span
+                            className={`flex items-center gap-1 rounded-pill px-2 py-0.2 text-[9px] font-bold ${
+                              isSynced
+                                ? 'bg-success-soft text-success-ink'
+                                : 'bg-warn-soft text-warn-ink'
+                            }`}
+                          >
+                            {isSynced ? (
+                              <CheckCircle2 className="h-2.5 w-2.5" />
+                            ) : (
+                              <Clock className="h-2.5 w-2.5" />
+                            )}
+                            {isSynced ? 'Sincronizada con ERP' : 'En cola (Offline)'}
+                          </span>
+                        </div>
 
-              <div>
-                <label className="text-xs font-bold text-ink">
-                  Nueva Tasa Oficial BCV (Bs/USD) <span className="text-danger">*</span>
-                </label>
-                <div className="relative mt-1.5">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
-                    Bs.
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="36.50"
-                    value={newRateInput}
-                    onChange={(e) => setNewRateInput(e.target.value)}
-                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-ink">Motivo del Ajuste (Opcional)</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Publicación BCV 4:30 PM"
-                  value={rateChangeReasonInput}
-                  onChange={(e) => setRateChangeReasonInput(e.target.value)}
-                  className="mt-1.5 w-full rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
-                />
-              </div>
-
-              {currentShift.rateAuditHistory && currentShift.rateAuditHistory.length > 0 && (
-                <div className="mt-2 rounded-2xl border border-line/60 bg-subtle/50 p-2.5">
-                  <p className="text-[10px] font-bold text-muted uppercase">Historial del Turno</p>
-                  <div className="mt-1.5 max-h-24 overflow-y-auto space-y-1 text-[11px]">
-                    {currentShift.rateAuditHistory.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-muted font-mono">
-                        <span>
-                          {new Date(item.changedAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}{' '}
-                          - {item.reason ?? 'Ajuste'}
-                        </span>
-                        <span className="font-bold text-ink">Bs. {item.rate}</span>
+                        <div className="flex flex-wrap items-center gap-x-3 text-xs text-ink font-medium">
+                          <span>{sale.customerName}</span>
+                          <span className="font-mono text-muted text-[11px]">
+                            {sale.customerDoc}
+                          </span>
+                          <span className="text-muted text-[11px]">{dateFormatted}</span>
+                          <span className="rounded-md bg-subtle px-1.5 py-0.2 text-[10px] font-bold text-muted uppercase">
+                            {sale.paymentMethod}
+                          </span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 border-line/60 pt-2 sm:pt-0">
+                        <div className="text-left sm:text-right">
+                          <p className="font-mono text-base font-black text-ink">${totalUsd}</p>
+                          <p className="font-mono text-[11px] text-muted">Bs. {totalVes}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setSelectedSaleDetail(sale)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-subtle transition cursor-pointer"
+                            title="Ver detalle"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => printInvoice(sale)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-subtle transition cursor-pointer"
+                            title="Imprimir ticket fiscal (SENIAT 00093)"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => downloadInvoiceFile(sale)}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-subtle transition cursor-pointer"
+                            title="Descargar comprobante digital"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
               )}
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2.5">
-              <button
-                onClick={() => setShowRateModal(false)}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={!newRateInput || parseFloat(newRateInput) <= 0}
-                onClick={() => {
-                  void handleUpdateRate();
-                }}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
-              >
-                Actualizar Tasa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showVariosModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
-            <div className="flex items-center gap-2.5 pb-1">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-soft text-brand">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-ink">Venta Varios (Contingente)</h3>
-                <p className="text-xs text-muted">Artículo rápido no registrado en catálogo</p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-xs font-bold text-ink">Nombre del Artículo</label>
-                <input
-                  type="text"
-                  value={variosName}
-                  onChange={(e) => setVariosName(e.target.value)}
-                  className="mt-1.5 w-full rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-ink">Precio de Venta ($)</label>
-                <div className="relative mt-1.5">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-muted">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={variosPrice}
-                    onChange={(e) => setVariosPrice(e.target.value)}
-                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2.5">
-              <button
-                onClick={() => setShowVariosModal(false)}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddVarios}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition"
-              >
-                Agregar al Ticket
-              </button>
             </div>
           </div>
         </div>
@@ -1436,33 +1273,21 @@ export function App() {
               </button>
             </div>
 
-            <div className="mt-3 rounded-2xl border border-line bg-canvas/60 p-3 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
-                <User className="h-3.5 w-3.5 text-brand" />
-                <span>Datos del Cliente (Opcional - Providencia 00093)</span>
+            <div className="mt-3 rounded-2xl border border-line bg-canvas/60 p-3 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-muted uppercase">Cliente Asignado</p>
+                <p className="text-xs font-bold text-ink">{selectedCustomer.name}</p>
+                <p className="font-mono text-[11px] text-muted">{selectedCustomer.taxId}</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold text-muted">Nombre o Razón Social</label>
-                  <input
-                    type="text"
-                    placeholder="Consumidor Final"
-                    value={customerNameInput}
-                    onChange={(e) => setCustomerNameInput(e.target.value)}
-                    className="mt-0.5 w-full rounded-xl border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-brand focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-muted">C.I. / RIF</label>
-                  <input
-                    type="text"
-                    placeholder="V-00000000"
-                    value={customerDocInput}
-                    onChange={(e) => setCustomerDocInput(e.target.value)}
-                    className="mt-0.5 w-full rounded-xl border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-brand focus:outline-none"
-                  />
-                </div>
-              </div>
+              <button
+                onClick={() => {
+                  setShowCashCheckoutModal(false);
+                  setShowCustomerModal(true);
+                }}
+                className="text-xs font-bold text-brand hover:underline cursor-pointer"
+              >
+                Cambiar
+              </button>
             </div>
 
             {checkoutCurrencyMode === 'usd' ? (
@@ -1653,6 +1478,333 @@ export function App() {
         </div>
       )}
 
+      {showOpenShiftModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center gap-2.5 pb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-success-soft text-success-ink">
+                <Unlock className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-ink">Apertura de Turno</h3>
+                <p className="text-xs text-muted">Fondo inicial y tasa oficial para la jornada</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3.5">
+              <div>
+                <label className="text-xs font-bold text-ink">Fondo de Efectivo ($)</label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={initialFloatInput}
+                    onChange={(e) => setInitialFloatInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+
+                <div className="mt-2 flex gap-1.5">
+                  {['20.00', '50.00', '100.00'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setInitialFloatInput(preset)}
+                      className="flex-1 rounded-xl border border-line bg-subtle py-1.5 text-xs font-bold text-ink hover:bg-surface transition cursor-pointer"
+                    >
+                      ${preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-ink">
+                    Tasa Oficial BCV (Bs/USD) <span className="text-danger">*</span>
+                  </label>
+                  <span className="text-[10px] text-brand font-semibold">Obligatoria</span>
+                </div>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
+                    Bs.
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="36.50"
+                    value={openShiftRateInput}
+                    onChange={(e) => setOpenShiftRateInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-muted">
+                  Tasa con la que se abrirá el turno para conversiones y fiscalización.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                onClick={() => setShowOpenShiftModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!openShiftRateInput || parseFloat(openShiftRateInput) <= 0}
+                onClick={() => {
+                  void handleOpenShift();
+                }}
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
+              >
+                Abrir Caja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCloseShiftModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center gap-2.5 pb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-warn-soft text-warn-ink">
+                <Lock className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-ink">Arqueo Ciego y Cierre de Turno</h3>
+                <p className="text-xs text-muted">Contá el efectivo en gaveta e ingresá el total</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-line bg-canvas/60 p-3 space-y-1 text-xs">
+                <div className="flex justify-between text-muted">
+                  <span>Tasa Apertura Turno:</span>
+                  <span className="font-mono font-bold text-ink">
+                    Bs. {currentShift?.openExchangeRateBcv ?? '36.50'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted">
+                  <span>Tasa Cierre Turno:</span>
+                  <span className="font-mono font-bold text-brand">Bs. {activeExchangeRate}</span>
+                </div>
+                {(currentShift?.rateAuditHistory?.length ?? 0) > 1 && (
+                  <div className="pt-1 text-[11px] text-warn-ink font-medium">
+                    ⚠️ Esta tasa fue modificada {currentShift!.rateAuditHistory!.length - 1} veces
+                    durante la jornada.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">Efectivo en Gaveta ($)</label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={declaredCashInput}
+                    onChange={(e) => setDeclaredCashInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-lg font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                onClick={() => setShowCloseShiftModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  void handleCloseShift();
+                }}
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
+              >
+                Cerrar y Conciliar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRateModal && currentShift && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-ink">Ajuste de Tasa BCV</h3>
+                  <p className="text-xs text-muted">Trazabilidad oficial durante el turno</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRateModal(false)}
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-line bg-canvas/60 p-3 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted">Tasa de Apertura:</span>
+                  <span className="font-mono font-bold text-ink">
+                    Bs. {currentShift.openExchangeRateBcv}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Tasa Actual Vigente:</span>
+                  <span className="font-mono font-bold text-brand">Bs. {activeExchangeRate}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">
+                  Nueva Tasa Oficial BCV (Bs/USD) <span className="text-danger">*</span>
+                </label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
+                    Bs.
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="36.50"
+                    value={newRateInput}
+                    onChange={(e) => setNewRateInput(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">Motivo del Ajuste (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Publicación BCV 4:30 PM"
+                  value={rateChangeReasonInput}
+                  onChange={(e) => setRateChangeReasonInput(e.target.value)}
+                  className="mt-1.5 w-full rounded-2xl border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
+                />
+              </div>
+
+              {currentShift.rateAuditHistory && currentShift.rateAuditHistory.length > 0 && (
+                <div className="mt-2 rounded-2xl border border-line/60 bg-subtle/50 p-2.5">
+                  <p className="text-[10px] font-bold text-muted uppercase">Historial del Turno</p>
+                  <div className="mt-1.5 max-h-24 overflow-y-auto space-y-1 text-[11px]">
+                    {currentShift.rateAuditHistory.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-muted font-mono">
+                        <span>
+                          {new Date(item.changedAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}{' '}
+                          - {item.reason ?? 'Ajuste'}
+                        </span>
+                        <span className="font-bold text-ink">Bs. {item.rate}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2.5">
+              <button
+                onClick={() => setShowRateModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!newRateInput || parseFloat(newRateInput) <= 0}
+                onClick={() => {
+                  void handleUpdateRate();
+                }}
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
+              >
+                Actualizar Tasa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showVariosModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center gap-2.5 pb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-ink">Venta Varios (Contingente)</h3>
+                <p className="text-xs text-muted">Artículo rápido no registrado en catálogo</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-xs font-bold text-ink">Nombre del Artículo</label>
+                <input
+                  type="text"
+                  value={variosName}
+                  onChange={(e) => setVariosName(e.target.value)}
+                  className="mt-1.5 w-full rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-ink">Precio de Venta ($)</label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-muted">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={variosPrice}
+                    onChange={(e) => setVariosPrice(e.target.value)}
+                    className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-8 pr-3 font-mono text-base font-bold text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                onClick={() => setShowVariosModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddVarios}
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
+              >
+                Agregar al Ticket
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showEnrollModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
           <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
@@ -1694,7 +1846,7 @@ export function App() {
             <div className="mt-6 flex justify-end gap-2.5">
               <button
                 onClick={() => setShowEnrollModal(false)}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition"
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1702,7 +1854,7 @@ export function App() {
                 onClick={() => {
                   void handleEnroll();
                 }}
-                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition"
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
               >
                 Vincular Caja
               </button>
@@ -1721,7 +1873,7 @@ export function App() {
               </div>
               <button
                 onClick={() => setShowCameraModal(false)}
-                className="rounded-xl p-1.5 text-muted hover:bg-subtle transition"
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle transition cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1733,6 +1885,99 @@ export function App() {
             <p className="mt-3 text-center text-xs text-muted">
               Apuntá la cámara al código de barras del producto
             </p>
+          </div>
+        </div>
+      )}
+
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-xl">
+            <div className="flex items-center justify-between pb-3">
+              <h3 className="text-base font-bold text-ink">Configuración de Terminal POS</h3>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  void triggerSync();
+                }}
+                disabled={isSyncing || !isOnline}
+                className="flex w-full items-center justify-between rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <RefreshCw className={`h-4 w-4 text-brand ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>Sincronizar Catálogo y Ventas</span>
+                </div>
+                <span className="text-muted text-[11px] font-normal">
+                  {pendingOutboxCount} pendientes
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  void reloadDemoCatalog();
+                }}
+                disabled={isSyncing}
+                className="flex w-full items-center justify-between rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="h-4 w-4 text-brand" />
+                  <span>Cargar Catálogo Demo ERP</span>
+                </div>
+                <span className="text-muted text-[11px] font-normal">Semilla ERP</span>
+              </button>
+
+              {currentShift ? (
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    setShowCloseShiftModal(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
+                >
+                  <Lock className="h-4 w-4 text-warn-ink" />
+                  <span>Cerrar Turno y Realizar Arqueo</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    setShowOpenShiftModal(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
+                >
+                  <Unlock className="h-4 w-4 text-success" />
+                  <span>Abrir Turno de Caja</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  setShowEnrollModal(true);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
+              >
+                <Barcode className="h-4 w-4 text-brand" />
+                <span>Vincular Código de Caja ({registerCode ?? 'Ninguna'})</span>
+              </button>
+
+              <a
+                href="/"
+                className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
+              >
+                <ArrowLeft className="h-4 w-4 text-muted" />
+                <span>Volver al Panel ERP CoreBiz</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -1751,21 +1996,21 @@ export function App() {
 
             {lastSaleSuccess.change && (
               <div className="mt-2.5 rounded-xl bg-emerald-50 py-1.5 text-xs font-bold text-emerald-800">
-                Vuelto entregado: ${lastSaleSuccess.change}
+                Vuelto entregado: {lastSaleSuccess.change}
               </div>
             )}
 
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button
                 onClick={() => printInvoice(lastSaleSuccess.sale)}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Printer className="h-4 w-4 text-brand" />
                 Imprimir
               </button>
               <button
                 onClick={() => downloadInvoiceFile(lastSaleSuccess.sale)}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Download className="h-4 w-4 text-brand" />
                 Descargar
@@ -1795,7 +2040,7 @@ export function App() {
               </div>
               <button
                 onClick={() => setSelectedSaleDetail(null)}
-                className="rounded-xl p-1.5 text-muted hover:bg-subtle"
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1833,8 +2078,8 @@ export function App() {
                     }`}
                   >
                     {selectedSaleDetail.syncStatus === 'synced'
-                      ? 'Sincronizada'
-                      : 'En cola local (Offline)'}
+                      ? 'Sincronizada con ERP'
+                      : 'En cola local (Pendiente)'}
                   </span>
                 </div>
               </div>
@@ -1896,14 +2141,14 @@ export function App() {
             <div className="mt-4 flex gap-2 pt-2 border-t border-line">
               <button
                 onClick={() => printInvoice(selectedSaleDetail)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Printer className="h-4 w-4 text-brand" />
                 Imprimir
               </button>
               <button
                 onClick={() => downloadInvoiceFile(selectedSaleDetail)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Download className="h-4 w-4 text-brand" />
                 Descargar

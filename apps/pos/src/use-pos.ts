@@ -5,6 +5,7 @@ import {
   type LocalShift,
   type LocalSale,
   type LocalSaleLine,
+  type LocalCustomer,
 } from './db';
 import { seedDemoDataIfEmpty, fetchErpDemoCatalog } from './demo-seed';
 import {
@@ -71,7 +72,10 @@ export function usePos(apiBaseUrl = '') {
     const shift = await posDb.shifts.where('status').equals('open').first();
     setCurrentShift(shift ?? null);
 
-    const pending = await posDb.outbox.where('status').equals('pending').count();
+    const pending = await posDb.outbox
+      .where('status')
+      .anyOf(['pending', 'failed', 'syncing'])
+      .count();
     setPendingOutboxCount(pending);
 
     const devId = await posDb.config.get('device_id');
@@ -136,6 +140,48 @@ export function usePos(apiBaseUrl = '') {
       .limit(60)
       .toArray();
   }, []);
+
+  const searchCustomers = useCallback(async (query: string): Promise<LocalCustomer[]> => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) {
+      return posDb.customers.limit(20).toArray();
+    }
+
+    return posDb.customers
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(trimmed) ||
+          c.taxId.toLowerCase().includes(trimmed) ||
+          c.code.toLowerCase().includes(trimmed),
+      )
+      .limit(20)
+      .toArray();
+  }, []);
+
+  const saveCustomer = useCallback(
+    async (customer: {
+      id?: string;
+      code?: string;
+      name: string;
+      taxId: string;
+      email?: string | null | undefined;
+      phone?: string | null | undefined;
+    }): Promise<LocalCustomer> => {
+      const id = customer.id || crypto.randomUUID();
+      const code = customer.code || `CLI-${customer.taxId.replace(/[^A-Za-z0-9]/g, '').slice(-8)}`;
+      const saved: LocalCustomer = {
+        id,
+        code,
+        name: customer.name.trim(),
+        taxId: customer.taxId.trim(),
+        email: customer.email?.trim() ?? null,
+        phone: customer.phone?.trim() ?? null,
+      };
+      await posDb.customers.put(saved);
+      return saved;
+    },
+    [],
+  );
 
   const addToCart = useCallback((product: LocalProduct, qty = 1) => {
     const priceMinor = BigInt(Math.round(parseFloat(product.price || '0') * 100));
@@ -400,6 +446,18 @@ export function usePos(apiBaseUrl = '') {
 
       await posDb.sales.put(localSaleRecord);
 
+      if (customerDoc && customerDoc !== 'V-00000000') {
+        const existingCust = await posDb.customers.where('taxId').equals(customerDoc).first();
+        if (!existingCust) {
+          await posDb.customers.put({
+            id: crypto.randomUUID(),
+            code: `CLI-${customerDoc.replace(/[^A-Za-z0-9]/g, '').slice(-8)}`,
+            name: customerName,
+            taxId: customerDoc,
+          });
+        }
+      }
+
       await queueOutboxOperation(operationId, 'sale.issue', {
         saleId,
         operationId,
@@ -574,6 +632,8 @@ export function usePos(apiBaseUrl = '') {
     reloadDemoCatalog,
     enrollDevice,
     searchCatalog,
+    searchCustomers,
+    saveCustomer,
     refreshState,
   };
 }

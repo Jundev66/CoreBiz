@@ -79,6 +79,15 @@ export interface OutboxItem {
   readonly errorMessage?: string | null;
 }
 
+export interface LocalCustomer {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly taxId: string;
+  readonly phone?: string | null | undefined;
+  readonly email?: string | null | undefined;
+}
+
 export interface LocalConfig {
   readonly key: string;
   readonly value: string;
@@ -89,6 +98,7 @@ export class CorebizPosDatabase extends Dexie {
   shifts!: Table<LocalShift, string>;
   outbox!: Table<OutboxItem, number>;
   sales!: Table<LocalSale, string>;
+  customers!: Table<LocalCustomer, string>;
   config!: Table<LocalConfig, string>;
 
   constructor() {
@@ -104,6 +114,14 @@ export class CorebizPosDatabase extends Dexie {
       shifts: 'id, registerId, status, openedAt',
       outbox: '++id, operationId, type, sequence, status, createdAt',
       sales: 'id, operationId, ticketNumber, occurredAt, syncStatus',
+      config: 'key',
+    });
+    this.version(3).stores({
+      catalog: 'id, sku, name, barcode',
+      shifts: 'id, registerId, status, openedAt',
+      outbox: '++id, operationId, type, sequence, status, createdAt',
+      sales: 'id, operationId, ticketNumber, occurredAt, syncStatus',
+      customers: 'id, code, name, taxId',
       config: 'key',
     });
   }
