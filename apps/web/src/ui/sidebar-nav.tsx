@@ -2,21 +2,52 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import {
+  AlertTriangle,
+  Banknote,
+  BarChart3,
+  Building2,
+  ChevronDown,
+  FileText,
+  LayoutDashboard,
+  Package,
+  Receipt,
+  Settings,
+  ShoppingCart,
+  Truck,
+  Users,
+} from 'lucide-react';
 import { NavLink } from '@/ui/nav-link';
 import { moduleTone, NAV_ICON } from '@/ui/module-tone';
+
+const ICON_MAP = {
+  home: LayoutDashboard,
+  cart: ShoppingCart,
+  receipt: Receipt,
+  fileText: FileText,
+  banknote: Banknote,
+  package: Package,
+  alert: AlertTriangle,
+  truck: Truck,
+  building: Building2,
+  users: Users,
+  chart: BarChart3,
+  settings: Settings,
+} as const;
+
+export type NavIconName = keyof typeof ICON_MAP;
 
 export interface NavLeafItem {
   readonly href: string;
   readonly label: string;
-  readonly Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  readonly icon: NavIconName;
   readonly exact?: boolean;
 }
 
 export interface NavSectionGroup {
   readonly id: string;
   readonly label: string;
-  readonly Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  readonly icon: NavIconName;
   readonly items: readonly NavLeafItem[];
 }
 
@@ -63,6 +94,7 @@ export function SidebarNav({ items }: SidebarNavProps) {
       {items.map((entry) => {
         if (entry.type === 'link') {
           const item = entry.item;
+          const Icon = ICON_MAP[item.icon] ?? LayoutDashboard;
           return (
             <NavLink
               key={item.href}
@@ -73,7 +105,7 @@ export function SidebarNav({ items }: SidebarNavProps) {
               activeClassName="bg-brand text-brand-ink shadow-xs"
               idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
             >
-              <item.Icon
+              <Icon
                 aria-hidden="true"
                 className={`size-[18px] shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(item.href)]}`}
                 strokeWidth={1.75}
@@ -90,6 +122,7 @@ export function SidebarNav({ items }: SidebarNavProps) {
             ? pathname === sub.href
             : pathname === sub.href || pathname.startsWith(`${sub.href}/`),
         );
+        const GroupIcon = ICON_MAP[group.icon] ?? LayoutDashboard;
 
         return (
           <div key={group.id} className="flex flex-col">
@@ -103,7 +136,7 @@ export function SidebarNav({ items }: SidebarNavProps) {
               }`}
             >
               <div className="flex items-center gap-3">
-                <group.Icon
+                <GroupIcon
                   aria-hidden="true"
                   className={`size-[18px] shrink-0 ${isGroupActive ? 'text-brand' : 'text-nav-muted group-hover:text-nav-ink'}`}
                   strokeWidth={1.75}
@@ -119,24 +152,27 @@ export function SidebarNav({ items }: SidebarNavProps) {
 
             {isOpen && (
               <div className="mt-0.5 ml-4 flex flex-col gap-0.5 border-l border-nav-line/60 pl-2">
-                {group.items.map((subItem) => (
-                  <NavLink
-                    key={subItem.href}
-                    href={subItem.href}
-                    {...(subItem.exact === true ? { exact: true } : {})}
-                    hint="inline"
-                    className="group flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-colors"
-                    activeClassName="bg-brand text-brand-ink font-semibold shadow-xs"
-                    idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
-                  >
-                    <subItem.Icon
-                      aria-hidden="true"
-                      className={`size-3.5 shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(subItem.href)]}`}
-                      strokeWidth={1.75}
-                    />
-                    <span>{subItem.label}</span>
-                  </NavLink>
-                ))}
+                {group.items.map((subItem) => {
+                  const SubIcon = ICON_MAP[subItem.icon] ?? LayoutDashboard;
+                  return (
+                    <NavLink
+                      key={subItem.href}
+                      href={subItem.href}
+                      {...(subItem.exact === true ? { exact: true } : {})}
+                      hint="inline"
+                      className="group flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-colors"
+                      activeClassName="bg-brand text-brand-ink font-semibold shadow-xs"
+                      idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
+                    >
+                      <SubIcon
+                        aria-hidden="true"
+                        className={`size-3.5 shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(subItem.href)]}`}
+                        strokeWidth={1.75}
+                      />
+                      <span>{subItem.label}</span>
+                    </NavLink>
+                  );
+                })}
               </div>
             )}
           </div>

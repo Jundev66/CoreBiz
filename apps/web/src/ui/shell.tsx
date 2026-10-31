@@ -14,8 +14,6 @@ import {
   UserRound,
   AlertTriangle,
   ShoppingCart,
-  Receipt,
-  Building2,
   type LucideIcon,
 } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
@@ -92,18 +90,18 @@ export async function AppFrame({
   const sidebarItems: SidebarNavItem[] = [
     {
       type: 'link' as const,
-      item: { href: '/', label: t('nav.home'), Icon: LayoutDashboard, exact: true },
+      item: { href: '/', label: t('nav.home'), icon: 'home' as const, exact: true },
     },
     {
       type: 'group' as const,
       group: {
         id: 'ventas',
         label: 'Ventas',
-        Icon: ShoppingCart,
+        icon: 'cart' as const,
         items: [
-          { href: '/pos-sales', label: 'Tickets POS (Mostrador)', Icon: Receipt },
-          { href: '/delivery-notes', label: 'Notas de Entrega', Icon: FileText },
-          { href: '/payments', label: 'Cobros', Icon: Banknote },
+          { href: '/pos-sales', label: 'Tickets POS (Mostrador)', icon: 'receipt' as const },
+          { href: '/delivery-notes', label: 'Notas de Entrega', icon: 'fileText' as const },
+          { href: '/payments', label: 'Cobros', icon: 'banknote' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
     },
@@ -112,10 +110,10 @@ export async function AppFrame({
       group: {
         id: 'inventario',
         label: 'Inventario',
-        Icon: Package,
+        icon: 'package' as const,
         items: [
-          { href: '/products', label: 'Productos & Stock', Icon: Package },
-          { href: '/conflicts', label: 'Inconsistencias POS', Icon: AlertTriangle },
+          { href: '/products', label: 'Productos & Stock', icon: 'package' as const },
+          { href: '/conflicts', label: 'Inconsistencias POS', icon: 'alert' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
     },
@@ -124,26 +122,26 @@ export async function AppFrame({
       group: {
         id: 'compras',
         label: 'Compras',
-        Icon: Truck,
+        icon: 'truck' as const,
         items: [
-          { href: '/purchases', label: 'Recepciones', Icon: Truck },
-          { href: '/purchases/suppliers', label: 'Proveedores', Icon: Building2 },
+          { href: '/purchases', label: 'Recepciones', icon: 'truck' as const },
+          { href: '/purchases/suppliers', label: 'Proveedores', icon: 'building' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
     },
     {
       type: 'link' as const,
-      item: { href: '/customers', label: t('nav.customers'), Icon: Users },
+      item: { href: '/customers', label: t('nav.customers'), icon: 'users' as const },
     },
     {
       type: 'group' as const,
       group: {
         id: 'admin',
         label: 'Gestión',
-        Icon: Settings,
+        icon: 'settings' as const,
         items: [
-          { href: '/reports', label: t('nav.reports'), Icon: BarChart3 },
-          { href: '/settings', label: t('nav.settings'), Icon: Settings },
+          { href: '/reports', label: t('nav.reports'), icon: 'chart' as const },
+          { href: '/settings', label: t('nav.settings'), icon: 'settings' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
     },
