@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   asId,
   Money,
@@ -600,10 +601,12 @@ export class PrismaInventoryConflictRepository implements InventoryConflictRepos
     });
 
     for (const rel of conflict.relations) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rel.id);
+      const rowId = isUuid ? rel.id : randomUUID();
       await this.tx.inventory_conflict_movements.upsert({
-        where: { id: rel.id },
+        where: { id: rowId },
         create: {
-          id: rel.id,
+          id: rowId,
           tenant_id: this.tenantId,
           conflict_id: conflict.id,
           stock_movement_id: rel.stockMovementId,

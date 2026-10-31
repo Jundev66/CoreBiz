@@ -150,6 +150,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
 
       const computedLines = [];
       const productsToUpdate = [];
+      const conflictsToSave: InventoryConflict[] = [];
       let detectedConflictId: string | undefined;
 
       for (const line of input.lines) {
@@ -178,7 +179,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
             saleId,
           });
           if (conflict.ok) {
-            await repos.inventoryConflicts.save(conflict.value);
+            conflictsToSave.push(conflict.value);
             detectedConflictId = conflict.value.id;
           }
         } else {
@@ -209,7 +210,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
                 saleId,
               });
               if (conflict.ok) {
-                await repos.inventoryConflicts.save(conflict.value);
+                conflictsToSave.push(conflict.value);
                 detectedConflictId = conflict.value.id;
               }
             }
@@ -257,6 +258,9 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       await repos.posSales.save(sale);
       if (productsToUpdate.length > 0) {
         await repos.products.saveMany(productsToUpdate);
+      }
+      for (const conf of conflictsToSave) {
+        await repos.inventoryConflicts.save(conf);
       }
 
       await repos.posSyncOperations.save({

@@ -58,13 +58,40 @@ export async function syncOutbox(
   const now = Date.now();
   const batchPayload = {
     deviceId,
-    operations: pendingItems.map((item, idx) => ({
-      operationId: item.operationId,
-      type: item.type,
-      sequence: item.sequence < 1000 ? now + idx : item.sequence,
-      payloadHash: item.payloadHash,
-      payload: item.payload,
-    })),
+    operations: pendingItems.map((item, idx) => {
+      const raw = (item.payload ?? {});
+      let paymentMethod = raw.paymentMethod;
+      if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
+        paymentMethod = 'cash';
+      } else if (paymentMethod === 'pago_movil') {
+        paymentMethod = 'transfer';
+      } else if (paymentMethod === 'punto_debito') {
+        paymentMethod = 'card';
+      }
+
+      const lines = Array.isArray(raw.lines)
+        ? raw.lines.map((l: Record<string, unknown>) => ({
+            ...l,
+            quantity: typeof l.quantity === 'number' ? l.quantity.toString() : l.quantity,
+            unitPriceMinor:
+              typeof l.unitPriceMinor === 'number' || typeof l.unitPriceMinor === 'bigint'
+                ? l.unitPriceMinor.toString()
+                : l.unitPriceMinor,
+          }))
+        : raw.lines;
+
+      return {
+        operationId: item.operationId,
+        type: item.type,
+        sequence: item.sequence < 1000 ? now + idx : item.sequence,
+        payloadHash: item.payloadHash,
+        payload: {
+          ...raw,
+          paymentMethod,
+          lines,
+        },
+      };
+    }),
   };
 
   try {

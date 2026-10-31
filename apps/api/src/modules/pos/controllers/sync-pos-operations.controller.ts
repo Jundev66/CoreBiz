@@ -34,12 +34,41 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
     type: 'shift.close',
     ...closeCashShiftSchema.parse(op.payload),
   }),
-  'sale.issue': (op) => ({
-    type: 'sale.issue',
-    ...issuePosSaleSchema.parse(op.payload),
-    sequence: op.sequence,
-    payloadHash: op.payloadHash,
-  }),
+  'sale.issue': (op) => {
+    const raw = (op.payload ?? {});
+    let paymentMethod = raw.paymentMethod;
+    if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
+      paymentMethod = 'cash';
+    } else if (paymentMethod === 'pago_movil') {
+      paymentMethod = 'transfer';
+    } else if (paymentMethod === 'punto_debito') {
+      paymentMethod = 'card';
+    }
+
+    const lines = Array.isArray(raw.lines)
+      ? raw.lines.map((l: Record<string, unknown>) => ({
+          ...l,
+          quantity: typeof l.quantity === 'number' ? l.quantity.toString() : l.quantity,
+          unitPriceMinor:
+            typeof l.unitPriceMinor === 'number' || typeof l.unitPriceMinor === 'bigint'
+              ? l.unitPriceMinor.toString()
+              : l.unitPriceMinor,
+        }))
+      : raw.lines;
+
+    const normalized = {
+      ...raw,
+      paymentMethod,
+      lines,
+    };
+
+    return {
+      type: 'sale.issue',
+      ...issuePosSaleSchema.parse(normalized),
+      sequence: op.sequence,
+      payloadHash: op.payloadHash,
+    };
+  },
 };
 
 @ApiTags('pos')
