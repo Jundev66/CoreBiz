@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3025,
     proxy: {
       '/v1': {
-        target: process.env.API_BASE_URL || 'http://localhost:3000',
+        target: process.env.API_BASE_URL || 'http://127.0.0.1:3021',
         changeOrigin: true,
       },
     },

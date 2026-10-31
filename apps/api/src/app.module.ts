@@ -96,6 +96,7 @@ export class AppModule implements NestModule {
         // una clave compartida. `IntegrationsApiKeyGuard` y un contexto sintetizado
         // desde el entorno sustituyen a la identidad, que aqui nunca va a existir.
         'v1/integrations/(.*)',
+        'v1/pos/demo-catalog',
       )
       .forRoutes('*');
   }

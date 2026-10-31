@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { posDb, type LocalProduct, type LocalShift } from './db';
+import { seedDemoDataIfEmpty, fetchErpDemoCatalog } from './demo-seed';
 import {
   queueOutboxOperation,
   syncCatalog,
@@ -65,9 +66,22 @@ export function usePos(apiBaseUrl = '') {
     }
   }, [apiBaseUrl, refreshState]);
 
+  const reloadDemoCatalog = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      await fetchErpDemoCatalog(apiBaseUrl);
+    } finally {
+      setIsSyncing(false);
+      await refreshState();
+    }
+  }, [apiBaseUrl, refreshState]);
+
   useEffect(() => {
     setIsOnline(navigator.onLine);
-    void refreshState();
+    void (async () => {
+      await seedDemoDataIfEmpty();
+      await refreshState();
+    })();
 
     const cleanupOnline = registerOnlineSyncListener(() => {
       setIsOnline(true);
@@ -396,6 +410,7 @@ export function usePos(apiBaseUrl = '') {
     closeShift,
     checkoutSale,
     triggerSync,
+    reloadDemoCatalog,
     enrollDevice,
     searchCatalog,
   };

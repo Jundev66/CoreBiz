@@ -46,6 +46,7 @@ export function App() {
     closeShift,
     checkoutSale,
     triggerSync,
+    reloadDemoCatalog,
     enrollDevice,
     searchCatalog,
   } = usePos();
@@ -444,12 +445,22 @@ export function App() {
                     ? 'Probá buscando por otro término o agregá un artículo fuera de catálogo.'
                     : 'Podés buscar por nombre, escanear o ingresar artículos varios.'}
                 </p>
-                <button
-                  onClick={() => setShowVariosModal(true)}
-                  className="mt-4 rounded-xl border border-brand-line bg-brand-soft px-4 py-2 text-xs font-bold text-brand transition hover:bg-brand-soft/80"
-                >
-                  + Agregar Artículo Varios
-                </button>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      void reloadDemoCatalog();
+                    }}
+                    className="rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-brand-hover"
+                  >
+                    Cargar Catálogo Demo ERP
+                  </button>
+                  <button
+                    onClick={() => setShowVariosModal(true)}
+                    className="rounded-xl border border-brand-line bg-brand-soft px-4 py-2 text-xs font-bold text-brand transition hover:bg-brand-soft/80"
+                  >
+                    + Agregar Artículo Varios
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -765,6 +776,21 @@ export function App() {
                 <span className="text-muted text-[11px] font-normal">
                   {pendingOutboxCount} pendientes
                 </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  void reloadDemoCatalog();
+                }}
+                disabled={isSyncing}
+                className="flex w-full items-center justify-between rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="h-4 w-4 text-brand" />
+                  <span>Cargar Catálogo Demo ERP</span>
+                </div>
+                <span className="text-muted text-[11px] font-normal">Semilla ERP</span>
               </button>
 
               {currentShift ? (
