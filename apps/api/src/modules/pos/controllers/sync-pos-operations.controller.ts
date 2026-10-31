@@ -20,11 +20,25 @@ import type { UseCases } from '../../../composition/use-cases.provider';
 export type SyncOperationItem = PosSyncBatchInput['operations'][number];
 export type CommandBuilder = (op: SyncOperationItem) => { type: string } & Record<string, unknown>;
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEMO_REGISTER_UUID = '00000000-0000-0000-0000-000000000099';
+const DEMO_DEVICE_UUID = '018e245a-0000-7000-8000-000000000001';
+
+function sanitizeRegisterId(id: unknown): string {
+  return typeof id === 'string' && UUID_REGEX.test(id) ? id : DEMO_REGISTER_UUID;
+}
+
+function sanitizeDeviceId(id: unknown): string {
+  return typeof id === 'string' && UUID_REGEX.test(id) ? id : DEMO_DEVICE_UUID;
+}
+
 export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
   'shift.open': (op) => {
     const raw = (op.payload ?? {});
     const normalized = {
       ...raw,
+      registerId: sanitizeRegisterId(raw.registerId),
+      deviceId: sanitizeDeviceId(raw.deviceId),
       initialFloatMinor:
         typeof raw.initialFloatMinor === 'number' || typeof raw.initialFloatMinor === 'bigint'
           ? raw.initialFloatMinor.toString()
@@ -47,7 +61,7 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
     ...closeCashShiftSchema.parse(op.payload),
   }),
   'sale.issue': (op) => {
-    const raw = op.payload ?? {};
+    const raw = (op.payload ?? {});
     let paymentMethod = raw.paymentMethod;
     if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
       paymentMethod = 'cash';
@@ -70,6 +84,8 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
 
     const normalized = {
       ...raw,
+      registerId: sanitizeRegisterId(raw.registerId),
+      deviceId: sanitizeDeviceId(raw.deviceId),
       paymentMethod,
       lines,
     };

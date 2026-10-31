@@ -46,6 +46,15 @@ export async function syncOutbox(
   token: string,
   deviceId: string,
 ): Promise<SyncResult> {
+  const regConfig = await posDb.config.get('register_id');
+  if (!regConfig || regConfig.value === 'reg-default') {
+    await posDb.config.put({ key: 'register_id', value: '00000000-0000-0000-0000-000000000099' });
+  }
+  const devConfig = await posDb.config.get('device_id');
+  if (!devConfig || devConfig.value === 'dev-default') {
+    await posDb.config.put({ key: 'device_id', value: '018e245a-0000-7000-8000-000000000001' });
+  }
+
   const syncedOutbox = await posDb.outbox.where('status').equals('synced').toArray();
   for (const item of syncedOutbox) {
     let sale = await posDb.sales.where('operationId').equals(item.operationId).first();
@@ -73,7 +82,7 @@ export async function syncOutbox(
         saleId: s.id,
         operationId: s.operationId,
         registerId: '00000000-0000-0000-0000-000000000099',
-        deviceId,
+        deviceId: '018e245a-0000-7000-8000-000000000001',
         shiftId: s.shiftId,
         ticketNumber: s.ticketNumber,
         invoiceControlNumber: s.invoiceControlNumber,
@@ -119,8 +128,24 @@ export async function syncOutbox(
           }))
         : raw.lines;
 
+      const rawRegisterId = raw.registerId;
+      const validRegisterId =
+        typeof rawRegisterId === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawRegisterId)
+          ? rawRegisterId
+          : '00000000-0000-0000-0000-000000000099';
+
+      const rawDeviceId = raw.deviceId;
+      const validDeviceId =
+        typeof rawDeviceId === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDeviceId)
+          ? rawDeviceId
+          : deviceId || '018e245a-0000-7000-8000-000000000001';
+
       const normalizedPayload = {
         ...raw,
+        registerId: validRegisterId,
+        deviceId: validDeviceId,
         paymentMethod,
         lines,
       };
@@ -137,8 +162,14 @@ export async function syncOutbox(
     }),
   );
 
+  const cleanDeviceId =
+    typeof deviceId === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(deviceId)
+      ? deviceId
+      : '018e245a-0000-7000-8000-000000000001';
+
   const batchPayload = {
-    deviceId,
+    deviceId: cleanDeviceId,
     operations,
   };
 
