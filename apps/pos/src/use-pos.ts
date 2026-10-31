@@ -85,7 +85,9 @@ export function usePos(apiBaseUrl = '') {
 
   const searchCatalog = useCallback(async (query: string): Promise<LocalProduct[]> => {
     const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return [];
+    if (!trimmed) {
+      return posDb.catalog.limit(60).toArray();
+    }
 
     return posDb.catalog
       .filter(
@@ -94,7 +96,7 @@ export function usePos(apiBaseUrl = '') {
           p.name.toLowerCase().includes(trimmed) ||
           (p.barcode ? p.barcode.includes(trimmed) : false),
       )
-      .limit(20)
+      .limit(60)
       .toArray();
   }, []);
 

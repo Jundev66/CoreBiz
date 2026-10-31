@@ -1,3 +1,60 @@
 @import 'tailwindcss';
 @source '../index.html';
 @source './**/*.{ts,tsx}';
+
+@theme static {
+  --color-n-50: oklch(0.985 0.002 260);
+  --color-n-100: oklch(0.968 0.004 260);
+  --color-n-200: oklch(0.928 0.006 260);
+  --color-n-300: oklch(0.87 0.008 260);
+  --color-n-400: oklch(0.71 0.012 260);
+  --color-n-500: oklch(0.54 0.015 260);
+  --color-n-600: oklch(0.48 0.017 260);
+  --color-n-700: oklch(0.38 0.017 260);
+  --color-n-800: oklch(0.28 0.016 260);
+  --color-n-900: oklch(0.2 0.014 260);
+
+  --color-ink: var(--color-n-900);
+  --color-ink-soft: var(--color-n-700);
+  --color-muted: oklch(0.5 0.016 260);
+  --color-line: oklch(0.89 0.012 260);
+  --color-line-strong: oklch(0.82 0.014 260);
+  --color-surface: oklch(1 0 0);
+  --color-canvas: oklch(0.965 0.01 260);
+  --color-subtle: oklch(0.945 0.012 260);
+
+  --color-brand: oklch(0.5 0.19 275);
+  --color-brand-hover: oklch(0.44 0.19 275);
+  --color-brand-soft: oklch(0.93 0.045 275);
+  --color-brand-line: oklch(0.84 0.08 275);
+  --color-brand-ink: oklch(0.99 0 0);
+
+  --color-nav: oklch(0.24 0.06 275);
+  --color-nav-raised: oklch(0.3 0.065 275);
+  --color-nav-line: oklch(0.36 0.06 275);
+  --color-nav-ink: oklch(0.96 0.01 275);
+  --color-nav-muted: oklch(0.8 0.03 275);
+
+  --color-warn: oklch(0.75 0.14 75);
+  --color-warn-ink: oklch(0.5 0.12 75);
+  --color-warn-soft: oklch(0.97 0.03 75);
+  --color-danger: oklch(0.58 0.19 25);
+  --color-danger-ink: oklch(0.47 0.18 25);
+  --color-danger-soft: oklch(0.97 0.02 25);
+  --color-success: oklch(0.58 0.13 150);
+  --color-success-ink: oklch(0.45 0.12 150);
+  --color-success-soft: oklch(0.96 0.03 150);
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.875rem;
+  --radius-pill: 9999px;
+
+  --shadow-xs: 0 1px 2px oklch(0.2 0.014 260 / 0.07);
+  --shadow-sm: 0 1px 2px oklch(0.2 0.014 260 / 0.07), 0 2px 6px oklch(0.2 0.014 260 / 0.07);
+  --shadow-md: 0 2px 4px oklch(0.2 0.014 260 / 0.06), 0 6px 16px oklch(0.2 0.014 260 / 0.1);
+  --shadow-lg: 0 8px 16px oklch(0.2 0.014 260 / 0.1), 0 16px 40px oklch(0.2 0.014 260 / 0.14);
+}
+
+:root {
+  color-scheme: light;
+}
