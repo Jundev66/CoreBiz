@@ -50,6 +50,13 @@ export async function createApp(): Promise<{ app: INestApplication; env: Env }> 
   // names and sometimes the value that failed.
   app.useGlobalFilters(new AllExceptionsFilter());
 
+  if (process.env.NODE_ENV !== 'production') {
+    app.enableCors({
+      origin: true,
+      credentials: true,
+    });
+  }
+
   /*
    * CORS stays DISABLED, and that is a decision.
    *

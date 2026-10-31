@@ -37,6 +37,7 @@ export interface OpenCashShiftOutput {
   readonly registerId: string;
   readonly openedAt: string;
   readonly initialFloat: string;
+  readonly status?: 'processed' | 'duplicate';
 }
 
 export interface OpenCashShiftDeps {
@@ -81,7 +82,13 @@ export function makeOpenCashShift(deps: OpenCashShiftDeps) {
 
       const existingShift = await repos.cashShifts.findActiveByRegisterId(registerId);
       if (existingShift) {
-        return err({ kind: 'ShiftAlreadyOpen', registerId: input.registerId });
+        return ok({
+          status: 'duplicate',
+          shiftId: existingShift.id,
+          registerId: existingShift.registerId,
+          openedAt: existingShift.openedAt.toISOString(),
+          initialFloat: existingShift.initialFloat.minorUnits.toString(),
+        });
       }
 
       const shiftResult = CashShift.open({

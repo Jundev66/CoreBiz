@@ -48,6 +48,7 @@ export function usePos(apiBaseUrl = '') {
   const [registerCode, setRegisterCode] = useState<string | null>(null);
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncStatusMessage, setSyncStatusMessage] = useState<string | null>(null);
   const [defaultExchangeRate, setDefaultExchangeRate] = useState<string>('36.50');
 
   const activeExchangeRate = useMemo(() => {
@@ -101,8 +102,8 @@ export function usePos(apiBaseUrl = '') {
   }, []);
 
   const triggerSync = useCallback(async () => {
-    if (!navigator.onLine) return;
     setIsSyncing(true);
+    setSyncStatusMessage('Sincronizando con ERP...');
 
     try {
       await syncCustomersFromErp(apiBaseUrl);
@@ -115,11 +116,24 @@ export function usePos(apiBaseUrl = '') {
 
       try {
         await syncCatalog(apiBaseUrl, token);
-      } catch {
-        // non-blocking
+      } catch (e) {
+        console.warn('Catalog sync error (non-blocking):', e);
       }
 
-      await syncOutbox(apiBaseUrl, token, deviceId);
+      const outboxResult = await syncOutbox(apiBaseUrl, token, deviceId);
+      if (outboxResult.errors.length > 0) {
+        setSyncStatusMessage(`Error: ${outboxResult.errors.join(', ')}`);
+      } else if (outboxResult.syncedCount > 0) {
+        setSyncStatusMessage(`${outboxResult.syncedCount} venta(s) sincronizada(s) con éxito.`);
+      } else {
+        setSyncStatusMessage('Todas las operaciones están sincronizadas.');
+      }
+      return outboxResult;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error en sincronización';
+      setSyncStatusMessage(msg);
+      console.error('POS Sync error:', err);
+      return { syncedCount: 0, failedCount: 0, errors: [msg] };
     } finally {
       setIsSyncing(false);
       await refreshState();
@@ -628,6 +642,7 @@ export function usePos(apiBaseUrl = '') {
     registerCode,
     deviceToken,
     isSyncing,
+    syncStatusMessage,
     activeExchangeRate,
     defaultExchangeRate,
     totals: cartTotals,

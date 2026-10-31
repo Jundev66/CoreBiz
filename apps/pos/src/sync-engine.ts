@@ -46,6 +46,46 @@ export async function syncOutbox(
   token: string,
   deviceId: string,
 ): Promise<SyncResult> {
+  const syncedOutbox = await posDb.outbox.where('status').equals('synced').toArray();
+  for (const item of syncedOutbox) {
+    let sale = await posDb.sales.where('operationId').equals(item.operationId).first();
+    if (!sale && item.payload && typeof item.payload.saleId === 'string') {
+      sale = await posDb.sales.get(item.payload.saleId);
+    }
+    if (sale && sale.syncStatus !== 'synced') {
+      await posDb.sales.update(sale.id, { syncStatus: 'synced' });
+    }
+  }
+
+  const unsyncedSales = await posDb.sales.where('syncStatus').notEqual('synced').toArray();
+  for (const s of unsyncedSales) {
+    const existingOp = await posDb.outbox.where('operationId').equals(s.operationId).first();
+    if (!existingOp) {
+      const outboxLines = s.lines.map((l) => ({
+        id: l.id,
+        productId: l.productId,
+        temporaryName: l.productId ? null : l.name,
+        barcodeScanned: null,
+        quantity: l.quantity.toString(),
+        unitPriceMinor: l.unitPriceMinor,
+      }));
+      await queueOutboxOperation(s.operationId, 'sale.issue', {
+        saleId: s.id,
+        operationId: s.operationId,
+        registerId: '00000000-0000-0000-0000-000000000099',
+        deviceId,
+        shiftId: s.shiftId,
+        ticketNumber: s.ticketNumber,
+        invoiceControlNumber: s.invoiceControlNumber,
+        customerName: s.customerName,
+        customerDoc: s.customerDoc,
+        paymentMethod: s.paymentMethod,
+        lines: outboxLines,
+        occurredAt: s.occurredAt,
+      });
+    }
+  }
+
   const pendingItems = await posDb.outbox
     .where('status')
     .anyOf(['pending', 'failed'])
@@ -56,9 +96,8 @@ export async function syncOutbox(
   }
 
   const now = Date.now();
-  const batchPayload = {
-    deviceId,
-    operations: pendingItems.map((item, idx) => {
+  const operations = await Promise.all(
+    pendingItems.map(async (item, idx) => {
       const raw = (item.payload ?? {});
       let paymentMethod = raw.paymentMethod;
       if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
@@ -80,18 +119,27 @@ export async function syncOutbox(
           }))
         : raw.lines;
 
+      const normalizedPayload = {
+        ...raw,
+        paymentMethod,
+        lines,
+      };
+
+      const computedHash = await computePayloadHash(normalizedPayload);
+
       return {
         operationId: item.operationId,
         type: item.type,
         sequence: item.sequence < 1000 ? now + idx : item.sequence,
-        payloadHash: item.payloadHash,
-        payload: {
-          ...raw,
-          paymentMethod,
-          lines,
-        },
+        payloadHash: computedHash,
+        payload: normalizedPayload,
       };
     }),
+  );
+
+  const batchPayload = {
+    deviceId,
+    operations,
   };
 
   try {
@@ -127,6 +175,17 @@ export async function syncOutbox(
       const match = pendingItems.find((p) => p.operationId === result.operationId);
       if (!match || match.id === undefined) continue;
 
+      let localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
+      if (!localSale && match.payload && typeof match.payload.saleId === 'string') {
+        localSale = await posDb.sales.get(match.payload.saleId);
+      }
+      if (!localSale) {
+        const allSales = await posDb.sales.toArray();
+        localSale = allSales.find(
+          (s) => s.operationId === result.operationId || s.id === match.payload?.saleId,
+        );
+      }
+
       if (
         result.status === 'processed' ||
         result.status === 'duplicate' ||
@@ -136,7 +195,6 @@ export async function syncOutbox(
           status: 'synced',
           errorMessage: null,
         });
-        const localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
         if (localSale) {
           await posDb.sales.update(localSale.id, { syncStatus: 'synced' });
         }
@@ -147,7 +205,6 @@ export async function syncOutbox(
           retryCount: match.retryCount + 1,
           errorMessage: result.error ?? 'Unknown error',
         });
-        const localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
         if (localSale) {
           await posDb.sales.update(localSale.id, { syncStatus: 'failed' });
         }

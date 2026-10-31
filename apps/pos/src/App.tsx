@@ -49,6 +49,7 @@ export function App() {
     sales,
     registerCode,
     isSyncing,
+    syncStatusMessage,
     totals,
     activeExchangeRate,
     defaultExchangeRate,
@@ -544,6 +545,22 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {syncStatusMessage && (
+        <div className="bg-brand/10 border-b border-brand/20 px-4 py-2 text-xs font-semibold text-brand flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{syncStatusMessage}</span>
+          </div>
+          <button
+            onClick={() => void triggerSync()}
+            disabled={isSyncing}
+            className="underline hover:text-brand-ink text-[11px] cursor-pointer"
+          >
+            Reintentar sincronización
+          </button>
+        </div>
+      )}
 
       <main className="relative flex flex-1 flex-col lg:flex-row overflow-hidden">
         <section className="flex flex-1 flex-col p-3 sm:p-5 overflow-hidden">
@@ -1137,6 +1154,19 @@ export function App() {
                     </p>
                   </div>
                 )}
+                <button
+                  onClick={() => {
+                    void triggerSync();
+                  }}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 rounded-xl border border-line bg-canvas px-3 py-1.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
+                  title="Sincronizar ventas con ERP"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 text-brand ${isSyncing ? 'animate-spin' : ''}`}
+                  />
+                  <span className="hidden sm:inline">Sincronizar</span>
+                </button>
                 <button
                   onClick={() => setShowSalesModal(false)}
                   className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer ml-2"

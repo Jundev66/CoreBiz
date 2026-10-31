@@ -21,10 +21,22 @@ export type SyncOperationItem = PosSyncBatchInput['operations'][number];
 export type CommandBuilder = (op: SyncOperationItem) => { type: string } & Record<string, unknown>;
 
 export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
-  'shift.open': (op) => ({
-    type: 'shift.open',
-    ...openCashShiftSchema.parse(op.payload),
-  }),
+  'shift.open': (op) => {
+    const raw = (op.payload ?? {});
+    const normalized = {
+      ...raw,
+      initialFloatMinor:
+        typeof raw.initialFloatMinor === 'number' || typeof raw.initialFloatMinor === 'bigint'
+          ? raw.initialFloatMinor.toString()
+          : (raw.initialFloatMinor ?? '0'),
+      currency: raw.currency ?? 'USD',
+      openedAt: raw.openedAt ?? new Date().toISOString(),
+    };
+    return {
+      type: 'shift.open',
+      ...openCashShiftSchema.parse(normalized),
+    };
+  },
   'cash.movement': (op) => {
     const parsed = recordCashMovementSchema.parse(op.payload);
     const { type: movementType, ...rest } = parsed;
@@ -35,7 +47,7 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
     ...closeCashShiftSchema.parse(op.payload),
   }),
   'sale.issue': (op) => {
-    const raw = (op.payload ?? {});
+    const raw = op.payload ?? {};
     let paymentMethod = raw.paymentMethod;
     if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
       paymentMethod = 'cash';
@@ -111,11 +123,15 @@ export class SyncPosOperationsController {
     }
 
     const results: PosSyncItemResult[] = [];
+    console.log(
+      `[API /v1/pos/sync] Incoming batch from device ${body.deviceId}: ${body.operations.length} operations`,
+    );
 
     for (const op of body.operations) {
       try {
         const buildCommand = COMMAND_DESERIALIZERS[op.type];
         if (!buildCommand) {
+          console.warn(`[API /v1/pos/sync] Unsupported operation type: ${op.type}`);
           results.push({
             operationId: op.operationId,
             status: 'failed',
@@ -129,21 +145,33 @@ export class SyncPosOperationsController {
 
         if (!dispatchResult.ok) {
           const errObj = dispatchResult.error as { kind?: string } | undefined;
+          const errorMsg = errObj?.kind ?? 'OperationRejected';
+          console.warn(
+            `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) rejected: ${errorMsg}`,
+          );
           results.push({
             operationId: op.operationId,
             status: 'failed',
-            error: errObj?.kind ?? 'OperationRejected',
+            error: errorMsg,
           });
         } else {
           const val = dispatchResult.value as { status?: string; conflictId?: string } | undefined;
+          const status = val?.status === 'duplicate' ? 'duplicate' : 'processed';
+          console.log(
+            `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) succeeded: ${status}`,
+          );
           results.push({
             operationId: op.operationId,
-            status: val?.status === 'duplicate' ? 'duplicate' : 'processed',
+            status,
             ...(val?.conflictId ? { conflictId: val.conflictId } : {}),
           });
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Sync dispatch error';
+        console.error(
+          `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) exception:`,
+          errorMsg,
+        );
         results.push({
           operationId: op.operationId,
           status: 'failed',
