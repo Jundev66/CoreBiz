@@ -33,6 +33,7 @@ import {
   Smartphone,
   Maximize2,
   Minimize2,
+  Pencil,
 } from 'lucide-react';
 import { usePos } from './use-pos';
 import { detectBarcodeFromMedia, generateInternalBarcode } from './barcode';
@@ -102,10 +103,11 @@ export function App() {
   const [rateChangeReasonInput, setRateChangeReasonInput] = useState('');
   const [declaredCashInput, setDeclaredCashInput] = useState('');
   const [cashTenderedInput, setCashTenderedInput] = useState('');
-  const [checkoutCurrencyMode, setCheckoutCurrencyMode] = useState<'usd' | 'ves'>('usd');
-  const [vesPaymentSubtype, setVesPaymentSubtype] = useState<
-    'pago_movil' | 'punto_debito' | 'cash_ves'
-  >('pago_movil');
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<
+    'cash_usd' | 'cash_ves' | 'pago_movil' | 'punto_debito'
+  >('cash_usd');
+  const [isEditingRateInCheckout, setIsEditingRateInCheckout] = useState(false);
+  const [checkoutNewRateInput, setCheckoutNewRateInput] = useState('');
   const [vesTenderedInput, setVesTenderedInput] = useState('');
   const [variosName, setVariosName] = useState('Artículo Varios');
   const [variosPrice, setVariosPrice] = useState('10.00');
@@ -276,15 +278,16 @@ export function App() {
     setShowEnrollModal(false);
   };
 
-  const handleOpenCheckoutModal = (mode: 'usd' | 'ves') => {
-    setCheckoutCurrencyMode(mode);
+  const handleOpenCheckoutModal = (preferredMethod?: 'cash_usd' | 'cash_ves' | 'usd' | 'ves') => {
+    const method =
+      preferredMethod === 'ves' || preferredMethod === 'cash_ves' ? 'cash_ves' : 'cash_usd';
+    setCheckoutPaymentMethod(method);
     setCheckoutCustomerSearch('');
     setIsCreatingCustomerInCheckout(false);
-    if (mode === 'usd') {
-      setCashTenderedInput(totalDecimal.toFixed(2));
-    } else {
-      setVesTenderedInput(totalVesDecimal.toFixed(2));
-    }
+    setIsEditingRateInCheckout(false);
+    setCheckoutNewRateInput(activeExchangeRate);
+    setCashTenderedInput(totalDecimal.toFixed(2));
+    setVesTenderedInput(totalVesDecimal.toFixed(2));
     setShowCashCheckoutModal(true);
   };
 
@@ -1248,26 +1251,15 @@ export function App() {
 
       {showCashCheckoutModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-line/60">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+          <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-5 sm:p-6 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b border-line/60 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
                   <Banknote className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-ink">Cobro y Facturación</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-black text-brand">
-                      ${totalDecimal.toFixed(2)}
-                    </span>
-                    <span className="text-xs text-muted">|</span>
-                    <span className="font-mono text-xs font-bold text-ink">
-                      Bs. {totalVesDecimal.toFixed(2)}
-                    </span>
-                    <span className="rounded-md bg-subtle px-1.5 py-0.2 text-[10px] font-mono text-muted">
-                      Tasa {activeExchangeRate}
-                    </span>
-                  </div>
+                  <p className="text-[11px] text-muted">Seleccioná cliente y forma de pago</p>
                 </div>
               </div>
               <button
@@ -1278,262 +1270,386 @@ export function App() {
               </button>
             </div>
 
-            <div className="mt-3 flex rounded-xl bg-subtle p-1 border border-line">
-              <button
-                type="button"
-                onClick={() => setCheckoutCurrencyMode('usd')}
-                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition cursor-pointer ${
-                  checkoutCurrencyMode === 'usd'
-                    ? 'bg-surface text-ink shadow-xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Dólares ($ USD)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCheckoutCurrencyMode('ves');
-                  if (!vesTenderedInput) {
-                    setVesTenderedInput(totalVesDecimal.toFixed(2));
-                  }
-                }}
-                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition cursor-pointer ${
-                  checkoutCurrencyMode === 'ves'
-                    ? 'bg-surface text-ink shadow-xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Bolívares (VES)
-              </button>
-            </div>
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3.5 my-3">
+              <div className="rounded-2xl border border-line bg-canvas/70 p-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-bold text-muted uppercase">
+                      Total a Cobrar
+                    </span>
+                    <div className="flex items-baseline gap-2 mt-0.5">
+                      <span className="font-mono text-2xl font-black text-brand">
+                        ${totalDecimal.toFixed(2)}
+                      </span>
+                      <span className="text-xs text-muted font-bold">≈</span>
+                      <span className="font-mono text-base font-bold text-ink">
+                        Bs. {totalVesDecimal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
 
-            <div className="mt-3 rounded-2xl border border-line bg-canvas/60 p-3.5 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
-                  <User className="h-4 w-4 text-brand" />
-                  <span>Cliente para Factura</span>
+                  <div className="flex items-center">
+                    {isEditingRateInCheckout ? (
+                      <div className="flex items-center gap-1.5 rounded-xl border border-brand bg-surface p-1 shadow-xs">
+                        <span className="text-[11px] font-bold text-muted pl-1">Bs.</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={checkoutNewRateInput}
+                          onChange={(e) => setCheckoutNewRateInput(e.target.value)}
+                          className="w-20 rounded-lg border border-line bg-canvas px-2 py-0.5 font-mono text-xs font-bold text-ink focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              !checkoutNewRateInput.trim() ||
+                              parseFloat(checkoutNewRateInput) <= 0
+                            )
+                              return;
+                            void updateShiftExchangeRate(checkoutNewRateInput, 'Ajuste en cobro');
+                            setIsEditingRateInCheckout(false);
+                          }}
+                          className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold text-white hover:bg-brand-hover cursor-pointer"
+                        >
+                          OK
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingRateInCheckout(false);
+                            setCheckoutNewRateInput(activeExchangeRate);
+                          }}
+                          className="rounded-lg px-1.5 py-1 text-[10px] text-muted hover:text-ink cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckoutNewRateInput(activeExchangeRate);
+                          setIsEditingRateInCheckout(true);
+                        }}
+                        className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-1 text-xs font-bold text-ink hover:border-brand/40 transition shadow-2xs cursor-pointer"
+                        title="Haz clic para actualizar la tasa oficial BCV si cambió"
+                      >
+                        <TrendingUp className="h-3.5 w-3.5 text-brand" />
+                        <span className="font-mono text-xs">Tasa Bs. {activeExchangeRate}</span>
+                        <Pencil className="h-3 w-3 text-muted" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {selectedCustomer ? (
-                  <span className="flex items-center gap-1 rounded-pill bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success-ink">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Seleccionado
-                  </span>
-                ) : (
-                  <span className="rounded-pill bg-warn-soft px-2 py-0.5 text-[10px] font-bold text-warn-ink uppercase">
-                    Obligatorio
-                  </span>
-                )}
               </div>
 
-              {selectedCustomer ? (
-                <div className="flex items-center justify-between rounded-xl border border-emerald-600/40 bg-emerald-50/50 p-2.5 text-xs">
-                  <div>
-                    <p className="font-bold text-emerald-950">{selectedCustomer.name}</p>
-                    <p className="font-mono text-[11px] text-emerald-800">
-                      {selectedCustomer.taxId}{' '}
-                      {selectedCustomer.code ? `• ${selectedCustomer.code}` : ''}
-                    </p>
+              <div className="rounded-2xl border border-line bg-canvas/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
+                    <User className="h-4 w-4 text-brand" />
+                    <span>Cliente para Factura</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCustomer(null);
-                      setIsCreatingCustomerInCheckout(false);
-                      setCheckoutCustomerSearch('');
-                    }}
-                    className="rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
-                  >
-                    Cambiar
-                  </button>
+                  {selectedCustomer ? (
+                    <span className="flex items-center gap-1 rounded-pill bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success-ink">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Seleccionado
+                    </span>
+                  ) : (
+                    <span className="rounded-pill bg-warn-soft px-2 py-0.5 text-[10px] font-bold text-warn-ink uppercase">
+                      Obligatorio
+                    </span>
+                  )}
                 </div>
-              ) : isCreatingCustomerInCheckout ? (
-                <div className="space-y-2 rounded-xl border border-line bg-surface p-3">
-                  <div className="flex items-center justify-between pb-1">
-                    <span className="text-xs font-bold text-ink">Registrar Nuevo Cliente</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingCustomerInCheckout(false)}
-                      className="text-xs font-semibold text-muted hover:text-ink cursor-pointer"
-                    >
-                      Volver a buscar
-                    </button>
-                  </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-muted uppercase">
-                      C.I. / RIF (DNI) *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. V-18765432 o J-12345678"
-                      value={newCustTaxId}
-                      onChange={(e) => setNewCustTaxId(e.target.value)}
-                      className="mt-0.5 w-full rounded-xl border border-line bg-canvas px-2.5 py-1.5 font-mono text-xs font-bold text-ink focus:border-brand focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-muted uppercase">
-                      Nombre o Razón Social *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. María Pérez o Abasto Central C.A."
-                      value={newCustName}
-                      onChange={(e) => setNewCustName(e.target.value)}
-                      className="mt-0.5 w-full rounded-xl border border-line bg-canvas px-2.5 py-1.5 text-xs font-bold text-ink focus:border-brand focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-muted uppercase">
-                      Teléfono (Opcional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 0414-1234567"
-                      value={newCustPhone}
-                      onChange={(e) => setNewCustPhone(e.target.value)}
-                      className="mt-0.5 w-full rounded-xl border border-line bg-canvas px-2.5 py-1.5 text-xs text-ink focus:border-brand focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingCustomerInCheckout(false)}
-                      className="rounded-xl px-3 py-1.5 text-xs font-bold text-muted hover:text-ink cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!newCustName.trim() || !newCustTaxId.trim()}
-                      onClick={() => {
-                        void handleCreateCustomerInCheckout();
-                      }}
-                      className="rounded-xl bg-brand px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover disabled:opacity-40 cursor-pointer"
-                    >
-                      Guardar y Asignar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-                      <input
-                        type="text"
-                        placeholder="Buscar por Nombre o C.I./RIF..."
-                        value={checkoutCustomerSearch}
-                        onChange={(e) => setCheckoutCustomerSearch(e.target.value)}
-                        className="w-full rounded-xl border border-line bg-surface py-1.5 pl-8 pr-3 text-xs font-medium text-ink focus:border-brand focus:outline-none"
-                      />
+                {selectedCustomer ? (
+                  <div className="flex items-center justify-between rounded-xl border border-emerald-600/40 bg-emerald-50/50 p-2.5 text-xs">
+                    <div>
+                      <p className="font-bold text-emerald-950">{selectedCustomer.name}</p>
+                      <p className="font-mono text-[11px] text-emerald-800">
+                        {selectedCustomer.taxId}{' '}
+                        {selectedCustomer.code ? `• ${selectedCustomer.code}` : ''}
+                      </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setNewCustName('');
-                        setNewCustTaxId(checkoutCustomerSearch.trim());
-                        setNewCustPhone('');
-                        setIsCreatingCustomerInCheckout(true);
+                        setSelectedCustomer(null);
+                        setIsCreatingCustomerInCheckout(false);
+                        setCheckoutCustomerSearch('');
                       }}
-                      className="flex items-center gap-1 rounded-xl bg-brand-soft border border-brand/30 px-2.5 py-1.5 text-xs font-bold text-brand hover:bg-brand-soft/80 transition cursor-pointer shrink-0"
+                      className="rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
                     >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Nuevo</span>
+                      Cambiar
                     </button>
                   </div>
+                ) : isCreatingCustomerInCheckout ? (
+                  <div className="space-y-2 rounded-xl border border-line bg-surface p-3">
+                    <div className="flex items-center justify-between pb-1">
+                      <span className="text-xs font-bold text-ink">Registrar Nuevo Cliente</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingCustomerInCheckout(false)}
+                        className="text-xs font-semibold text-muted hover:text-ink cursor-pointer"
+                      >
+                        Volver a buscar
+                      </button>
+                    </div>
 
-                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
-                    {checkoutCustomerList.length === 0 ? (
-                      <div className="p-3 text-center rounded-xl bg-surface border border-line/60">
-                        <p className="text-xs text-muted">
-                          {checkoutCustomerSearch.trim()
-                            ? `No hay clientes que coincidan con "${checkoutCustomerSearch}".`
-                            : 'No hay clientes registrados.'}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewCustName('');
-                            setNewCustTaxId(checkoutCustomerSearch.trim());
-                            setNewCustPhone('');
-                            setIsCreatingCustomerInCheckout(true);
-                          }}
-                          className="mt-1.5 text-xs font-bold text-brand hover:underline cursor-pointer"
-                        >
-                          + Registrar cliente ahora
-                        </button>
-                      </div>
-                    ) : (
-                      checkoutCustomerList.map((cust) => (
-                        <button
-                          key={cust.id}
-                          type="button"
-                          onClick={() => setSelectedCustomer(cust)}
-                          className="w-full flex items-center justify-between rounded-xl border border-line bg-surface p-2 text-left hover:border-brand hover:bg-subtle transition cursor-pointer"
-                        >
-                          <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-xs font-bold text-ink truncate">{cust.name}</p>
-                            <p className="font-mono text-[10px] text-muted">{cust.taxId}</p>
-                          </div>
-                          <span className="text-[11px] font-bold text-brand shrink-0">Elegir</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {checkoutCurrencyMode === 'usd' ? (
-              <div className="mt-3.5 space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-ink">Monto recibido en USD ($)</label>
-                  <div className="relative mt-1.5">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-lg font-bold text-muted">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={cashTenderedInput}
-                      onChange={(e) => setCashTenderedInput(e.target.value)}
-                      className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-9 pr-4 font-mono text-xl font-black text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                    />
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {[totalDecimal, 5, 10, 20, 50, 100].map((amount) => {
-                      if (amount < totalDecimal && amount !== totalDecimal) return null;
-                      const label = amount === totalDecimal ? 'Exacto' : `$${amount.toFixed(0)}`;
-                      return (
-                        <button
-                          key={amount}
-                          type="button"
-                          onClick={() => setCashTenderedInput(amount.toFixed(2))}
-                          className="rounded-xl border border-line bg-subtle px-3 py-1 text-xs font-bold text-ink hover:bg-surface transition cursor-pointer"
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-line bg-canvas p-3">
-                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-muted">Vuelto a Entregar:</p>
-                      <p className="text-[11px] font-mono text-muted">
+                      <label className="text-[10px] font-bold text-muted uppercase">
+                        C.I. / RIF (DNI) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. V-18765432 o J-12345678"
+                        value={newCustTaxId}
+                        onChange={(e) => setNewCustTaxId(e.target.value)}
+                        className="mt-0.5 w-full rounded-xl border border-line bg-canvas px-2.5 py-1.5 font-mono text-xs font-bold text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-muted uppercase">
+                        Nombre o Razón Social *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. María Pérez o Abasto Central C.A."
+                        value={newCustName}
+                        onChange={(e) => setNewCustName(e.target.value)}
+                        className="mt-0.5 w-full rounded-xl border border-line bg-canvas px-2.5 py-1.5 text-xs font-bold text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-muted uppercase">
+                        Teléfono (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. 0414-1234567"
+                        value={newCustPhone}
+                        onChange={(e) => setNewCustPhone(e.target.value)}
+                        className="mt-0.5 w-full rounded-xl border border-line bg-canvas px-2.5 py-1.5 text-xs text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingCustomerInCheckout(false)}
+                        className="rounded-xl px-3 py-1.5 text-xs font-bold text-muted hover:text-ink cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!newCustName.trim() || !newCustTaxId.trim()}
+                        onClick={() => {
+                          void handleCreateCustomerInCheckout();
+                        }}
+                        className="rounded-xl bg-brand px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover disabled:opacity-40 cursor-pointer"
+                      >
+                        Guardar y Asignar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+                        <input
+                          type="text"
+                          placeholder="Buscar por Nombre o C.I./RIF..."
+                          value={checkoutCustomerSearch}
+                          onChange={(e) => setCheckoutCustomerSearch(e.target.value)}
+                          className="w-full rounded-xl border border-line bg-surface py-1.5 pl-8 pr-3 text-xs font-medium text-ink focus:border-brand focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewCustName('');
+                          setNewCustTaxId(checkoutCustomerSearch.trim());
+                          setNewCustPhone('');
+                          setIsCreatingCustomerInCheckout(true);
+                        }}
+                        className="flex items-center gap-1 rounded-xl bg-brand-soft border border-brand/30 px-2.5 py-1.5 text-xs font-bold text-brand hover:bg-brand-soft/80 transition cursor-pointer shrink-0"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Nuevo</span>
+                      </button>
+                    </div>
+
+                    <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+                      {checkoutCustomerList.length === 0 ? (
+                        <div className="p-3 text-center rounded-xl bg-surface border border-line/60">
+                          <p className="text-xs text-muted">
+                            {checkoutCustomerSearch.trim()
+                              ? `No hay clientes que coincidan con "${checkoutCustomerSearch}".`
+                              : 'No hay clientes registrados.'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewCustName('');
+                              setNewCustTaxId(checkoutCustomerSearch.trim());
+                              setNewCustPhone('');
+                              setIsCreatingCustomerInCheckout(true);
+                            }}
+                            className="mt-1.5 text-xs font-bold text-brand hover:underline cursor-pointer"
+                          >
+                            + Registrar cliente ahora
+                          </button>
+                        </div>
+                      ) : (
+                        checkoutCustomerList.map((cust) => (
+                          <button
+                            key={cust.id}
+                            type="button"
+                            onClick={() => setSelectedCustomer(cust)}
+                            className="w-full flex items-center justify-between rounded-xl border border-line bg-surface p-2 text-left hover:border-brand hover:bg-subtle transition cursor-pointer"
+                          >
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-xs font-bold text-ink truncate">{cust.name}</p>
+                              <p className="font-mono text-[10px] text-muted">{cust.taxId}</p>
+                            </div>
+                            <span className="text-[11px] font-bold text-brand shrink-0">
+                              Elegir
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-muted uppercase mb-1.5 block">
+                  Forma de Pago
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckoutPaymentMethod('cash_usd');
+                      if (!cashTenderedInput) setCashTenderedInput(totalDecimal.toFixed(2));
+                    }}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      checkoutPaymentMethod === 'cash_usd'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold ring-2 ring-emerald-600'
+                        : 'border-line bg-surface text-ink hover:bg-subtle'
+                    }`}
+                  >
+                    <Banknote className="h-4 w-4 mb-0.5 text-emerald-600" />
+                    <span className="text-xs font-bold">Efectivo ($)</span>
+                    <span className="font-mono text-[10px] text-muted">
+                      ${totalDecimal.toFixed(2)}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckoutPaymentMethod('cash_ves');
+                      if (!vesTenderedInput) setVesTenderedInput(totalVesDecimal.toFixed(2));
+                    }}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      checkoutPaymentMethod === 'cash_ves'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold ring-2 ring-brand'
+                        : 'border-line bg-surface text-ink hover:bg-subtle'
+                    }`}
+                  >
+                    <Coins className="h-4 w-4 mb-0.5 text-brand" />
+                    <span className="text-xs font-bold">Efectivo (Bs.)</span>
+                    <span className="font-mono text-[10px] text-muted">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutPaymentMethod('pago_movil')}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      checkoutPaymentMethod === 'pago_movil'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold ring-2 ring-brand'
+                        : 'border-line bg-surface text-ink hover:bg-subtle'
+                    }`}
+                  >
+                    <Smartphone className="h-4 w-4 mb-0.5 text-brand" />
+                    <span className="text-xs font-bold">Pago Móvil</span>
+                    <span className="font-mono text-[10px] text-muted">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutPaymentMethod('punto_debito')}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      checkoutPaymentMethod === 'punto_debito'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold ring-2 ring-brand'
+                        : 'border-line bg-surface text-ink hover:bg-subtle'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4 mb-0.5 text-brand" />
+                    <span className="text-xs font-bold">Punto Débito</span>
+                    <span className="font-mono text-[10px] text-muted">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {checkoutPaymentMethod === 'cash_usd' && (
+                <div className="space-y-2.5 rounded-2xl border border-line bg-surface p-3.5">
+                  <div>
+                    <label className="text-xs font-bold text-ink">
+                      Monto recibido en Dólares ($)
+                    </label>
+                    <div className="relative mt-1">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-muted">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={cashTenderedInput}
+                        onChange={(e) => setCashTenderedInput(e.target.value)}
+                        className="w-full rounded-2xl border border-line bg-canvas py-2 pl-8 pr-3 font-mono text-lg font-black text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {[totalDecimal, 5, 10, 20, 50, 100].map((amount) => {
+                        if (amount < totalDecimal && amount !== totalDecimal) return null;
+                        const label = amount === totalDecimal ? 'Exacto' : `$${amount.toFixed(0)}`;
+                        return (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() => setCashTenderedInput(amount.toFixed(2))}
+                            className="rounded-xl border border-line bg-subtle px-2.5 py-0.5 text-xs font-bold text-ink hover:bg-canvas transition cursor-pointer"
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-line bg-canvas p-2.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-bold text-muted">Vuelto a entregar:</p>
+                      <p className="text-[10px] font-mono text-muted">
                         ≈ Bs. {(changeValue * rateNum).toFixed(2)}
                       </p>
                     </div>
                     <span
-                      className={`font-mono text-2xl font-black ${
+                      className={`font-mono text-xl font-black ${
                         tenderedNumber >= totalDecimal ? 'text-emerald-600' : 'text-danger'
                       }`}
                     >
@@ -1541,139 +1657,125 @@ export function App() {
                     </span>
                   </div>
                 </div>
+              )}
 
-                <div className="mt-4 flex justify-end gap-2.5">
-                  <button
-                    onClick={() => setShowCashCheckoutModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    disabled={!selectedCustomer || tenderedNumber < totalDecimal}
-                    onClick={() => {
-                      void handleCheckout('cash', `$${changeValue.toFixed(2)}`);
-                    }}
-                    className="rounded-2xl bg-emerald-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-emerald-700 disabled:opacity-40 cursor-pointer"
-                  >
-                    Confirmar Cobro ($)
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3.5 space-y-3">
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setVesPaymentSubtype('pago_movil')}
-                    className={`flex flex-col items-center rounded-xl border p-2 text-center transition cursor-pointer ${
-                      vesPaymentSubtype === 'pago_movil'
-                        ? 'border-brand bg-brand-soft/40 text-brand font-bold'
-                        : 'border-line bg-surface text-muted hover:text-ink'
-                    }`}
-                  >
-                    <Smartphone className="h-4 w-4 mb-1" />
-                    <span className="text-[11px]">Pago Móvil</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVesPaymentSubtype('punto_debito')}
-                    className={`flex flex-col items-center rounded-xl border p-2 text-center transition cursor-pointer ${
-                      vesPaymentSubtype === 'punto_debito'
-                        ? 'border-brand bg-brand-soft/40 text-brand font-bold'
-                        : 'border-line bg-surface text-muted hover:text-ink'
-                    }`}
-                  >
-                    <CreditCard className="h-4 w-4 mb-1" />
-                    <span className="text-[11px]">Punto Débito</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVesPaymentSubtype('cash_ves')}
-                    className={`flex flex-col items-center rounded-xl border p-2 text-center transition cursor-pointer ${
-                      vesPaymentSubtype === 'cash_ves'
-                        ? 'border-brand bg-brand-soft/40 text-brand font-bold'
-                        : 'border-line bg-surface text-muted hover:text-ink'
-                    }`}
-                  >
-                    <Coins className="h-4 w-4 mb-1" />
-                    <span className="text-[11px]">Efectivo Bs.</span>
-                  </button>
-                </div>
+              {checkoutPaymentMethod === 'cash_ves' && (
+                <div className="space-y-2.5 rounded-2xl border border-line bg-surface p-3.5">
+                  <div>
+                    <label className="text-xs font-bold text-ink">
+                      Monto recibido en Bolívares (Bs.)
+                    </label>
+                    <div className="relative mt-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
+                        Bs.
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={vesTenderedInput}
+                        onChange={(e) => setVesTenderedInput(e.target.value)}
+                        className="w-full rounded-2xl border border-line bg-canvas py-2 pl-9 pr-3 font-mono text-lg font-black text-ink focus:border-brand focus:outline-none"
+                      />
+                    </div>
 
-                {vesPaymentSubtype === 'cash_ves' ? (
-                  <div className="space-y-2.5">
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setVesTenderedInput(totalVesDecimal.toFixed(2))}
+                        className="rounded-xl border border-line bg-subtle px-2.5 py-0.5 text-xs font-bold text-ink hover:bg-canvas transition cursor-pointer"
+                      >
+                        Exacto (Bs. {totalVesDecimal.toFixed(2)})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-line bg-canvas p-2.5 flex items-center justify-between">
                     <div>
-                      <label className="text-xs font-bold text-ink">Efectivo recibido en Bs.</label>
-                      <div className="relative mt-1.5">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted">
-                          Bs.
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={vesTenderedInput}
-                          onChange={(e) => setVesTenderedInput(e.target.value)}
-                          className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-10 pr-4 font-mono text-xl font-black text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                        />
-                      </div>
+                      <p className="text-[11px] font-bold text-muted">Vuelto en Bolívares:</p>
+                      <p className="text-[10px] font-mono text-muted">
+                        ≈ ${(rateNum > 0 ? vesChangeValue / rateNum : 0).toFixed(2)} USD
+                      </p>
                     </div>
-
-                    <div className="rounded-2xl border border-line bg-canvas p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-muted">Vuelto en Bolívares:</span>
-                        <span
-                          className={`font-mono text-2xl font-black ${
-                            vesTenderedNumber >= totalVesDecimal
-                              ? 'text-emerald-600'
-                              : 'text-danger'
-                          }`}
-                        >
-                          Bs. {vesChangeValue.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
+                    <span
+                      className={`font-mono text-xl font-black ${
+                        vesTenderedNumber >= totalVesDecimal ? 'text-emerald-600' : 'text-danger'
+                      }`}
+                    >
+                      Bs. {vesChangeValue.toFixed(2)}
+                    </span>
                   </div>
-                ) : (
-                  <div className="rounded-2xl border border-line bg-canvas p-4 text-center space-y-1">
-                    <p className="text-xs text-muted">Monto total a procesar en Bolívares:</p>
-                    <p className="font-mono text-2xl font-black text-brand">
-                      Bs. {totalVesDecimal.toFixed(2)}
-                    </p>
-                    <p className="text-[11px] text-muted">
-                      Calculado a Tasa Oficial BCV: {activeExchangeRate} Bs/USD
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-4 flex justify-end gap-2.5">
-                  <button
-                    onClick={() => setShowCashCheckoutModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    disabled={
-                      !selectedCustomer ||
-                      (vesPaymentSubtype === 'cash_ves' && vesTenderedNumber < totalVesDecimal)
-                    }
-                    onClick={() => {
-                      if (vesPaymentSubtype === 'pago_movil') {
-                        void handleCheckout('transfer');
-                      } else if (vesPaymentSubtype === 'punto_debito') {
-                        void handleCheckout('card');
-                      } else {
-                        void handleCheckout('cash', `Bs. ${vesChangeValue.toFixed(2)}`);
-                      }
-                    }}
-                    className="rounded-2xl bg-brand px-6 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-brand-hover transition disabled:opacity-40 cursor-pointer"
-                  >
-                    Confirmar Cobro (Bs.)
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
+
+              {checkoutPaymentMethod === 'pago_movil' && (
+                <div className="rounded-2xl border border-line bg-surface p-4 text-center space-y-1">
+                  <p className="text-xs font-bold text-ink">Cobro por Pago Móvil Interbancario</p>
+                  <p className="font-mono text-2xl font-black text-brand">
+                    Bs. {totalVesDecimal.toFixed(2)}
+                  </p>
+                  <p className="text-xs font-mono text-muted">
+                    Equivalente a ${totalDecimal.toFixed(2)} USD a Tasa BCV: {activeExchangeRate}
+                  </p>
+                </div>
+              )}
+
+              {checkoutPaymentMethod === 'punto_debito' && (
+                <div className="rounded-2xl border border-line bg-surface p-4 text-center space-y-1">
+                  <p className="text-xs font-bold text-ink">
+                    Cobro por Punto de Venta (Tarjeta Débito)
+                  </p>
+                  <p className="font-mono text-2xl font-black text-brand">
+                    Bs. {totalVesDecimal.toFixed(2)}
+                  </p>
+                  <p className="text-xs font-mono text-muted">
+                    Equivalente a ${totalDecimal.toFixed(2)} USD a Tasa BCV: {activeExchangeRate}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-line/60 flex justify-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCashCheckoutModal(false)}
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  !selectedCustomer ||
+                  (checkoutPaymentMethod === 'cash_usd' && tenderedNumber < totalDecimal) ||
+                  (checkoutPaymentMethod === 'cash_ves' && vesTenderedNumber < totalVesDecimal)
+                }
+                onClick={() => {
+                  if (checkoutPaymentMethod === 'cash_usd') {
+                    void handleCheckout('cash', `$${changeValue.toFixed(2)}`);
+                  } else if (checkoutPaymentMethod === 'cash_ves') {
+                    void handleCheckout('cash', `Bs. ${vesChangeValue.toFixed(2)}`);
+                  } else if (checkoutPaymentMethod === 'pago_movil') {
+                    void handleCheckout('transfer');
+                  } else if (checkoutPaymentMethod === 'punto_debito') {
+                    void handleCheckout('card');
+                  }
+                }}
+                className={`rounded-2xl px-6 py-2.5 text-xs font-extrabold text-white shadow-xs transition disabled:opacity-40 cursor-pointer ${
+                  checkoutPaymentMethod === 'cash_usd'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-brand hover:bg-brand-hover'
+                }`}
+              >
+                {checkoutPaymentMethod === 'cash_usd' &&
+                  `Confirmar Cobro ($${totalDecimal.toFixed(2)})`}
+                {checkoutPaymentMethod === 'cash_ves' &&
+                  `Confirmar Cobro (Bs. ${totalVesDecimal.toFixed(2)})`}
+                {checkoutPaymentMethod === 'pago_movil' &&
+                  `Confirmar Pago Móvil (Bs. ${totalVesDecimal.toFixed(2)})`}
+                {checkoutPaymentMethod === 'punto_debito' &&
+                  `Confirmar Punto Débito (Bs. ${totalVesDecimal.toFixed(2)})`}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -193,6 +193,18 @@ export async function seedDemoDataIfEmpty(force = false): Promise<boolean> {
   if (!existingToken) {
     await posDb.config.put({ key: 'device_token', value: DEMO_DEVICE_TOKEN });
   }
+  const existingDeviceId = await posDb.config.get('device_id');
+  if (!existingDeviceId) {
+    await posDb.config.put({ key: 'device_id', value: DEMO_DEVICE_ID });
+  }
+  const existingRegId = await posDb.config.get('register_id');
+  if (!existingRegId) {
+    await posDb.config.put({ key: 'register_id', value: DEMO_REGISTER_ID });
+  }
+  const existingRegCode = await posDb.config.get('register_code');
+  if (!existingRegCode) {
+    await posDb.config.put({ key: 'register_code', value: DEMO_REGISTER_CODE });
+  }
 
   return false;
 }

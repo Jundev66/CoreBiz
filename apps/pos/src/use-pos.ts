@@ -7,7 +7,12 @@ import {
   type LocalSaleLine,
   type LocalCustomer,
 } from './db';
-import { seedDemoDataIfEmpty, fetchErpDemoCatalog } from './demo-seed';
+import {
+  seedDemoDataIfEmpty,
+  fetchErpDemoCatalog,
+  DEMO_DEVICE_ID,
+  DEMO_DEVICE_TOKEN,
+} from './demo-seed';
 import {
   queueOutboxOperation,
   syncCatalog,
@@ -105,12 +110,16 @@ export function usePos(apiBaseUrl = '') {
       const devIdEntry = await posDb.config.get('device_id');
       const tokenEntry = await posDb.config.get('device_token');
 
-      if (tokenEntry?.value) {
-        await syncCatalog(apiBaseUrl, tokenEntry.value);
-        if (devIdEntry?.value) {
-          await syncOutbox(apiBaseUrl, tokenEntry.value, devIdEntry.value);
-        }
+      const token = tokenEntry?.value || DEMO_DEVICE_TOKEN;
+      const deviceId = devIdEntry?.value || DEMO_DEVICE_ID;
+
+      try {
+        await syncCatalog(apiBaseUrl, token);
+      } catch {
+        // non-blocking
       }
+
+      await syncOutbox(apiBaseUrl, token, deviceId);
     } finally {
       setIsSyncing(false);
       await refreshState();
