@@ -214,7 +214,7 @@ export function App() {
         exchangeRateBcv: '36.50',
         lines: res.lines,
         occurredAt: res.occurredAt,
-        syncStatus: 'pending',
+        syncStatus: res.syncStatus,
       };
 
       setLastSaleSuccess({

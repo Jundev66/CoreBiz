@@ -357,8 +357,12 @@ export function usePos(apiBaseUrl = '') {
       }
 
       clearCart();
+      if (navigator.onLine) {
+        await triggerSync();
+      }
       await refreshState();
-      void triggerSync();
+
+      const latestSale = await posDb.sales.get(saleId);
 
       return {
         saleId,
@@ -372,6 +376,7 @@ export function usePos(apiBaseUrl = '') {
         lines: saleLines,
         paymentMethod,
         occurredAt,
+        syncStatus: latestSale?.syncStatus ?? 'pending',
       };
     },
     [currentShift, cart, registerCode, cartTotals, clearCart, refreshState, triggerSync],
@@ -424,6 +429,7 @@ export function usePos(apiBaseUrl = '') {
     void (async () => {
       await seedDemoDataIfEmpty();
       await refreshState();
+      void triggerSync();
     })();
 
     const cleanupOnline = registerOnlineSyncListener(() => {

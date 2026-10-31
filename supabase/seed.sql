@@ -565,7 +565,7 @@ begin
   where dn.tenant_id = v_tenant;
 
   -- ─────────────────────────────────────────────────────────────────────────
-  -- POS: Caja de Demostracion
+  -- POS: Caja y Dispositivo de Demostracion
   -- ─────────────────────────────────────────────────────────────────────────
   insert into public.pos_registers (
     id, tenant_id, code, name, status, created_at, updated_at
@@ -577,6 +577,35 @@ begin
     'active',
     now(),
     now()
+  ) on conflict (id) do nothing;
+
+  insert into public.pos_devices (
+    id, tenant_id, installation_id, name, platform, browser, status,
+    device_token_hash, registered_at, last_seen_at
+  ) values (
+    '018e245a-0000-7000-8000-000000000001',
+    v_tenant,
+    '018e245a-0000-7000-8000-000000000001',
+    'Terminal Mostrador Demo',
+    'Web PWA',
+    'Chrome',
+    'active',
+    encode(extensions.digest('pos-demo-token-000000000001', 'sha256'), 'hex'),
+    now(),
+    now()
+  ) on conflict (id) do update set
+    status = 'active',
+    device_token_hash = encode(extensions.digest('pos-demo-token-000000000001', 'sha256'), 'hex');
+
+  insert into public.pos_register_assignments (
+    id, tenant_id, register_id, device_id, assigned_at, assigned_by
+  ) values (
+    '018e245a-1000-7000-8000-000000000001',
+    v_tenant,
+    '00000000-0000-0000-0000-000000000099',
+    '018e245a-0000-7000-8000-000000000001',
+    now(),
+    v_owner
   ) on conflict (id) do nothing;
 
   -- ─────────────────────────────────────────────────────────────────────────

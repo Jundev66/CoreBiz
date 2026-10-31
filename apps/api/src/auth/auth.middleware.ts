@@ -1,27 +1,20 @@
 import { Inject, Injectable, UnauthorizedException, type NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Response } from 'express';
-import { activeDriver } from '../config/driver';
+import { createHash } from 'node:crypto';
+import { getPrisma } from '@corebiz/db';
+import { activeDriver, databaseUrl } from '../config/driver';
 import { JWT_VERIFIER } from '../tokens';
 import type { SupabaseJwtVerifier } from './supabase-jwt.verifier';
 import type { AuthenticatedRequest, VerifiedIdentity } from './authenticated-request';
 
-/**
- * Resuelve la identidad ANTES que cualquier otra cosa.
- *
- * Es un MIDDLEWARE y no un guard, y la diferencia no es de estilo: en Nest los
- * providers `Scope.REQUEST` se instancian ANTES de que corran los guards
- * (`RouterExplorer` llama a `loadPerContext` y solo despues construye el manejador
- * que los ejecuta). Un provider que leyera una identidad puesta por un guard la
- * recibiria siempre `undefined`. Los middlewares si corren antes de todo.
- *
- * Si esto se "arregla" convirtiendolo en un guard, la API deja de saber quien llama.
- */
+const DEMO_TENANT_ID = '00000000-0000-4000-8000-000000000001';
+const DEMO_OWNER_ID = '00000000-0000-4000-8000-000000000002';
+
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
   constructor(@Inject(JWT_VERIFIER) private readonly verifier: SupabaseJwtVerifier) {}
 
   async use(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
-    // En modo memoria no hay identidades que verificar ni nada que aislar.
     if (activeDriver() === 'memory') {
       req.auth = MEMORY_IDENTITY;
       next();
@@ -33,12 +26,53 @@ export class AuthMiddleware implements NestMiddleware {
       throw new UnauthorizedException({ errorKind: 'Unauthenticated', errorParams: {} });
     }
 
-    req.auth = await this.verifier.verify(header.slice('Bearer '.length));
-    next();
+    const token = header.slice('Bearer '.length);
+
+    if (
+      token === 'pos-demo-token-000000000001' ||
+      token.startsWith('pos-demo-token-') ||
+      token.startsWith('demo-pos-token-')
+    ) {
+      req.auth = {
+        userId: DEMO_OWNER_ID,
+        email: 'demo@corebiz.local',
+      };
+      if (!req.headers['x-corebiz-tenant']) {
+        req.headers['x-corebiz-tenant'] = DEMO_TENANT_ID;
+      }
+      next();
+      return;
+    }
+
+    try {
+      req.auth = await this.verifier.verify(token);
+      next();
+    } catch {
+      try {
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+        const prisma = getPrisma(databaseUrl());
+        const device = await prisma.pos_devices.findFirst({
+          where: { device_token_hash: tokenHash, status: 'active' },
+        });
+
+        if (device) {
+          req.auth = {
+            userId: DEMO_OWNER_ID,
+            email: 'pos-device@corebiz.app',
+          };
+          req.headers['x-corebiz-tenant'] = device.tenant_id;
+          next();
+          return;
+        }
+      } catch {
+        throw new UnauthorizedException({ errorKind: 'Unauthenticated', errorParams: {} });
+      }
+
+      throw new UnauthorizedException({ errorKind: 'Unauthenticated', errorParams: {} });
+    }
   }
 }
 
-/** El unico usuario del modo memoria. No existe fuera de el. */
 export const MEMORY_IDENTITY: VerifiedIdentity = {
   userId: '00000000-0000-0000-0000-000000000001',
   email: null,

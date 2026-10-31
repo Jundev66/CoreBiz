@@ -3,6 +3,7 @@ import { posDb, type LocalProduct } from './db';
 export const DEMO_REGISTER_CODE = 'CAJA-01';
 export const DEMO_REGISTER_ID = '00000000-0000-0000-0000-000000000099';
 export const DEMO_DEVICE_ID = '018e245a-0000-7000-8000-000000000001';
+export const DEMO_DEVICE_TOKEN = 'pos-demo-token-000000000001';
 
 export const DEMO_CATALOG_PRODUCTS: readonly LocalProduct[] = [
   {
@@ -147,9 +148,16 @@ export async function seedDemoDataIfEmpty(force = false): Promise<boolean> {
       await posDb.config.put({ key: 'register_code', value: DEMO_REGISTER_CODE });
       await posDb.config.put({ key: 'register_id', value: DEMO_REGISTER_ID });
       await posDb.config.put({ key: 'device_id', value: DEMO_DEVICE_ID });
+      await posDb.config.put({ key: 'device_token', value: DEMO_DEVICE_TOKEN });
     }
     return true;
   }
+
+  const existingToken = await posDb.config.get('device_token');
+  if (!existingToken) {
+    await posDb.config.put({ key: 'device_token', value: DEMO_DEVICE_TOKEN });
+  }
+
   return false;
 }
 
