@@ -49,7 +49,6 @@ export function makeRecordCashMovement(deps: RecordCashMovementDeps) {
 
     const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
     const movementId = input.movementId ?? deps.ids.next();
-    const amount = Money.fromMinor(BigInt(input.amountMinor), input.currency);
     const occurredAt = input.occurredAt ? new Date(input.occurredAt) : deps.clock.now();
 
     return deps.uow.run(async (repos) => {
@@ -57,6 +56,11 @@ export function makeRecordCashMovement(deps: RecordCashMovementDeps) {
       if (!shift) {
         return err({ kind: 'ShiftNotFound', shiftId: input.shiftId });
       }
+
+      const amount = Money.fromMinor(
+        BigInt(input.amountMinor),
+        input.currency ?? shift.initialFloat.currency,
+      );
 
       const movementResult = shift.recordCashMovement({
         id: movementId,

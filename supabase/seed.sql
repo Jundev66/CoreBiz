@@ -565,6 +565,21 @@ begin
   where dn.tenant_id = v_tenant;
 
   -- ─────────────────────────────────────────────────────────────────────────
+  -- POS: Caja de Demostracion
+  -- ─────────────────────────────────────────────────────────────────────────
+  insert into public.pos_registers (
+    id, tenant_id, code, name, status, created_at, updated_at
+  ) values (
+    '00000000-0000-0000-0000-000000000099',
+    v_tenant,
+    'CAJA-01',
+    'Caja Mostrador Demo',
+    'active',
+    now(),
+    now()
+  ) on conflict (id) do nothing;
+
+  -- ─────────────────────────────────────────────────────────────────────────
   -- Estado de la plataforma
   --
   -- Lo lee el circuit breaker que protege el presupuesto de la capa gratuita.

@@ -7,11 +7,13 @@ import {
   Product,
   Quantity,
   Supplier,
+  PosRegister,
   asId,
   type CustomerId,
   type DeliveryNoteId,
   type PaymentId,
   type ProductId,
+  type PosRegisterId,
   type SupplierId,
   type Currency,
   type TenantId,
@@ -378,6 +380,17 @@ function seed(target: MemoryStore): void {
   const year = String(SEEDED_AT.getFullYear()).slice(-2);
   target.sequences.set(`${MEMORY_TENANT}:customer:${year}`, target.customers.size);
   target.sequences.set(`${MEMORY_TENANT}:supplier:${year}`, target.suppliers.size);
+
+  const demoRegister = PosRegister.create({
+    id: asId<PosRegisterId>('018e245a-0000-7000-8000-000000000099'),
+    tenantId: MEMORY_TENANT,
+    name: 'Caja Mostrador Demo',
+    code: 'CAJA-01',
+    now: SEEDED_AT,
+  });
+  if (demoRegister.ok) {
+    target.posRegisters.set(demoRegister.value.id, demoRegister.value);
+  }
 }
 
 export function getMemoryUnitOfWork(tenantId: TenantId): InMemoryUnitOfWork {
