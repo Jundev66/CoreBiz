@@ -20,7 +20,7 @@ import {
 import { NavLink } from '@/ui/nav-link';
 import { moduleTone, NAV_ICON } from '@/ui/module-tone';
 
-const ICON_MAP = {
+export const ICON_MAP = {
   home: LayoutDashboard,
   cart: ShoppingCart,
   receipt: Receipt,

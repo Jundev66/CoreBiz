@@ -1,26 +1,12 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import {
-  Users,
-  Package,
-  FileText,
-  Banknote,
-  Truck,
-  BarChart3,
-  Settings,
-  LayoutDashboard,
-  MoreHorizontal,
-  Inbox,
-  UserRound,
-  AlertTriangle,
-  ShoppingCart,
-  type LucideIcon,
-} from 'lucide-react';
+import { Inbox, ShoppingCart, UserRound, type LucideIcon } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
 import { canOpen } from '@/auth/module-access';
 import { Toast } from '@/ui/toast';
 import { AssistantPanel } from '@/ui/assistant-panel';
 import { SidebarNav, type SidebarNavItem } from '@/ui/sidebar-nav';
+import { MobileNav, type MobileNavItem } from '@/ui/mobile-nav';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
@@ -29,7 +15,7 @@ import { buttonClasses } from '@/ui/button';
 
 import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
-import { MoreSummary, NavDetails, NavLink } from '@/ui/nav-link';
+import { NavDetails } from '@/ui/nav-link';
 import { ThemeToggle } from '@/ui/theme-toggle';
 
 /**
@@ -56,18 +42,6 @@ import { ThemeToggle } from '@/ui/theme-toggle';
  * width: the main navigation is still the first visible `navigation`, with links named
  * exactly after their module.
  */
-
-interface NavItem {
-  readonly href: string;
-  readonly label: string;
-  readonly Icon: LucideIcon;
-  readonly exact?: boolean;
-  /** Shorter label for the phone tab bar, where "Delivery notes" does not fit. */
-  readonly short?: string;
-}
-
-/** How many modules fit in the phone tab bar before the rest move under "More". */
-const TAB_BAR_SLOTS = 5;
 
 export async function AppFrame({
   ctx,
@@ -150,22 +124,23 @@ export async function AppFrame({
     return entry.group.items.length > 0;
   });
 
-  const mobileNav: NavItem[] = [
-    { href: '/', label: t('nav.home'), Icon: LayoutDashboard, exact: true },
-    { href: '/pos-sales', label: 'Ventas', short: 'Ventas', Icon: ShoppingCart },
-    { href: '/products', label: 'Stock', short: 'Stock', Icon: Package },
-    { href: '/customers', label: t('nav.customers'), short: 'Clientes', Icon: Users },
-    { href: '/delivery-notes', label: t('nav.deliveryNotes'), short: 'Despachos', Icon: FileText },
-    { href: '/payments', label: t('nav.payments'), short: 'Cobros', Icon: Banknote },
-    { href: '/purchases', label: t('nav.purchases'), short: 'Compras', Icon: Truck },
-    { href: '/reports', label: t('nav.reports'), short: 'Reportes', Icon: BarChart3 },
-    { href: '/conflicts', label: 'Inconsistencias', short: 'Inconsist.', Icon: AlertTriangle },
-    { href: '/settings', label: t('nav.settings'), short: 'Ajustes', Icon: Settings },
+  const mobileItems: MobileNavItem[] = [
+    { href: '/', label: t('nav.home'), icon: 'home' as const, exact: true },
+    { href: '/pos-sales', label: 'Ventas', short: 'Ventas', icon: 'cart' as const },
+    { href: '/products', label: 'Stock', short: 'Stock', icon: 'package' as const },
+    { href: '/customers', label: t('nav.customers'), short: 'Clientes', icon: 'users' as const },
+    {
+      href: '/delivery-notes',
+      label: t('nav.deliveryNotes'),
+      short: 'Despachos',
+      icon: 'fileText' as const,
+    },
+    { href: '/payments', label: t('nav.payments'), short: 'Cobros', icon: 'banknote' as const },
+    { href: '/purchases', label: t('nav.purchases'), short: 'Compras', icon: 'truck' as const },
+    { href: '/reports', label: t('nav.reports'), short: 'Reportes', icon: 'chart' as const },
+    { href: '/conflicts', label: 'Inconsistencias', short: 'Inconsist.', icon: 'alert' as const },
+    { href: '/settings', label: t('nav.settings'), short: 'Ajustes', icon: 'settings' as const },
   ].filter(({ href }) => canOpen(ctx.actor, href));
-
-  const tabItems =
-    mobileNav.length <= TAB_BAR_SLOTS ? mobileNav : mobileNav.slice(0, TAB_BAR_SLOTS - 1);
-  const moreItems = mobileNav.length <= TAB_BAR_SLOTS ? [] : mobileNav.slice(TAB_BAR_SLOTS - 1);
 
   return (
     <div className="min-h-screen lg:flex">
@@ -239,59 +214,7 @@ export async function AppFrame({
           <p className="border-t border-line pt-5 text-xs text-muted">{t('legal.notice')}</p>
         </footer>
 
-        <nav
-          aria-label={t('nav.mobile')}
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
-        >
-          <ul className="mx-auto flex h-16 max-w-lg items-stretch">
-            {tabItems.map((item) => (
-              <li key={item.href} className="flex-1">
-                <NavLink
-                  href={item.href}
-                  {...(item.exact === true ? { exact: true } : {})}
-                  hint="top"
-                  className="relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors [&[aria-current=page]>svg]:[stroke-width:2.25]"
-                  activeClassName="text-brand before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:rounded-pill before:bg-brand"
-                  idleClassName="text-muted active:text-ink"
-                >
-                  <item.Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
-                  <span className="max-w-full truncate px-1">{item.short ?? item.label}</span>
-                </NavLink>
-              </li>
-            ))}
-
-            {moreItems.length > 0 && (
-              <li className="flex-1">
-                <NavDetails className="relative h-full">
-                  <MoreSummary
-                    hrefs={moreItems.map((item) => item.href)}
-                    className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-1 text-[11px] font-medium [&::-webkit-details-marker]:hidden"
-                    activeClassName="text-brand"
-                    idleClassName="text-muted"
-                  >
-                    <MoreHorizontal aria-hidden="true" className="size-5" strokeWidth={1.75} />
-                    <span>{t('nav.more')}</span>
-                  </MoreSummary>
-                  <div className="absolute right-2 bottom-[calc(100%+0.5rem)] w-56 rounded-card border border-line bg-surface p-1.5 shadow-lg">
-                    {moreItems.map((item) => (
-                      <NavLink
-                        key={item.href}
-                        href={item.href}
-                        hint="inline"
-                        className="flex items-center gap-3 rounded-control px-3 py-2.5 text-sm"
-                        activeClassName="bg-brand-soft font-medium text-brand"
-                        idleClassName="text-ink active:bg-subtle"
-                      >
-                        <item.Icon aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
-                        {item.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </NavDetails>
-              </li>
-            )}
-          </ul>
-        </nav>
+        <MobileNav items={mobileItems} moreLabel={t('nav.more')} />
       </div>
     </div>
   );
