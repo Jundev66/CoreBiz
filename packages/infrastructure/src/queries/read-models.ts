@@ -233,6 +233,7 @@ class PrismaProductQueries implements ProductQueries {
     includeArchived?: boolean;
     limit?: number;
     cursor?: string;
+    since?: Date;
   }): Promise<Page<ProductListItem>> {
     const limit = pageLimit(filter.limit);
 
@@ -256,6 +257,7 @@ class PrismaProductQueries implements ProductQueries {
         where: {
           tenant_id: this.ctx.tenantId,
           ...(filter.includeArchived !== true ? { archived_at: null } : {}),
+          ...(filter.since ? { updated_at: { gt: filter.since } } : {}),
           ...(search !== '' ? coincideCon(['name', 'sku'], search) : {}),
           ...(cursor !== null ? despuesDelCursor(cursor) : {}),
         },
