@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { InsightsController } from './insights.controller';
+import { GetSalesSummaryController, GetUsageController } from './controllers';
 
-@Module({ controllers: [InsightsController] })
+@Module({
+  controllers: [GetSalesSummaryController, GetUsageController],
+})
 export class InsightsModule {}

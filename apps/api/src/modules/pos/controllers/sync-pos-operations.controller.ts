@@ -34,7 +34,7 @@ function sanitizeDeviceId(id: unknown): string {
 
 export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
   'shift.open': (op) => {
-    const raw = (op.payload ?? {});
+    const raw = op.payload ?? {};
     const normalized = {
       ...raw,
       registerId: sanitizeRegisterId(raw.registerId),
@@ -61,7 +61,7 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
     ...closeCashShiftSchema.parse(op.payload),
   }),
   'sale.issue': (op) => {
-    const raw = (op.payload ?? {});
+    const raw = op.payload ?? {};
     let paymentMethod = raw.paymentMethod;
     if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
       paymentMethod = 'cash';
@@ -139,7 +139,7 @@ export class SyncPosOperationsController {
     }
 
     const results: PosSyncItemResult[] = [];
-    console.log(
+    console.warn(
       `[API /v1/pos/sync] Incoming batch from device ${body.deviceId}: ${body.operations.length} operations`,
     );
 
@@ -173,7 +173,7 @@ export class SyncPosOperationsController {
         } else {
           const val = dispatchResult.value as { status?: string; conflictId?: string } | undefined;
           const status = val?.status === 'duplicate' ? 'duplicate' : 'processed';
-          console.log(
+          console.warn(
             `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) succeeded: ${status}`,
           );
           results.push({

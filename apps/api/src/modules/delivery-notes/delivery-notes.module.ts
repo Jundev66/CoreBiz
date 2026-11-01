@@ -1,5 +1,19 @@
 import { Module } from '@nestjs/common';
-import { DeliveryNotesController } from './delivery-notes.controller';
+import {
+  ListDeliveryNotesController,
+  GetDeliveryNoteByIdController,
+  IssueDeliveryNoteController,
+  MarkDeliveryNoteDeliveredController,
+  VoidDeliveryNoteController,
+} from './controllers';
 
-@Module({ controllers: [DeliveryNotesController] })
+@Module({
+  controllers: [
+    ListDeliveryNotesController,
+    GetDeliveryNoteByIdController,
+    IssueDeliveryNoteController,
+    MarkDeliveryNoteDeliveredController,
+    VoidDeliveryNoteController,
+  ],
+})
 export class DeliveryNotesModule {}

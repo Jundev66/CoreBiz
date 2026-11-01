@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { DemoController } from './demo.controller';
+import { StartDemoSandboxController } from './controllers';
 
-@Module({ controllers: [DemoController] })
+@Module({
+  controllers: [StartDemoSandboxController],
+})
 export class DemoModule {}

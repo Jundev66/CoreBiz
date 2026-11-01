@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { SessionController } from './session.controller';
+import { GetSessionController, DestroyDemoSessionController } from './controllers';
 
-@Module({ controllers: [SessionController] })
+@Module({
+  controllers: [DestroyDemoSessionController, GetSessionController],
+})
 export class SessionModule {}

@@ -1,5 +1,21 @@
 import { Module } from '@nestjs/common';
-import { AiSettingsController, AssistantController } from './ai.controller';
+import {
+  GetAiSettingsController,
+  ListAiModelsController,
+  SaveAiSettingsController,
+  RemoveAiSettingsController,
+  GetAssistantStatusController,
+  ChatAssistantController,
+} from './controllers';
 
-@Module({ controllers: [AiSettingsController, AssistantController] })
+@Module({
+  controllers: [
+    GetAiSettingsController,
+    ListAiModelsController,
+    SaveAiSettingsController,
+    RemoveAiSettingsController,
+    GetAssistantStatusController,
+    ChatAssistantController,
+  ],
+})
 export class AiModule {}

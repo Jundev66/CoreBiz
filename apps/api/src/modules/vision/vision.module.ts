@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { VisionController } from './vision.controller';
+import { ExtractVisionDocumentController, ReindexVisionEmbeddingsController } from './controllers';
 
-@Module({ controllers: [VisionController] })
+@Module({
+  controllers: [ExtractVisionDocumentController, ReindexVisionEmbeddingsController],
+})
 export class VisionModule {}

@@ -125,6 +125,23 @@ Las decisiones con su contexto y sus alternativas descartadas están en [`docs/a
     de disfrazarlo de necesidad técnica.
 11. [La API se despliega en Vercel, no en Render](docs/adr/011-api-en-vercel.md)
 
+### Compromisos y Decisiones para Free-Tier (Vercel, Supabase, Redis)
+
+CoreBiz es una demostración integral y de nivel senior con un costo de infraestructura de **$0**. Para que un sistema de esta envergadura opere de forma robusta y permanente sin superar los límites gratuitos de las plataformas utilizadas, se tomaron decisiones de ingeniería deliberadas:
+
+1. **Vercel Serverless (Límite de ejecución de 10s en plan Hobby):**
+   - **Outbox Chunking en el POS**: En lugar de enviar ráfagas masivas de cientos de transacciones acumuladas fuera de línea en un único payload HTTP pesado (que provocaba errores 504 por timeout de 10s en Vercel), el motor de sincronización (`sync-engine.ts`) procesa el outbox en **lotes acotados de 10 operaciones**.
+   - **Compilación sin tests**: `apps/api/tsconfig.build.json` y el pipeline de empaquetado excluyen estrictamente las carpetas de pruebas (`apps/api/test/`), manteniendo los artefactos de las funciones serverless de Vercel mínimos, con arranques en frío (cold starts) por debajo de 500ms.
+   - **Controladores de Acción Única (Single-Action Controllers / CodelyTV ADR)**: Cada controlador en la API expone un único endpoint con dependencias explícitas (`@Inject(...)`), reduciendo el árbol de resolución en tiempo de arranque.
+
+2. **Supabase PostgreSQL (Conexiones y Almacenamiento Acotado):**
+   - **Delta Sync de Catálogo**: La sincronización del catálogo POS admite el parámetro `?since=<ISO_TIMESTAMP>`, transfiriendo únicamente registros modificados o creados recientemente en lugar de volcar la tabla completa en cada consulta. Esto ahorra cuota de ancho de banda y conexiones.
+   - **Pool de Conexiones Singleton**: Reutilización de pool con Prisma evitando agotar las conexiones concurrentes del free tier de Supabase.
+   - **Purga Automática de Sandboxes de Demostración**: Sandboxes de demostración efímeros (`/demo`) con TTL de 24 horas y degradación preventiva a modo solo lectura si la base de datos supera el 70% de su capacidad.
+
+3. **Arquitectura Offline-First en el POS:**
+   - La base local (Dexie / IndexedDB) absorbe toda la operativa de venta, aperturas de caja y movimientos de efectivo sin depender de llamadas continuas al servidor. La API serverless solo recibe ráfagas idempotentes cuando hay conectividad disponible.
+
 El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 

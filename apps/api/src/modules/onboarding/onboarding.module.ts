@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
-import { OnboardingController } from './onboarding.controller';
+import {
+  CreateTenantController,
+  PreviewInvitationController,
+  AcceptInvitationController,
+} from './controllers';
 
-@Module({ controllers: [OnboardingController] })
+@Module({
+  controllers: [CreateTenantController, PreviewInvitationController, AcceptInvitationController],
+})
 export class OnboardingModule {}

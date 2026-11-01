@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { InternalController } from './internal.controller';
+import { HitRateLimitController, PurgeExpiredDemosController } from './controllers';
 
-@Module({ controllers: [InternalController] })
+@Module({
+  controllers: [HitRateLimitController, PurgeExpiredDemosController],
+})
 export class InternalModule {}

@@ -207,7 +207,7 @@ module.exports = {
       severity: 'error',
       from: {
         path: '^(packages|apps|synapse-vision)/[^/]+/src/',
-        pathNot: '\.(spec|test)\.tsx?$',
+        pathNot: '(\\.(spec|test)\\.tsx?|\\.d\\.ts)$',
       },
       to: { dependencyTypes: ['npm-dev'], pathNot: 'node_modules/@types/' },
     },
