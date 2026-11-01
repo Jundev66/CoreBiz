@@ -65,48 +65,17 @@ export default async function PosSalesPage() {
       title="Ventas de Caja (Mostrador)"
       subtitle="Tickets cobrados en terminales de punto de venta físico"
       action={
-        <div className="flex items-center gap-2">
-          <Link
-            href="/delivery-notes"
-            className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            Ver Notas de Entrega
-          </Link>
-          <Link
-            href="/pos"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand/90"
-          >
-            <ShoppingCart className="size-3.5" />
-            Abrir Terminal POS
-          </Link>
-        </div>
+        <Link
+          href="/pos"
+          target="_blank"
+          className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand/90"
+        >
+          <ShoppingCart className="size-3.5" />
+          Abrir Terminal POS
+        </Link>
       }
     >
       <div className="space-y-6">
-        <div className="border-b border-line">
-          <nav className="-mb-px flex gap-6" aria-label="Tabs">
-            <Link
-              href="/pos-sales"
-              className="border-b-2 border-brand pb-3 text-sm font-semibold text-brand"
-            >
-              Tickets Mostrador (POS)
-            </Link>
-            <Link
-              href="/delivery-notes"
-              className="border-b-2 border-transparent pb-3 text-sm font-medium text-muted hover:border-line hover:text-ink transition"
-            >
-              Despachos (Notas de Entrega)
-            </Link>
-            <Link
-              href="/payments"
-              className="border-b-2 border-transparent pb-3 text-sm font-medium text-muted hover:border-line hover:text-ink transition"
-            >
-              Cobros y Cuentas por Cobrar
-            </Link>
-          </nav>
-        </div>
-
         {sales.length === 0 ? (
           <Empty icon={ShoppingCart}>
             <div className="max-w-sm">
@@ -140,7 +109,7 @@ export default async function PosSalesPage() {
                     <th className="py-3 px-4">Ticket</th>
                     <th className="py-3 px-4">Fecha y Hora</th>
                     <th className="py-3 px-4">Método de Pago</th>
-                    <th className="py-3 px-4 text-center">Renglones</th>
+                    <th className="py-3 px-4 text-center">Productos</th>
                     <th className="py-3 px-4 text-right">Subtotal</th>
                     <th className="py-3 px-4 text-right">Total Cobrado</th>
                     <th className="py-3 px-4 text-center">Detalle</th>
@@ -164,7 +133,7 @@ export default async function PosSalesPage() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-center font-mono text-muted">
-                        {sale.linesCount} ítem(s)
+                        {sale.linesCount} producto(s)
                       </td>
                       <td className="py-3 px-4 text-right font-mono text-muted">
                         $ {sale.subtotal}
