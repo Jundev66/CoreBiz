@@ -83,6 +83,7 @@ export function App() {
   const [showVariosModal, setShowVariosModal] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [showCashCheckoutModal, setShowCashCheckoutModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -189,9 +190,14 @@ export function App() {
     let animFrame: number;
 
     async function startCamera() {
+      setCameraError(null);
       try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setCameraError('Este navegador o dispositivo no tiene soporte para cámara.');
+          return;
+        }
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: { facingMode: { ideal: 'environment' } },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -221,7 +227,9 @@ export function App() {
           animFrame = requestAnimationFrame(scanLoop);
         }
       } catch {
-        setShowCameraModal(false);
+        setCameraError(
+          'No se detectó cámara web o se denegó el acceso. En PC podés escanear directamente con cualquier lector o pistola USB/Bluetooth apuntando al código sin abrir la cámara.',
+        );
       }
     }
 
@@ -571,7 +579,7 @@ export function App() {
                 ref={searchInputRef}
                 type="text"
                 data-barcode-receiver="true"
-                placeholder="Escanear con pistola USB / teclear SKU o Nombre (Enter agrega)..."
+                placeholder="Escanear con lector USB/Bluetooth o teclear SKU/Nombre (Enter agrega)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -588,12 +596,15 @@ export function App() {
             </div>
 
             <button
-              onClick={() => setShowCameraModal(true)}
+              onClick={() => {
+                setCameraError(null);
+                setShowCameraModal(true);
+              }}
               className="flex h-11 items-center gap-1.5 rounded-2xl border border-line bg-surface px-3.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
-              title="Escanear con cámara (Móvil / Tablet)"
+              title="Escanear con cámara web o cámara integrada"
             >
               <Camera className="h-4 w-4 text-brand" />
-              <span className="hidden md:inline">Cámara (Móvil)</span>
+              <span className="hidden md:inline">Cámara Web</span>
             </button>
 
             <button
@@ -2201,7 +2212,7 @@ export function App() {
             <div className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2">
                 <Camera className="h-4 w-4 text-brand" />
-                <h3 className="text-sm font-bold text-ink">Escanear Código (Cámara Móvil)</h3>
+                <h3 className="text-sm font-bold text-ink">Escanear Código con Cámara</h3>
               </div>
               <button
                 onClick={() => setShowCameraModal(false)}
@@ -2210,20 +2221,49 @@ export function App() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
-              <video
-                ref={videoRef}
-                playsInline
-                autoPlay
-                muted
-                className="h-full w-full object-cover"
-              />
-              <div className="pointer-events-none absolute inset-x-12 inset-y-8 rounded-xl border-2 border-dashed border-brand" />
-            </div>
-            <p className="mt-3 text-center text-xs text-muted">
-              Apuntá la cámara al código. En PC con pistola de código de barras USB, escaneá directo
-              sin abrir la cámara.
-            </p>
+
+            {cameraError ? (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 text-amber-500 mb-2" />
+                <p className="text-xs font-medium text-ink mb-3">{cameraError}</p>
+                <div className="rounded-xl bg-surface p-3 text-left text-xs text-muted border border-line">
+                  <div className="flex items-center gap-1.5 font-bold text-ink mb-1">
+                    <Barcode className="h-4 w-4 text-brand" />
+                    <span>¿Tenés lector o pistola USB / Bluetooth?</span>
+                  </div>
+                  <p>
+                    Funciona como teclado automático. No necesitás abrir la cámara: solo apuntá y
+                    dispará al código de barras desde la pantalla principal y el producto se cargará
+                    directo al carrito.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    autoPlay
+                    muted
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="pointer-events-none absolute inset-x-12 inset-y-8 rounded-xl border-2 border-dashed border-brand" />
+                </div>
+                <div className="mt-3 rounded-xl bg-subtle/70 p-2.5 text-xs text-muted border border-line flex items-start gap-2">
+                  <Barcode className="h-4 w-4 text-brand shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-ink">
+                      Lector de código de barras USB / Bluetooth
+                    </p>
+                    <p>
+                      En PC no hace falta abrir la cámara: podés disparar tu lector directamente
+                      desde la pantalla principal y el producto se añade al momento.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
