@@ -439,7 +439,7 @@ export function usePos(apiBaseUrl = '') {
       const outboxLines = cart.map((item) => ({
         id: item.id,
         productId: item.productId,
-        temporaryName: item.productId ? null : item.name,
+        temporaryName: item.name,
         barcodeScanned: item.barcodeScanned,
         quantity: item.quantity.toString(),
         unitPriceMinor: item.unitPriceMinor.toString(),

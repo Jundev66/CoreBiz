@@ -128,7 +128,12 @@ Then('I should see the best selling products', async ({ page }) => {
 });
 
 Then('the reports link is available', async ({ page }) => {
-  // Llevaba un candado al lado mientras el modulo era de pago. Ahora es un enlace y
-  // nada mas, que es justo lo que hay que comprobar: que sigue ahi y se puede pulsar.
-  await expect(page.getByRole('link', { name: /Reports/ })).toBeVisible();
+  const reportsLink = page.getByRole('link', { name: /Reports/ });
+  if (!(await reportsLink.isVisible())) {
+    const adminGroup = page.getByRole('button', { name: /Gestión/i });
+    if (await adminGroup.isVisible()) {
+      await adminGroup.click();
+    }
+  }
+  await expect(reportsLink).toBeVisible();
 });

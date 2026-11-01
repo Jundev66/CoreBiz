@@ -341,7 +341,15 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
   async findById(id: PosSaleId): Promise<PosSale | null> {
     const row = await this.tx.pos_sales.findFirst({
       where: { tenant_id: this.tenantId, id },
-      include: { lines: true },
+      include: {
+        lines: {
+          include: {
+            product: {
+              select: { name: true },
+            },
+          },
+        },
+      },
     });
     if (!row) return null;
 
@@ -365,7 +373,7 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
       lines: row.lines.map((l) => ({
         id: l.id,
         productId: l.product_id ? asId<ProductId>(l.product_id) : null,
-        temporaryName: l.temporary_name,
+        temporaryName: l.temporary_name ?? l.product?.name ?? null,
         barcodeScanned: l.barcode_scanned,
         quantity: Quantity.fromScaled(l.quantity),
         unitPrice: Money.fromMinor(l.unit_price_minor, 'USD'),
@@ -377,7 +385,15 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
   async findByOperationId(operationId: string): Promise<PosSale | null> {
     const row = await this.tx.pos_sales.findFirst({
       where: { tenant_id: this.tenantId, operation_id: operationId },
-      include: { lines: true },
+      include: {
+        lines: {
+          include: {
+            product: {
+              select: { name: true },
+            },
+          },
+        },
+      },
     });
     if (!row) return null;
 
@@ -401,7 +417,7 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
       lines: row.lines.map((l) => ({
         id: l.id,
         productId: l.product_id ? asId<ProductId>(l.product_id) : null,
-        temporaryName: l.temporary_name,
+        temporaryName: l.temporary_name ?? l.product?.name ?? null,
         barcodeScanned: l.barcode_scanned,
         quantity: Quantity.fromScaled(l.quantity),
         unitPrice: Money.fromMinor(l.unit_price_minor, 'USD'),
@@ -414,7 +430,15 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
     const limit = Math.min(100, Math.max(1, filter?.limit ?? 50));
     const rows = await this.tx.pos_sales.findMany({
       where: { tenant_id: this.tenantId },
-      include: { lines: true },
+      include: {
+        lines: {
+          include: {
+            product: {
+              select: { name: true },
+            },
+          },
+        },
+      },
       orderBy: { occurred_at: 'desc' },
       take: limit,
       ...(filter?.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
@@ -441,7 +465,7 @@ export class PrismaPosSaleRepository implements PosSaleRepository {
         lines: row.lines.map((l) => ({
           id: l.id,
           productId: l.product_id ? asId<ProductId>(l.product_id) : null,
-          temporaryName: l.temporary_name,
+          temporaryName: l.temporary_name ?? l.product?.name ?? null,
           barcodeScanned: l.barcode_scanned,
           quantity: Quantity.fromScaled(l.quantity),
           unitPrice: Money.fromMinor(l.unit_price_minor, 'USD'),

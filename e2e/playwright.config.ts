@@ -40,9 +40,7 @@ export default defineConfig({
   // Nadie deberia poder mezclar `test.only` en la rama principal.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // `exactOptionalPropertyTypes` prohibe pasar `undefined` explicito, asi que en local
-  // la clave simplemente no se define y Playwright aplica su valor por defecto.
-  ...(process.env.CI ? { workers: 2 } : {}),
+  workers: process.env.CI ? 2 : 1,
 
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['github'], ['list']]
