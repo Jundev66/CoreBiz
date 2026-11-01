@@ -20,7 +20,7 @@ export class GetPosCatalogController {
   async run(@Query(new ZodValidationPipe(catalogDeltaQuerySchema)) query: CatalogDeltaQuery) {
     const catalogPage = await this.runtime.queries.products.list({
       limit: query.limit,
-      since: query.since ? new Date(query.since) : undefined,
+      ...(query.since ? { since: new Date(query.since) } : {}),
     });
 
     return {

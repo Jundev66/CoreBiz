@@ -80,7 +80,7 @@ export default defineConfig({
           root: './apps/api',
           environment: 'node',
           globals: true,
-          include: ['test/**/*.test.ts'],
+          include: ['test/**/*.{test,spec}.ts'],
           exclude: ['test/**/*.integration.test.ts'],
         },
       },

@@ -1,5 +1,27 @@
 import { Module } from '@nestjs/common';
-import { ProductsController } from './products.controller';
+import {
+  ListProductsController,
+  GetProductOptionsController,
+  GetLowStockProductsController,
+  CreateProductController,
+  GetProductByIdController,
+  GetProductMovementsController,
+  UpdateProductController,
+  SetProductStatusController,
+  AdjustProductStockController,
+} from './controllers';
 
-@Module({ controllers: [ProductsController] })
+@Module({
+  controllers: [
+    ListProductsController,
+    GetProductOptionsController,
+    GetLowStockProductsController,
+    CreateProductController,
+    GetProductByIdController,
+    GetProductMovementsController,
+    UpdateProductController,
+    SetProductStatusController,
+    AdjustProductStockController,
+  ],
+})
 export class ProductsModule {}

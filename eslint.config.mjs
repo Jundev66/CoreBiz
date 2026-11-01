@@ -23,6 +23,7 @@ export default tseslint.config(
       // Codigo generado por `prisma generate`, con su propio `@ts-nocheck`.
       'packages/prisma-client/generated/**',
       'apps/web/public/**',
+      'apps/pos/dev-dist/**',
       'scripts/zap/**',
     ],
   },

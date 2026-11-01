@@ -1,0 +1,9 @@
+export { ListProductsController } from './list-products.controller';
+export { GetProductOptionsController } from './get-product-options.controller';
+export { GetLowStockProductsController } from './get-low-stock-products.controller';
+export { CreateProductController } from './create-product.controller';
+export { GetProductByIdController } from './get-product-by-id.controller';
+export { GetProductMovementsController } from './get-product-movements.controller';
+export { UpdateProductController } from './update-product.controller';
+export { SetProductStatusController } from './set-product-status.controller';
+export { AdjustProductStockController } from './adjust-product-stock.controller';

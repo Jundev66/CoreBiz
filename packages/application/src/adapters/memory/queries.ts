@@ -181,7 +181,6 @@ class InMemoryProductQueries implements ProductQueries {
   }): Promise<Page<ProductListItem>> {
     const items = this.scoped()
       .filter((p) => filter.includeArchived === true || !p.isArchived)
-      .filter((p) => (filter.since ? p.createdAt > filter.since : true))
       .filter((p) => matches([p.name, p.sku], filter.search ?? ''))
       .map((p): ProductListItem => this.toListItem(p));
 
