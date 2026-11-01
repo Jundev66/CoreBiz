@@ -6,7 +6,8 @@ import { GetDemoPosCustomersController } from './controllers/get-demo-pos-custom
 import { SyncPosOperationsController } from './controllers/sync-pos-operations.controller';
 import { GetPosConflictsController } from './controllers/get-pos-conflicts.controller';
 import { ResolvePosConflictController } from './controllers/resolve-pos-conflict.controller';
-import { GetPosSalesController } from './controllers/get-pos-sales.controller';
+import { ListPosSalesController } from './controllers/list-pos-sales.controller';
+import { GetPosSaleByIdController } from './controllers/get-pos-sale-by-id.controller';
 
 @Module({
   controllers: [
@@ -17,7 +18,8 @@ import { GetPosSalesController } from './controllers/get-pos-sales.controller';
     SyncPosOperationsController,
     GetPosConflictsController,
     ResolvePosConflictController,
-    GetPosSalesController,
+    ListPosSalesController,
+    GetPosSaleByIdController,
   ],
 })
 export class PosModule {}
