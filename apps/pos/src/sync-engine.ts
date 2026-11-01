@@ -104,63 +104,10 @@ export async function syncOutbox(
     return { syncedCount: 0, failedCount: 0, errors: [] };
   }
 
-  const now = Date.now();
-  const operations = await Promise.all(
-    pendingItems.map(async (item, idx) => {
-      const raw = (item.payload ?? {});
-      let paymentMethod = raw.paymentMethod;
-      if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
-        paymentMethod = 'cash';
-      } else if (paymentMethod === 'pago_movil') {
-        paymentMethod = 'transfer';
-      } else if (paymentMethod === 'punto_debito') {
-        paymentMethod = 'card';
-      }
-
-      const lines = Array.isArray(raw.lines)
-        ? raw.lines.map((l: Record<string, unknown>) => ({
-            ...l,
-            quantity: typeof l.quantity === 'number' ? l.quantity.toString() : l.quantity,
-            unitPriceMinor:
-              typeof l.unitPriceMinor === 'number' || typeof l.unitPriceMinor === 'bigint'
-                ? l.unitPriceMinor.toString()
-                : l.unitPriceMinor,
-          }))
-        : raw.lines;
-
-      const rawRegisterId = raw.registerId;
-      const validRegisterId =
-        typeof rawRegisterId === 'string' &&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawRegisterId)
-          ? rawRegisterId
-          : '00000000-0000-0000-0000-000000000099';
-
-      const rawDeviceId = raw.deviceId;
-      const validDeviceId =
-        typeof rawDeviceId === 'string' &&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDeviceId)
-          ? rawDeviceId
-          : deviceId || '018e245a-0000-7000-8000-000000000001';
-
-      const normalizedPayload = {
-        ...raw,
-        registerId: validRegisterId,
-        deviceId: validDeviceId,
-        paymentMethod,
-        lines,
-      };
-
-      const computedHash = await computePayloadHash(normalizedPayload);
-
-      return {
-        operationId: item.operationId,
-        type: item.type,
-        sequence: item.sequence < 1000 ? now + idx : item.sequence,
-        payloadHash: computedHash,
-        payload: normalizedPayload,
-      };
-    }),
-  );
+  const CHUNK_SIZE = 10;
+  let totalSynced = 0;
+  let totalFailed = 0;
+  const allErrors: string[] = [];
 
   const cleanDeviceId =
     typeof deviceId === 'string' &&
@@ -168,87 +115,146 @@ export async function syncOutbox(
       ? deviceId
       : '018e245a-0000-7000-8000-000000000001';
 
-  const batchPayload = {
-    deviceId: cleanDeviceId,
-    operations,
-  };
+  for (let offset = 0; offset < pendingItems.length; offset += CHUNK_SIZE) {
+    const chunk = pendingItems.slice(offset, offset + CHUNK_SIZE);
+    const now = Date.now();
+    const operations = await Promise.all(
+      chunk.map(async (item, idx) => {
+        const raw = item.payload ?? {};
+        let paymentMethod = raw.paymentMethod;
+        if (paymentMethod === 'cash_usd' || paymentMethod === 'cash_ves') {
+          paymentMethod = 'cash';
+        } else if (paymentMethod === 'pago_movil') {
+          paymentMethod = 'transfer';
+        } else if (paymentMethod === 'punto_debito') {
+          paymentMethod = 'card';
+        }
 
-  try {
-    const res = await fetch(`${apiBaseUrl}/v1/pos/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(batchPayload),
-    });
+        const lines = Array.isArray(raw.lines)
+          ? raw.lines.map((l: Record<string, unknown>) => ({
+              ...l,
+              quantity: typeof l.quantity === 'number' ? l.quantity.toString() : l.quantity,
+              unitPriceMinor:
+                typeof l.unitPriceMinor === 'number' || typeof l.unitPriceMinor === 'bigint'
+                  ? l.unitPriceMinor.toString()
+                  : l.unitPriceMinor,
+            }))
+          : raw.lines;
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('POS Sync HTTP error:', res.status, errText);
-      throw new Error(`Sync HTTP error: ${res.status} - ${errText}`);
-    }
+        const rawRegisterId = raw.registerId;
+        const validRegisterId =
+          typeof rawRegisterId === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawRegisterId)
+            ? rawRegisterId
+            : '00000000-0000-0000-0000-000000000099';
 
-    const data = (await res.json()) as {
-      results: Array<{
-        operationId: string;
-        status: 'processed' | 'duplicate' | 'failed' | 'enqueued';
-        error?: string;
-        conflictId?: string;
-      }>;
+        const rawDeviceId = raw.deviceId;
+        const validDeviceId =
+          typeof rawDeviceId === 'string' &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDeviceId)
+            ? rawDeviceId
+            : deviceId || '018e245a-0000-7000-8000-000000000001';
+
+        const normalizedPayload = {
+          ...raw,
+          registerId: validRegisterId,
+          deviceId: validDeviceId,
+          paymentMethod,
+          lines,
+        };
+
+        const computedHash = await computePayloadHash(normalizedPayload);
+
+        return {
+          operationId: item.operationId,
+          type: item.type,
+          sequence: item.sequence < 1000 ? now + idx : item.sequence,
+          payloadHash: computedHash,
+          payload: normalizedPayload,
+        };
+      }),
+    );
+
+    const batchPayload = {
+      deviceId: cleanDeviceId,
+      operations,
     };
 
-    let syncedCount = 0;
-    let failedCount = 0;
-    const errors: string[] = [];
+    try {
+      const res = await fetch(`${apiBaseUrl}/v1/pos/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(batchPayload),
+      });
 
-    for (const result of data.results) {
-      const match = pendingItems.find((p) => p.operationId === result.operationId);
-      if (!match || match.id === undefined) continue;
-
-      let localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
-      if (!localSale && match.payload && typeof match.payload.saleId === 'string') {
-        localSale = await posDb.sales.get(match.payload.saleId);
-      }
-      if (!localSale) {
-        const allSales = await posDb.sales.toArray();
-        localSale = allSales.find(
-          (s) => s.operationId === result.operationId || s.id === match.payload?.saleId,
-        );
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('POS Sync HTTP error:', res.status, errText);
+        throw new Error(`Sync HTTP error: ${res.status} - ${errText}`);
       }
 
-      if (
-        result.status === 'processed' ||
-        result.status === 'duplicate' ||
-        result.status === 'enqueued'
-      ) {
-        await posDb.outbox.update(match.id, {
-          status: 'synced',
-          errorMessage: null,
-        });
-        if (localSale) {
-          await posDb.sales.update(localSale.id, { syncStatus: 'synced' });
+      const data = (await res.json()) as {
+        results: Array<{
+          operationId: string;
+          status: 'processed' | 'duplicate' | 'failed' | 'enqueued';
+          error?: string;
+          conflictId?: string;
+        }>;
+      };
+
+      for (const result of data.results) {
+        const match = chunk.find((p) => p.operationId === result.operationId);
+        if (!match || match.id === undefined) continue;
+
+        let localSale = await posDb.sales.where('operationId').equals(result.operationId).first();
+        if (!localSale && match.payload && typeof match.payload.saleId === 'string') {
+          localSale = await posDb.sales.get(match.payload.saleId);
         }
-        syncedCount++;
-      } else {
-        await posDb.outbox.update(match.id, {
-          status: 'failed',
-          retryCount: match.retryCount + 1,
-          errorMessage: result.error ?? 'Unknown error',
-        });
-        if (localSale) {
-          await posDb.sales.update(localSale.id, { syncStatus: 'failed' });
+        if (!localSale) {
+          const allSales = await posDb.sales.toArray();
+          localSale = allSales.find(
+            (s) => s.operationId === result.operationId || s.id === match.payload?.saleId,
+          );
         }
-        failedCount++;
-        if (result.error) errors.push(result.error);
+
+        if (
+          result.status === 'processed' ||
+          result.status === 'duplicate' ||
+          result.status === 'enqueued'
+        ) {
+          await posDb.outbox.update(match.id, {
+            status: 'synced',
+            errorMessage: null,
+          });
+          if (localSale) {
+            await posDb.sales.update(localSale.id, { syncStatus: 'synced' });
+          }
+          totalSynced++;
+        } else {
+          await posDb.outbox.update(match.id, {
+            status: 'failed',
+            retryCount: match.retryCount + 1,
+            errorMessage: result.error ?? 'Unknown error',
+          });
+          if (localSale) {
+            await posDb.sales.update(localSale.id, { syncStatus: 'failed' });
+          }
+          totalFailed++;
+          if (result.error) allErrors.push(result.error);
+        }
       }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Network sync error';
+      allErrors.push(msg);
+      totalFailed += chunk.length;
+      break;
     }
-
-    return { syncedCount, failedCount, errors };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Network sync error';
-    return { syncedCount: 0, failedCount: pendingItems.length, errors: [msg] };
   }
+
+  return { syncedCount: totalSynced, failedCount: totalFailed, errors: allErrors };
 }
 
 export async function syncCatalog(

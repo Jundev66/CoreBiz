@@ -129,6 +129,7 @@ export interface ProductQueries {
     includeArchived?: boolean;
     limit?: number;
     cursor?: string;
+    since?: Date;
   }): Promise<Page<ProductListItem>>;
   options(limit?: number): Promise<readonly ProductOption[]>;
   /**
