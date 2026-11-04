@@ -14,9 +14,9 @@
     "@corebiz/contracts": "workspace:*",
     "@corebiz/domain": "workspace:*",
     "dexie": "^4.4.7",
-    "lucide-react": "^1.45.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "lucide-react": "^1.66.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "workbox-window": "^7.4.1"
   },
   "devDependencies": {
