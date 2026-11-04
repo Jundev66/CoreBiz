@@ -14,7 +14,7 @@
     "@synapse-vision/core": "workspace:*",
     "@langchain/core": "^0.3.40",
     "@langchain/langgraph": "^0.2.54",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^26.5.1",
