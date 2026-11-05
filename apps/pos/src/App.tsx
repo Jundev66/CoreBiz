@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { usePos } from './use-pos';
 import { detectBarcodeFromMedia, generateInternalBarcode } from './barcode';
-import { printInvoice, downloadInvoiceFile } from './invoice';
+import { printReceipt, downloadReceiptFile } from './receipt';
 import type { LocalProduct, LocalSale, LocalCustomer } from './db';
 
 export function App() {
@@ -340,7 +340,7 @@ export function App() {
         id: res.saleId,
         operationId: res.saleId,
         ticketNumber: res.ticketNumber,
-        invoiceControlNumber: res.invoiceControlNumber,
+        receiptSequenceNumber: res.receiptSequenceNumber,
         customerName: res.customerName,
         customerDoc: res.customerDoc,
         shiftId: currentShift?.id ?? '',
@@ -788,7 +788,7 @@ export function App() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-muted flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-brand" />
-                Facturación Fiscal
+                Datos de Venta
               </span>
               <span className="text-[10px] font-bold text-brand bg-brand-soft px-2 py-0.5 rounded-pill">
                 Se verifica al cobrar
@@ -1172,7 +1172,7 @@ export function App() {
 
               <div className="flex items-center gap-2">
                 <div className="rounded-xl border border-line bg-canvas px-3 py-1.5 text-center shadow-xs">
-                  <p className="text-[10px] font-bold text-muted uppercase">Total Facturado</p>
+                  <p className="text-[10px] font-bold text-muted uppercase">Total Vendido</p>
                   <p className="font-mono text-sm font-black text-brand">
                     ${totalSalesAmount.toFixed(2)}
                   </p>
@@ -1234,7 +1234,7 @@ export function App() {
                             {sale.ticketNumber}
                           </span>
                           <span className="font-mono text-[10px] text-muted">
-                            Ctrl: {sale.invoiceControlNumber}
+                            Seq: {sale.receiptSequenceNumber}
                           </span>
                           <span
                             className={`flex items-center gap-1 rounded-pill px-2 py-0.2 text-[9px] font-bold ${
@@ -1279,16 +1279,16 @@ export function App() {
                             <Eye className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            onClick={() => printInvoice(sale)}
+                            onClick={() => printReceipt(sale)}
                             className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-subtle transition cursor-pointer"
-                            title="Imprimir ticket fiscal (SENIAT 00093)"
+                            title="Imprimir comprobante de entrega"
                           >
                             <Printer className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            onClick={() => downloadInvoiceFile(sale)}
+                            onClick={() => downloadReceiptFile(sale)}
                             className="flex h-8 w-8 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-subtle transition cursor-pointer"
-                            title="Descargar comprobante digital"
+                            title="Descargar comprobante de entrega"
                           >
                             <Download className="h-3.5 w-3.5" />
                           </button>
@@ -1312,7 +1312,7 @@ export function App() {
                   <Banknote className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-ink">Cobro y Facturación</h3>
+                  <h3 className="text-base font-bold text-ink">Cobro y Despacho</h3>
                   <p className="text-[11px] text-muted">Seleccioná cliente y forma de pago</p>
                 </div>
               </div>
@@ -1402,7 +1402,7 @@ export function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
                     <User className="h-4 w-4 text-brand" />
-                    <span>Cliente para Factura</span>
+                    <span>Cliente para el Comprobante</span>
                   </div>
                   {selectedCustomer ? (
                     <span className="flex items-center gap-1 rounded-pill bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success-ink">
@@ -2438,14 +2438,14 @@ export function App() {
 
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button
-                onClick={() => printInvoice(lastSaleSuccess.sale)}
+                onClick={() => printReceipt(lastSaleSuccess.sale)}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Printer className="h-4 w-4 text-brand" />
                 Imprimir
               </button>
               <button
-                onClick={() => downloadInvoiceFile(lastSaleSuccess.sale)}
+                onClick={() => downloadReceiptFile(lastSaleSuccess.sale)}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Download className="h-4 w-4 text-brand" />
@@ -2468,10 +2468,10 @@ export function App() {
           <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <div>
-                <h3 className="text-base font-bold text-ink">Detalle de Factura</h3>
+                <h3 className="text-base font-bold text-ink">Detalle de la Venta</h3>
                 <p className="font-mono text-xs font-bold text-brand">
-                  {selectedSaleDetail.ticketNumber} | Ctrl:{' '}
-                  {selectedSaleDetail.invoiceControlNumber}
+                  {selectedSaleDetail.ticketNumber} | Seq:{' '}
+                  {selectedSaleDetail.receiptSequenceNumber}
                 </p>
               </div>
               <button
@@ -2529,7 +2529,7 @@ export function App() {
               </div>
 
               <div>
-                <h4 className="font-bold text-ink pb-1">Artículos facturados</h4>
+                <h4 className="font-bold text-ink pb-1">Artículos despachados</h4>
                 <div className="space-y-1.5">
                   {selectedSaleDetail.lines.map((item) => (
                     <div
@@ -2584,14 +2584,14 @@ export function App() {
 
             <div className="mt-4 flex gap-2 pt-2 border-t border-line">
               <button
-                onClick={() => printInvoice(selectedSaleDetail)}
+                onClick={() => printReceipt(selectedSaleDetail)}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Printer className="h-4 w-4 text-brand" />
                 Imprimir
               </button>
               <button
-                onClick={() => downloadInvoiceFile(selectedSaleDetail)}
+                onClick={() => downloadReceiptFile(selectedSaleDetail)}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-canvas py-2.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
               >
                 <Download className="h-4 w-4 text-brand" />

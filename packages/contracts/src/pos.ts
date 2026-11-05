@@ -109,7 +109,7 @@ export const issuePosSaleSchema = z
     deviceId: recordIdSchema,
     shiftId: recordIdSchema,
     ticketNumber: z.string().trim().min(3).max(50),
-    invoiceControlNumber: z.string().optional(),
+    receiptSequenceNumber: z.string().optional(),
     customerName: z.string().optional(),
     customerDoc: z.string().optional(),
     exchangeRateBcv: z.string().optional(),

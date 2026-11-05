@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeEan13CheckDigit, generateInternalBarcode, isValidEan13 } from './barcode';
 import { computePayloadHash } from './sync-engine';
-import { formatInvoiceHtml } from './invoice';
+import { formatReceiptHtml } from './receipt';
 import type { LocalSale } from './db';
 
 describe('POS Barcode Utilities', () => {
@@ -48,13 +48,13 @@ describe('POS Sync Engine Hasher', () => {
   });
 });
 
-describe('POS Invoice Generator', () => {
+describe('POS Receipt Generator', () => {
   it('includes payment reference when present on receipt', () => {
     const sale: LocalSale = {
       id: '018e245a-0000-7000-8000-000000000001',
       operationId: '018e245a-0000-7000-8000-000000000001',
       ticketNumber: 'CAJA-01-000123',
-      invoiceControlNumber: '00-12345678',
+      receiptSequenceNumber: '00-12345678',
       customerName: 'Juan Pérez',
       customerDoc: 'V-12345678',
       shiftId: 'shift-1',
@@ -79,7 +79,7 @@ describe('POS Invoice Generator', () => {
       syncStatus: 'synced',
     };
 
-    const html = formatInvoiceHtml(sale);
+    const html = formatReceiptHtml(sale);
     expect(html).toContain('REFERENCIA:');
     expect(html).toContain('REF-789456');
     expect(html).toContain('CONTADO (TRANSFER)');

@@ -29,6 +29,8 @@ export const ESCALATE_ONLY_KINDS = [
   'ApiUnavailable',
   'AuthUnavailable',
   'AiTimeout',
+  'JobEnqueueFailed',
+  'QueueUnavailable',
 ] as const;
 
 export type EscalateOnlyKind = (typeof ESCALATE_ONLY_KINDS)[number];
@@ -68,6 +70,23 @@ export const NO_PANEL_KINDS = [
   'ResetLinkExpired',
   // The demo does not start. Lives on /demo, a card without the app frame.
   'Unavailable',
+  // POS Terminal & Conflicts — runs on standalone POS PWA or API sync without the web frame
+  'ConflictAlreadyClosed',
+  'ConflictNotFound',
+  'DeviceAlreadyRevoked',
+  'DeviceNotActive',
+  'DeviceNotFound',
+  'EmptySaleLines',
+  'InsufficientCashInShift',
+  'InvalidPayloadHash',
+  'InvalidRegisterState',
+  'RegisterNotActive',
+  'RegisterNotFound',
+  'SaleAlreadyVoided',
+  'ShiftAlreadyClosed',
+  'ShiftAlreadyOpen',
+  'ShiftNotFound',
+  'ShiftNotOpen',
 ] as const;
 
 /**
@@ -95,6 +114,9 @@ export const INTERNAL_KINDS = [
   'NonPositiveRate',
   'UnconvertiblePair',
   'UnknownPlan',
+  'NegativeFloat',
+  'NoHandlerForCommand',
+  'EmptyResolutionNotes',
 ] as const;
 
 /**

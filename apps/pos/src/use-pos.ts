@@ -436,7 +436,7 @@ export function usePos(apiBaseUrl = '') {
       const occurredAt = new Date().toISOString();
 
       const ticketNumber = `${registerCode ?? 'CAJA-01'}-${Date.now().toString().slice(-6)}`;
-      const invoiceControlNumber = `00-${Date.now().toString().slice(-8)}`;
+      const receiptSequenceNumber = `00-${Date.now().toString().slice(-8)}`;
       const customerName = customer?.name?.trim() || 'Consumidor Final';
       const customerDoc = customer?.doc?.trim() || 'V-00000000';
 
@@ -471,7 +471,7 @@ export function usePos(apiBaseUrl = '') {
         id: saleId,
         operationId,
         ticketNumber,
-        invoiceControlNumber,
+        receiptSequenceNumber,
         customerName,
         customerDoc,
         shiftId,
@@ -508,7 +508,7 @@ export function usePos(apiBaseUrl = '') {
         deviceId: devId,
         shiftId,
         ticketNumber,
-        invoiceControlNumber,
+        receiptSequenceNumber,
         customerName,
         customerDoc,
         paymentMethod,
@@ -541,7 +541,7 @@ export function usePos(apiBaseUrl = '') {
       return {
         saleId,
         ticketNumber,
-        invoiceControlNumber,
+        receiptSequenceNumber,
         totalMinor: cartTotals.totalMinor,
         subtotalMinor: cartTotals.subtotalMinor,
         taxMinor: cartTotals.taxMinor,

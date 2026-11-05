@@ -34,7 +34,7 @@ export interface ProcessPosSaleInput {
   readonly deviceId: string;
   readonly shiftId: string;
   readonly ticketNumber: string;
-  readonly invoiceControlNumber?: string | null;
+  readonly receiptSequenceNumber?: string | null;
   readonly customerName?: string | null;
   readonly customerDoc?: string | null;
   readonly exchangeRateBcv?: string | null;

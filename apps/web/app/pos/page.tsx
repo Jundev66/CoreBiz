@@ -31,7 +31,8 @@ export default function PosLandingPage() {
           <div className="mt-6 space-y-4 text-xs text-muted leading-relaxed">
             <p>
               El punto de venta de CoreBiz está diseñado como una Progressive Web App autónoma para
-              garantizar que el cajero pueda facturar y cobrar sin depender de la conexión al ERP.
+              garantizar que el cajero pueda registrar ventas y cobrar sin depender de la conexión
+              al ERP.
             </p>
 
             {isDev ? (

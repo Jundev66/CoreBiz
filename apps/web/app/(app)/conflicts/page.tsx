@@ -58,8 +58,8 @@ export default async function ConflictsPage() {
                 {openCount} discrepancia(s) pendientes de resolución.
               </span>
               <span className="ml-1 text-muted">
-                Las ventas se registraron y conservaron para no frenar la facturación en caja, pero
-                el inventario resultante requiere conciliación.
+                Las ventas se registraron y conservaron para no frenar la atención en caja, pero el
+                inventario resultante requiere conciliación.
               </span>
             </div>
           </div>

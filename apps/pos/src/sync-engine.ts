@@ -85,7 +85,7 @@ export async function syncOutbox(
         deviceId: '018e245a-0000-7000-8000-000000000001',
         shiftId: s.shiftId,
         ticketNumber: s.ticketNumber,
-        invoiceControlNumber: s.invoiceControlNumber,
+        receiptSequenceNumber: s.receiptSequenceNumber,
         customerName: s.customerName,
         customerDoc: s.customerDoc,
         paymentMethod: s.paymentMethod,

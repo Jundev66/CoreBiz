@@ -1,6 +1,6 @@
 import type { LocalSale } from './db';
 
-export function formatInvoiceHtml(sale: LocalSale): string {
+export function formatReceiptHtml(sale: LocalSale): string {
   const dateFormatted = new Date(sale.occurredAt).toLocaleString('es-VE', {
     day: '2-digit',
     month: '2-digit',
@@ -37,7 +37,7 @@ export function formatInvoiceHtml(sale: LocalSale): string {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Factura ${sale.ticketNumber}</title>
+  <title>Ticket ${sale.ticketNumber}</title>
   <style>
     @page { size: 80mm auto; margin: 0; }
     body {
@@ -74,20 +74,20 @@ export function formatInvoiceHtml(sale: LocalSale): string {
     <h1>COREBIZ C.A.</h1>
     <p>RIF: J-50123456-7</p>
     <p>Av. Francisco de Miranda, Caracas, Venezuela</p>
-    <p class="font-bold">FACTURA DIGITAL</p>
-    <p style="font-size: 9px;">Providencia SENIAT SNAT/2026/00093 (Gaceta 43.484)</p>
+    <p class="font-bold">COMPROBANTE DE ENTREGA</p>
+    <p style="font-size: 9px;">DOCUMENTO INTERNO NO FISCAL</p>
   </div>
 
   <div class="divider"></div>
 
   <table class="meta-table">
     <tr>
-      <td class="font-bold">FACTURA N°:</td>
+      <td class="font-bold">TICKET N°:</td>
       <td class="text-right font-bold" style="font-family: monospace;">${sale.ticketNumber}</td>
     </tr>
     <tr>
-      <td class="font-bold">N° DE CONTROL:</td>
-      <td class="text-right" style="font-family: monospace;">${sale.invoiceControlNumber}</td>
+      <td class="font-bold">SECUENCIA:</td>
+      <td class="text-right" style="font-family: monospace;">${sale.receiptSequenceNumber}</td>
     </tr>
     <tr>
       <td>FECHA / HORA:</td>
@@ -168,28 +168,28 @@ export function formatInvoiceHtml(sale: LocalSale): string {
 
   <div class="text-center" style="font-size: 9px; color: #6b7280; margin-top: 10px;">
     <p>Gracias por su compra</p>
-    <p>Comprobante Digital Fiscal emitido conforme a la Providencia SNAT/2026/00093</p>
-    <p style="font-family: monospace; font-size: 8px;">HASH: ${sale.operationId.slice(0, 16)}...</p>
+    <p>Documento de control interno para entrega de mercancía</p>
+    <p style="font-family: monospace; font-size: 8px;">REF: ${sale.operationId.slice(0, 16)}...</p>
   </div>
 </body>
 </html>`;
 }
 
-export function downloadInvoiceFile(sale: LocalSale): void {
-  const html = formatInvoiceHtml(sale);
+export function downloadReceiptFile(sale: LocalSale): void {
+  const html = formatReceiptHtml(sale);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `Factura-${sale.ticketNumber}.html`;
+  link.download = `Ticket-${sale.ticketNumber}.html`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 
-export function printInvoice(sale: LocalSale): void {
-  const html = formatInvoiceHtml(sale);
+export function printReceipt(sale: LocalSale): void {
+  const html = formatReceiptHtml(sale);
   const printWindow = window.open('', '_blank', 'width=450,height=650');
   if (!printWindow) return;
 

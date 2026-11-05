@@ -51,7 +51,7 @@ export interface LocalSale {
   readonly id: string;
   readonly operationId: string;
   readonly ticketNumber: string;
-  readonly invoiceControlNumber: string;
+  readonly receiptSequenceNumber: string;
   readonly customerName: string;
   readonly customerDoc: string;
   readonly shiftId: string;
