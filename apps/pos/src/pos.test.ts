@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { computeEan13CheckDigit, generateInternalBarcode, isValidEan13 } from './barcode';
 import { computePayloadHash } from './sync-engine';
+import { formatInvoiceHtml } from './invoice';
+import type { LocalSale } from './db';
 
 describe('POS Barcode Utilities', () => {
   it('computes exact GS1 check digit for known EAN-13 barcodes', () => {
@@ -43,5 +45,43 @@ describe('POS Sync Engine Hasher', () => {
     expect(hash1).toBe(hash2);
     expect(hash1.length).toBe(64);
     expect(/^[0-9a-f]{64}$/.test(hash1)).toBe(true);
+  });
+});
+
+describe('POS Invoice Generator', () => {
+  it('includes payment reference when present on receipt', () => {
+    const sale: LocalSale = {
+      id: '018e245a-0000-7000-8000-000000000001',
+      operationId: '018e245a-0000-7000-8000-000000000001',
+      ticketNumber: 'CAJA-01-000123',
+      invoiceControlNumber: '00-12345678',
+      customerName: 'Juan Pérez',
+      customerDoc: 'V-12345678',
+      shiftId: 'shift-1',
+      registerCode: 'CAJA-01',
+      paymentMethod: 'transfer',
+      paymentReference: 'REF-789456',
+      subtotalMinor: '1000',
+      taxMinor: '160',
+      totalMinor: '1160',
+      exchangeRateBcv: '36.50',
+      lines: [
+        {
+          id: 'l1',
+          productId: 'p1',
+          name: 'Café Molido 500g',
+          quantity: 1,
+          unitPriceMinor: '1000',
+          lineTotalMinor: '1000',
+        },
+      ],
+      occurredAt: '2026-11-04T12:00:00.000Z',
+      syncStatus: 'synced',
+    };
+
+    const html = formatInvoiceHtml(sale);
+    expect(html).toContain('REFERENCIA:');
+    expect(html).toContain('REF-789456');
+    expect(html).toContain('CONTADO (TRANSFER)');
   });
 });

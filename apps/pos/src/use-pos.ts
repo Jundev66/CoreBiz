@@ -424,6 +424,7 @@ export function usePos(apiBaseUrl = '') {
     async (
       paymentMethod: 'cash' | 'card' | 'transfer' | 'split',
       customer?: CustomerCheckoutInput,
+      paymentReference?: string,
     ) => {
       if (!currentShift || cart.length === 0) return null;
 
@@ -464,6 +465,8 @@ export function usePos(apiBaseUrl = '') {
         defaultExchangeRate ||
         '36.50';
 
+      const cleanRef = paymentReference?.trim() || undefined;
+
       const localSaleRecord: LocalSale = {
         id: saleId,
         operationId,
@@ -474,6 +477,7 @@ export function usePos(apiBaseUrl = '') {
         shiftId,
         registerCode: registerCode ?? 'CAJA-01',
         paymentMethod,
+        paymentReference: cleanRef,
         subtotalMinor: cartTotals.subtotalMinor.toString(),
         taxMinor: cartTotals.taxMinor.toString(),
         totalMinor: cartTotals.totalMinor.toString(),
@@ -508,6 +512,7 @@ export function usePos(apiBaseUrl = '') {
         customerName,
         customerDoc,
         paymentMethod,
+        paymentReference: cleanRef,
         lines: outboxLines,
         occurredAt,
       });
@@ -545,6 +550,7 @@ export function usePos(apiBaseUrl = '') {
         customerDoc,
         lines: saleLines,
         paymentMethod,
+        paymentReference: cleanRef,
         occurredAt,
         syncStatus: latestSale?.syncStatus ?? 'pending',
       };

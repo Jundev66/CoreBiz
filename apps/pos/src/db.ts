@@ -57,6 +57,7 @@ export interface LocalSale {
   readonly shiftId: string;
   readonly registerCode: string;
   readonly paymentMethod: 'cash' | 'card' | 'transfer' | 'split';
+  readonly paymentReference?: string | undefined;
   readonly subtotalMinor: string;
   readonly taxMinor: string;
   readonly totalMinor: string;

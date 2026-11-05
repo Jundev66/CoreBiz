@@ -126,7 +126,7 @@ export async function syncOutbox(
           paymentMethod = 'cash';
         } else if (paymentMethod === 'pago_movil') {
           paymentMethod = 'transfer';
-        } else if (paymentMethod === 'punto_debito') {
+        } else if (paymentMethod === 'punto_debito' || paymentMethod === 'biopago') {
           paymentMethod = 'card';
         }
 

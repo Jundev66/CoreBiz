@@ -118,6 +118,14 @@ export function formatInvoiceHtml(sale: LocalSale): string {
       <td>CONDICIÓN:</td>
       <td class="text-right">CONTADO (${sale.paymentMethod.toUpperCase()})</td>
     </tr>
+    ${
+      sale.paymentReference
+        ? `<tr>
+      <td>REFERENCIA:</td>
+      <td class="text-right" style="font-family: monospace; font-weight: bold;">${sale.paymentReference}</td>
+    </tr>`
+        : ''
+    }
   </table>
 
   <div class="divider"></div>

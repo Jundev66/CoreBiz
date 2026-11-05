@@ -31,6 +31,7 @@ import {
   Clock,
   TrendingUp,
   Smartphone,
+  Fingerprint,
   Maximize2,
   Minimize2,
   Pencil,
@@ -109,8 +110,9 @@ export function App() {
   const [declaredCashInput, setDeclaredCashInput] = useState('');
   const [cashTenderedInput, setCashTenderedInput] = useState('');
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<
-    'cash_usd' | 'cash_ves' | 'pago_movil' | 'punto_debito'
+    'cash_usd' | 'cash_ves' | 'pago_movil' | 'punto_debito' | 'biopago'
   >('cash_usd');
+  const [paymentReferenceInput, setPaymentReferenceInput] = useState('');
   const [isEditingRateInCheckout, setIsEditingRateInCheckout] = useState(false);
   const [checkoutNewRateInput, setCheckoutNewRateInput] = useState('');
   const [vesTenderedInput, setVesTenderedInput] = useState('');
@@ -320,13 +322,18 @@ export function App() {
   const handleCheckout = async (
     method: 'cash' | 'card' | 'transfer' | 'split',
     changeAmount?: string,
+    reference?: string,
   ) => {
     if (!selectedCustomer) return;
 
-    const res = await checkoutSale(method, {
-      name: selectedCustomer.name,
-      doc: selectedCustomer.taxId,
-    });
+    const res = await checkoutSale(
+      method,
+      {
+        name: selectedCustomer.name,
+        doc: selectedCustomer.taxId,
+      },
+      reference,
+    );
 
     if (res) {
       const saleRecord: LocalSale = {
@@ -339,6 +346,7 @@ export function App() {
         shiftId: currentShift?.id ?? '',
         registerCode: registerCode ?? 'CAJA-01',
         paymentMethod: method,
+        paymentReference: res.paymentReference,
         subtotalMinor: res.subtotalMinor.toString(),
         taxMinor: res.taxMinor.toString(),
         totalMinor: res.totalMinor.toString(),
@@ -360,6 +368,7 @@ export function App() {
       setIsCreatingCustomerInCheckout(false);
       setCashTenderedInput('');
       setVesTenderedInput('');
+      setPaymentReferenceInput('');
       setShowCashCheckoutModal(false);
     }
   };
@@ -1576,7 +1585,7 @@ export function App() {
                 <label className="text-[11px] font-bold text-muted uppercase mb-1.5 block">
                   Forma de Pago
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -1642,6 +1651,22 @@ export function App() {
                   >
                     <CreditCard className="h-4 w-4 mb-0.5 text-brand" />
                     <span className="text-xs font-bold">Punto Débito</span>
+                    <span className="font-mono text-[10px] text-muted">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutPaymentMethod('biopago')}
+                    className={`flex flex-col items-center justify-center rounded-xl border p-2 text-center transition cursor-pointer ${
+                      checkoutPaymentMethod === 'biopago'
+                        ? 'border-brand bg-brand-soft/40 text-brand font-bold ring-2 ring-brand'
+                        : 'border-line bg-surface text-ink hover:bg-subtle'
+                    }`}
+                  >
+                    <Fingerprint className="h-4 w-4 mb-0.5 text-brand" />
+                    <span className="text-xs font-bold">Biopago</span>
                     <span className="font-mono text-[10px] text-muted">
                       Bs. {totalVesDecimal.toFixed(2)}
                     </span>
@@ -1752,29 +1777,49 @@ export function App() {
                 </div>
               )}
 
-              {checkoutPaymentMethod === 'pago_movil' && (
-                <div className="rounded-2xl border border-line bg-surface p-4 text-center space-y-1">
-                  <p className="text-xs font-bold text-ink">Cobro por Pago Móvil Interbancario</p>
-                  <p className="font-mono text-2xl font-black text-brand">
-                    Bs. {totalVesDecimal.toFixed(2)}
-                  </p>
-                  <p className="text-xs font-mono text-muted">
-                    Equivalente a ${totalDecimal.toFixed(2)} USD a Tasa BCV: {activeExchangeRate}
-                  </p>
-                </div>
-              )}
+              {(checkoutPaymentMethod === 'pago_movil' ||
+                checkoutPaymentMethod === 'punto_debito' ||
+                checkoutPaymentMethod === 'biopago') && (
+                <div className="rounded-2xl border border-line bg-surface p-4 text-center space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-ink">
+                      {checkoutPaymentMethod === 'pago_movil' &&
+                        'Cobro por Pago Móvil Interbancario'}
+                      {checkoutPaymentMethod === 'punto_debito' &&
+                        'Cobro por Punto de Venta (Tarjeta Débito)'}
+                      {checkoutPaymentMethod === 'biopago' &&
+                        'Cobro por Biopago (Huella Digital / BDV)'}
+                    </p>
+                    <p className="font-mono text-2xl font-black text-brand">
+                      Bs. {totalVesDecimal.toFixed(2)}
+                    </p>
+                    <p className="text-xs font-mono text-muted">
+                      Equivalente a ${totalDecimal.toFixed(2)} USD a Tasa BCV: {activeExchangeRate}
+                    </p>
+                  </div>
 
-              {checkoutPaymentMethod === 'punto_debito' && (
-                <div className="rounded-2xl border border-line bg-surface p-4 text-center space-y-1">
-                  <p className="text-xs font-bold text-ink">
-                    Cobro por Punto de Venta (Tarjeta Débito)
-                  </p>
-                  <p className="font-mono text-2xl font-black text-brand">
-                    Bs. {totalVesDecimal.toFixed(2)}
-                  </p>
-                  <p className="text-xs font-mono text-muted">
-                    Equivalente a ${totalDecimal.toFixed(2)} USD a Tasa BCV: {activeExchangeRate}
-                  </p>
+                  <div className="text-left pt-2 border-t border-line/60">
+                    <label className="text-[11px] font-bold text-ink block mb-1">
+                      Número de Referencia / Aprobación <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={paymentReferenceInput}
+                      onChange={(e) => setPaymentReferenceInput(e.target.value)}
+                      placeholder={
+                        checkoutPaymentMethod === 'pago_movil'
+                          ? 'Ej. 6 dígitos de la transferencia'
+                          : checkoutPaymentMethod === 'punto_debito'
+                            ? 'Ej. Nro. de lote o aprobación del voucher'
+                            : 'Ej. Referencia de aprobación Biopago'
+                      }
+                      className="w-full rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs font-semibold text-ink focus:border-brand focus:outline-none"
+                      autoFocus
+                    />
+                    <p className="mt-1 text-[10px] text-muted">
+                      Requerido para procesar la venta y conciliar con el banco.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1792,7 +1837,11 @@ export function App() {
                 disabled={
                   !selectedCustomer ||
                   (checkoutPaymentMethod === 'cash_usd' && tenderedNumber < totalDecimal) ||
-                  (checkoutPaymentMethod === 'cash_ves' && vesTenderedNumber < totalVesDecimal)
+                  (checkoutPaymentMethod === 'cash_ves' && vesTenderedNumber < totalVesDecimal) ||
+                  ((checkoutPaymentMethod === 'pago_movil' ||
+                    checkoutPaymentMethod === 'punto_debito' ||
+                    checkoutPaymentMethod === 'biopago') &&
+                    paymentReferenceInput.trim().length < 4)
                 }
                 onClick={() => {
                   if (checkoutPaymentMethod === 'cash_usd') {
@@ -1800,9 +1849,11 @@ export function App() {
                   } else if (checkoutPaymentMethod === 'cash_ves') {
                     void handleCheckout('cash', `Bs. ${vesChangeValue.toFixed(2)}`);
                   } else if (checkoutPaymentMethod === 'pago_movil') {
-                    void handleCheckout('transfer');
+                    void handleCheckout('transfer', undefined, paymentReferenceInput.trim());
                   } else if (checkoutPaymentMethod === 'punto_debito') {
-                    void handleCheckout('card');
+                    void handleCheckout('card', undefined, paymentReferenceInput.trim());
+                  } else if (checkoutPaymentMethod === 'biopago') {
+                    void handleCheckout('card', undefined, paymentReferenceInput.trim());
                   }
                 }}
                 className={`rounded-2xl px-6 py-2.5 text-xs font-extrabold text-white shadow-xs transition disabled:opacity-40 cursor-pointer ${
@@ -1819,6 +1870,8 @@ export function App() {
                   `Confirmar Pago Móvil (Bs. ${totalVesDecimal.toFixed(2)})`}
                 {checkoutPaymentMethod === 'punto_debito' &&
                   `Confirmar Punto Débito (Bs. ${totalVesDecimal.toFixed(2)})`}
+                {checkoutPaymentMethod === 'biopago' &&
+                  `Confirmar Biopago (Bs. ${totalVesDecimal.toFixed(2)})`}
               </button>
             </div>
           </div>
@@ -2451,6 +2504,14 @@ export function App() {
                     {selectedSaleDetail.paymentMethod}
                   </span>
                 </div>
+                {selectedSaleDetail.paymentReference && (
+                  <div className="flex justify-between text-muted">
+                    <span>Referencia:</span>
+                    <span className="font-mono font-bold text-brand">
+                      {selectedSaleDetail.paymentReference}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-muted">
                   <span>Estado ERP:</span>
                   <span
