@@ -60,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [locale, messages, theme] = await Promise.all([getLocale(), getMessages(), readTheme()]);
 
   return (
-    <html lang={locale} className={inter.variable} data-theme={theme}>
+    <html lang={locale} className={inter.variable} data-theme={theme} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider messages={messages}>
           {children}
