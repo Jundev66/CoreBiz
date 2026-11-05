@@ -43,7 +43,8 @@ export class EnrollPosDeviceController {
 
       let device = await repos.posDevices.findByInstallationId(body.installationId);
       const now = new Date();
-      const token = crypto.randomUUID();
+      const secret = crypto.randomUUID();
+      const token = `pos_dev_${this.ctx.tenantId}_${this.ctx.actor.userId}_${secret}`;
       const tokenHash = createHash('sha256').update(token).digest('hex');
 
       if (!device) {

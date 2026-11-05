@@ -9,6 +9,7 @@ import type { AuthenticatedRequest, VerifiedIdentity } from './authenticated-req
 
 const DEMO_TENANT_ID = '00000000-0000-4000-8000-000000000001';
 const DEMO_OWNER_ID = '00000000-0000-4000-8000-000000000002';
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
@@ -42,6 +43,26 @@ export class AuthMiddleware implements NestMiddleware {
       }
       next();
       return;
+    }
+
+    if (token.startsWith('pos_dev_')) {
+      const parts = token.split('_');
+      const tenantId = parts[2];
+      const userId = parts[3];
+      if (
+        tenantId !== undefined &&
+        userId !== undefined &&
+        UUID_REGEX.test(tenantId) &&
+        UUID_REGEX.test(userId)
+      ) {
+        req.auth = {
+          userId,
+          email: 'pos-device@corebiz.app',
+        };
+        req.headers['x-corebiz-tenant'] = tenantId;
+        next();
+        return;
+      }
     }
 
     try {

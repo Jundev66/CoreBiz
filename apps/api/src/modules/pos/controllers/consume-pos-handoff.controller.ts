@@ -107,7 +107,8 @@ export class ConsumePosHandoffController {
       }
 
       let device = await repos.posDevices.findByInstallationId(body.installationId);
-      const token = crypto.randomUUID();
+      const secret = crypto.randomUUID();
+      const token = `pos_dev_${tenantId}_${userId}_${secret}`;
       const tokenHash = createHash('sha256').update(token).digest('hex');
 
       if (!device) {
