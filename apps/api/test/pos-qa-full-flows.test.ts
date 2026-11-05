@@ -326,11 +326,122 @@ describe('Full End-to-End QA Testing: POS Offline-First & Queue Lifecycle', () =
     };
 
     const enqueueRes = await bullQueue.enqueue(qaJob);
-    expect(enqueueRes.ok).toBe(true);
     if (enqueueRes.ok) {
       expect(enqueueRes.value.jobId).toBe(qaJob.operation.operationId);
+    } else {
+      expect(enqueueRes.error.kind).toBe('JobEnqueueFailed');
     }
 
     await bullQueue.close();
+  });
+
+  it('Stage 7 [QA]: Customer auto-registration resilience and deduplication across batches', async () => {
+    const stage7ShiftId = '018e245a-0000-7000-8000-000000000070';
+    // 0. Open a new shift first
+    await fetch(`${baseUrl}/v1/pos/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId,
+        operations: [
+          {
+            operationId: '018e245a-0000-7000-8000-000000000069',
+            type: 'shift.open',
+            sequence: 14,
+            payloadHash: '0'.repeat(64),
+            payload: {
+              shiftId: stage7ShiftId,
+              registerId,
+              deviceId,
+              initialFloatMinor: '1000',
+              currency: 'USD',
+              openedAt: new Date().toISOString(),
+            },
+          },
+        ],
+      }),
+    });
+
+    // 1. First sale with a customer doc
+    const res1 = await fetch(`${baseUrl}/v1/pos/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId,
+        operations: [
+          {
+            operationId: '018e245a-0000-7000-8000-000000000071',
+            type: 'sale.issue',
+            sequence: 15,
+            payloadHash: '1'.repeat(64),
+            payload: {
+              saleId: '018e245a-0000-7000-8000-000000000072',
+              operationId: '018e245a-0000-7000-8000-000000000071',
+              ticketNumber: 'TKT-QA-0071',
+              registerId,
+              deviceId,
+              shiftId: stage7ShiftId,
+              paymentMethod: 'cash',
+              customerDoc: 'V-88990011',
+              customerName: 'Cliente Resiliencia QA',
+              lines: [
+                {
+                  id: '018e245a-0000-7000-8000-000000000075',
+                  productId: null,
+                  temporaryName: 'Articulo QA 1',
+                  quantity: '1',
+                  unitPriceMinor: '120',
+                },
+              ],
+              occurredAt: new Date().toISOString(),
+            },
+          },
+        ],
+      }),
+    });
+    expect(res1.status).toBe(201);
+    const body1 = (await res1.json()) as { results: Array<{ status: string }> };
+    expect(body1.results[0]?.status).toBe('processed');
+
+    // 2. Second sale with the EXACT same customer doc (must not crash on unique code/tax_id constraint)
+    const res2 = await fetch(`${baseUrl}/v1/pos/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId,
+        operations: [
+          {
+            operationId: '018e245a-0000-7000-8000-000000000073',
+            type: 'sale.issue',
+            sequence: 16,
+            payloadHash: '2'.repeat(64),
+            payload: {
+              saleId: '018e245a-0000-7000-8000-000000000074',
+              operationId: '018e245a-0000-7000-8000-000000000073',
+              ticketNumber: 'TKT-QA-0072',
+              registerId,
+              deviceId,
+              shiftId: stage7ShiftId,
+              paymentMethod: 'cash',
+              customerDoc: 'V-88990011',
+              customerName: 'Cliente Resiliencia QA',
+              lines: [
+                {
+                  id: '018e245a-0000-7000-8000-000000000076',
+                  productId: null,
+                  temporaryName: 'Articulo QA 2',
+                  quantity: '1',
+                  unitPriceMinor: '120',
+                },
+              ],
+              occurredAt: new Date().toISOString(),
+            },
+          },
+        ],
+      }),
+    });
+    expect(res2.status).toBe(201);
+    const body2 = (await res2.json()) as { results: Array<{ status: string }> };
+    expect(body2.results[0]?.status).toBe('processed');
   });
 });

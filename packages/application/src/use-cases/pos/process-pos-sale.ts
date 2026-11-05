@@ -123,9 +123,16 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         input.customerDoc.trim() !== 'V-00000000'
       ) {
         const cleanDoc = input.customerDoc.trim();
-        const existing = await repos.customers.list({ search: cleanDoc, limit: 1 });
-        if (existing.items.length === 0) {
-          const custCode = `CLI-${cleanDoc.replace(/[^A-Za-z0-9]/g, '').slice(-8) || Date.now().toString().slice(-6)}`;
+        const existingByDoc = await repos.customers.list({ search: cleanDoc, limit: 1 });
+        if (existingByDoc.items.length === 0) {
+          const rawDigits = cleanDoc.replace(/[^A-Za-z0-9]/g, '');
+          const rawSuffix = rawDigits.slice(-6) || Date.now().toString().slice(-6);
+          let custCode = `CLI-${rawSuffix}`;
+          const existingByCode = await repos.customers.findByCode(custCode);
+          if (existingByCode) {
+            custCode = `CLI-${rawSuffix}-${deps.ids.next().slice(0, 4)}`.toUpperCase();
+          }
+
           const custResult = Customer.create({
             id: asId<CustomerId>(deps.ids.next()),
             tenantId: deps.ctx.tenantId,
@@ -135,7 +142,11 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
             createdAt: deps.clock.now(),
           });
           if (custResult.ok) {
-            await repos.customers.save(custResult.value);
+            try {
+              await repos.customers.save(custResult.value);
+            } catch {
+              // Ignore unique or race condition constraint conflicts during customer auto-creation
+            }
           }
         }
       }
