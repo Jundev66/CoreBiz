@@ -612,6 +612,54 @@ export function usePos(apiBaseUrl = '') {
   useEffect(() => {
     setIsOnline(navigator.onLine);
     void (async () => {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const handoffToken = urlParams.get('handoff');
+        if (handoffToken) {
+          try {
+            let installId = (await posDb.config.get('installation_id'))?.value;
+            if (!installId) {
+              installId = crypto.randomUUID();
+              await posDb.config.put({ key: 'installation_id', value: installId });
+            }
+
+            const res = await fetch(`${apiBaseUrl}/v1/pos/handoff/consume`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                handoffToken,
+                installationId: installId,
+                name: 'Terminal Mostrador',
+                platform: navigator.platform || 'Web',
+                browser: navigator.userAgent.slice(0, 50),
+              }),
+            });
+
+            if (res.ok) {
+              const data = (await res.json()) as {
+                deviceId: string;
+                registerId: string;
+                registerCode: string;
+                deviceToken: string;
+                tenantId: string;
+              };
+              await posDb.config.put({ key: 'device_id', value: data.deviceId });
+              await posDb.config.put({ key: 'register_id', value: data.registerId });
+              await posDb.config.put({ key: 'register_code', value: data.registerCode });
+              await posDb.config.put({ key: 'device_token', value: data.deviceToken });
+              await posDb.config.put({ key: 'tenant_id', value: data.tenantId });
+
+              const cleanUrl = window.location.pathname + window.location.hash;
+              window.history.replaceState({}, document.title, cleanUrl);
+
+              await syncCatalog(apiBaseUrl, data.deviceToken);
+            }
+          } catch (err) {
+            console.error('Failed to consume handoff token:', err);
+          }
+        }
+      }
+
       await seedDemoDataIfEmpty();
       await refreshState();
       void triggerSync();

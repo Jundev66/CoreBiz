@@ -45,6 +45,30 @@ export const enrollDeviceResponseSchema = z
   .strict();
 export type EnrollDeviceResponse = z.infer<typeof enrollDeviceResponseSchema>;
 
+export const createPosHandoffResponseSchema = z
+  .object({
+    handoffToken: z.string().min(1),
+    expiresAt: z.string().datetime(),
+  })
+  .strict();
+export type CreatePosHandoffResponse = z.infer<typeof createPosHandoffResponseSchema>;
+
+export const consumePosHandoffSchema = z
+  .object({
+    handoffToken: z.string().min(1),
+    installationId: z.string().uuid(),
+    name: z.string().trim().min(1).max(100).optional(),
+    platform: z.string().trim().max(50).optional(),
+    browser: z.string().trim().max(50).optional(),
+  })
+  .strict();
+export type ConsumePosHandoffInput = z.infer<typeof consumePosHandoffSchema>;
+
+export const consumePosHandoffResponseSchema = enrollDeviceResponseSchema.extend({
+  tenantId: recordIdSchema,
+});
+export type ConsumePosHandoffResponse = z.infer<typeof consumePosHandoffResponseSchema>;
+
 export const openCashShiftSchema = z
   .object({
     shiftId: recordIdSchema,

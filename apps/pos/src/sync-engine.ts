@@ -1,4 +1,5 @@
 import { posDb, type OutboxItem, type LocalProduct, type LocalCustomer } from './db';
+import { DEMO_DEVICE_TOKEN } from './demo-seed';
 
 export async function computePayloadHash(payload: unknown): Promise<string> {
   const jsonStr = JSON.stringify(payload);
@@ -141,19 +142,37 @@ export async function syncOutbox(
             }))
           : raw.lines;
 
+        const storedRegEntry = await posDb.config.get('register_id');
+        const storedDevEntry = await posDb.config.get('device_id');
+        const configuredRegisterId = storedRegEntry?.value;
+        const configuredDeviceId = storedDevEntry?.value;
+
         const rawRegisterId = raw.registerId;
+        const isDemoRegister =
+          !rawRegisterId || rawRegisterId === '00000000-0000-0000-0000-000000000099';
         const validRegisterId =
-          typeof rawRegisterId === 'string' &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawRegisterId)
-            ? rawRegisterId
-            : '00000000-0000-0000-0000-000000000099';
+          isDemoRegister &&
+          configuredRegisterId &&
+          configuredRegisterId !== '00000000-0000-0000-0000-000000000099'
+            ? configuredRegisterId
+            : typeof rawRegisterId === 'string' &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                  rawRegisterId,
+                )
+              ? rawRegisterId
+              : configuredRegisterId || '00000000-0000-0000-0000-000000000099';
 
         const rawDeviceId = raw.deviceId;
+        const isDemoDevice = !rawDeviceId || rawDeviceId === '018e245a-0000-7000-8000-000000000001';
         const validDeviceId =
-          typeof rawDeviceId === 'string' &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDeviceId)
-            ? rawDeviceId
-            : deviceId || '018e245a-0000-7000-8000-000000000001';
+          isDemoDevice &&
+          configuredDeviceId &&
+          configuredDeviceId !== '018e245a-0000-7000-8000-000000000001'
+            ? configuredDeviceId
+            : typeof rawDeviceId === 'string' &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDeviceId)
+              ? rawDeviceId
+              : configuredDeviceId || deviceId || '018e245a-0000-7000-8000-000000000001';
 
         const normalizedPayload = {
           ...raw,
@@ -258,9 +277,11 @@ export async function syncOutbox(
 }
 
 export async function syncCatalog(
-  apiBaseUrl: string,
-  token: string,
+  apiBaseUrl = '',
+  token?: string,
 ): Promise<{ updatedCount: number }> {
+  const effectiveToken =
+    token || (await posDb.config.get('device_token'))?.value || DEMO_DEVICE_TOKEN;
   const lastSyncEntry = await posDb.config.get('last_catalog_sync_at');
   const sinceQuery = lastSyncEntry?.value
     ? `?since=${encodeURIComponent(lastSyncEntry.value)}&limit=500`
@@ -268,7 +289,7 @@ export async function syncCatalog(
 
   const res = await fetch(`${apiBaseUrl}/v1/pos/catalog${sinceQuery}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${effectiveToken}`,
     },
   });
 
