@@ -16,7 +16,6 @@ export default async function PosLandingPage() {
       redirect(`${posUrl}/?handoff=${encodeURIComponent(result.value.handoffToken)}`);
     }
   } catch (err) {
-    // If redirect throws NEXT_REDIRECT, rethrow it
     if (err && typeof err === 'object' && 'digest' in err) {
       throw err;
     }

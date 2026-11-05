@@ -64,7 +64,10 @@ export function makeOpenCashShift(deps: OpenCashShiftDeps) {
     const now = deps.clock.now();
 
     return deps.uow.run(async (repos) => {
-      const register = await repos.posRegisters.findById(registerId);
+      let register = await repos.posRegisters.findById(registerId);
+      if (!register) {
+        register = await repos.posRegisters.findByCode('CAJA-01');
+      }
       if (!register) {
         return err({ kind: 'RegisterNotFound', registerId: input.registerId });
       }

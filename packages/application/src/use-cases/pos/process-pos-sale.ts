@@ -92,10 +92,18 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         });
       }
 
+      let registerId: PosRegisterId = asId<PosRegisterId>(input.registerId);
+      let regRecord = await repos.posRegisters.findById(registerId);
+      if (!regRecord) {
+        regRecord = await repos.posRegisters.findByCode('CAJA-01');
+        if (regRecord) {
+          registerId = regRecord.id;
+        }
+      }
+
       const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
       let shift = await repos.cashShifts.findById(shiftId);
       if (!shift) {
-        const registerId: PosRegisterId = asId<PosRegisterId>(input.registerId);
         const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
         const autoShift = CashShift.open({
           id: shiftId,
@@ -154,7 +162,6 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       const saleId: PosSaleId = input.saleId
         ? asId<PosSaleId>(input.saleId)
         : asId<PosSaleId>(deps.ids.next());
-      const registerId: PosRegisterId = asId<PosRegisterId>(input.registerId);
       const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
       const occurredAt = new Date(input.occurredAt);
       const postedAt = deps.clock.now();

@@ -64,7 +64,7 @@ export class ConsumePosHandoffController {
       isDemo: false,
     };
 
-    if (activeDriver() === 'memory') {
+    if (activeDriver() === 'memory' || tenantId === '00000000-0000-4000-8000-000000000001') {
       return {
         deviceId: '018e245a-0000-7000-8000-000000000001',
         registerId: '00000000-0000-0000-0000-000000000099',

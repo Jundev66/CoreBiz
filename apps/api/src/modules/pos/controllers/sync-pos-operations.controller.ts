@@ -143,7 +143,20 @@ export class SyncPosOperationsController {
       `[API /v1/pos/sync] Incoming batch from device ${body.deviceId}: ${body.operations.length} operations`,
     );
 
+    const isTemplateTenant = this.ctx.tenantId === '00000000-0000-4000-8000-000000000001';
+
     for (const op of body.operations) {
+      if (isTemplateTenant) {
+        console.warn(
+          `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) acknowledged for demo template tenant`,
+        );
+        results.push({
+          operationId: op.operationId,
+          status: 'processed',
+        });
+        continue;
+      }
+
       try {
         const buildCommand = COMMAND_DESERIALIZERS[op.type];
         if (!buildCommand) {
@@ -184,6 +197,17 @@ export class SyncPosOperationsController {
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Sync dispatch error';
+        if (errorMsg.includes('DEMO_TEMPLATE_LOCKED')) {
+          console.warn(
+            `[API /v1/pos/sync] Demo template locked: treating operation ${op.operationId} as processed`,
+          );
+          results.push({
+            operationId: op.operationId,
+            status: 'processed',
+          });
+          continue;
+        }
+
         console.error(
           `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) exception:`,
           errorMsg,

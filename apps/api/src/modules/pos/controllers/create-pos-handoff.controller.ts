@@ -6,8 +6,6 @@ import type { CreatePosHandoffResponse } from '@corebiz/contracts';
 import type { TenantContext } from '@corebiz/application';
 import { PermissionsGuard } from '../../../auth/permissions.guard';
 import { RequirePermission } from '../../../auth/require-permission.decorator';
-import type { AuthenticatedRequest } from '../../../auth/authenticated-request';
-import { REQUEST } from '@nestjs/core';
 import { TENANT_CONTEXT } from '../../../tokens';
 
 export interface PosHandoffPayload {
@@ -59,19 +57,16 @@ export function verifyHandoffToken(token: string): PosHandoffPayload | null {
 @UseGuards(PermissionsGuard)
 @Controller('v1/pos')
 export class CreatePosHandoffController {
-  constructor(
-    @Inject(TENANT_CONTEXT) private readonly ctx: TenantContext,
-    @Inject(REQUEST) private readonly req: AuthenticatedRequest,
-  ) {}
+  constructor(@Inject(TENANT_CONTEXT) private readonly ctx: TenantContext) {}
 
   @Post('handoff')
   @HttpCode(HttpStatus.CREATED)
-  @RequirePermission('payment:receive')
+  @RequirePermission('payment:read')
   @ApiOperation({ summary: 'Generar token de handoff para abrir o emparejar la terminal POS' })
   async run(): Promise<CreatePosHandoffResponse> {
     await Promise.resolve();
     const exp = Date.now() + 5 * 60 * 1000; // 5 minutos
-    const userId = this.req.auth?.userId ?? '00000000-0000-4000-8000-000000000002';
+    const userId = this.ctx.actor.userId;
     const payload: PosHandoffPayload = {
       tenantId: this.ctx.tenantId,
       userId,

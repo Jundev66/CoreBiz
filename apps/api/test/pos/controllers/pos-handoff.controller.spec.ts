@@ -7,7 +7,6 @@ import {
 } from '../../../src/modules/pos/controllers/create-pos-handoff.controller';
 import { ConsumePosHandoffController } from '../../../src/modules/pos/controllers/consume-pos-handoff.controller';
 import type { TenantContext } from '@corebiz/application';
-import type { AuthenticatedRequest } from '../../../src/auth/authenticated-request';
 import { asId, type TenantId } from '@corebiz/domain';
 
 describe('PosHandoffControllers', () => {
@@ -67,12 +66,12 @@ describe('PosHandoffControllers', () => {
 
   describe('CreatePosHandoffController', () => {
     it('generates a valid handoff token with 5-minute expiration', async () => {
-      const ctx = { tenantId } as unknown as TenantContext;
-      const req = {
-        auth: { userId },
-      } as unknown as AuthenticatedRequest;
+      const ctx = {
+        tenantId,
+        actor: { userId },
+      } as unknown as TenantContext;
 
-      const controller = new CreatePosHandoffController(ctx, req);
+      const controller = new CreatePosHandoffController(ctx);
       const res = await controller.run();
 
       expect(res.handoffToken).toBeDefined();

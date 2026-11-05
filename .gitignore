@@ -71,3 +71,5 @@ scripts/zap/*.html
 scripts/zap/corebiz-zap-report/
 scripts/zap/report/
 scripts/zap/REPORT.md
+.vercel
+.env*

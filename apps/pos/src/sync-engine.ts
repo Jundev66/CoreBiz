@@ -67,6 +67,11 @@ export async function syncOutbox(
     }
   }
 
+  const storedReg = await posDb.config.get('register_id');
+  const storedDev = await posDb.config.get('device_id');
+  const activeRegId = storedReg?.value || '00000000-0000-0000-0000-000000000099';
+  const activeDevId = storedDev?.value || '018e245a-0000-7000-8000-000000000001';
+
   const unsyncedSales = await posDb.sales.where('syncStatus').notEqual('synced').toArray();
   for (const s of unsyncedSales) {
     const existingOp = await posDb.outbox.where('operationId').equals(s.operationId).first();
@@ -82,8 +87,8 @@ export async function syncOutbox(
       await queueOutboxOperation(s.operationId, 'sale.issue', {
         saleId: s.id,
         operationId: s.operationId,
-        registerId: '00000000-0000-0000-0000-000000000099',
-        deviceId: '018e245a-0000-7000-8000-000000000001',
+        registerId: activeRegId,
+        deviceId: activeDevId,
         shiftId: s.shiftId,
         ticketNumber: s.ticketNumber,
         receiptSequenceNumber: s.receiptSequenceNumber,
