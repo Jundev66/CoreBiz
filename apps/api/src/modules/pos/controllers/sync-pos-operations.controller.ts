@@ -35,8 +35,15 @@ function sanitizeDeviceId(id: unknown): string {
 export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
   'shift.open': (op) => {
     const raw = op.payload ?? {};
+    const shiftId =
+      typeof raw.shiftId === 'string' && raw.shiftId.trim().length > 0
+        ? raw.shiftId.trim()
+        : typeof op.operationId === 'string' && op.operationId.trim().length > 0
+          ? op.operationId.trim()
+          : sanitizeDeviceId(null);
     const normalized = {
       ...raw,
+      shiftId,
       registerId: sanitizeRegisterId(raw.registerId),
       deviceId: sanitizeDeviceId(raw.deviceId),
       initialFloatMinor:
@@ -78,7 +85,8 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
       paymentMethod = 'cash';
     }
 
-    let ticketNumber = typeof raw.ticketNumber === 'string' ? raw.ticketNumber.trim() : '';
+    let ticketNumber =
+      typeof raw.ticketNumber === 'string' ? raw.ticketNumber.trim().toUpperCase() : '';
     if (!/^[A-Z0-9_-]+-\d{4,}$/.test(ticketNumber)) {
       ticketNumber = `CAJA-01-${Date.now().toString().slice(-6)}`;
     }
@@ -107,6 +115,10 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
     const lines = rawLines.map((l: Record<string, unknown>) => ({
       ...l,
       id: typeof l.id === 'string' && l.id.length > 0 ? l.id : sanitizeDeviceId(null),
+      productId:
+        typeof l.productId === 'string' && l.productId.trim().length > 0
+          ? l.productId.trim()
+          : null,
       quantity:
         typeof l.quantity === 'number'
           ? l.quantity.toString()
@@ -128,9 +140,15 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
           ? op.operationId
           : sanitizeDeviceId(null);
 
+    const shiftId =
+      typeof raw.shiftId === 'string' && raw.shiftId.trim().length > 0
+        ? raw.shiftId.trim()
+        : sanitizeDeviceId(null);
+
     const normalized = {
       ...raw,
       saleId,
+      shiftId,
       ticketNumber,
       occurredAt,
       registerId: sanitizeRegisterId(raw.registerId),
