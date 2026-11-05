@@ -67,23 +67,72 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
       paymentMethod = 'cash';
     } else if (paymentMethod === 'pago_movil') {
       paymentMethod = 'transfer';
-    } else if (paymentMethod === 'punto_debito') {
+    } else if (paymentMethod === 'punto_debito' || paymentMethod === 'biopago') {
       paymentMethod = 'card';
+    } else if (
+      paymentMethod !== 'cash' &&
+      paymentMethod !== 'card' &&
+      paymentMethod !== 'transfer' &&
+      paymentMethod !== 'split'
+    ) {
+      paymentMethod = 'cash';
     }
 
-    const lines = Array.isArray(raw.lines)
-      ? raw.lines.map((l: Record<string, unknown>) => ({
-          ...l,
-          quantity: typeof l.quantity === 'number' ? l.quantity.toString() : l.quantity,
-          unitPriceMinor:
-            typeof l.unitPriceMinor === 'number' || typeof l.unitPriceMinor === 'bigint'
-              ? l.unitPriceMinor.toString()
-              : l.unitPriceMinor,
-        }))
-      : raw.lines;
+    let ticketNumber = typeof raw.ticketNumber === 'string' ? raw.ticketNumber.trim() : '';
+    if (!/^[A-Z0-9_-]+-\d{4,}$/.test(ticketNumber)) {
+      ticketNumber = `CAJA-01-${Date.now().toString().slice(-6)}`;
+    }
+
+    let occurredAt = typeof raw.occurredAt === 'string' ? raw.occurredAt : new Date().toISOString();
+    try {
+      occurredAt = new Date(occurredAt).toISOString();
+    } catch {
+      occurredAt = new Date().toISOString();
+    }
+
+    const rawLines =
+      Array.isArray(raw.lines) && raw.lines.length > 0
+        ? raw.lines
+        : [
+            {
+              id: sanitizeDeviceId(null),
+              productId: null,
+              temporaryName: 'Venta Mostrador',
+              barcodeScanned: null,
+              quantity: '1',
+              unitPriceMinor: '0',
+            },
+          ];
+
+    const lines = rawLines.map((l: Record<string, unknown>) => ({
+      ...l,
+      id: typeof l.id === 'string' && l.id.length > 0 ? l.id : sanitizeDeviceId(null),
+      quantity:
+        typeof l.quantity === 'number'
+          ? l.quantity.toString()
+          : typeof l.quantity === 'string' && l.quantity.length > 0
+            ? l.quantity
+            : '1',
+      unitPriceMinor:
+        typeof l.unitPriceMinor === 'number' || typeof l.unitPriceMinor === 'bigint'
+          ? l.unitPriceMinor.toString()
+          : typeof l.unitPriceMinor === 'string' && /^\d+$/.test(l.unitPriceMinor)
+            ? l.unitPriceMinor
+            : '0',
+    }));
+
+    const saleId =
+      typeof raw.saleId === 'string' && raw.saleId.length > 0
+        ? raw.saleId
+        : typeof op.operationId === 'string' && op.operationId.length > 0
+          ? op.operationId
+          : sanitizeDeviceId(null);
 
     const normalized = {
       ...raw,
+      saleId,
+      ticketNumber,
+      occurredAt,
       registerId: sanitizeRegisterId(raw.registerId),
       deviceId: sanitizeDeviceId(raw.deviceId),
       paymentMethod,

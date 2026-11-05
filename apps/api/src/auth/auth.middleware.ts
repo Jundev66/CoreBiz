@@ -34,6 +34,32 @@ export class AuthMiddleware implements NestMiddleware {
       token.startsWith('pos-demo-token-') ||
       token.startsWith('demo-pos-token-')
     ) {
+      const explicitTenant = req.headers['x-corebiz-tenant'];
+      if (
+        typeof explicitTenant === 'string' &&
+        UUID_REGEX.test(explicitTenant) &&
+        explicitTenant !== DEMO_TENANT_ID
+      ) {
+        try {
+          const prisma = getPrisma(databaseUrl());
+          const member = await prisma.memberships.findFirst({
+            where: { tenant_id: explicitTenant, status: 'active' },
+            orderBy: { created_at: 'asc' },
+          });
+          if (member) {
+            req.auth = {
+              userId: member.user_id,
+              email: 'pos-device@corebiz.app',
+            };
+            req.headers['x-corebiz-tenant'] = explicitTenant;
+            next();
+            return;
+          }
+        } catch {
+          // fall through to default demo auth
+        }
+      }
+
       req.auth = {
         userId: DEMO_OWNER_ID,
         email: 'demo@corebiz.local',

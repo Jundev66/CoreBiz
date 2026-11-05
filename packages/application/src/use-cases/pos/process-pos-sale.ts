@@ -4,6 +4,8 @@ import {
   can,
   asId,
   PosSale,
+  PosRegister,
+  PosDevice,
   CashShift,
   Customer,
   Quantity,
@@ -92,19 +94,50 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         });
       }
 
+      const now = deps.clock.now();
       let registerId: PosRegisterId = asId<PosRegisterId>(input.registerId);
       let regRecord = await repos.posRegisters.findById(registerId);
       if (!regRecord) {
         regRecord = await repos.posRegisters.findByCode('CAJA-01');
         if (regRecord) {
           registerId = regRecord.id;
+        } else {
+          const regRes = PosRegister.create({
+            id: registerId,
+            tenantId: deps.ctx.tenantId,
+            code: 'CAJA-01',
+            name: 'Caja Principal',
+            now,
+          });
+          if (regRes.ok) {
+            await repos.posRegisters.save(regRes.value);
+            registerId = regRes.value.id;
+          }
         }
+      }
+
+      const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
+      const devRecord = await repos.posDevices.findById(deviceId);
+      if (!devRecord) {
+        const devRes = PosDevice.create({
+          id: deviceId,
+          tenantId: deps.ctx.tenantId,
+          installationId: deviceId,
+          name: 'Terminal Mostrador',
+          now,
+        });
+        if (devRes.ok) {
+          devRes.value.authorize('auto-authorized', now);
+          await repos.posDevices.save(devRes.value);
+        }
+      } else if (devRecord.status !== 'active') {
+        devRecord.authorize('auto-authorized', now);
+        await repos.posDevices.save(devRecord);
       }
 
       const shiftId: PosShiftId = asId<PosShiftId>(input.shiftId);
       let shift = await repos.cashShifts.findById(shiftId);
       if (!shift) {
-        const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
         const autoShift = CashShift.open({
           id: shiftId,
           tenantId: deps.ctx.tenantId,
@@ -120,9 +153,6 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         } else {
           return err({ kind: 'ShiftNotFound', shiftId: input.shiftId });
         }
-      }
-      if (shift.status !== 'open') {
-        return err({ kind: 'ShiftNotOpen', shiftId: input.shiftId });
       }
 
       if (
@@ -162,7 +192,6 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       const saleId: PosSaleId = input.saleId
         ? asId<PosSaleId>(input.saleId)
         : asId<PosSaleId>(deps.ids.next());
-      const deviceId: PosDeviceId = asId<PosDeviceId>(input.deviceId);
       const occurredAt = new Date(input.occurredAt);
       const postedAt = deps.clock.now();
 

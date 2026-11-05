@@ -204,12 +204,16 @@ export async function syncOutbox(
       operations,
     };
 
+    const tenantEntry = await posDb.config.get('tenant_id');
+    const tenantId = tenantEntry?.value;
+
     try {
       const res = await fetch(`${apiBaseUrl}/v1/pos/sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          ...(tenantId ? { 'x-corebiz-tenant': tenantId } : {}),
         },
         body: JSON.stringify(batchPayload),
       });
@@ -292,9 +296,13 @@ export async function syncCatalog(
     ? `?since=${encodeURIComponent(lastSyncEntry.value)}&limit=500`
     : '?limit=500';
 
+  const tenantEntry = await posDb.config.get('tenant_id');
+  const tenantId = tenantEntry?.value;
+
   const res = await fetch(`${apiBaseUrl}/v1/pos/catalog${sinceQuery}`, {
     headers: {
       Authorization: `Bearer ${effectiveToken}`,
+      ...(tenantId ? { 'x-corebiz-tenant': tenantId } : {}),
     },
   });
 

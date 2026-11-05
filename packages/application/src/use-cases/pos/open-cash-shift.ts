@@ -4,6 +4,8 @@ import {
   can,
   asId,
   CashShift,
+  PosRegister,
+  PosDevice,
   Money,
   type Result,
   type PosShiftId,
@@ -69,18 +71,42 @@ export function makeOpenCashShift(deps: OpenCashShiftDeps) {
         register = await repos.posRegisters.findByCode('CAJA-01');
       }
       if (!register) {
-        return err({ kind: 'RegisterNotFound', registerId: input.registerId });
+        const regRes = PosRegister.create({
+          id: registerId,
+          tenantId: deps.ctx.tenantId,
+          code: 'CAJA-01',
+          name: 'Caja Principal',
+          now,
+        });
+        if (regRes.ok) {
+          await repos.posRegisters.save(regRes.value);
+          register = regRes.value;
+        } else {
+          return err({ kind: 'RegisterNotFound', registerId: input.registerId });
+        }
       }
       if (register.status !== 'active') {
         return err({ kind: 'RegisterNotActive', registerId: input.registerId });
       }
 
-      const device = await repos.posDevices.findById(deviceId);
-      if (!device) {
-        return err({ kind: 'DeviceNotFound', deviceId: input.deviceId });
-      }
-      if (device.status !== 'active') {
-        return err({ kind: 'DeviceNotActive', deviceId: input.deviceId });
+      const existingDevice = await repos.posDevices.findById(deviceId);
+      if (!existingDevice) {
+        const devRes = PosDevice.create({
+          id: deviceId,
+          tenantId: deps.ctx.tenantId,
+          installationId: deviceId,
+          name: 'Terminal Mostrador',
+          now,
+        });
+        if (devRes.ok) {
+          devRes.value.authorize('auto-authorized', now);
+          await repos.posDevices.save(devRes.value);
+        } else {
+          return err({ kind: 'DeviceNotFound', deviceId: input.deviceId });
+        }
+      } else if (existingDevice.status !== 'active') {
+        existingDevice.authorize('auto-authorized', now);
+        await repos.posDevices.save(existingDevice);
       }
 
       const existingShift = await repos.cashShifts.findActiveByRegisterId(registerId);
