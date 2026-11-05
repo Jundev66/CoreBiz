@@ -98,6 +98,7 @@ export class AppModule implements NestModule {
         'v1/integrations/(.*)',
         'v1/pos/demo-catalog',
         'v1/pos/demo-customers',
+        'v1/pos/handoff/consume',
       )
       .forRoutes('*');
   }
