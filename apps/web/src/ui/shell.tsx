@@ -17,6 +17,7 @@ import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
 import { NavDetails } from '@/ui/nav-link';
 import { ThemeToggle } from '@/ui/theme-toggle';
+import { getPosTerminalUrl } from '@/ui/pos-link';
 
 /**
  * Marco comun de las pantallas de la aplicacion.
@@ -166,14 +167,15 @@ export async function AppFrame({
         </div>
 
         <div className="mt-auto border-t border-line p-4 space-y-3">
-          <Link
-            href="/pos"
+          <a
+            href={getPosTerminalUrl()}
             target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 rounded-control bg-brand-soft px-3 py-2 text-xs font-semibold text-brand transition hover:bg-brand/20"
           >
             <ShoppingCart className="size-4" />
             Terminal POS PWA
-          </Link>
+          </a>
           <AccountArea session={session} activeTenantId={ctx.tenantId} />
         </div>
       </aside>

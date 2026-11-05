@@ -50,6 +50,7 @@ export function App() {
     registerCode,
     isSyncing,
     syncStatusMessage,
+    clearSyncStatusMessage,
     totals,
     activeExchangeRate,
     defaultExchangeRate,
@@ -68,7 +69,9 @@ export function App() {
     searchCatalog,
     searchCustomers,
     saveCustomer,
-  } = usePos();
+  } = usePos(
+    (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL || '',
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LocalProduct[]>([]);
@@ -448,16 +451,13 @@ export function App() {
                   {isOnline ? 'En línea' : 'Offline'}
                 </span>
                 {pendingOutboxCount > 0 && (
-                  <button
-                    onClick={() => {
-                      void triggerSync();
-                    }}
-                    className="flex items-center gap-1 rounded-pill bg-warn-soft border border-warn/30 px-2 py-0.2 text-[10px] font-bold text-warn-ink hover:bg-warn-soft/80 transition cursor-pointer"
-                    title="Hay ventas u operaciones en cola local. Hacé clic para reintentar sincronización."
+                  <span
+                    className="flex items-center gap-1 rounded-pill bg-warn-soft border border-warn/30 px-2 py-0.2 text-[10px] font-bold text-warn-ink"
+                    title="Operaciones pendientes en cola local"
                   >
                     <Clock className="h-2.5 w-2.5" />
                     {pendingOutboxCount} en cola
-                  </button>
+                  </span>
                 )}
               </div>
             </div>
@@ -538,10 +538,21 @@ export function App() {
               void triggerSync();
             }}
             disabled={isSyncing || !isOnline}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft transition hover:bg-subtle disabled:opacity-50 cursor-pointer"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 text-xs font-semibold text-ink-soft transition hover:bg-subtle disabled:opacity-50 cursor-pointer shadow-xs"
             title="Sincronizar con ERP"
           >
-            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin text-brand' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${isSyncing ? 'animate-spin text-brand' : 'text-brand'}`}
+            />
+            <span className="hidden sm:inline">
+              {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+            </span>
+            {pendingOutboxCount > 0 && !isSyncing && (
+              <span
+                className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"
+                title={`${pendingOutboxCount} operaciones pendientes`}
+              />
+            )}
           </button>
 
           <button
@@ -555,17 +566,23 @@ export function App() {
       </header>
 
       {syncStatusMessage && (
-        <div className="bg-brand/10 border-b border-brand/20 px-4 py-2 text-xs font-semibold text-brand flex items-center justify-between">
+        <div
+          className={`border-b px-4 py-2 text-xs font-medium flex items-center justify-between transition-all ${
+            syncStatusMessage.includes('error') || syncStatusMessage.includes('problema')
+              ? 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300'
+              : 'bg-brand/10 border-brand/20 text-brand'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
             <span>{syncStatusMessage}</span>
           </div>
           <button
-            onClick={() => void triggerSync()}
-            disabled={isSyncing}
-            className="underline hover:text-brand-ink text-[11px] cursor-pointer"
+            onClick={clearSyncStatusMessage}
+            className="text-muted hover:text-ink text-xs cursor-pointer p-0.5"
+            title="Cerrar aviso"
           >
-            Reintentar sincronización
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
@@ -600,11 +617,11 @@ export function App() {
                 setCameraError(null);
                 setShowCameraModal(true);
               }}
-              className="flex h-11 items-center gap-1.5 rounded-2xl border border-line bg-surface px-3.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
-              title="Escanear con cámara web o cámara integrada"
+              className="flex md:hidden h-11 items-center gap-1.5 rounded-2xl border border-line bg-surface px-3.5 text-xs font-bold text-ink hover:bg-subtle transition shadow-xs cursor-pointer"
+              title="Escanear con cámara (dispositivos móviles)"
             >
               <Camera className="h-4 w-4 text-brand" />
-              <span className="hidden md:inline">Cámara Web</span>
+              <span>Cámara</span>
             </button>
 
             <button
@@ -1165,19 +1182,6 @@ export function App() {
                     </p>
                   </div>
                 )}
-                <button
-                  onClick={() => {
-                    void triggerSync();
-                  }}
-                  disabled={isSyncing}
-                  className="flex items-center gap-1.5 rounded-xl border border-line bg-canvas px-3 py-1.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
-                  title="Sincronizar ventas con ERP"
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 text-brand ${isSyncing ? 'animate-spin' : ''}`}
-                  />
-                  <span className="hidden sm:inline">Sincronizar</span>
-                </button>
                 <button
                   onClick={() => setShowSalesModal(false)}
                   className="rounded-xl p-1.5 text-muted hover:bg-subtle cursor-pointer ml-2"

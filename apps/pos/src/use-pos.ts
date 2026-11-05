@@ -122,21 +122,34 @@ export function usePos(apiBaseUrl = '') {
 
       const outboxResult = await syncOutbox(apiBaseUrl, token, deviceId);
       if (outboxResult.errors.length > 0) {
-        setSyncStatusMessage(`Error: ${outboxResult.errors.join(', ')}`);
+        console.error('POS Outbox sync errors:', outboxResult.errors);
+        setSyncStatusMessage(
+          'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
+        );
       } else if (outboxResult.syncedCount > 0) {
-        setSyncStatusMessage(`${outboxResult.syncedCount} venta(s) sincronizada(s) con éxito.`);
+        setSyncStatusMessage(
+          `${outboxResult.syncedCount} operación(es) sincronizada(s) con éxito.`,
+        );
       } else {
-        setSyncStatusMessage('Todas las operaciones están sincronizadas.');
+        setSyncStatusMessage('Operaciones al día con el ERP.');
       }
       return outboxResult;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error en sincronización';
-      setSyncStatusMessage(msg);
       console.error('POS Sync error:', err);
-      return { syncedCount: 0, failedCount: 0, errors: [msg] };
+      setSyncStatusMessage(
+        'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
+      );
+      return {
+        syncedCount: 0,
+        failedCount: 0,
+        errors: [err instanceof Error ? err.message : 'Error en sincronización'],
+      };
     } finally {
       setIsSyncing(false);
       await refreshState();
+      setTimeout(() => {
+        setSyncStatusMessage(null);
+      }, 5000);
     }
   }, [apiBaseUrl, refreshState]);
 
@@ -643,6 +656,7 @@ export function usePos(apiBaseUrl = '') {
     deviceToken,
     isSyncing,
     syncStatusMessage,
+    clearSyncStatusMessage: () => setSyncStatusMessage(null),
     activeExchangeRate,
     defaultExchangeRate,
     totals: cartTotals,

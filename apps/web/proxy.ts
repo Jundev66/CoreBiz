@@ -125,6 +125,7 @@ const SIN_SESION = [
   '/auth/callback',
   '/demo',
   '/api',
+  '/v1',
   '/offline',
   '/manifest.webmanifest',
   '/sw.js',

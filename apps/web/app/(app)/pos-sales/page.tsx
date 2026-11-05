@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getFormatter } from 'next-intl/server';
 import { ShoppingCart, ArrowRight } from 'lucide-react';
+import { getPosTerminalUrl } from '@/ui/pos-link';
 import { apiForRequest } from '@/api/session';
 import { get } from '@/api/client';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
@@ -65,14 +66,15 @@ export default async function PosSalesPage() {
       title="Ventas de Caja (Mostrador)"
       subtitle="Tickets cobrados en terminales de punto de venta físico"
       action={
-        <Link
-          href="/pos"
+        <a
+          href={getPosTerminalUrl()}
           target="_blank"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand/90"
         >
           <ShoppingCart className="size-3.5" />
           Abrir Terminal POS
-        </Link>
+        </a>
       }
     >
       <div className="space-y-6">

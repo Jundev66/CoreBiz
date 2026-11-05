@@ -189,8 +189,8 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
               <button
                 type="button"
                 onClick={() => setShowScanner(true)}
-                className="inline-flex items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                title="Escanear código de barras con la cámara del dispositivo"
+                className="inline-flex md:hidden items-center gap-1 rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Escanear código de barras con la cámara del dispositivo móvil"
               >
                 <Camera className="size-3.5 text-muted" />
                 Escanear con Cámara
