@@ -56,8 +56,13 @@ export class AuthMiddleware implements NestMiddleware {
         });
 
         if (device) {
+          const member = await prisma.memberships.findFirst({
+            where: { tenant_id: device.tenant_id, status: 'active' },
+            orderBy: { created_at: 'asc' },
+          });
+
           req.auth = {
-            userId: DEMO_OWNER_ID,
+            userId: member?.user_id ?? DEMO_OWNER_ID,
             email: 'pos-device@corebiz.app',
           };
           req.headers['x-corebiz-tenant'] = device.tenant_id;
