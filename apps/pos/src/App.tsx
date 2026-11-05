@@ -86,6 +86,14 @@ export function App() {
   const [showRateModal, setShowRateModal] = useState(false);
   const [showVariosModal, setShowVariosModal] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<{
+    prompt(): Promise<void>;
+    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+  } | null>(null);
+  const [isInstalledPwa, setIsInstalledPwa] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [showCashCheckoutModal, setShowCashCheckoutModal] = useState(false);
@@ -287,9 +295,65 @@ export function App() {
     setVariosPrice('10.00');
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    setIsInstalledPwa(isStandalone);
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(
+        e as unknown as {
+          prompt(): Promise<void>;
+          userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+        },
+      );
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalledPwa(true);
+      setDeferredInstallPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (deferredInstallPrompt) {
+      await deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsInstalledPwa(true);
+      }
+      setDeferredInstallPrompt(null);
+    } else {
+      setShowInstallGuideModal(true);
+    }
+  };
+
   const handleEnroll = async () => {
-    await enrollDevice(enrollPairingCode, enrollDeviceName);
-    setShowEnrollModal(false);
+    try {
+      setIsEnrolling(true);
+      setEnrollError(null);
+      await enrollDevice(enrollPairingCode, enrollDeviceName);
+      setShowEnrollModal(false);
+    } catch (err) {
+      console.error('Enroll error:', err);
+      setEnrollError(
+        'No se pudo vincular la caja. Verificá que el código sea correcto y que el equipo tenga conexión a internet.',
+      );
+    } finally {
+      setIsEnrolling(false);
+    }
   };
 
   const handleOpenCheckoutModal = (preferredMethod?: 'cash_usd' | 'cash_ves' | 'usd' | 'ves') => {
@@ -448,9 +512,18 @@ export function App() {
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-sm font-bold tracking-tight text-ink">CoreBiz POS</h1>
-                <span className="rounded-pill border border-line bg-subtle px-2 py-0.5 text-[10px] font-bold text-ink-soft">
-                  {registerCode ? registerCode : 'Sin Caja'}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnrollError(null);
+                    setShowEnrollModal(true);
+                  }}
+                  className="flex items-center gap-1 rounded-pill border border-line bg-subtle px-2 py-0.5 text-[10px] font-bold text-ink-soft hover:border-brand/40 hover:bg-brand-soft hover:text-brand transition cursor-pointer"
+                  title="Terminal asignada a esta caja. Hacé click para configurar o cambiar la vinculación."
+                >
+                  <Barcode className="h-2.5 w-2.5" />
+                  <span>{registerCode ? registerCode : 'Sin Caja (Vincular)'}</span>
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1 text-[11px] font-medium text-muted">
@@ -533,6 +606,19 @@ export function App() {
               </span>
             )}
           </button>
+
+          {!isInstalledPwa && (
+            <button
+              onClick={() => {
+                void handleInstallPwa();
+              }}
+              className="flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold text-brand hover:bg-brand hover:text-white transition shadow-xs cursor-pointer"
+              title="Instalar CoreBiz POS como aplicación de escritorio o móvil para uso offline"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">Instalar App</span>
+            </button>
+          )}
 
           <button
             onClick={toggleFullscreen}
@@ -2241,22 +2327,108 @@ export function App() {
                   className="mt-1.5 w-full rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
+
+              {enrollError && (
+                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500 mt-0.5" />
+                  <span>{enrollError}</span>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex justify-end gap-2.5">
               <button
+                type="button"
+                disabled={isEnrolling}
                 onClick={() => setShowEnrollModal(false)}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer"
+                className="rounded-xl px-4 py-2 text-xs font-bold text-muted hover:text-ink transition cursor-pointer disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
+                type="button"
+                disabled={isEnrolling || !enrollPairingCode.trim()}
                 onClick={() => {
                   void handleEnroll();
                 }}
+                className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer disabled:opacity-50"
+              >
+                {isEnrolling ? 'Vinculando...' : 'Vincular Caja'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInstallGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                  <Download className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-ink">Instalar en este Dispositivo</h3>
+                  <p className="text-xs text-muted">Ejecución nativa independiente y offline</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInstallGuideModal(false)}
+                className="rounded-xl p-1.5 text-muted hover:bg-subtle transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 text-xs text-ink-soft">
+              <div className="rounded-2xl border border-line bg-subtle/50 p-3.5 space-y-1">
+                <p className="font-bold text-ink flex items-center gap-1.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] text-white font-bold">
+                    1
+                  </span>
+                  En Chrome, Edge o Android
+                </p>
+                <p className="pl-6 text-muted">
+                  Hacé click en el ícono de instalación{' '}
+                  <strong className="text-ink">⊕ Instalar</strong> en la barra de direcciones
+                  superior del navegador o seleccioná{' '}
+                  <strong className="text-ink">Instalar aplicación</strong> en el menú de tres
+                  puntos.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-line bg-subtle/50 p-3.5 space-y-1">
+                <p className="font-bold text-ink flex items-center gap-1.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] text-white font-bold">
+                    2
+                  </span>
+                  En iPhone / iPad (Safari)
+                </p>
+                <p className="pl-6 text-muted">
+                  Tocá el botón <strong className="text-ink">Compartir</strong> (icono de cuadrado
+                  con flecha hacia arriba) y seleccioná{' '}
+                  <strong className="text-ink">Agregar al inicio</strong>.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-brand/20 bg-brand-soft/50 p-3 text-brand">
+                <p className="font-medium">
+                  Una vez instalada, la terminal se abre a pantalla completa y funciona con o sin
+                  internet, guardando las ventas y los catálogos en la base de datos local del
+                  dispositivo.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInstallGuideModal(false)}
                 className="rounded-2xl bg-brand px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
               >
-                Vincular Caja
+                Entendido
               </button>
             </div>
           </div>
@@ -2395,9 +2567,24 @@ export function App() {
                 </button>
               )}
 
+              {!isInstalledPwa && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    void handleInstallPwa();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-2xl border border-brand/30 bg-brand-soft p-3.5 text-xs font-bold text-brand hover:bg-brand hover:text-white transition cursor-pointer"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Instalar App en este Dispositivo</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setShowMobileMenu(false);
+                  setEnrollError(null);
                   setShowEnrollModal(true);
                 }}
                 className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-canvas/50 p-3.5 text-xs font-bold text-ink hover:bg-subtle transition cursor-pointer"
