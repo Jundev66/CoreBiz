@@ -54,7 +54,11 @@ function contentSecurityPolicy(nonce: string): string {
 
     // En produccion el CSS viaja como archivo servido por el propio origen. En
     // desarrollo Next lo inyecta en linea para poder recargarlo en caliente.
-    production ? `style-src 'self' 'nonce-${nonce}'` : `style-src 'self' 'unsafe-inline'`,
+    // 'unsafe-inline' en style-src permite estilos en linea en componentes React, SVGs
+    // y gestores de contrasenas sin abrir riesgos de ejecucion de scripts.
+    production
+      ? `style-src 'self' 'unsafe-inline' 'nonce-${nonce}'`
+      : `style-src 'self' 'unsafe-inline'`,
 
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
@@ -126,6 +130,7 @@ const SIN_SESION = [
   '/demo',
   '/api',
   '/v1',
+  '/pos',
   '/offline',
   '/manifest.webmanifest',
   '/sw.js',
