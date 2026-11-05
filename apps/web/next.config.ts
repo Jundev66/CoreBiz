@@ -55,19 +55,10 @@ const config: NextConfig = {
   },
 
   rewrites() {
-    const posUrl = process.env.POS_URL ?? 'http://localhost:3025';
     return Promise.resolve([
       {
         source: '/v1/pos/:path*',
         destination: '/api/v1/pos/:path*',
-      },
-      {
-        source: '/pos',
-        destination: posUrl,
-      },
-      {
-        source: '/pos/:path*',
-        destination: `${posUrl}/:path*`,
       },
     ]);
   },
