@@ -294,6 +294,91 @@ describe('CashShift Aggregate & Blind Cash Reconciliation', () => {
       closedAt: testDate,
     });
     expect(reClose.ok).toBe(false);
+
+    const movAfterClose = shift.recordCashMovement({
+      id: 'mov-after',
+      type: 'cash_in',
+      amount: Money.fromMinor(1_000n, 'USD'),
+      reason: 'Tarde',
+      occurredAt: testDate,
+    });
+    expect(movAfterClose.ok).toBe(false);
+  });
+
+  it('handles cash shift validations (currency mismatch, negative amounts) and rehydration', () => {
+    const shiftRes = CashShift.open({
+      id: shiftId,
+      tenantId,
+      registerId,
+      deviceId,
+      openedByUserId: cashierId,
+      initialFloat,
+      now: testDate,
+    });
+    if (!shiftRes.ok) throw new Error('Setup failed');
+    const shift = shiftRes.value;
+
+    const vesMoney = Money.fromMinor(100n, 'VES');
+    const zeroMoney = Money.zero('USD');
+
+    // Currency mismatch in movement
+    const badCurrencyMov = shift.recordCashMovement({
+      id: 'm1',
+      type: 'cash_in',
+      amount: vesMoney,
+      reason: 'Test',
+      occurredAt: testDate,
+    });
+    expect(badCurrencyMov.ok).toBe(false);
+
+    // Negative / zero movement
+    const zeroMov = shift.recordCashMovement({
+      id: 'm2',
+      type: 'cash_in',
+      amount: zeroMoney,
+      reason: 'Zero',
+      occurredAt: testDate,
+    });
+    expect(zeroMov.ok).toBe(false);
+
+    // Currency mismatch in sale
+    const badSale = shift.recordCashSale(vesMoney);
+    expect(badSale.ok).toBe(false);
+
+    // Close with currency mismatch
+    const badCloseCurrency = shift.close({
+      declaredCash: vesMoney,
+      closedByUserId: cashierId,
+      closedAt: testDate,
+    });
+    expect(badCloseCurrency.ok).toBe(false);
+
+    // Check getters
+    expect(shift.totalCashSales.minorUnits).toBe(0n);
+    expect(shift.movements).toHaveLength(0);
+    expect(shift.notes).toBeNull();
+
+    // Rehydrate
+    const rehydrated = CashShift.rehydrate({
+      id: shift.id,
+      tenantId,
+      registerId,
+      deviceId,
+      openedByUserId: cashierId,
+      openedAt: testDate,
+      initialFloat,
+      status: 'open',
+      movements: [],
+      totalCashSales: Money.zero('USD'),
+      closedByUserId: null,
+      closedAt: null,
+      declaredCash: null,
+      systemCash: null,
+      cashVariance: null,
+      notes: null,
+    });
+    expect(rehydrated.id).toBe(shift.id);
+    expect(rehydrated.status).toBe('open');
   });
 });
 
@@ -500,5 +585,52 @@ describe('InventoryConflict Aggregate', () => {
     const events = conflict.pullDomainEvents();
     const resolvedEvent = events.find((e) => e.type === 'pos.conflict.resolved');
     expect(resolvedEvent).toBeDefined();
+
+    // Resolving again fails
+    const alreadyResolved = conflict.resolve({
+      resolutionType: 'adjustment_in',
+      notes: 'Otra nota',
+      resolvedBy: adminId,
+      resolvedAt: testDate,
+    });
+    expect(alreadyResolved.ok).toBe(false);
+  });
+
+  it('dismisses conflict and validates closed state and empty notes', () => {
+    const conflictRes = InventoryConflict.createNegativeStock({
+      id: conflictId,
+      tenantId,
+      productId,
+      stockBefore: 0n,
+      quantityAttempted: 5_000n,
+      stockAfter: -5_000n,
+      shortageQuantity: 5_000n,
+      detectedAt: testDate,
+    });
+    if (!conflictRes.ok) throw new Error('Conflict setup failed');
+    const conflict = conflictRes.value;
+
+    const emptyDismiss = conflict.dismiss({
+      notes: '   ',
+      resolvedBy: adminId,
+      resolvedAt: testDate,
+    });
+    expect(emptyDismiss.ok).toBe(false);
+
+    const dismissRes = conflict.dismiss({
+      notes: 'Venta de demostración interna autorizada',
+      resolvedBy: adminId,
+      resolvedAt: testDate,
+    });
+    expect(dismissRes.ok).toBe(true);
+    expect(conflict.status).toBe('dismissed');
+    expect(conflict.resolutionType).toBe('dismissed_known');
+
+    const alreadyDismissed = conflict.dismiss({
+      notes: 'Reintento',
+      resolvedBy: adminId,
+      resolvedAt: testDate,
+    });
+    expect(alreadyDismissed.ok).toBe(false);
   });
 });

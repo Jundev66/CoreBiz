@@ -178,4 +178,47 @@ describe('Payment Aggregate', () => {
     if (voidResult.ok) return;
     expect(voidResult.error.kind).toBe('TooShort');
   });
+
+  it('permite consultar getters y tomar snapshot/rehydrate', () => {
+    const amount = Money.fromMinor(10000n, 'USD');
+    const payment = Payment.receive({
+      id: asId<PaymentId>('p1'),
+      tenantId,
+      number: 'REC-000001',
+      customerId,
+      amount,
+      currency: 'USD',
+      exchangeRate: rate,
+      paymentMethod: 'cash_usd',
+      reference: 'REF-001',
+      notes: 'Nota del cobro',
+      paidAt: new Date('2026-10-14T10:00:00Z'),
+      allocations: [{ deliveryNoteId: asId<DeliveryNoteId>('dn1'), amount }],
+    });
+
+    expect(payment.ok).toBe(true);
+    if (!payment.ok) return;
+
+    const p = payment.value;
+    expect(p.tenantId).toBe(tenantId);
+    expect(p.customerId).toBe(customerId);
+    expect(p.amount).toBe(amount);
+    expect(p.currency).toBe('USD');
+    expect(p.exchangeRate).toBe(rate);
+    expect(p.paymentMethod).toBe('cash_usd');
+    expect(p.reference).toBe('REF-001');
+    expect(p.notes).toBe('Nota del cobro');
+    expect(p.paidAt).toBeInstanceOf(Date);
+    expect(p.isVoided).toBe(false);
+    expect(p.voidedAt).toBeNull();
+    expect(p.voidReason).toBeNull();
+
+    const snap = p.snapshot();
+    expect(snap.id).toBe(p.id);
+    expect(snap.amount).toBe(amount);
+
+    const rehydrated = Payment.rehydrate(p.id, snap);
+    expect(rehydrated.id).toBe(p.id);
+    expect(rehydrated.number).toBe('REC-000001');
+  });
 });
