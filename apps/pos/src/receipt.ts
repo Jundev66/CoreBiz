@@ -1,7 +1,11 @@
 import type { LocalSale } from './db';
+import { getJurisdictionConfig } from './config/pos-jurisdiction';
 
-export function formatReceiptHtml(sale: LocalSale): string {
-  const dateFormatted = new Date(sale.occurredAt).toLocaleString('es-VE', {
+export function formatReceiptHtml(sale: LocalSale, jurisdictionOverride?: string): string {
+  const config = getJurisdictionConfig(jurisdictionOverride || sale.country || 'VE');
+  const isUs = config.jurisdiction === 'US';
+
+  const dateFormatted = new Date(sale.occurredAt).toLocaleString(isUs ? 'en-US' : 'es-VE', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -33,8 +37,46 @@ export function formatReceiptHtml(sale: LocalSale): string {
     })
     .join('');
 
+  const totalsHtml = isUs
+    ? `
+    <table class="meta-table" style="font-size: 11px;">
+      <tr>
+        <td>SUBTOTAL:</td>
+        <td class="text-right font-bold" style="font-family: monospace;">$${subtotalUsd}</td>
+      </tr>
+      <tr>
+        <td>${config.taxLabel}:</td>
+        <td class="text-right font-bold" style="font-family: monospace;">$${taxUsd}</td>
+      </tr>
+      <tr style="font-size: 13px;">
+        <td class="font-bold" style="padding-top: 4px;">TOTAL DUE:</td>
+        <td class="text-right font-bold" style="font-family: monospace; padding-top: 4px;">$${totalUsd}</td>
+      </tr>
+    </table>
+    `
+    : `
+    <table class="meta-table" style="font-size: 11px;">
+      <tr>
+        <td>SUBTOTAL:</td>
+        <td class="text-right font-bold" style="font-family: monospace;">$${subtotalUsd} / Bs. ${subtotalVes}</td>
+      </tr>
+      <tr>
+        <td>${config.taxLabel}:</td>
+        <td class="text-right font-bold" style="font-family: monospace;">$${taxUsd} / Bs. ${taxVes}</td>
+      </tr>
+      <tr style="font-size: 13px;">
+        <td class="font-bold" style="padding-top: 4px;">TOTAL A PAGAR:</td>
+        <td class="text-right font-bold" style="font-family: monospace; padding-top: 4px;">$${totalUsd}</td>
+      </tr>
+      <tr style="font-size: 11px; color: #374151;">
+        <td style="padding-top: 4px;">TOTAL BS. (TASA BCV ${rate.toFixed(2)}):</td>
+        <td class="text-right font-bold" style="font-family: monospace; padding-top: 4px;">Bs. ${totalVes}</td>
+      </tr>
+    </table>
+    `;
+
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="${isUs ? 'en' : 'es'}">
 <head>
   <meta charset="UTF-8">
   <title>Ticket ${sale.ticketNumber}</title>
@@ -71,11 +113,11 @@ export function formatReceiptHtml(sale: LocalSale): string {
 </head>
 <body>
   <div class="header text-center">
-    <h1>COREBIZ C.A.</h1>
-    <p>RIF: J-50123456-7</p>
-    <p>Av. Francisco de Miranda, Caracas, Venezuela</p>
-    <p class="font-bold">COMPROBANTE DE ENTREGA</p>
-    <p style="font-size: 9px;">DOCUMENTO INTERNO NO FISCAL</p>
+    <h1>${config.storeName}</h1>
+    <p>${config.storeTaxId}</p>
+    <p>${config.storeAddress}</p>
+    <p class="font-bold">${config.receiptTitle}</p>
+    <p style="font-size: 9px;">${config.receiptSubtitle}</p>
   </div>
 
   <div class="divider"></div>
@@ -90,16 +132,16 @@ export function formatReceiptHtml(sale: LocalSale): string {
       <td class="text-right" style="font-family: monospace;">${sale.receiptSequenceNumber}</td>
     </tr>
     <tr>
-      <td>FECHA / HORA:</td>
+      <td>${isUs ? 'DATE / TIME:' : 'FECHA / HORA:'}</td>
       <td class="text-right">${dateFormatted}</td>
     </tr>
     <tr>
-      <td>CAJA / TURNO:</td>
+      <td>${isUs ? 'REGISTER / SHIFT:' : 'CAJA / TURNO:'}</td>
       <td class="text-right">${sale.registerCode}</td>
     </tr>
     <tr>
-      <td>ESTADO SYNC:</td>
-      <td class="text-right"><span class="badge">${sale.syncStatus === 'synced' ? 'SINCRONIZADA' : 'OFFLINE (EN COLA)'}</span></td>
+      <td>${isUs ? 'SYNC STATUS:' : 'ESTADO SYNC:'}</td>
+      <td class="text-right"><span class="badge">${sale.syncStatus === 'synced' ? (isUs ? 'SYNCED' : 'SINCRONIZADA') : isUs ? 'OFFLINE (QUEUED)' : 'OFFLINE (EN COLA)'}</span></td>
     </tr>
   </table>
 
@@ -107,21 +149,21 @@ export function formatReceiptHtml(sale: LocalSale): string {
 
   <table class="meta-table">
     <tr>
-      <td class="font-bold">CLIENTE:</td>
+      <td class="font-bold">${isUs ? 'CUSTOMER:' : 'CLIENTE:'}</td>
       <td class="text-right">${sale.customerName}</td>
     </tr>
     <tr>
-      <td class="font-bold">C.I. / RIF:</td>
+      <td class="font-bold">${config.taxIdLabel}:</td>
       <td class="text-right" style="font-family: monospace;">${sale.customerDoc}</td>
     </tr>
     <tr>
-      <td>CONDICIÓN:</td>
-      <td class="text-right">CONTADO (${sale.paymentMethod.toUpperCase()})</td>
+      <td>${isUs ? 'TENDER:' : 'CONDICIÓN:'}</td>
+      <td class="text-right">${isUs ? 'PAID' : 'CONTADO'} (${sale.paymentMethod.toUpperCase()})</td>
     </tr>
     ${
       sale.paymentReference
         ? `<tr>
-      <td>REFERENCIA:</td>
+      <td>${isUs ? 'REFERENCE:' : 'REFERENCIA:'}</td>
       <td class="text-right" style="font-family: monospace; font-weight: bold;">${sale.paymentReference}</td>
     </tr>`
         : ''
@@ -133,8 +175,8 @@ export function formatReceiptHtml(sale: LocalSale): string {
   <table class="items-table">
     <thead>
       <tr style="border-bottom: 1px solid #e5e7eb;">
-        <th style="text-align: left; padding-bottom: 4px; font-size: 10px;">DESCRIPCIÓN</th>
-        <th style="text-align: right; padding-bottom: 4px; font-size: 10px;">P.U.</th>
+        <th style="text-align: left; padding-bottom: 4px; font-size: 10px;">${isUs ? 'DESCRIPTION' : 'DESCRIPCIÓN'}</th>
+        <th style="text-align: right; padding-bottom: 4px; font-size: 10px;">${isUs ? 'PRICE' : 'P.U.'}</th>
         <th style="text-align: right; padding-bottom: 4px; font-size: 10px;">TOTAL</th>
       </tr>
     </thead>
@@ -145,38 +187,21 @@ export function formatReceiptHtml(sale: LocalSale): string {
 
   <div class="divider"></div>
 
-  <table class="meta-table" style="font-size: 11px;">
-    <tr>
-      <td>SUBTOTAL:</td>
-      <td class="text-right font-bold" style="font-family: monospace;">$${subtotalUsd} / Bs. ${subtotalVes}</td>
-    </tr>
-    <tr>
-      <td>I.V.A. (16.00%):</td>
-      <td class="text-right font-bold" style="font-family: monospace;">$${taxUsd} / Bs. ${taxVes}</td>
-    </tr>
-    <tr style="font-size: 13px;">
-      <td class="font-bold" style="padding-top: 4px;">TOTAL A PAGAR:</td>
-      <td class="text-right font-bold" style="font-family: monospace; padding-top: 4px;">$${totalUsd}</td>
-    </tr>
-    <tr style="font-size: 11px; color: #374151;">
-      <td style="padding-top: 4px;">TOTAL BS. (TASA BCV ${rate.toFixed(2)}):</td>
-      <td class="text-right font-bold" style="font-family: monospace; padding-top: 4px;">Bs. ${totalVes}</td>
-    </tr>
-  </table>
+  ${totalsHtml}
 
   <div class="divider"></div>
 
   <div class="text-center" style="font-size: 9px; color: #6b7280; margin-top: 10px;">
-    <p>Gracias por su compra</p>
-    <p>Documento de control interno para entrega de mercancía</p>
+    <p>${isUs ? 'Thank you for your business!' : 'Gracias por su compra'}</p>
+    <p>${isUs ? 'Official purchase receipt for customer records' : 'Documento de control interno para entrega de mercancía'}</p>
     <p style="font-family: monospace; font-size: 8px;">REF: ${sale.operationId.slice(0, 16)}...</p>
   </div>
 </body>
 </html>`;
 }
 
-export function downloadReceiptFile(sale: LocalSale): void {
-  const html = formatReceiptHtml(sale);
+export function downloadReceiptFile(sale: LocalSale, jurisdiction?: string): void {
+  const html = formatReceiptHtml(sale, jurisdiction);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -188,8 +213,8 @@ export function downloadReceiptFile(sale: LocalSale): void {
   URL.revokeObjectURL(url);
 }
 
-export function printReceipt(sale: LocalSale): void {
-  const html = formatReceiptHtml(sale);
+export function printReceipt(sale: LocalSale, jurisdiction?: string): void {
+  const html = formatReceiptHtml(sale, jurisdiction);
   const printWindow = window.open('', '_blank', 'width=450,height=650');
   if (!printWindow) return;
 

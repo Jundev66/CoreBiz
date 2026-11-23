@@ -7,6 +7,7 @@ import {
   type LocalSaleLine,
   type LocalCustomer,
 } from './db';
+import { type PosJurisdiction, getJurisdictionConfig } from './config/pos-jurisdiction';
 import {
   seedDemoDataIfEmpty,
   fetchErpDemoCatalog,
@@ -50,6 +51,12 @@ export function usePos(apiBaseUrl = '') {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatusMessage, setSyncStatusMessage] = useState<string | null>(null);
   const [defaultExchangeRate, setDefaultExchangeRate] = useState<string>('36.50');
+  const [jurisdiction, setJurisdictionState] = useState<PosJurisdiction>('VE');
+
+  const activeJurisdictionConfig = useMemo(
+    () => getJurisdictionConfig(jurisdiction),
+    [jurisdiction],
+  );
 
   const activeExchangeRate = useMemo(() => {
     return (
@@ -65,7 +72,7 @@ export function usePos(apiBaseUrl = '') {
     for (const item of cart) {
       subtotal += item.lineTotalMinor;
     }
-    const tax = (subtotal * 1600n) / 10000n;
+    const tax = (subtotal * activeJurisdictionConfig.taxRateBp) / 10000n;
     const total = subtotal + tax;
 
     return {
@@ -73,7 +80,7 @@ export function usePos(apiBaseUrl = '') {
       taxMinor: tax,
       totalMinor: total,
     };
-  }, [cart]);
+  }, [cart, activeJurisdictionConfig.taxRateBp]);
 
   const refreshState = useCallback(async () => {
     const shift = await posDb.shifts.where('status').equals('open').first();
@@ -89,12 +96,16 @@ export function usePos(apiBaseUrl = '') {
     const regCode = await posDb.config.get('register_code');
     const token = await posDb.config.get('device_token');
     const rateEntry = await posDb.config.get('exchange_rate_bcv');
+    const jurEntry = await posDb.config.get('jurisdiction');
 
     setDeviceId(devId?.value ?? null);
     setRegisterCode(regCode?.value ?? null);
     setDeviceToken(token?.value ?? null);
     if (rateEntry?.value) {
       setDefaultExchangeRate(rateEntry.value);
+    }
+    if (jurEntry?.value) {
+      setJurisdictionState(jurEntry.value);
     }
 
     const recentSales = await posDb.sales.orderBy('occurredAt').reverse().limit(100).toArray();
@@ -420,6 +431,11 @@ export function usePos(apiBaseUrl = '') {
     [currentShift, refreshState, triggerSync],
   );
 
+  const setJurisdiction = useCallback(async (newJur: PosJurisdiction) => {
+    setJurisdictionState(newJur);
+    await posDb.config.put({ key: 'jurisdiction', value: newJur });
+  }, []);
+
   const checkoutSale = useCallback(
     async (
       paymentMethod: 'cash' | 'card' | 'transfer' | 'split',
@@ -438,7 +454,9 @@ export function usePos(apiBaseUrl = '') {
       const ticketNumber = `${registerCode ?? 'CAJA-01'}-${Date.now().toString().slice(-6)}`;
       const receiptSequenceNumber = `00-${Date.now().toString().slice(-8)}`;
       const customerName = customer?.name?.trim() || 'Consumidor Final';
-      const customerDoc = customer?.doc?.trim() || 'V-00000000';
+      const defaultDoc =
+        activeJurisdictionConfig.jurisdiction === 'US' ? '00-0000000' : 'V-00000000';
+      const customerDoc = customer?.doc?.trim() || defaultDoc;
 
       const saleLines: LocalSaleLine[] = cart.map((item) => ({
         id: item.id,
@@ -485,6 +503,8 @@ export function usePos(apiBaseUrl = '') {
         lines: saleLines,
         occurredAt,
         syncStatus: 'pending',
+        country: activeJurisdictionConfig.jurisdiction,
+        taxRateBp: activeJurisdictionConfig.taxRateBp.toString(),
       };
 
       await posDb.sales.put(localSaleRecord);
@@ -730,5 +750,8 @@ export function usePos(apiBaseUrl = '') {
     searchCustomers,
     saveCustomer,
     refreshState,
+    jurisdiction,
+    setJurisdiction,
+    activeJurisdictionConfig,
   };
 }

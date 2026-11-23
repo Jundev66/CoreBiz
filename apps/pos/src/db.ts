@@ -61,10 +61,12 @@ export interface LocalSale {
   readonly subtotalMinor: string;
   readonly taxMinor: string;
   readonly totalMinor: string;
-  readonly exchangeRateBcv: string;
+  readonly exchangeRateBcv?: string | undefined;
   readonly lines: readonly LocalSaleLine[];
   readonly occurredAt: string;
   readonly syncStatus: 'pending' | 'synced' | 'failed';
+  readonly country?: string | undefined;
+  readonly taxRateBp?: string | undefined;
 }
 
 export interface OutboxItem {
