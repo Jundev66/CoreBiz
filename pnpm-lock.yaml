@@ -60,6 +60,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@corebiz/accounting':
+        specifier: workspace:*
+        version: link:../../packages/accounting
       '@corebiz/application':
         specifier: workspace:*
         version: link:../../packages/application
@@ -283,8 +286,30 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/accounting:
+    dependencies:
+      '@corebiz/prisma-client':
+        specifier: workspace:*
+        version: link:../prisma-client
+      '@corebiz/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
+    devDependencies:
+      '@types/node':
+        specifier: ^26.5.1
+        version: 26.5.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13))
+
   packages/application:
     dependencies:
+      '@corebiz/accounting':
+        specifier: workspace:*
+        version: link:../accounting
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../domain
@@ -348,6 +373,9 @@ importers:
 
   packages/domain:
     dependencies:
+      '@corebiz/accounting':
+        specifier: workspace:*
+        version: link:../accounting
       '@corebiz/fiscal':
         specifier: workspace:*
         version: link:../fiscal
@@ -380,6 +408,9 @@ importers:
 
   packages/infrastructure:
     dependencies:
+      '@corebiz/accounting':
+        specifier: workspace:*
+        version: link:../accounting
       '@corebiz/application':
         specifier: workspace:*
         version: link:../application
@@ -8031,7 +8062,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@22.20.5)(@vitest/coverage-v8@4.1.11)(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13))
+      vitest: 4.1.11(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13))
 
   '@vitest/expect@4.1.11':
     dependencies:

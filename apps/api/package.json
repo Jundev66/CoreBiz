@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@corebiz/accounting": "workspace:*",
     "@corebiz/application": "workspace:*",
     "@corebiz/contracts": "workspace:*",
     "@corebiz/db": "workspace:*",

@@ -24,7 +24,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/domain/src' },
       to: {
-        pathNot: '^packages/(domain|shared-kernel|fiscal)/src',
+        pathNot: '^packages/(domain|shared-kernel|fiscal|accounting)/src',
         dependencyTypesNot: ['type-only'],
       },
     },
@@ -34,6 +34,15 @@ module.exports = {
       from: { path: '^packages/fiscal/src/domain' },
       to: {
         pathNot: '^packages/(fiscal/src/domain|shared-kernel/src)',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'accounting-domain-is-pure',
+      severity: 'error',
+      from: { path: '^packages/accounting/src/domain' },
+      to: {
+        pathNot: '^packages/(accounting/src/domain|shared-kernel/src)',
         dependencyTypesNot: ['type-only'],
       },
     },
@@ -85,7 +94,9 @@ module.exports = {
         'propio cliente generado. Si aparecen en apps/web o en el dominio, la persistencia se ' +
         'ha filtrado fuera del adaptador.',
       severity: 'error',
-      from: { pathNot: '^packages/(db|infrastructure|prisma-client|testing)/' },
+      from: {
+        pathNot: '^packages/(db|infrastructure|prisma-client|testing|[^/]+/src/infrastructure)/',
+      },
       /*
        * Tres formas, y las tres hacen falta.
        *

@@ -18,6 +18,8 @@
     "paths": {
       "@corebiz/fiscal": ["../../packages/fiscal/src/index"],
       "@corebiz/fiscal/*": ["../../packages/fiscal/src/*/index"],
+      "@corebiz/accounting": ["../../packages/accounting/src/index"],
+      "@corebiz/accounting/*": ["../../packages/accounting/src/*/index"],
       "@corebiz/shared-kernel": ["../../packages/shared-kernel/src/index"],
       "@corebiz/domain": ["../../packages/domain/src/index"],
       "@corebiz/domain/*": ["../../packages/domain/src/*/index"],
