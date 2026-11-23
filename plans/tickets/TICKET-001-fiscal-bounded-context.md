@@ -81,10 +81,10 @@ packages/fiscal/
 
 ## 5. Verification Checklist
 
-- [ ] `packages/fiscal` scaffolded via `pnpm new:context fiscal`
-- [ ] `Rif`, `Ein`, `TaxRate`, and `FiscalJurisdictionPort` moved to `packages/fiscal/src/domain/`
-- [ ] `VenezuelaFiscalEngine` and `UnitedStatesFiscalEngine` moved to `packages/fiscal/src/infrastructure/`
-- [ ] Subpath exports `./domain` and `./infrastructure` configured in `packages/fiscal/package.json`
-- [ ] Test suite with Object Mothers in `packages/fiscal/tests/`
-- [ ] Zero comments in all source and test files
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] `packages/fiscal` scaffolded via `pnpm new:context fiscal`
+- [x] `Rif`, `Ein`, `TaxRate`, and `FiscalJurisdictionPort` moved to `packages/fiscal/src/domain/`
+- [x] `VenezuelaFiscalEngine` and `UnitedStatesFiscalEngine` moved to `packages/fiscal/src/infrastructure/`
+- [x] Subpath exports `./domain` and `./infrastructure` configured in `packages/fiscal/package.json`
+- [x] Test suite with Object Mothers in `packages/fiscal/tests/`
+- [x] Zero comments in all source and test files
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

@@ -72,6 +72,9 @@ importers:
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@corebiz/fiscal':
+        specifier: workspace:*
+        version: link:../../packages/fiscal
       '@corebiz/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
@@ -345,6 +348,9 @@ importers:
 
   packages/domain:
     dependencies:
+      '@corebiz/fiscal':
+        specifier: workspace:*
+        version: link:../fiscal
       '@corebiz/shared-kernel':
         specifier: workspace:*
         version: link:../shared-kernel
@@ -352,6 +358,19 @@ importers:
       fast-check:
         specifier: ^4.10.0
         version: 4.10.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13))
+
+  packages/fiscal:
+    dependencies:
+      '@corebiz/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
+    devDependencies:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -370,6 +389,9 @@ importers:
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../domain
+      '@corebiz/fiscal':
+        specifier: workspace:*
+        version: link:../fiscal
       '@corebiz/prisma-client':
         specifier: workspace:*
         version: link:../prisma-client

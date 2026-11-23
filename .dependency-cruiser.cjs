@@ -24,7 +24,16 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/domain/src' },
       to: {
-        pathNot: '^packages/(domain|shared-kernel)/src',
+        pathNot: '^packages/(domain|shared-kernel|fiscal)/src',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'fiscal-domain-is-pure',
+      severity: 'error',
+      from: { path: '^packages/fiscal/src/domain' },
+      to: {
+        pathNot: '^packages/(fiscal/src/domain|shared-kernel/src)',
         dependencyTypesNot: ['type-only'],
       },
     },

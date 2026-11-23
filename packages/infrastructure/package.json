@@ -13,6 +13,7 @@
     "@corebiz/application": "workspace:*",
     "@corebiz/db": "workspace:*",
     "@corebiz/domain": "workspace:*",
+    "@corebiz/fiscal": "workspace:*",
     "@corebiz/prisma-client": "workspace:*",
     "@corebiz/shared-kernel": "workspace:*",
     "@synapse-vision/core": "workspace:*",
