@@ -15,6 +15,7 @@
   "dependencies": {
     "@corebiz/accounting": "workspace:*",
     "@corebiz/fiscal": "workspace:*",
+    "@corebiz/invoicing": "workspace:*",
     "@corebiz/shared-kernel": "workspace:*"
   },
   "devDependencies": {

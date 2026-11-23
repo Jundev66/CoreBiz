@@ -17,6 +17,7 @@
     "@corebiz/domain": "workspace:*",
     "@corebiz/fiscal": "workspace:*",
     "@corebiz/infrastructure": "workspace:*",
+    "@corebiz/invoicing": "workspace:*",
     "@corebiz/shared-kernel": "workspace:*",
     "@synapse-vision/core": "workspace:*",
     "@nestjs/common": "^11.1.6",

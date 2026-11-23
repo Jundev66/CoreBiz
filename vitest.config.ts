@@ -65,6 +65,15 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'invoicing',
+          root: './packages/invoicing',
+          environment: 'node',
+          globals: true,
+          include: ['tests/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'shared-kernel',
           root: './packages/shared-kernel',
           environment: 'node',

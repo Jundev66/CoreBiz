@@ -24,7 +24,7 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/domain/src' },
       to: {
-        pathNot: '^packages/(domain|shared-kernel|fiscal|accounting)/src',
+        pathNot: '^packages/(domain|shared-kernel|fiscal|accounting|invoicing)/src',
         dependencyTypesNot: ['type-only'],
       },
     },
@@ -43,6 +43,15 @@ module.exports = {
       from: { path: '^packages/accounting/src/domain' },
       to: {
         pathNot: '^packages/(accounting/src/domain|shared-kernel/src)',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'invoicing-domain-is-pure',
+      severity: 'error',
+      from: { path: '^packages/invoicing/src/domain' },
+      to: {
+        pathNot: '^packages/(invoicing/src/domain|shared-kernel/src|fiscal/src/domain)',
         dependencyTypesNot: ['type-only'],
       },
     },

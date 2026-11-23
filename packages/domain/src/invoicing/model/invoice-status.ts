@@ -1,1 +1,1 @@
-export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID';
+export * from '@corebiz/invoicing/domain';

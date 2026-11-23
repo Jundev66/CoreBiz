@@ -13,6 +13,7 @@
   "dependencies": {
     "@corebiz/accounting": "workspace:*",
     "@corebiz/domain": "workspace:*",
+    "@corebiz/invoicing": "workspace:*",
     "@corebiz/shared-kernel": "workspace:*",
     "@corebiz/synapse": "workspace:*",
     "@synapse-vision/core": "workspace:*"
