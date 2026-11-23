@@ -169,7 +169,17 @@
     "nonFiscal": "Documento no fiscal / sin valor fiscal",
     "notice": "CoreBiz genera notas de entrega, documentos internos sin valor fiscal.",
     "deliveryNoteKind": "Nota de entrega — documento interno",
-    "paymentReceiptKind": "Recibo de cobro — documento interno no fiscal"
+    "paymentReceiptKind": "Recibo de cobro — documento interno no fiscal",
+    "syntheticShieldTitle": "Entorno Demostrativo y Educativo",
+    "syntheticShieldNotice": "Toda la información comercial, fiscal, tributaria y contable desplegada en CoreBiz es 100% sintética y ficticia con fines exclusivamente educativos y de demostración técnica. Los nombres, identificadores (RIF, EIN), montos y transacciones no corresponden a ninguna persona natural o jurídica real.",
+    "cookieConsentTitle": "Aviso de Cookies y Almacenamiento Local",
+    "cookieConsentNotice": "CoreBiz utiliza cookies y almacenamiento local estrictamente necesarios para autenticación, gestión de sesión y funcionamiento fuera de línea (PWA). No utilizamos cookies de rastreo publicitario ni compartimos datos con terceros.",
+    "cookieAccept": "Entendido y Aceptar",
+    "cookiePreferences": "Solo esenciales",
+    "termsTitle": "Términos de Demostración y Descargo de Responsabilidad",
+    "termsBody": "Este software es un prototipo y demostrador tecnológico. Se proporciona 'tal cual' sin garantías de ninguna clase, expresas o implícitas. No constituye asesoramiento contable, fiscal ni legal formal.",
+    "close": "Cerrar",
+    "viewLegalNotice": "Ver descargo legal"
   },
   "demo": {
     "title": "Prueba CoreBiz",

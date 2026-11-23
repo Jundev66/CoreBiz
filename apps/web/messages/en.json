@@ -169,7 +169,17 @@
     "nonFiscal": "Non-fiscal document / no tax value",
     "notice": "CoreBiz issues delivery notes: internal documents with no fiscal value.",
     "deliveryNoteKind": "Delivery note — internal document",
-    "paymentReceiptKind": "Payment receipt — internal non-fiscal document"
+    "paymentReceiptKind": "Payment receipt — internal non-fiscal document",
+    "syntheticShieldTitle": "Demonstrative & Educational Environment",
+    "syntheticShieldNotice": "All commercial, fiscal, tax, and accounting information displayed on CoreBiz is 100% synthetic and fictitious for technical demonstration and educational purposes only. Names, identifiers (RIF, EIN), amounts, and transactions do not correspond to any real natural or legal person.",
+    "cookieConsentTitle": "Cookies & Local Storage Notice",
+    "cookieConsentNotice": "CoreBiz uses strictly necessary cookies and local storage for authentication, session management, and offline operation (PWA). We do not use advertising tracking cookies or share data with third parties.",
+    "cookieAccept": "Understood & Accept",
+    "cookiePreferences": "Essential only",
+    "termsTitle": "Demo Terms & Disclaimer",
+    "termsBody": "This software is a prototype and technology demonstrator provided 'as is' without warranties of any kind. It does not constitute formal accounting, tax, or legal advice.",
+    "close": "Close",
+    "viewLegalNotice": "View legal disclaimer"
   },
   "demo": {
     "title": "Try CoreBiz",

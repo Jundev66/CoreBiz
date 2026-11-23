@@ -5,6 +5,8 @@ import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { readTheme } from '@/ui/theme';
 import { PwaRegister } from '@/ui/pwa-register';
 import { ToastContainer } from '@/ui/toast';
+import { LegalDisclaimerBanner } from '@/ui/legal-disclaimer-banner';
+import { CookieConsentBanner } from '@/ui/cookie-consent-banner';
 import './globals.css';
 
 /**
@@ -63,7 +65,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} className={inter.variable} data-theme={theme} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider messages={messages}>
+          <LegalDisclaimerBanner />
           {children}
+          <CookieConsentBanner />
           <ToastContainer />
           <PwaRegister />
         </NextIntlClientProvider>
