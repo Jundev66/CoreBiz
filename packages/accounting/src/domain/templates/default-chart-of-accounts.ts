@@ -55,11 +55,36 @@ const US_GAAP_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
   { code: '6010', name: 'Operating Expenses', category: 'EXPENSE', isReconcilable: false },
 ];
 
+export class ChartOfAccountsRegistry {
+  private static readonly templates = new Map<string, readonly AccountTemplateItem[]>();
+
+  static {
+    ChartOfAccountsRegistry.register('VE', VENEZUELA_CHART_TEMPLATE);
+    ChartOfAccountsRegistry.register('US', US_GAAP_CHART_TEMPLATE);
+  }
+
+  static register(jurisdiction: string, template: readonly AccountTemplateItem[]): void {
+    ChartOfAccountsRegistry.templates.set(jurisdiction.toUpperCase(), template);
+  }
+
+  static get(jurisdiction: string): readonly AccountTemplateItem[] {
+    const template = ChartOfAccountsRegistry.templates.get(jurisdiction.toUpperCase());
+    if (!template) {
+      throw new Error(`No chart of accounts template registered for jurisdiction: ${jurisdiction}`);
+    }
+    return template;
+  }
+
+  static has(jurisdiction: string): boolean {
+    return ChartOfAccountsRegistry.templates.has(jurisdiction.toUpperCase());
+  }
+}
+
 export function createDefaultAccountsForJurisdiction(
   tenantId: string,
-  jurisdiction: 'VE' | 'US',
+  jurisdiction: string,
 ): readonly Account[] {
-  const template = jurisdiction === 'VE' ? VENEZUELA_CHART_TEMPLATE : US_GAAP_CHART_TEMPLATE;
+  const template = ChartOfAccountsRegistry.get(jurisdiction);
 
   return template.map((item, index) => {
     const codeResult = AccountCode.create(item.code);

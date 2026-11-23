@@ -1,6 +1,6 @@
 import type { Currency, Money } from '@corebiz/shared-kernel';
 
-export type JurisdictionCode = 'VE' | 'US';
+export type JurisdictionCode = 'VE' | 'US' | (string & {});
 
 export interface TaxCalculationLineInput {
   readonly lineId: string;

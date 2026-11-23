@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createDefaultAccountsForJurisdiction } from '../src/domain/templates/default-chart-of-accounts';
+import {
+  createDefaultAccountsForJurisdiction,
+  ChartOfAccountsRegistry,
+} from '../src/domain/templates/default-chart-of-accounts';
 
-describe('createDefaultAccountsForJurisdiction', () => {
+describe('createDefaultAccountsForJurisdiction & ChartOfAccountsRegistry', () => {
   const tenantId = 'tenant-multi-country-01';
 
   it('generates Venezuelan FCCPV chart with IVA, IGTF, and retentions accounts', () => {
@@ -34,5 +37,35 @@ describe('createDefaultAccountsForJurisdiction', () => {
     const salesTaxAccount = accounts.find((a) => a.code.value === '2050');
     expect(salesTaxAccount?.name).toBe('Sales Tax Payable');
     expect(salesTaxAccount?.normalSide).toBe('CREDIT');
+  });
+
+  it('throws descriptive error for unregistered jurisdiction', () => {
+    expect(() => createDefaultAccountsForJurisdiction(tenantId, 'UNKNOWN')).toThrowError(
+      /No chart of accounts template registered for jurisdiction: UNKNOWN/,
+    );
+  });
+
+  it('allows registering a future country template without modifying existing code', () => {
+    ChartOfAccountsRegistry.register('CO', [
+      { code: '1105', name: 'Caja General', category: 'ASSET', isReconcilable: true },
+      {
+        code: '2408',
+        name: 'Impuesto sobre las Ventas por Pagar',
+        category: 'LIABILITY',
+        isReconcilable: false,
+      },
+      {
+        code: '4135',
+        name: 'Comercio al por mayor y al por menor',
+        category: 'REVENUE',
+        isReconcilable: false,
+      },
+    ]);
+
+    expect(ChartOfAccountsRegistry.has('CO')).toBe(true);
+    const coAccounts = createDefaultAccountsForJurisdiction(tenantId, 'CO');
+    expect(coAccounts.length).toBe(3);
+    expect(coAccounts[0]?.code.value).toBe('1105');
+    expect(coAccounts[0]?.name).toBe('Caja General');
   });
 });
