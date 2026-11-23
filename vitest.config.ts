@@ -47,11 +47,20 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'shared-kernel',
+          root: './packages/shared-kernel',
+          environment: 'node',
+          globals: true,
+          include: ['tests/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'domain',
           root: './packages/domain',
           environment: 'node',
           globals: true,
-          include: ['src/**/*.test.ts'],
+          include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
         },
       },
       {
@@ -60,18 +69,16 @@ export default defineConfig({
           root: './packages/application',
           environment: 'node',
           globals: true,
-          include: ['src/**/*.test.ts'],
+          include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
         },
       },
       {
         test: {
-          // Adapters that need no database: key encryption and the AI provider clients,
-          // which are tested against a stubbed `fetch`.
           name: 'infrastructure',
           root: './packages/infrastructure',
           environment: 'node',
           globals: true,
-          include: ['src/**/*.test.ts'],
+          include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
         },
       },
       {

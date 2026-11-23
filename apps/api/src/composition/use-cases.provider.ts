@@ -47,6 +47,10 @@ import {
   type PosSyncQueue,
   memoryVisionDocumentCache,
   systemClock,
+  PostJournalEntryCommandHandler,
+  GetTrialBalanceQueryHandler,
+  IssueInvoiceCommandHandler,
+  ApplyInvoicePaymentCommandHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -211,6 +215,14 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       }
       return new DirectPosSyncQueue();
     })(),
+
+    postJournalEntry: new PostJournalEntryCommandHandler(runtime.accounts, runtime.journalEntries),
+    getTrialBalance: new GetTrialBalanceQueryHandler(runtime.accounts, runtime.journalEntries),
+    issueInvoice: new IssueInvoiceCommandHandler(runtime.invoices, runtime.journalEntries),
+    applyInvoicePayment: new ApplyInvoicePaymentCommandHandler(
+      runtime.invoices,
+      runtime.journalEntries,
+    ),
   } as const;
 }
 

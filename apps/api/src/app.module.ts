@@ -21,6 +21,8 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { SessionModule } from './modules/session/session.module';
 import { VisionModule } from './modules/vision/vision.module';
 import { PosModule } from './modules/pos/pos.module';
+import { AccountingModule } from './modules/accounting/accounting.module';
+import { InvoicingModule } from './modules/invoicing/invoicing.module';
 
 /**
  * Raiz de la aplicacion.
@@ -50,6 +52,8 @@ import { PosModule } from './modules/pos/pos.module';
     InternalModule,
     IntegrationsModule,
     PosModule,
+    AccountingModule,
+    InvoicingModule,
   ],
   // Global and singleton on purpose: see the note in `WriteThrottleGuard`.
   providers: [

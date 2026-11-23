@@ -56,11 +56,12 @@ export const PERMISSIONS = [
   'audit:export',
   'settings:read',
   'settings:write',
-  // Connecting the company to an AI provider: it stores a paid credential and decides
-  // where people's questions are sent, so it sits with the rest of the settings.
   'ai:configure',
-  // Asking the assistant. Every role gets it: it reads no company data and writes nothing.
   'assistant:use',
+  'accounting:read',
+  'accounting:write',
+  'invoice:read',
+  'invoice:write',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -108,6 +109,10 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
     'settings:write',
     'ai:configure',
     'assistant:use',
+    'accounting:read',
+    'accounting:write',
+    'invoice:read',
+    'invoice:write',
   ],
 
   sales: [
@@ -117,6 +122,9 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
     'stock:read',
     'delivery_note:read',
     'delivery_note:issue',
+    'invoice:read',
+    'invoice:write',
+    'accounting:read',
     'payment:read',
     'payment:receive',
     'report:read',
@@ -144,6 +152,8 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly (Permission | '*')[]>> = 
     'payment:read',
     'supplier:read',
     'purchase:read',
+    'invoice:read',
+    'accounting:read',
     'assistant:use',
   ],
 };

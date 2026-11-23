@@ -48,12 +48,16 @@ const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   ShiftNotFound: 404,
   ConflictNotFound: 404,
   RegisterNotFound: 404,
+  AccountNotFound: 404,
+  InvoiceNotFound: 404,
 
   InsufficientStock: 409,
   DuplicateProduct: 409,
   InvalidTransition: 409,
   StockNotTracked: 409,
   NoActiveTenant: 409,
+  UnbalancedEntry: 422,
+  PaymentExceedsRemainingBalance: 422,
 
   InvalidFormat: 400,
   PayloadTooLarge: 413,

@@ -15,3 +15,6 @@ export * from './administration';
 export * from './support';
 export * from './ai';
 export * from './pos';
+export * from './fiscal';
+export * from './accounting';
+export * from './invoicing';

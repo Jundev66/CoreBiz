@@ -5,6 +5,7 @@ import {
   DeliverIntegrationDeliveryNoteController,
   RegisterOrConfirmIntegrationDeliveryNoteController,
   GetIntegrationDeliveryNoteByIdController,
+  HeadlessInvoiceIssueController,
 } from './controllers';
 
 @Module({
@@ -14,6 +15,7 @@ import {
     DeliverIntegrationDeliveryNoteController,
     RegisterOrConfirmIntegrationDeliveryNoteController,
     GetIntegrationDeliveryNoteByIdController,
+    HeadlessInvoiceIssueController,
   ],
 })
 export class IntegrationsModule {}

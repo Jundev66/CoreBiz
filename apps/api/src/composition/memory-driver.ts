@@ -24,6 +24,9 @@ import {
   createSalesStores,
   inMemoryReadModels,
   memoryVisionVectorStore,
+  InMemoryAccountRepository,
+  InMemoryJournalEntryRepository,
+  InMemoryInvoiceRepository,
   type ReadModels,
   type SalesStores,
 } from '@corebiz/application';
@@ -50,14 +53,22 @@ const RATE = ExchangeRate.fromScaled(
 
 interface MemoryStore extends SalesStores {
   seeded: boolean;
-  /**
-   * El indice vectorial del proceso, cuando la busqueda semantica esta configurada.
-   *
-   * Vive con el resto del estado en memoria —y no en una variable de modulo— por la misma
-   * razon: sobrevivir a la recarga en caliente durante el desarrollo. Es UNO para todo el
-   * proceso y lleva el `tenantId` en cada fila, igual que la tabla de Postgres.
-   */
   visionVectors?: VisionVectorStorePort;
+  accountRepo?: InMemoryAccountRepository;
+  journalEntryRepo?: InMemoryJournalEntryRepository;
+  invoiceRepo?: InMemoryInvoiceRepository;
+}
+
+export function memoryAccountingRepos() {
+  const s = store();
+  s.accountRepo ??= new InMemoryAccountRepository();
+  s.journalEntryRepo ??= new InMemoryJournalEntryRepository();
+  s.invoiceRepo ??= new InMemoryInvoiceRepository();
+  return {
+    accounts: s.accountRepo,
+    journalEntries: s.journalEntryRepo,
+    invoices: s.invoiceRepo,
+  };
 }
 
 const globalForMemory = globalThis as unknown as { __corebizMemory?: MemoryStore };

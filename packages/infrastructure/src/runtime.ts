@@ -6,12 +6,16 @@ import type {
   TenantContext,
   UnitOfWork,
 } from '@corebiz/application';
+import type { AccountRepository, JournalEntryRepository, InvoiceRepository } from '@corebiz/domain';
 import type { VisionVectorStorePort } from '@synapse-vision/core';
 import { PrismaUnitOfWork } from './prisma/unit-of-work';
 import type { AuditTrace } from './prisma/audit';
 import { readOnly } from './prisma/session';
 import { prismaVisionVectorStore } from './prisma/vector-store';
 import { prismaReadModels } from './queries/read-models';
+import { PrismaAccountRepository } from './prisma/accounts';
+import { PrismaJournalEntryRepository } from './prisma/journal-entries';
+import { PrismaInvoiceRepository } from './prisma/invoices';
 
 /**
  * Punto de entrada del adaptador de Postgres.
@@ -39,8 +43,10 @@ export interface PostgresRuntimeDeps {
 export interface PostgresRuntime {
   readonly uow: UnitOfWork;
   readonly queries: ReadModels;
-  /** Presente solo si hay un modelo de embeddings configurado. */
   readonly vectorStore?: VisionVectorStorePort;
+  readonly accounts: AccountRepository;
+  readonly journalEntries: JournalEntryRepository;
+  readonly invoices: InvoiceRepository;
 }
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
@@ -55,6 +61,9 @@ export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
       ...(deps.trace !== undefined ? { trace: deps.trace } : {}),
     }),
     queries: prismaReadModels(prisma, deps.ctx, deps.clock),
+    accounts: new PrismaAccountRepository(prisma),
+    journalEntries: new PrismaJournalEntryRepository(prisma),
+    invoices: new PrismaInvoiceRepository(prisma),
     ...(deps.vectorModel !== undefined
       ? { vectorStore: prismaVisionVectorStore(prisma, deps.ctx, { model: deps.vectorModel }) }
       : {}),

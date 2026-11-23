@@ -75,6 +75,9 @@ importers:
       '@corebiz/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
+      '@corebiz/shared-kernel':
+        specifier: workspace:*
+        version: link:../../packages/shared-kernel
       '@nestjs/common':
         specifier: ^11.1.6
         version: 11.2.3(class-transformer@0.5.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -282,6 +285,9 @@ importers:
       '@corebiz/domain':
         specifier: workspace:*
         version: link:../domain
+      '@corebiz/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
       '@corebiz/synapse':
         specifier: workspace:*
         version: link:../synapse
@@ -338,6 +344,10 @@ importers:
         version: 5.9.3
 
   packages/domain:
+    dependencies:
+      '@corebiz/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
     devDependencies:
       fast-check:
         specifier: ^4.10.0
@@ -363,6 +373,9 @@ importers:
       '@corebiz/prisma-client':
         specifier: workspace:*
         version: link:../prisma-client
+      '@corebiz/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
       '@synapse-vision/core':
         specifier: workspace:*
         version: link:../../synapse-vision/core
@@ -401,6 +414,18 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/shared-kernel:
+    devDependencies:
+      fast-check:
+        specifier: ^4.10.0
+        version: 4.10.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.5.1)(@vitest/coverage-v8@4.1.11)(vite@7.3.6(@types/node@26.5.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13))
 
   packages/synapse:
     dependencies:

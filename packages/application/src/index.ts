@@ -39,3 +39,7 @@ export * from './use-cases/ai/system-prompt';
 export * from './adapters/synapse/corebiz-bridge';
 export * from './adapters/synapse-vision/corebiz-vision-bridge';
 export * from './use-cases/pos/index';
+export * from './accounting/commands/post-journal-entry.command';
+export * from './accounting/queries/get-trial-balance.query';
+export * from './invoicing/commands/issue-invoice.command';
+export * from './invoicing/commands/apply-invoice-payment.command';

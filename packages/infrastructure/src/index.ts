@@ -90,3 +90,8 @@ export {
   type PosSyncJobHandler,
 } from './queue/pos-sync-worker';
 export { isAllowedBaseUrl } from './ai/url-guard';
+export { VenezuelaFiscalEngine } from './fiscal/venezuela-fiscal-engine';
+export { UnitedStatesFiscalEngine } from './fiscal/united-states-fiscal-engine';
+export { PrismaAccountRepository } from './prisma/accounts';
+export { PrismaJournalEntryRepository } from './prisma/journal-entries';
+export { PrismaInvoiceRepository } from './prisma/invoices';

@@ -16,6 +16,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
+      "@corebiz/shared-kernel": ["../../packages/shared-kernel/src/index"],
       "@corebiz/domain": ["../../packages/domain/src/index"],
       "@corebiz/domain/*": ["../../packages/domain/src/*/index"],
       "@corebiz/application": ["../../packages/application/src/index"],

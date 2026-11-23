@@ -12,14 +12,22 @@ import { postgresRuntime, type AuditTrace } from '@corebiz/infrastructure';
 import { RUNTIME, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
 import { loadEnv } from '../config/env';
-import { getMemoryUnitOfWork, memoryReadModels, memoryVisionStore } from './memory-driver';
+import {
+  getMemoryUnitOfWork,
+  memoryReadModels,
+  memoryVisionStore,
+  memoryAccountingRepos,
+} from './memory-driver';
+import type { AccountRepository, JournalEntryRepository, InvoiceRepository } from '@corebiz/domain';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface Runtime {
   readonly uow: UnitOfWork;
   readonly queries: ReadModels;
-  /** Almacen vectorial con contexto de tenant; ausente si no hay RAG configurado. */
   readonly vectorStore?: VisionVectorStorePort;
+  readonly accounts: AccountRepository;
+  readonly journalEntries: JournalEntryRepository;
+  readonly invoices: InvoiceRepository;
 }
 
 /**
@@ -73,9 +81,13 @@ export const runtimeProvider: FactoryProvider = {
     const semantic = env.VISION_EMBEDDINGS_BASE_URL !== undefined;
 
     if (activeDriver() === 'memory') {
+      const accounting = memoryAccountingRepos();
       return {
         uow: getMemoryUnitOfWork(ctx.tenantId),
         queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency, ctx.actor.userId),
+        accounts: accounting.accounts,
+        journalEntries: accounting.journalEntries,
+        invoices: accounting.invoices,
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }

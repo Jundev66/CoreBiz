@@ -18,15 +18,36 @@ module.exports = {
     {
       name: 'domain-is-pure',
       comment:
-        'packages/domain no puede importar NADA fuera de si mismo. Ni frameworks, ni ORM, ' +
+        'packages/domain no puede importar NADA fuera de si mismo y shared-kernel. Ni frameworks, ni ORM, ' +
         'ni utilidades de terceros. Si necesitas algo del exterior, es una senal de que ' +
         'deberia ser un puerto en packages/application.',
       severity: 'error',
       from: { path: '^packages/domain/src' },
       to: {
-        pathNot: '^packages/domain/src',
+        pathNot: '^packages/(domain|shared-kernel)/src',
         dependencyTypesNot: ['type-only'],
       },
+    },
+    {
+      name: 'shared-kernel-is-pure',
+      severity: 'error',
+      from: { path: '^packages/shared-kernel/src' },
+      to: {
+        pathNot: '^packages/shared-kernel/src',
+        dependencyTypesNot: ['type-only'],
+      },
+    },
+    {
+      name: 'context-domain-never-imports-infrastructure',
+      severity: 'error',
+      from: { path: '^packages/[^/]+/src/domain' },
+      to: { path: '^packages/[^/]+/src/infrastructure' },
+    },
+    {
+      name: 'context-domain-never-imports-application',
+      severity: 'error',
+      from: { path: '^packages/[^/]+/src/domain' },
+      to: { path: '^packages/[^/]+/src/application' },
     },
 
     // ── La aplicacion define puertos, no los implementa ───────────────────

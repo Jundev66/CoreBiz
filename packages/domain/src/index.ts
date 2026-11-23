@@ -15,3 +15,6 @@ export * from './sales/index';
 export * from './purchasing/index';
 export * from './ai/index';
 export * from './pos/index';
+export * from './fiscal/index';
+export * from './accounting/index';
+export * from './invoicing/index';

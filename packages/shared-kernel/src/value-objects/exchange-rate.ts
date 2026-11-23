@@ -1,0 +1,125 @@
+import { ok, err, type Result } from '../result';
+import type { ExchangeRateError, MoneyError } from '../errors';
+import { Money, parseDecimalToMinor, pow10, type Currency, type Rounding } from './money';
+
+export const RATE_SCALE = 8;
+const RATE_DIVISOR = pow10(RATE_SCALE);
+
+export class ExchangeRate {
+  private constructor(
+    readonly from: Currency,
+    readonly to: Currency,
+    readonly scaledRate: bigint,
+    readonly capturedAt: Date,
+  ) {
+    Object.freeze(this);
+  }
+
+  static of(
+    rate: string | number,
+    from: Currency,
+    to: Currency,
+    capturedAt: Date,
+  ): Result<ExchangeRate, ExchangeRateError> {
+    const raw = typeof rate === 'number' ? rate.toString() : rate;
+    if (typeof rate === 'number' && !Number.isFinite(rate)) {
+      return err({ kind: 'NonPositiveRate', raw });
+    }
+
+    const parsed = parseDecimalToMinor(raw, RATE_SCALE);
+    if (!parsed.ok || parsed.value <= 0n) {
+      return err({ kind: 'NonPositiveRate', raw });
+    }
+    if (from === to) {
+      return err({ kind: 'UnconvertiblePair', from, to });
+    }
+    return ok(new ExchangeRate(from, to, parsed.value, new Date(capturedAt.getTime())));
+  }
+
+  static fromScaled(
+    scaledRate: bigint,
+    from: Currency,
+    to: Currency,
+    capturedAt: Date,
+  ): ExchangeRate {
+    return new ExchangeRate(from, to, scaledRate, new Date(capturedAt.getTime()));
+  }
+
+  convert(
+    amount: Money,
+    mode: Rounding = 'HALF_UP',
+  ): Result<Money, MoneyError | ExchangeRateError> {
+    if (amount.currency === this.from) {
+      return ok(
+        Money.fromMinor(
+          this.applyRounding(amount.minorUnits * this.scaledRate, RATE_DIVISOR, mode),
+          this.to,
+        ),
+      );
+    }
+    if (amount.currency === this.to) {
+      return ok(
+        Money.fromMinor(
+          this.applyRounding(amount.minorUnits * RATE_DIVISOR, this.scaledRate, mode),
+          this.from,
+        ),
+      );
+    }
+    return err({ kind: 'UnconvertiblePair', from: amount.currency, to: this.to });
+  }
+
+  private applyRounding(numerator: bigint, denominator: bigint, mode: Rounding): bigint {
+    const negative = numerator < 0n;
+    const n = negative ? -numerator : numerator;
+    const quotient = n / denominator;
+    const remainder = n % denominator;
+    if (remainder === 0n) return negative ? -quotient : quotient;
+
+    let rounded: bigint;
+    switch (mode) {
+      case 'DOWN':
+        rounded = quotient;
+        break;
+      case 'HALF_UP':
+        rounded = remainder * 2n >= denominator ? quotient + 1n : quotient;
+        break;
+      case 'HALF_EVEN': {
+        const twice = remainder * 2n;
+        if (twice > denominator) rounded = quotient + 1n;
+        else if (twice < denominator) rounded = quotient;
+        else rounded = quotient % 2n === 0n ? quotient : quotient + 1n;
+        break;
+      }
+    }
+    return negative ? -rounded : rounded;
+  }
+
+  toString(): string {
+    const whole = this.scaledRate / RATE_DIVISOR;
+    const fraction = (this.scaledRate % RATE_DIVISOR).toString().padStart(RATE_SCALE, '0');
+    return `${whole}.${fraction}`;
+  }
+
+  toCompactString(): string {
+    const full = this.toString();
+    return full.includes('.') ? full.replace(/0+$/, '').replace(/\.$/, '') : full;
+  }
+
+  equals(other: ExchangeRate): boolean {
+    return (
+      this.from === other.from &&
+      this.to === other.to &&
+      this.scaledRate === other.scaledRate &&
+      this.capturedAt.getTime() === other.capturedAt.getTime()
+    );
+  }
+
+  toJSON(): { scaledRate: string; from: Currency; to: Currency; capturedAt: string } {
+    return {
+      scaledRate: this.scaledRate.toString(),
+      from: this.from,
+      to: this.to,
+      capturedAt: this.capturedAt.toISOString(),
+    };
+  }
+}

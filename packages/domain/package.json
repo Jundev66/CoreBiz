@@ -12,6 +12,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@corebiz/shared-kernel": "workspace:*"
+  },
   "devDependencies": {
     "fast-check": "^4.10.0",
     "typescript": "^5.9.3",

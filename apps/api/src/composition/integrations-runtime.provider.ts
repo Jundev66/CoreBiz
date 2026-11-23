@@ -6,7 +6,12 @@ import { Plan, asId, type TenantId, type UserId } from '@corebiz/domain';
 import { INTEGRATIONS_RUNTIME } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
 import { loadEnv } from '../config/env';
-import { MEMORY_TENANT, getMemoryUnitOfWork, memoryReadModels } from './memory-driver';
+import {
+  MEMORY_TENANT,
+  getMemoryUnitOfWork,
+  memoryReadModels,
+  memoryAccountingRepos,
+} from './memory-driver';
 import { DEMO_SETTINGS } from './settings';
 import type { Runtime } from './runtime.provider';
 
@@ -59,18 +64,23 @@ export const integrationsRuntimeProvider: FactoryProvider = {
   useFactory: (): Runtime => {
     const ctx = contextFromEnv();
 
-    return activeDriver() === 'memory'
-      ? {
-          uow: getMemoryUnitOfWork(ctx.tenantId),
-          queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency, ctx.actor.userId),
-        }
-      : postgresRuntime({
-          url: databaseUrl(),
-          ctx,
-          ids: { next: () => uuidv7() },
-          clock: systemClock,
-          // Sin email verificado y sin cabeceras de navegador: no hay usuario detras.
-          trace: { actorEmail: null, ipHash: null, userAgent: null },
-        });
+    if (activeDriver() === 'memory') {
+      const accounting = memoryAccountingRepos();
+      return {
+        uow: getMemoryUnitOfWork(ctx.tenantId),
+        queries: memoryReadModels(ctx.tenantId, ctx.settings.baseCurrency, ctx.actor.userId),
+        accounts: accounting.accounts,
+        journalEntries: accounting.journalEntries,
+        invoices: accounting.invoices,
+      };
+    }
+
+    return postgresRuntime({
+      url: databaseUrl(),
+      ctx,
+      ids: { next: () => uuidv7() },
+      clock: systemClock,
+      trace: { actorEmail: null, ipHash: null, userAgent: null },
+    });
   },
 };

@@ -545,6 +545,7 @@ model customers {
   tenants               tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   delivery_notes        delivery_notes[]
   payments              payments[]
+  invoices              invoices[]
 
   @@unique([tenant_id, code], map: "customers_tenant_code_key")
   @@index([tenant_id, name], map: "customers_tenant_name_idx", where: raw("(archived_at IS NULL)"))
@@ -806,6 +807,7 @@ model products {
   goods_receipt_lines goods_receipt_lines[]
   pos_sale_lines      pos_sale_lines[]
   inventory_conflicts inventory_conflicts[]
+  invoice_lines       invoice_lines[]
   tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   stock_movements     stock_movements[]
 
@@ -915,8 +917,18 @@ model tenants {
   tax_label            String?               @default("Impuesto informativo")
   tax_rate_bp          Int                   @default(1600)
   settings             Json                  @default("{}")
+  fiscal_country       String                @default("VE") @db.VarChar(2)
+  tax_id               String?               @db.VarChar(30)
+  legal_name           String?
+  fiscal_address       String?
   created_at           DateTime              @default(now()) @db.Timestamptz(6)
   updated_at           DateTime              @default(now()) @db.Timestamptz(6)
+  accounts             accounts[]
+  journal_entries      journal_entries[]
+  journal_entry_lines  journal_entry_lines[]
+  invoices             invoices[]
+  invoice_lines        invoice_lines[]
+  fiscal_sequences     fiscal_sequences[]
   audit_log            audit_log[]
   customers            customers[]
   delivery_note_lines  delivery_note_lines[]
@@ -1241,4 +1253,134 @@ enum one_time_token_type {
   phone_change_token
 
   @@schema("auth")
+}
+
+model accounts {
+  id                  String                @id @db.Uuid
+  tenant_id           String                @db.Uuid
+  code                String
+  name                String
+  category            String
+  normal_side         String
+  parent_id           String?               @db.Uuid
+  is_reconcilable     Boolean               @default(false)
+  is_active           Boolean               @default(true)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  parent              accounts?             @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  children            accounts[]            @relation("AccountHierarchy")
+  journal_entry_lines journal_entry_lines[]
+  tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, code], map: "accounts_tenant_code_key")
+  @@index([tenant_id, category], map: "accounts_tenant_category_idx")
+  @@schema("public")
+}
+
+model journal_entries {
+  id                  String                @id @db.Uuid
+  tenant_id           String                @db.Uuid
+  entry_number        BigInt
+  date                DateTime              @db.Timestamptz(6)
+  description         String
+  source_type         String
+  source_id           String?               @db.Uuid
+  currency            String
+  total_debit_minor   BigInt
+  total_credit_minor  BigInt
+  is_locked           Boolean               @default(false)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  journal_entry_lines journal_entry_lines[]
+  tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, entry_number], map: "journal_entries_tenant_entry_number_key")
+  @@index([tenant_id, date], map: "journal_entries_tenant_date_idx")
+  @@index([tenant_id, source_type, source_id], map: "journal_entries_tenant_source_idx")
+  @@schema("public")
+}
+
+model journal_entry_lines {
+  id              String          @id @db.Uuid
+  tenant_id       String          @db.Uuid
+  entry_id        String          @db.Uuid
+  account_id      String          @db.Uuid
+  debit_minor     BigInt          @default(0)
+  credit_minor    BigInt          @default(0)
+  currency        String
+  memo            String?
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  journal_entries journal_entries @relation(fields: [entry_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  accounts        accounts        @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  tenants         tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenant_id, entry_id], map: "journal_entry_lines_tenant_entry_idx")
+  @@index([tenant_id, account_id], map: "journal_entry_lines_tenant_account_idx")
+  @@schema("public")
+}
+
+model invoices {
+  id              String          @id @db.Uuid
+  tenant_id       String          @db.Uuid
+  customer_id     String          @db.Uuid
+  document_type   String
+  document_number String
+  control_number  String?
+  issue_date      DateTime        @db.Timestamptz(6)
+  due_date        DateTime        @db.Timestamptz(6)
+  currency        String
+  subtotal_minor  BigInt
+  tax_minor       BigInt
+  igtf_minor      BigInt          @default(0)
+  total_minor     BigInt
+  paid_minor      BigInt          @default(0)
+  status          String          @default("DRAFT")
+  idempotency_key String?
+  notes           String?
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime        @default(now()) @db.Timestamptz(6)
+  invoice_lines   invoice_lines[]
+  customers       customers       @relation(fields: [customer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  tenants         tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, document_number], map: "invoices_tenant_document_number_key")
+  @@index([tenant_id, customer_id], map: "invoices_tenant_customer_idx")
+  @@index([tenant_id, issue_date], map: "invoices_tenant_issue_date_idx")
+  @@index([tenant_id, idempotency_key], map: "invoices_tenant_idempotency_idx")
+  @@schema("public")
+}
+
+model invoice_lines {
+  id               String    @id @db.Uuid
+  tenant_id        String    @db.Uuid
+  invoice_id       String    @db.Uuid
+  product_id       String?   @db.Uuid
+  description      String
+  quantity_scaled  BigInt
+  unit_price_minor BigInt
+  tax_rate_bp      Int
+  subtotal_minor   BigInt
+  tax_minor        BigInt
+  total_minor      BigInt
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  invoices         invoices  @relation(fields: [invoice_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products         products? @relation(fields: [product_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  tenants          tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenant_id, invoice_id], map: "invoice_lines_tenant_invoice_idx")
+  @@schema("public")
+}
+
+model fiscal_sequences {
+  id             String   @id @db.Uuid
+  tenant_id      String   @db.Uuid
+  document_type  String
+  prefix         String   @default("")
+  current_number BigInt   @default(0)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  tenants        tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, document_type, prefix], map: "fiscal_sequences_tenant_type_prefix_key")
+  @@schema("public")
 }
