@@ -1,0 +1,80 @@
+import { Account } from '../model/account';
+import { AccountCode } from '../model/account-code';
+import type { AccountCategory } from '../model/account-type';
+
+export interface AccountTemplateItem {
+  readonly code: string;
+  readonly name: string;
+  readonly category: AccountCategory;
+  readonly isReconcilable: boolean;
+}
+
+const VENEZUELA_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
+  { code: '1.1.01', name: 'Caja y Bancos', category: 'ASSET', isReconcilable: true },
+  {
+    code: '1.1.02',
+    name: 'Cuentas por Cobrar Comerciales',
+    category: 'ASSET',
+    isReconcilable: true,
+  },
+  { code: '1.1.03', name: 'Inventario de Mercancias', category: 'ASSET', isReconcilable: false },
+  {
+    code: '2.1.01',
+    name: 'Cuentas por Pagar Proveedores',
+    category: 'LIABILITY',
+    isReconcilable: true,
+  },
+  {
+    code: '2.1.02',
+    name: 'Debito Fiscal IVA por Enterar',
+    category: 'LIABILITY',
+    isReconcilable: false,
+  },
+  {
+    code: '2.1.03',
+    name: 'Retenciones de IVA por Enterar',
+    category: 'LIABILITY',
+    isReconcilable: false,
+  },
+  { code: '2.1.04', name: 'IGTF por Pagar', category: 'LIABILITY', isReconcilable: false },
+  { code: '3.1.01', name: 'Capital Social', category: 'EQUITY', isReconcilable: false },
+  { code: '4.1.01', name: 'Ingresos por Ventas', category: 'REVENUE', isReconcilable: false },
+  { code: '5.1.01', name: 'Costo de Ventas', category: 'COGS', isReconcilable: false },
+  { code: '6.1.01', name: 'Gastos Operativos', category: 'EXPENSE', isReconcilable: false },
+];
+
+const US_GAAP_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
+  { code: '1010', name: 'Cash and Cash Equivalents', category: 'ASSET', isReconcilable: true },
+  { code: '1200', name: 'Accounts Receivable', category: 'ASSET', isReconcilable: true },
+  { code: '1400', name: 'Inventory Asset', category: 'ASSET', isReconcilable: false },
+  { code: '2010', name: 'Accounts Payable', category: 'LIABILITY', isReconcilable: true },
+  { code: '2050', name: 'Sales Tax Payable', category: 'LIABILITY', isReconcilable: false },
+  { code: '3010', name: 'Owners Equity', category: 'EQUITY', isReconcilable: false },
+  { code: '4010', name: 'Sales Revenue', category: 'REVENUE', isReconcilable: false },
+  { code: '5010', name: 'Cost of Goods Sold', category: 'COGS', isReconcilable: false },
+  { code: '6010', name: 'Operating Expenses', category: 'EXPENSE', isReconcilable: false },
+];
+
+export function createDefaultAccountsForJurisdiction(
+  tenantId: string,
+  jurisdiction: 'VE' | 'US',
+): readonly Account[] {
+  const template = jurisdiction === 'VE' ? VENEZUELA_CHART_TEMPLATE : US_GAAP_CHART_TEMPLATE;
+
+  return template.map((item, index) => {
+    const codeResult = AccountCode.create(item.code);
+    if (!codeResult.ok) {
+      throw new Error(`Invalid code in template: ${item.code}`);
+    }
+
+    return new Account({
+      id: `${tenantId}-acc-${index + 1}`,
+      tenantId,
+      code: codeResult.value,
+      name: item.name,
+      category: item.category,
+      isReconcilable: item.isReconcilable,
+      isActive: true,
+    });
+  });
+}

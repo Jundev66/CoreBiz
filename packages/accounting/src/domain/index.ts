@@ -6,3 +6,4 @@ export * from './model/account';
 export * from './model/journal-entry-line';
 export * from './model/journal-entry';
 export * from './port/accounting-repository';
+export * from './templates/default-chart-of-accounts';
