@@ -22,6 +22,8 @@ export const createProductSchema = z
     minStock: decimalStringSchema.optional().or(z.literal('')),
     taxable: z.boolean().optional(),
     trackStock: z.boolean().optional(),
+    revenueAccountId: z.string().trim().optional().or(z.literal('')),
+    inventoryAccountId: z.string().trim().optional().or(z.literal('')),
   })
   .strict();
 

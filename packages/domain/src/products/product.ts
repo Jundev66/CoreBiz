@@ -52,6 +52,8 @@ export interface ProductProps {
   readonly minStock: Quantity | null;
   readonly stockPolicy: StockPolicy;
   readonly archivedAt: Date | null;
+  readonly revenueAccountId?: string | null;
+  readonly inventoryAccountId?: string | null;
 }
 
 const NAME_MIN = 2;
@@ -82,6 +84,8 @@ export class Product extends AggregateRoot<ProductId> {
     initialStock?: Quantity;
     minStock?: Quantity | null;
     stockPolicy?: StockPolicy;
+    revenueAccountId?: string | null;
+    inventoryAccountId?: string | null;
     createdAt: Date;
   }): Result<Product, ProductError> {
     const name = input.name.trim();
@@ -117,6 +121,8 @@ export class Product extends AggregateRoot<ProductId> {
       minStock: input.minStock ?? null,
       stockPolicy: input.stockPolicy ?? 'deny_negative',
       archivedAt: null,
+      revenueAccountId: input.revenueAccountId?.trim() || null,
+      inventoryAccountId: input.inventoryAccountId?.trim() || null,
     });
 
     // El inventario inicial tambien es un movimiento: si no lo fuese, el saldo
@@ -182,6 +188,12 @@ export class Product extends AggregateRoot<ProductId> {
   }
   get isArchived(): boolean {
     return this.props.archivedAt !== null;
+  }
+  get revenueAccountId(): string | null {
+    return this.props.revenueAccountId ?? null;
+  }
+  get inventoryAccountId(): string | null {
+    return this.props.inventoryAccountId ?? null;
   }
 
   /** Avisa de reposicion. Un producto sin minimo definido nunca esta bajo minimos. */

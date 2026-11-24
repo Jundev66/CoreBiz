@@ -12,6 +12,7 @@ export const issueInvoiceLineSchema = z
     unitPrice: decimalStringSchema,
     taxPercentage: z.coerce.number().min(0).max(100).default(16),
     productId: recordIdSchema.optional(),
+    revenueAccountId: recordIdSchema.optional(),
   })
   .strict();
 

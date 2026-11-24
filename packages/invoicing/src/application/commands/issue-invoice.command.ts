@@ -20,6 +20,7 @@ export interface InvoiceLineCreationInput {
   readonly unitPriceMinor: bigint;
   readonly taxPercentage: number;
   readonly productId?: string | undefined;
+  readonly revenueAccountId?: string | undefined;
 }
 
 export interface IssueInvoiceCommand {
@@ -75,6 +76,7 @@ export class IssueInvoiceCommandHandler {
         Money.fromMinor(lineInput.unitPriceMinor, command.currency),
         taxRateResult.value,
         lineInput.productId,
+        lineInput.revenueAccountId,
       );
 
       if (!lineResult.ok) {
@@ -110,18 +112,40 @@ export class IssueInvoiceCommandHandler {
       `Accounts receivable - Invoice ${command.documentNumber}`,
     );
 
-    const creditRevenueLine = JournalEntryLine.create(
-      command.revenueAccountId,
-      Money.zero(command.currency),
-      invoice.subtotal,
-      `Sales revenue - Invoice ${command.documentNumber}`,
-    );
-
-    if (!debitReceivableLine.ok || !creditRevenueLine.ok) {
-      return err({ kind: 'JournalEntryError', details: 'Failed to create main journal lines' });
+    if (!debitReceivableLine.ok) {
+      return err({
+        kind: 'JournalEntryError',
+        details: 'Failed to create receivable journal line',
+      });
     }
 
-    const journalLines: JournalEntryLine[] = [debitReceivableLine.value, creditRevenueLine.value];
+    const revenueByAccount = new Map<string, bigint>();
+
+    for (let i = 0; i < invoice.lines.length; i++) {
+      const line = invoice.lines[i];
+      const inputLine = command.lines[i];
+      if (!line) continue;
+      const targetAccount = inputLine?.revenueAccountId?.trim() || command.revenueAccountId;
+      const currentMinor = revenueByAccount.get(targetAccount) ?? 0n;
+      revenueByAccount.set(targetAccount, currentMinor + line.subtotal.minorUnits);
+    }
+
+    const revenueLines: JournalEntryLine[] = [];
+    for (const [accountId, totalMinor] of revenueByAccount.entries()) {
+      const revenueMoney = Money.fromMinor(totalMinor, command.currency);
+      const creditRevenueLine = JournalEntryLine.create(
+        accountId,
+        Money.zero(command.currency),
+        revenueMoney,
+        `Sales revenue - Invoice ${command.documentNumber}`,
+      );
+      if (!creditRevenueLine.ok) {
+        return err({ kind: 'JournalEntryError', details: 'Failed to create revenue journal line' });
+      }
+      revenueLines.push(creditRevenueLine.value);
+    }
+
+    const journalLines: JournalEntryLine[] = [debitReceivableLine.value, ...revenueLines];
 
     if (invoice.taxTotal.isPositive) {
       const creditTaxLine = JournalEntryLine.create(

@@ -37,6 +37,7 @@ export class IssueInvoiceController {
         unitPriceMinor: unitPriceParsed.ok ? unitPriceParsed.value.minorUnits : 0n,
         taxPercentage: l.taxPercentage,
         productId: l.productId,
+        revenueAccountId: l.revenueAccountId,
       };
     });
 

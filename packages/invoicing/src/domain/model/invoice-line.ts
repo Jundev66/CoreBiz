@@ -8,6 +8,7 @@ export interface InvoiceLineError {
 export class InvoiceLine {
   readonly id: string;
   readonly productId?: string | undefined;
+  readonly revenueAccountId?: string | undefined;
   readonly description: string;
   readonly quantity: Quantity;
   readonly unitPrice: Money;
@@ -19,6 +20,7 @@ export class InvoiceLine {
   private constructor(
     id: string,
     productId: string | undefined,
+    revenueAccountId: string | undefined,
     description: string,
     quantity: Quantity,
     unitPrice: Money,
@@ -29,6 +31,7 @@ export class InvoiceLine {
   ) {
     this.id = id;
     this.productId = productId;
+    this.revenueAccountId = revenueAccountId;
     this.description = description;
     this.quantity = quantity;
     this.unitPrice = unitPrice;
@@ -45,6 +48,7 @@ export class InvoiceLine {
     unitPrice: Money,
     taxRate: TaxRate,
     productId?: string,
+    revenueAccountId?: string,
   ): Result<InvoiceLine, InvoiceLineError> {
     if (description.trim() === '') {
       return err({ kind: 'EmptyDescription' });
@@ -67,6 +71,7 @@ export class InvoiceLine {
       new InvoiceLine(
         id,
         productId,
+        revenueAccountId,
         description.trim(),
         quantity,
         unitPrice,
