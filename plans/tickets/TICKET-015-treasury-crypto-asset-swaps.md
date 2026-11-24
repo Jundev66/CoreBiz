@@ -68,10 +68,10 @@ apps/web/
 
 ## 5. Verification Checklist
 
-- [ ] Implement `TreasurySwap` domain aggregate in `@corebiz/accounting`
-- [ ] Enforce double-entry balance across cross-currency asset swaps
-- [ ] Record blockchain TX hash / P2P order reference
-- [ ] Expose REST controllers in `apps/api`
-- [ ] Implement web dashboard in `apps/web`
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Implement `TreasurySwap` domain aggregate in `@corebiz/accounting`
+- [x] Enforce double-entry balance across cross-currency asset swaps
+- [x] Record blockchain TX hash / P2P order reference
+- [x] Expose REST controllers in `apps/api`
+- [x] Implement web dashboard in `apps/web`
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

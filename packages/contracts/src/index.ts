@@ -23,3 +23,4 @@ export * from './access';
 export * from './fiscal-reports';
 export * from './reconciliation';
 export * from './forex';
+export * from './treasury';

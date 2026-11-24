@@ -11,6 +11,8 @@ import {
   ListBankStatementsController,
   RunForexRevaluationController,
   GetForexExposureController,
+  ExecuteTreasurySwapController,
+  ListTreasurySwapsController,
 } from './controllers';
 
 @Module({
@@ -26,6 +28,8 @@ import {
     ListBankStatementsController,
     RunForexRevaluationController,
     GetForexExposureController,
+    ExecuteTreasurySwapController,
+    ListTreasurySwapsController,
   ],
 })
 export class AccountingModule {}

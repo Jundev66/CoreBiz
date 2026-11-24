@@ -73,6 +73,7 @@ export const integrationsRuntimeProvider: FactoryProvider = {
         journalEntries: accounting.journalEntries,
         invoices: accounting.invoices,
         bankStatements: accounting.bankStatements,
+        treasurySwaps: accounting.treasurySwaps,
       };
     }
 

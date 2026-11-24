@@ -9,3 +9,5 @@ export { GetReconciliationStatusController } from './get-reconciliation-status.c
 export { ListBankStatementsController } from './list-bank-statements.controller';
 export { RunForexRevaluationController } from './run-forex-revaluation.controller';
 export { GetForexExposureController } from './get-forex-exposure.controller';
+export { ExecuteTreasurySwapController } from './execute-treasury-swap.controller';
+export { ListTreasurySwapsController } from './list-treasury-swaps.controller';

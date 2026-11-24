@@ -9,14 +9,18 @@ describe('createDefaultAccountsForJurisdiction & ChartOfAccountsRegistry', () =>
 
   it('generates Venezuelan FCCPV chart with IVA, IGTF, and retentions accounts', () => {
     const accounts = createDefaultAccountsForJurisdiction(tenantId, 'VE');
-    expect(accounts.length).toBe(11);
+    expect(accounts.length).toBe(15);
 
     const codes = accounts.map((a) => a.code.value);
     expect(codes).toContain('1.1.01');
+    expect(codes).toContain('1.1.04');
+    expect(codes).toContain('1.2.01');
     expect(codes).toContain('2.1.02');
     expect(codes).toContain('2.1.03');
     expect(codes).toContain('2.1.04');
+    expect(codes).toContain('3.1.02');
     expect(codes).toContain('4.1.01');
+    expect(codes).toContain('6.1.02');
 
     const igtfAccount = accounts.find((a) => a.code.value === '2.1.04');
     expect(igtfAccount?.name).toBe('IGTF por Pagar');
@@ -25,14 +29,18 @@ describe('createDefaultAccountsForJurisdiction & ChartOfAccountsRegistry', () =>
 
   it('generates US GAAP chart with Sales Tax Payable and 4-digit codes', () => {
     const accounts = createDefaultAccountsForJurisdiction(tenantId, 'US');
-    expect(accounts.length).toBe(9);
+    expect(accounts.length).toBe(13);
 
     const codes = accounts.map((a) => a.code.value);
     expect(codes).toContain('1010');
+    expect(codes).toContain('1040');
     expect(codes).toContain('1200');
+    expect(codes).toContain('1250');
     expect(codes).toContain('2010');
     expect(codes).toContain('2050');
+    expect(codes).toContain('3020');
     expect(codes).toContain('4010');
+    expect(codes).toContain('6050');
 
     const salesTaxAccount = accounts.find((a) => a.code.value === '2050');
     expect(salesTaxAccount?.name).toBe('Sales Tax Payable');

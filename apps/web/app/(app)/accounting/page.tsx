@@ -5,7 +5,7 @@ import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Badge } from '@/ui/feedback';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
-import { BarChart3, BookOpen, Layers } from 'lucide-react';
+import { BarChart3, BookOpen, Layers, ArrowRightLeft } from 'lucide-react';
 
 const CATEGORY_NAMES: Record<string, string> = {
   ASSET: 'Activos',
@@ -48,6 +48,13 @@ export default async function AccountingPage() {
           >
             <BookOpen className="size-3.5" />
             <span>Libro Diario</span>
+          </Link>
+          <Link
+            href="/accounting/treasury"
+            className="flex items-center gap-2 rounded-control border border-border px-3 py-1.5 text-xs font-semibold text-text hover:bg-surface-raised"
+          >
+            <ArrowRightLeft className="size-3.5" />
+            <span>Tesorería & Cripto</span>
           </Link>
         </div>
       }

@@ -18,6 +18,8 @@ const VENEZUELA_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
     isReconcilable: true,
   },
   { code: '1.1.03', name: 'Inventario de Mercancias', category: 'ASSET', isReconcilable: false },
+  { code: '1.1.04', name: 'Criptoactivos y Divisas', category: 'ASSET', isReconcilable: true },
+  { code: '1.2.01', name: 'Cuentas por Cobrar a Socios', category: 'ASSET', isReconcilable: true },
   {
     code: '2.1.01',
     name: 'Cuentas por Pagar Proveedores',
@@ -38,21 +40,47 @@ const VENEZUELA_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
   },
   { code: '2.1.04', name: 'IGTF por Pagar', category: 'LIABILITY', isReconcilable: false },
   { code: '3.1.01', name: 'Capital Social', category: 'EQUITY', isReconcilable: false },
+  {
+    code: '3.1.02',
+    name: 'Retiros y Dividendos de Socios',
+    category: 'EQUITY',
+    isReconcilable: false,
+  },
   { code: '4.1.01', name: 'Ingresos por Ventas', category: 'REVENUE', isReconcilable: false },
   { code: '5.1.01', name: 'Costo de Ventas', category: 'COGS', isReconcilable: false },
   { code: '6.1.01', name: 'Gastos Operativos', category: 'EXPENSE', isReconcilable: false },
+  {
+    code: '6.1.02',
+    name: 'Comisiones Bancarias y Financieras',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
 ];
 
 const US_GAAP_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
   { code: '1010', name: 'Cash and Cash Equivalents', category: 'ASSET', isReconcilable: true },
+  {
+    code: '1040',
+    name: 'Digital Assets and Crypto Holdings',
+    category: 'ASSET',
+    isReconcilable: true,
+  },
   { code: '1200', name: 'Accounts Receivable', category: 'ASSET', isReconcilable: true },
+  { code: '1250', name: 'Due from Shareholders', category: 'ASSET', isReconcilable: true },
   { code: '1400', name: 'Inventory Asset', category: 'ASSET', isReconcilable: false },
   { code: '2010', name: 'Accounts Payable', category: 'LIABILITY', isReconcilable: true },
   { code: '2050', name: 'Sales Tax Payable', category: 'LIABILITY', isReconcilable: false },
   { code: '3010', name: 'Owners Equity', category: 'EQUITY', isReconcilable: false },
+  {
+    code: '3020',
+    name: 'Owner Drawings and Distributions',
+    category: 'EQUITY',
+    isReconcilable: false,
+  },
   { code: '4010', name: 'Sales Revenue', category: 'REVENUE', isReconcilable: false },
   { code: '5010', name: 'Cost of Goods Sold', category: 'COGS', isReconcilable: false },
   { code: '6010', name: 'Operating Expenses', category: 'EXPENSE', isReconcilable: false },
+  { code: '6050', name: 'Bank and Processing Fees', category: 'EXPENSE', isReconcilable: false },
 ];
 
 export class ChartOfAccountsRegistry {

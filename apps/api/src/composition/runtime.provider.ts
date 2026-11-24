@@ -23,6 +23,7 @@ import type {
   JournalEntryRepository,
   InvoiceRepository,
   BankStatementRepository,
+  TreasurySwapRepository,
 } from '@corebiz/domain';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
@@ -34,6 +35,7 @@ export interface Runtime {
   readonly journalEntries: JournalEntryRepository;
   readonly invoices: InvoiceRepository;
   readonly bankStatements: BankStatementRepository;
+  readonly treasurySwaps?: TreasurySwapRepository;
 }
 
 /**
@@ -95,6 +97,7 @@ export const runtimeProvider: FactoryProvider = {
         journalEntries: accounting.journalEntries,
         invoices: accounting.invoices,
         bankStatements: accounting.bankStatements,
+        treasurySwaps: accounting.treasurySwaps,
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }

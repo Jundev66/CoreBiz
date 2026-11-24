@@ -6,6 +6,8 @@ import type {
   JournalEntryRepository,
   BankStatement,
   BankStatementRepository,
+  TreasurySwap,
+  TreasurySwapRepository,
 } from '@corebiz/domain';
 
 export class InMemoryAccountRepository implements AccountRepository {
@@ -111,6 +113,44 @@ export class InMemoryBankStatementRepository implements BankStatementRepository 
 
   save(statement: BankStatement): Promise<void> {
     this.store.set(statement.id, statement);
+    return Promise.resolve();
+  }
+}
+
+export class InMemoryTreasurySwapRepository implements TreasurySwapRepository {
+  private readonly store: Map<string, TreasurySwap> = new Map();
+
+  findById(tenantId: string, id: string): Promise<TreasurySwap | null> {
+    const swap = this.store.get(id);
+    if (!swap || swap.tenantId !== tenantId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(swap);
+  }
+
+  nextSwapNumber(tenantId: string): Promise<bigint> {
+    let max = 0n;
+    for (const swap of this.store.values()) {
+      if (swap.tenantId === tenantId && swap.swapNumber > max) {
+        max = swap.swapNumber;
+      }
+    }
+    return Promise.resolve(max + 1n);
+  }
+
+  listByTenant(tenantId: string): Promise<readonly TreasurySwap[]> {
+    const list: TreasurySwap[] = [];
+    for (const swap of this.store.values()) {
+      if (swap.tenantId === tenantId) {
+        list.push(swap);
+      }
+    }
+    list.sort((a, b) => b.date.getTime() - a.date.getTime());
+    return Promise.resolve(list);
+  }
+
+  save(swap: TreasurySwap): Promise<void> {
+    this.store.set(swap.id, swap);
     return Promise.resolve();
   }
 }

@@ -64,6 +64,8 @@ import {
   ListBankStatementsQueryHandler,
   RunForexRevaluationCommandHandler,
   GetForexExposureQueryHandler,
+  ExecuteTreasurySwapCommandHandler,
+  ListTreasurySwapsQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -265,6 +267,12 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       runtime.journalEntries,
     ),
     getForexExposure: new GetForexExposureQueryHandler(runtime.accounts, runtime.journalEntries),
+    executeTreasurySwap: new ExecuteTreasurySwapCommandHandler(
+      runtime.accounts,
+      runtime.journalEntries,
+      runtime.treasurySwaps!,
+    ),
+    listTreasurySwaps: new ListTreasurySwapsQueryHandler(runtime.treasurySwaps!),
   } as const;
 }
 

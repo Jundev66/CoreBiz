@@ -10,6 +10,8 @@ export * from './model/bank-statement';
 export * from './model/reconciliation-match';
 export * from './model/monetary-position';
 export * from './model/forex-revaluation';
+export * from './model/treasury-swap';
 export * from './port/accounting-repository';
 export * from './port/bank-statement-repository';
+export * from './port/treasury-swap-repository';
 export * from './templates/default-chart-of-accounts';
