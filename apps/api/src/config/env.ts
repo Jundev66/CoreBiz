@@ -232,6 +232,12 @@ const schema = z
      * instance's connection pool.
      */
     INTEGRATIONS_REQUESTS_PER_MINUTE: z.coerce.number().int().positive().default(600),
+
+    ALLOWED_IP_LIST: z.string().optional(),
+    ENFORCE_IP_ALLOWLIST: z
+      .enum(['true', 'false', '1', '0'])
+      .default('false')
+      .transform((value) => value === 'true' || value === '1'),
   })
   .superRefine((value, ctx) => {
     if (value.DATA_DRIVER === 'postgres' && value.DATABASE_URL === undefined) {

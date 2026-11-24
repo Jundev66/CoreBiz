@@ -1,0 +1,19 @@
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
+
+FROM base AS builder
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json .npmrc ./
+COPY packages/ ./packages/
+COPY synapse-vision/ ./synapse-vision/
+COPY apps/web/ ./apps/web/
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @corebiz/web build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app ./
+EXPOSE 3020
+CMD ["pnpm", "--filter", "@corebiz/web", "start", "-p", "3020"]
