@@ -40,3 +40,6 @@ export * from './invoicing/commands/apply-invoice-payment.command';
 export * from './invoicing/queries/list-invoices.query';
 export * from './use-cases/access/switch-active-tenant.use-case';
 export * from './queries/access/list-user-tenants.query';
+export * from './fiscal/queries/generate-sales-book.query';
+export * from './fiscal/queries/generate-purchases-book.query';
+export * from './fiscal/queries/generate-us-tax-summary.query';

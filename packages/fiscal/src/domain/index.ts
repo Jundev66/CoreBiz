@@ -2,3 +2,8 @@ export * from './value-objects/rif';
 export * from './value-objects/ein';
 export * from './value-objects/tax-rate';
 export * from './port/fiscal-jurisdiction-port';
+export * from './port/fiscal-reporting.port';
+export * from './model/fiscal-period';
+export * from './model/sales-book-record';
+export * from './model/purchases-book-record';
+export * from './model/us-sales-tax-record';

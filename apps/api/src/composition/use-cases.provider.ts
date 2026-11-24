@@ -54,6 +54,9 @@ import {
   IssueInvoiceCommandHandler,
   ApplyInvoicePaymentCommandHandler,
   ListInvoicesQueryHandler,
+  GenerateSalesBookQueryHandler,
+  GeneratePurchasesBookQueryHandler,
+  GenerateUsTaxSummaryQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -229,6 +232,9 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       runtime.journalEntries,
     ),
     listInvoices: new ListInvoicesQueryHandler(runtime.invoices),
+    generateSalesBook: new GenerateSalesBookQueryHandler(runtime.invoices),
+    generatePurchasesBook: new GeneratePurchasesBookQueryHandler(),
+    generateUsTaxSummary: new GenerateUsTaxSummaryQueryHandler(runtime.invoices),
   } as const;
 }
 

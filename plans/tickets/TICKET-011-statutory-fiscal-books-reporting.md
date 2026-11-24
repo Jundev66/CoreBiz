@@ -79,10 +79,10 @@ apps/web/
 
 ## 5. Verification Checklist
 
-- [ ] Implement `FiscalReportingPort` in `@corebiz/fiscal/domain`
-- [ ] Implement `VenezuelaFiscalBookService` conforming to SENIAT providencias
-- [ ] Implement `UnitedStatesTaxReportService`
-- [ ] Expose REST controllers in `apps/api` with `@RequirePermission('accounting:read')`
-- [ ] Implement CSV export / print views in `apps/web`
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Implement `FiscalReportingPort` in `@corebiz/fiscal/domain`
+- [x] Implement `VenezuelaFiscalBookService` conforming to SENIAT providencias
+- [x] Implement `UnitedStatesTaxReportService`
+- [x] Expose REST controllers in `apps/api` with `@RequirePermission('accounting:read')`
+- [x] Implement CSV export / print views in `apps/web`
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
