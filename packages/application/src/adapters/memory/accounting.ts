@@ -4,6 +4,8 @@ import type {
   AccountRepository,
   JournalEntry,
   JournalEntryRepository,
+  BankStatement,
+  BankStatementRepository,
 } from '@corebiz/domain';
 
 export class InMemoryAccountRepository implements AccountRepository {
@@ -80,5 +82,35 @@ export class InMemoryJournalEntryRepository implements JournalEntryRepository {
       }
     }
     return Promise.resolve(list);
+  }
+}
+
+export class InMemoryBankStatementRepository implements BankStatementRepository {
+  private readonly store: Map<string, BankStatement> = new Map();
+
+  findById(tenantId: string, id: string): Promise<BankStatement | null> {
+    const statement = this.store.get(id);
+    if (!statement || statement.tenantId !== tenantId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(statement);
+  }
+
+  listByTenant(tenantId: string, bankAccountId?: string): Promise<readonly BankStatement[]> {
+    const list: BankStatement[] = [];
+    for (const statement of this.store.values()) {
+      if (statement.tenantId === tenantId) {
+        if (!bankAccountId || statement.bankAccountId === bankAccountId) {
+          list.push(statement);
+        }
+      }
+    }
+    list.sort((a, b) => b.endDate.getTime() - a.endDate.getTime());
+    return Promise.resolve(list);
+  }
+
+  save(statement: BankStatement): Promise<void> {
+    this.store.set(statement.id, statement);
+    return Promise.resolve();
   }
 }

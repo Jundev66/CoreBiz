@@ -6,7 +6,13 @@ import type {
   TenantContext,
   UnitOfWork,
 } from '@corebiz/application';
-import type { AccountRepository, JournalEntryRepository, InvoiceRepository } from '@corebiz/domain';
+import type {
+  AccountRepository,
+  JournalEntryRepository,
+  InvoiceRepository,
+  BankStatementRepository,
+} from '@corebiz/domain';
+import { InMemoryBankStatementRepository } from '@corebiz/accounting/infrastructure';
 import type { VisionVectorStorePort } from '@synapse-vision/core';
 import { PrismaUnitOfWork } from './prisma/unit-of-work';
 import type { AuditTrace } from './prisma/audit';
@@ -47,6 +53,7 @@ export interface PostgresRuntime {
   readonly accounts: AccountRepository;
   readonly journalEntries: JournalEntryRepository;
   readonly invoices: InvoiceRepository;
+  readonly bankStatements: BankStatementRepository;
 }
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
@@ -64,6 +71,7 @@ export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
     accounts: new PrismaAccountRepository(prisma),
     journalEntries: new PrismaJournalEntryRepository(prisma),
     invoices: new PrismaInvoiceRepository(prisma),
+    bankStatements: new InMemoryBankStatementRepository(),
     ...(deps.vectorModel !== undefined
       ? { vectorStore: prismaVisionVectorStore(prisma, deps.ctx, { model: deps.vectorModel }) }
       : {}),

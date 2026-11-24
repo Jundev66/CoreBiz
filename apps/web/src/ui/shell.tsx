@@ -95,6 +95,11 @@ export async function AppFrame({
             icon: 'chart' as const,
           },
           { href: '/accounting/journal-entries', label: 'Libro Diario', icon: 'receipt' as const },
+          {
+            href: '/accounting/reconciliation',
+            label: 'Conciliación Bancaria',
+            icon: 'building' as const,
+          },
           { href: '/fiscal/sales-book', label: 'Libro de Ventas', icon: 'fileText' as const },
           { href: '/fiscal/purchases-book', label: 'Libro de Compras', icon: 'truck' as const },
           { href: '/fiscal/us-sales-tax', label: 'Sales Tax US', icon: 'chart' as const },

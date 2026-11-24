@@ -57,6 +57,11 @@ import {
   GenerateSalesBookQueryHandler,
   GeneratePurchasesBookQueryHandler,
   GenerateUsTaxSummaryQueryHandler,
+  ImportBankStatementCommandHandler,
+  MatchReconciliationCommandHandler,
+  RecordBankAdjustmentCommandHandler,
+  GetReconciliationStatusQueryHandler,
+  ListBankStatementsQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -235,6 +240,24 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     generateSalesBook: new GenerateSalesBookQueryHandler(runtime.invoices),
     generatePurchasesBook: new GeneratePurchasesBookQueryHandler(),
     generateUsTaxSummary: new GenerateUsTaxSummaryQueryHandler(runtime.invoices),
+    importBankStatement: new ImportBankStatementCommandHandler(
+      runtime.accounts,
+      runtime.bankStatements,
+    ),
+    matchReconciliation: new MatchReconciliationCommandHandler(
+      runtime.bankStatements,
+      runtime.journalEntries,
+    ),
+    recordBankAdjustment: new RecordBankAdjustmentCommandHandler(
+      runtime.bankStatements,
+      runtime.accounts,
+      runtime.journalEntries,
+    ),
+    getReconciliationStatus: new GetReconciliationStatusQueryHandler(
+      runtime.bankStatements,
+      runtime.journalEntries,
+    ),
+    listBankStatements: new ListBankStatementsQueryHandler(runtime.bankStatements),
   } as const;
 }
 

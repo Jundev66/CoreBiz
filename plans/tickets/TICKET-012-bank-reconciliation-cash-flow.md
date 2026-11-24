@@ -74,10 +74,10 @@ apps/web/
 
 ## 5. Verification Checklist
 
-- [ ] Implement `BankStatement` and `BankStatementLine` domain models in `@corebiz/accounting`
-- [ ] Implement `ImportBankStatementCommandHandler` and `MatchReconciliationCommandHandler`
-- [ ] Enforce double-entry invariants on bank adjustment postings
-- [ ] Expose REST controllers in `apps/api`
-- [ ] Implement web reconciliation dashboard in Next.js 16
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Implement `BankStatement` and `BankStatementLine` domain models in `@corebiz/accounting`
+- [x] Implement `ImportBankStatementCommandHandler` and `MatchReconciliationCommandHandler`
+- [x] Enforce double-entry invariants on bank adjustment postings
+- [x] Expose REST controllers in `apps/api`
+- [x] Implement web reconciliation dashboard in Next.js 16
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

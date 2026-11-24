@@ -18,7 +18,12 @@ import {
   memoryVisionStore,
   memoryAccountingRepos,
 } from './memory-driver';
-import type { AccountRepository, JournalEntryRepository, InvoiceRepository } from '@corebiz/domain';
+import type {
+  AccountRepository,
+  JournalEntryRepository,
+  InvoiceRepository,
+  BankStatementRepository,
+} from '@corebiz/domain';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface Runtime {
@@ -28,6 +33,7 @@ export interface Runtime {
   readonly accounts: AccountRepository;
   readonly journalEntries: JournalEntryRepository;
   readonly invoices: InvoiceRepository;
+  readonly bankStatements: BankStatementRepository;
 }
 
 /**
@@ -88,6 +94,7 @@ export const runtimeProvider: FactoryProvider = {
         accounts: accounting.accounts,
         journalEntries: accounting.journalEntries,
         invoices: accounting.invoices,
+        bankStatements: accounting.bankStatements,
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }
