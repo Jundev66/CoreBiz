@@ -48,6 +48,19 @@ const STATIC_ROUTES = [
   '/settings/audit',
   '/settings/ai',
   '/purchases/scan',
+  '/accounting',
+  '/accounting/trial-balance',
+  '/accounting/journal-entries',
+  '/accounting/reconciliation',
+  '/accounting/forex',
+  '/accounting/treasury',
+  '/accounting/drawings',
+  '/invoicing',
+  '/fiscal/sales-book',
+  '/fiscal/purchases-book',
+  '/fiscal/us-sales-tax',
+  '/pos-sales',
+  '/conflicts',
 ] as const;
 
 /** Pantallas de cuenta. Se visitan SIN sesion, que es como las ve quien llega. */

@@ -105,6 +105,16 @@ export async function AppFrame({
             label: 'Reexpresión (Forex)',
             icon: 'chart' as const,
           },
+          {
+            href: '/accounting/treasury',
+            label: 'Tesorería & Swaps',
+            icon: 'banknote' as const,
+          },
+          {
+            href: '/accounting/drawings',
+            label: 'Retiros & Autoconsumo',
+            icon: 'users' as const,
+          },
           { href: '/fiscal/sales-book', label: 'Libro de Ventas', icon: 'fileText' as const },
           { href: '/fiscal/purchases-book', label: 'Libro de Compras', icon: 'truck' as const },
           { href: '/fiscal/us-sales-tax', label: 'Sales Tax US', icon: 'chart' as const },
@@ -476,7 +486,7 @@ export function Empty({
       <span className="grid size-11 place-items-center rounded-pill bg-brand-soft text-brand">
         <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
       </span>
-      <p className="mt-3 max-w-sm text-sm text-muted">{children}</p>
+      <div className="mt-3 max-w-sm text-sm text-muted">{children}</div>
       {action !== undefined && <div className="mt-4">{action}</div>}
     </div>
   );

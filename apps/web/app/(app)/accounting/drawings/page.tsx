@@ -401,60 +401,59 @@ export default async function PartnerDrawingsPage() {
         </div>
       )}
 
-      <TableFrame>
-        {drawings.length === 0 ? (
-          <Empty>No hay retiros ni autoconsumo de socios registrados.</Empty>
-        ) : (
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="bg-zinc-950/50 text-zinc-400 border-b border-zinc-800">
-              <tr>
-                <th className="py-2.5 px-3"># Retiro</th>
-                <th className="py-2.5 px-3">Tipo</th>
-                <th className="py-2.5 px-3">Socio</th>
-                <th className="py-2.5 px-3">Fecha</th>
-                <th className="py-2.5 px-3 text-right">Monto / Valor</th>
-                <th className="py-2.5 px-3">Detalle / Mercancía</th>
-                <th className="py-2.5 px-3">Explicación</th>
-                <th className="py-2.5 px-3">Asiento</th>
-                <th className="py-2.5 px-3 text-center">Estado</th>
+      {drawings.length === 0 ? (
+        <Empty>No hay retiros ni autoconsumo de socios registrados.</Empty>
+      ) : (
+        <TableFrame>
+          <thead className="bg-zinc-950/50 text-zinc-400 border-b border-zinc-800">
+            <tr>
+              <th className="py-2.5 px-3"># Retiro</th>
+              <th className="py-2.5 px-3">Tipo</th>
+              <th className="py-2.5 px-3">Socio</th>
+              <th className="py-2.5 px-3">Fecha</th>
+              <th className="py-2.5 px-3 text-right">Monto / Valor</th>
+              <th className="py-2.5 px-3">Detalle / Mercancía</th>
+              <th className="py-2.5 px-3">Explicación</th>
+              <th className="py-2.5 px-3">Asiento</th>
+              <th className="py-2.5 px-3 text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800/50">
+            {drawings.map((d) => (
+              <tr key={d.id} className="hover:bg-zinc-800/30">
+                <td className="py-2.5 px-3 font-mono font-medium text-zinc-200">
+                  #{d.drawingNumber}
+                </td>
+                <td className="py-2.5 px-3">
+                  <Badge tone={d.drawingType === 'CASH' ? 'success' : 'neutral'}>
+                    {d.drawingType === 'CASH' ? 'Efectivo' : 'Mercancía'}
+                  </Badge>
+                </td>
+                <td className="py-2.5 px-3 font-medium text-zinc-100">{d.partnerName}</td>
+                <td className="py-2.5 px-3">{d.date.slice(0, 10)}</td>
+                <td className="py-2.5 px-3 text-right font-mono text-amber-400 font-semibold">
+                  {d.amount} {d.currency}
+                </td>
+                <td className="py-2.5 px-3 font-mono text-zinc-300">
+                  {d.drawingType === 'STOCK' ? `${d.quantity}x (${d.productId})` : 'Caja/Banco'}
+                </td>
+                <td className="py-2.5 px-3 text-zinc-400 truncate max-w-[180px]">{d.notes}</td>
+                <td className="py-2.5 px-3 font-mono text-zinc-400">
+                  <Link
+                    href="/accounting/journal-entries"
+                    className="text-blue-400 hover:underline"
+                  >
+                    {d.journalEntryId.slice(0, 8)}...
+                  </Link>
+                </td>
+                <td className="py-2.5 px-3 text-center">
+                  <Badge tone={d.status === 'COMPLETED' ? 'success' : 'neutral'}>{d.status}</Badge>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800/50">
-              {drawings.map((d) => (
-                <tr key={d.id} className="hover:bg-zinc-800/30">
-                  <td className="py-2.5 px-3 font-mono font-medium text-zinc-200">
-                    #{d.drawingNumber}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <Badge tone={d.drawingType === 'CASH' ? 'success' : 'neutral'}>
-                      {d.drawingType === 'CASH' ? 'Efectivo' : 'Mercancía'}
-                    </Badge>
-                  </td>
-                  <td className="py-2.5 px-3 font-medium text-zinc-100">{d.partnerName}</td>
-                  <td className="py-2.5 px-3">{d.date.slice(0, 10)}</td>
-                  <td className="py-2.5 px-3 text-right font-mono text-amber-400 font-semibold">
-                    {d.amount} {d.currency}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono text-zinc-300">
-                    {d.drawingType === 'STOCK' ? `${d.quantity}x (${d.productId})` : 'Caja/Banco'}
-                  </td>
-                  <td className="py-2.5 px-3 text-zinc-400 truncate max-w-[180px]">{d.notes}</td>
-                  <td className="py-2.5 px-3 font-mono text-zinc-400">
-                    <Link href="/accounting/journal" className="text-blue-400 hover:underline">
-                      {d.journalEntryId.slice(0, 8)}...
-                    </Link>
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
-                    <Badge tone={d.status === 'COMPLETED' ? 'success' : 'neutral'}>
-                      {d.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </TableFrame>
+            ))}
+          </tbody>
+        </TableFrame>
+      )}
     </Screen>
   );
 }

@@ -281,60 +281,57 @@ export default async function TreasurySwapsPage() {
         </div>
       )}
 
-      <TableFrame>
-        {swaps.length === 0 ? (
-          <Empty>No hay operaciones de tesorería registradas para esta empresa.</Empty>
-        ) : (
-          <table className="w-full text-left text-xs text-zinc-300">
-            <thead className="bg-zinc-950/50 text-zinc-400 border-b border-zinc-800">
-              <tr>
-                <th className="py-2.5 px-3"># Swap</th>
-                <th className="py-2.5 px-3">Fecha</th>
-                <th className="py-2.5 px-3 text-right">Monto Origen</th>
-                <th className="py-2.5 px-3 text-right">Monto Destino</th>
-                <th className="py-2.5 px-3 text-right">Tasa</th>
-                <th className="py-2.5 px-3 text-right">Comisión</th>
-                <th className="py-2.5 px-3">Referencia / Hash</th>
-                <th className="py-2.5 px-3">Asiento</th>
-                <th className="py-2.5 px-3 text-center">Estado</th>
+      {swaps.length === 0 ? (
+        <Empty>No hay operaciones de tesorería registradas para esta empresa.</Empty>
+      ) : (
+        <TableFrame>
+          <thead className="bg-zinc-950/50 text-zinc-400 border-b border-zinc-800">
+            <tr>
+              <th className="py-2.5 px-3"># Swap</th>
+              <th className="py-2.5 px-3">Fecha</th>
+              <th className="py-2.5 px-3 text-right">Monto Origen</th>
+              <th className="py-2.5 px-3 text-right">Monto Destino</th>
+              <th className="py-2.5 px-3 text-right">Tasa</th>
+              <th className="py-2.5 px-3 text-right">Comisión</th>
+              <th className="py-2.5 px-3">Referencia / Hash</th>
+              <th className="py-2.5 px-3">Asiento</th>
+              <th className="py-2.5 px-3 text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800/50">
+            {swaps.map((s) => (
+              <tr key={s.id} className="hover:bg-zinc-800/30">
+                <td className="py-2.5 px-3 font-mono font-medium text-zinc-200">#{s.swapNumber}</td>
+                <td className="py-2.5 px-3">{s.date.slice(0, 10)}</td>
+                <td className="py-2.5 px-3 text-right font-mono text-amber-400">
+                  -{s.sourceAmount} {s.sourceCurrency}
+                </td>
+                <td className="py-2.5 px-3 text-right font-mono text-emerald-400">
+                  +{s.targetAmount} {s.targetCurrency}
+                </td>
+                <td className="py-2.5 px-3 text-right font-mono">{s.exchangeRate}</td>
+                <td className="py-2.5 px-3 text-right font-mono text-rose-400">
+                  {s.feeAmount} {s.targetCurrency}
+                </td>
+                <td className="py-2.5 px-3 font-mono text-zinc-400 truncate max-w-[150px]">
+                  {s.counterpartyReference}
+                </td>
+                <td className="py-2.5 px-3 font-mono text-zinc-400">
+                  <Link
+                    href="/accounting/journal-entries"
+                    className="text-blue-400 hover:underline"
+                  >
+                    {s.journalEntryId.slice(0, 8)}...
+                  </Link>
+                </td>
+                <td className="py-2.5 px-3 text-center">
+                  <Badge tone={s.status === 'COMPLETED' ? 'success' : 'neutral'}>{s.status}</Badge>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800/50">
-              {swaps.map((s) => (
-                <tr key={s.id} className="hover:bg-zinc-800/30">
-                  <td className="py-2.5 px-3 font-mono font-medium text-zinc-200">
-                    #{s.swapNumber}
-                  </td>
-                  <td className="py-2.5 px-3">{s.date.slice(0, 10)}</td>
-                  <td className="py-2.5 px-3 text-right font-mono text-amber-400">
-                    -{s.sourceAmount} {s.sourceCurrency}
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-mono text-emerald-400">
-                    +{s.targetAmount} {s.targetCurrency}
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-mono">{s.exchangeRate}</td>
-                  <td className="py-2.5 px-3 text-right font-mono text-rose-400">
-                    {s.feeAmount} {s.targetCurrency}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono text-zinc-400 truncate max-w-[150px]">
-                    {s.counterpartyReference}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono text-zinc-400">
-                    <Link href="/accounting/journal" className="text-blue-400 hover:underline">
-                      {s.journalEntryId.slice(0, 8)}...
-                    </Link>
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
-                    <Badge tone={s.status === 'COMPLETED' ? 'success' : 'neutral'}>
-                      {s.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </TableFrame>
+            ))}
+          </tbody>
+        </TableFrame>
+      )}
     </Screen>
   );
 }
