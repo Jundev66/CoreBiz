@@ -1,7 +1,7 @@
 import { type Currency, ok, err, type Result } from '@corebiz/shared-kernel';
 import { type JournalEntryLine } from './journal-entry-line';
 
-export type JournalSourceType = 'INVOICE' | 'PAYMENT' | 'MANUAL' | 'ADJUSTMENT';
+export type JournalSourceType = 'INVOICE' | 'PAYMENT' | 'MANUAL' | 'ADJUSTMENT' | 'EXTERNAL_API';
 
 export interface JournalEntryError {
   readonly kind:

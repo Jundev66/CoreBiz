@@ -6,6 +6,8 @@ import {
   RegisterOrConfirmIntegrationDeliveryNoteController,
   GetIntegrationDeliveryNoteByIdController,
   HeadlessInvoiceIssueController,
+  IssueIntegrationInvoiceController,
+  PostIntegrationJournalEntryController,
 } from './controllers';
 
 @Module({
@@ -16,6 +18,8 @@ import {
     RegisterOrConfirmIntegrationDeliveryNoteController,
     GetIntegrationDeliveryNoteByIdController,
     HeadlessInvoiceIssueController,
+    IssueIntegrationInvoiceController,
+    PostIntegrationJournalEntryController,
   ],
 })
 export class IntegrationsModule {}

@@ -66,10 +66,10 @@ plans/tickets/
 
 ## 5. Verification Checklist
 
-- [ ] Create DTO contracts in `@corebiz/contracts` for external integration payloads
-- [ ] Implement `ApiKeyGuard` in `apps/api` validating tenant API keys
-- [ ] Implement `issue-integration-invoice.controller.ts` with single-responsibility pattern
-- [ ] Verify atomic transaction execution producing balanced journal entries
-- [ ] Unit and controller tests with Vitest doubles
-- [ ] Zero comments policy strictly enforced
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Create DTO contracts in `@corebiz/contracts` for external integration payloads
+- [x] Implement `ApiKeyGuard` in `apps/api` validating tenant API keys
+- [x] Implement `issue-integration-invoice.controller.ts` with single-responsibility pattern
+- [x] Verify atomic transaction execution producing balanced journal entries
+- [x] Unit and controller tests with Vitest doubles
+- [x] Zero comments policy strictly enforced
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

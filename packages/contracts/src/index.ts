@@ -18,3 +18,4 @@ export * from './pos';
 export * from './fiscal';
 export * from './accounting';
 export * from './invoicing';
+export * from './integrations';

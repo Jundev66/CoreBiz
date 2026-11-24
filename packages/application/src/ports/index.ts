@@ -52,3 +52,4 @@ export type {
   PosSyncOperationRepository,
 } from './pos';
 export type { PosSyncQueue, PosQueueJobData, PosQueueError } from './pos-queue';
+export type { IdempotencyRecord, IdempotencyStorePort } from './idempotency-store';
