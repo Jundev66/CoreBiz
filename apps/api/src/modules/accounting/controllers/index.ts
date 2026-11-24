@@ -7,3 +7,5 @@ export { MatchReconciliationController } from './match-reconciliation.controller
 export { RecordBankAdjustmentController } from './record-bank-adjustment.controller';
 export { GetReconciliationStatusController } from './get-reconciliation-status.controller';
 export { ListBankStatementsController } from './list-bank-statements.controller';
+export { RunForexRevaluationController } from './run-forex-revaluation.controller';
+export { GetForexExposureController } from './get-forex-exposure.controller';

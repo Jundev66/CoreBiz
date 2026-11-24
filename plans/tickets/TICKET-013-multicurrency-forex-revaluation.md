@@ -70,10 +70,10 @@ apps/web/
 
 ## 5. Verification Checklist
 
-- [ ] Implement `MonetaryPosition` and `ForexRevaluation` in `@corebiz/accounting`
-- [ ] Implement `RunForexRevaluationCommandHandler` enforcing double-entry invariants
-- [ ] Add contract schemas in `@corebiz/contracts`
-- [ ] Expose REST controllers in `apps/api`
-- [ ] Implement currency exposure view in `apps/web`
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Implement `MonetaryPosition` and `ForexRevaluation` in `@corebiz/accounting`
+- [x] Implement `RunForexRevaluationCommandHandler` enforcing double-entry invariants
+- [x] Add contract schemas in `@corebiz/contracts`
+- [x] Expose REST controllers in `apps/api`
+- [x] Implement currency exposure view in `apps/web`
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

@@ -9,6 +9,8 @@ import {
   RecordBankAdjustmentController,
   GetReconciliationStatusController,
   ListBankStatementsController,
+  RunForexRevaluationController,
+  GetForexExposureController,
 } from './controllers';
 
 @Module({
@@ -22,6 +24,8 @@ import {
     RecordBankAdjustmentController,
     GetReconciliationStatusController,
     ListBankStatementsController,
+    RunForexRevaluationController,
+    GetForexExposureController,
   ],
 })
 export class AccountingModule {}

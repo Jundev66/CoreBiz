@@ -62,6 +62,8 @@ import {
   RecordBankAdjustmentCommandHandler,
   GetReconciliationStatusQueryHandler,
   ListBankStatementsQueryHandler,
+  RunForexRevaluationCommandHandler,
+  GetForexExposureQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -258,6 +260,11 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       runtime.journalEntries,
     ),
     listBankStatements: new ListBankStatementsQueryHandler(runtime.bankStatements),
+    runForexRevaluation: new RunForexRevaluationCommandHandler(
+      runtime.accounts,
+      runtime.journalEntries,
+    ),
+    getForexExposure: new GetForexExposureQueryHandler(runtime.accounts, runtime.journalEntries),
   } as const;
 }
 

@@ -8,6 +8,8 @@ export * from './model/journal-entry';
 export * from './model/bank-statement-line';
 export * from './model/bank-statement';
 export * from './model/reconciliation-match';
+export * from './model/monetary-position';
+export * from './model/forex-revaluation';
 export * from './port/accounting-repository';
 export * from './port/bank-statement-repository';
 export * from './templates/default-chart-of-accounts';
