@@ -24,3 +24,4 @@ export * from './fiscal-reports';
 export * from './reconciliation';
 export * from './forex';
 export * from './treasury';
+export * from './partner-drawings';

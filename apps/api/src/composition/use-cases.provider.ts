@@ -66,6 +66,9 @@ import {
   GetForexExposureQueryHandler,
   ExecuteTreasurySwapCommandHandler,
   ListTreasurySwapsQueryHandler,
+  RecordPartnerCashDrawingCommandHandler,
+  RecordPartnerStockDrawingCommandHandler,
+  ListPartnerDrawingsQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -273,6 +276,17 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       runtime.treasurySwaps!,
     ),
     listTreasurySwaps: new ListTreasurySwapsQueryHandler(runtime.treasurySwaps!),
+    recordPartnerCashDrawing: new RecordPartnerCashDrawingCommandHandler(
+      runtime.accounts,
+      runtime.journalEntries,
+      runtime.partnerDrawings!,
+    ),
+    recordPartnerStockDrawing: new RecordPartnerStockDrawingCommandHandler(
+      runtime.accounts,
+      runtime.journalEntries,
+      runtime.partnerDrawings!,
+    ),
+    listPartnerDrawings: new ListPartnerDrawingsQueryHandler(runtime.partnerDrawings!),
   } as const;
 }
 

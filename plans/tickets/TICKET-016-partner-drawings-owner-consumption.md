@@ -80,10 +80,10 @@ apps/web/
 
 ## 5. Verification Checklist
 
-- [ ] Implement `PartnerDrawing` domain model in `@corebiz/accounting`
-- [ ] Connect stock reduction handler with `@corebiz/domain` product stock adjustments
-- [ ] Enforce double-entry balance on partner equity draw accounts
-- [ ] Expose REST controllers in `apps/api`
-- [ ] Implement audit dashboard in `apps/web`
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Implement `PartnerDrawing` domain model in `@corebiz/accounting`
+- [x] Connect stock reduction handler with `@corebiz/domain` product stock adjustments
+- [x] Enforce double-entry balance on partner equity draw accounts
+- [x] Expose REST controllers in `apps/api`
+- [x] Implement audit dashboard in `apps/web`
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

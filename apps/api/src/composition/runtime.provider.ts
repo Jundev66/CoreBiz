@@ -24,6 +24,7 @@ import type {
   InvoiceRepository,
   BankStatementRepository,
   TreasurySwapRepository,
+  PartnerDrawingRepository,
 } from '@corebiz/domain';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
@@ -36,6 +37,7 @@ export interface Runtime {
   readonly invoices: InvoiceRepository;
   readonly bankStatements: BankStatementRepository;
   readonly treasurySwaps?: TreasurySwapRepository;
+  readonly partnerDrawings?: PartnerDrawingRepository;
 }
 
 /**
@@ -98,6 +100,7 @@ export const runtimeProvider: FactoryProvider = {
         invoices: accounting.invoices,
         bankStatements: accounting.bankStatements,
         treasurySwaps: accounting.treasurySwaps,
+        partnerDrawings: accounting.partnerDrawings,
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }

@@ -11,3 +11,6 @@ export { RunForexRevaluationController } from './run-forex-revaluation.controlle
 export { GetForexExposureController } from './get-forex-exposure.controller';
 export { ExecuteTreasurySwapController } from './execute-treasury-swap.controller';
 export { ListTreasurySwapsController } from './list-treasury-swaps.controller';
+export { RecordPartnerCashDrawingController } from './record-partner-cash-drawing.controller';
+export { RecordPartnerStockDrawingController } from './record-partner-stock-drawing.controller';
+export { ListPartnerDrawingsController } from './list-partner-drawings.controller';

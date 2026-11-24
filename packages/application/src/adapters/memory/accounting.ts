@@ -8,6 +8,8 @@ import type {
   BankStatementRepository,
   TreasurySwap,
   TreasurySwapRepository,
+  PartnerDrawing,
+  PartnerDrawingRepository,
 } from '@corebiz/domain';
 
 export class InMemoryAccountRepository implements AccountRepository {
@@ -151,6 +153,44 @@ export class InMemoryTreasurySwapRepository implements TreasurySwapRepository {
 
   save(swap: TreasurySwap): Promise<void> {
     this.store.set(swap.id, swap);
+    return Promise.resolve();
+  }
+}
+
+export class InMemoryPartnerDrawingRepository implements PartnerDrawingRepository {
+  private readonly store: Map<string, PartnerDrawing> = new Map();
+
+  findById(tenantId: string, id: string): Promise<PartnerDrawing | null> {
+    const drawing = this.store.get(id);
+    if (!drawing || drawing.tenantId !== tenantId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(drawing);
+  }
+
+  nextDrawingNumber(tenantId: string): Promise<bigint> {
+    let max = 0n;
+    for (const drawing of this.store.values()) {
+      if (drawing.tenantId === tenantId && drawing.drawingNumber > max) {
+        max = drawing.drawingNumber;
+      }
+    }
+    return Promise.resolve(max + 1n);
+  }
+
+  listByTenant(tenantId: string): Promise<readonly PartnerDrawing[]> {
+    const list: PartnerDrawing[] = [];
+    for (const drawing of this.store.values()) {
+      if (drawing.tenantId === tenantId) {
+        list.push(drawing);
+      }
+    }
+    list.sort((a, b) => b.date.getTime() - a.date.getTime());
+    return Promise.resolve(list);
+  }
+
+  save(drawing: PartnerDrawing): Promise<void> {
+    this.store.set(drawing.id, drawing);
     return Promise.resolve();
   }
 }

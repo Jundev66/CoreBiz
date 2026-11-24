@@ -29,6 +29,7 @@ import {
   InMemoryInvoiceRepository,
   InMemoryBankStatementRepository,
   InMemoryTreasurySwapRepository,
+  InMemoryPartnerDrawingRepository,
   type ReadModels,
   type SalesStores,
 } from '@corebiz/application';
@@ -61,6 +62,7 @@ interface MemoryStore extends SalesStores {
   invoiceRepo?: InMemoryInvoiceRepository;
   bankStatementRepo?: InMemoryBankStatementRepository;
   treasurySwapRepo?: InMemoryTreasurySwapRepository;
+  partnerDrawingRepo?: InMemoryPartnerDrawingRepository;
 }
 
 export function memoryAccountingRepos() {
@@ -70,12 +72,14 @@ export function memoryAccountingRepos() {
   s.invoiceRepo ??= new InMemoryInvoiceRepository();
   s.bankStatementRepo ??= new InMemoryBankStatementRepository();
   s.treasurySwapRepo ??= new InMemoryTreasurySwapRepository();
+  s.partnerDrawingRepo ??= new InMemoryPartnerDrawingRepository();
   return {
     accounts: s.accountRepo,
     journalEntries: s.journalEntryRepo,
     invoices: s.invoiceRepo,
     bankStatements: s.bankStatementRepo,
     treasurySwaps: s.treasurySwapRepo,
+    partnerDrawings: s.partnerDrawingRepo,
   };
 }
 
