@@ -44,8 +44,15 @@ export const applyInvoicePaymentSchema = z
   })
   .strict();
 
+export const listInvoicesQuerySchema = z
+  .object({
+    customerId: recordIdSchema.optional(),
+  })
+  .strict();
+
 export type InvoiceType = z.infer<typeof invoiceTypeSchema>;
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
 export type IssueInvoiceLineInput = z.infer<typeof issueInvoiceLineSchema>;
 export type IssueInvoiceInput = z.infer<typeof issueInvoiceSchema>;
 export type ApplyInvoicePaymentInput = z.infer<typeof applyInvoicePaymentSchema>;
+export type ListInvoicesInput = z.infer<typeof listInvoicesQuerySchema>;

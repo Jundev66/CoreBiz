@@ -38,6 +38,16 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     return Promise.resolve(list);
   }
 
+  listByTenant(tenantId: string): Promise<readonly Invoice[]> {
+    const list: Invoice[] = [];
+    for (const inv of this.store.values()) {
+      if (inv.tenantId === tenantId) {
+        list.push(inv);
+      }
+    }
+    return Promise.resolve(list);
+  }
+
   save(invoice: Invoice): Promise<void> {
     this.store.set(invoice.id, invoice);
     return Promise.resolve();

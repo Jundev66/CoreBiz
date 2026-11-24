@@ -74,9 +74,27 @@ export async function AppFrame({
         label: 'Ventas',
         icon: 'cart' as const,
         items: [
+          { href: '/invoicing', label: 'Facturación Fiscal', icon: 'fileText' as const },
           { href: '/pos-sales', label: 'Tickets POS (Mostrador)', icon: 'receipt' as const },
           { href: '/delivery-notes', label: 'Notas de Entrega', icon: 'fileText' as const },
           { href: '/payments', label: 'Cobros', icon: 'banknote' as const },
+        ].filter(({ href }) => canOpen(ctx.actor, href)),
+      },
+    },
+    {
+      type: 'group' as const,
+      group: {
+        id: 'contabilidad',
+        label: 'Contabilidad',
+        icon: 'banknote' as const,
+        items: [
+          { href: '/accounting', label: 'Plan de Cuentas', icon: 'fileText' as const },
+          {
+            href: '/accounting/trial-balance',
+            label: 'Balance de Comprobación',
+            icon: 'chart' as const,
+          },
+          { href: '/accounting/journal-entries', label: 'Libro Diario', icon: 'receipt' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
     },
@@ -137,6 +155,8 @@ export async function AppFrame({
       icon: 'fileText' as const,
     },
     { href: '/payments', label: t('nav.payments'), short: 'Cobros', icon: 'banknote' as const },
+    { href: '/invoicing', label: 'Facturas', short: 'Facturas', icon: 'fileText' as const },
+    { href: '/accounting', label: 'Contabilidad', short: 'Contab.', icon: 'banknote' as const },
     { href: '/purchases', label: t('nav.purchases'), short: 'Compras', icon: 'truck' as const },
     { href: '/reports', label: t('nav.reports'), short: 'Reportes', icon: 'chart' as const },
     { href: '/conflicts', label: 'Inconsistencias', short: 'Inconsist.', icon: 'alert' as const },

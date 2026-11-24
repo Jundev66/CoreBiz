@@ -53,7 +53,22 @@ export const getTrialBalanceQuerySchema = z
   })
   .strict();
 
+export const listAccountsQuerySchema = z
+  .object({
+    fiscalCountry: z.string().trim().max(10).optional(),
+  })
+  .strict();
+
+export const listJournalEntriesQuerySchema = z
+  .object({
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+  })
+  .strict();
+
 export type AccountCategory = z.infer<typeof accountCategorySchema>;
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;
 export type PostJournalEntryInput = z.infer<typeof postJournalEntrySchema>;
 export type GetTrialBalanceInput = z.infer<typeof getTrialBalanceQuerySchema>;
+export type ListAccountsQueryInput = z.infer<typeof listAccountsQuerySchema>;
+export type ListJournalEntriesQueryInput = z.infer<typeof listJournalEntriesQuerySchema>;

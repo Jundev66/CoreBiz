@@ -39,6 +39,17 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     return Promise.resolve(list);
   }
 
+  listByTenant(tenantId: string): Promise<readonly Invoice[]> {
+    const list: Invoice[] = [];
+    for (const inv of this.storage.values()) {
+      if (inv.tenantId === tenantId) {
+        list.push(inv);
+      }
+    }
+    list.sort((a, b) => b.issueDate.getTime() - a.issueDate.getTime());
+    return Promise.resolve(list);
+  }
+
   save(invoice: Invoice): Promise<void> {
     this.storage.set(invoice.id, invoice);
     return Promise.resolve();

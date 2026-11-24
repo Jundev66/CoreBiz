@@ -8,5 +8,6 @@ export interface InvoiceRepository {
     documentNumber: string,
   ): Promise<Invoice | null>;
   listByCustomer(tenantId: string, customerId: string): Promise<readonly Invoice[]>;
+  listByTenant(tenantId: string): Promise<readonly Invoice[]>;
   save(invoice: Invoice): Promise<void>;
 }

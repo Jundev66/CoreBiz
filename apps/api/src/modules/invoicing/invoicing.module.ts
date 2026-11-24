@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
-import { IssueInvoiceController, ApplyPaymentController } from './controllers';
+import {
+  IssueInvoiceController,
+  ApplyPaymentController,
+  ListInvoicesController,
+} from './controllers';
 
 @Module({
-  controllers: [IssueInvoiceController, ApplyPaymentController],
+  controllers: [IssueInvoiceController, ApplyPaymentController, ListInvoicesController],
 })
 export class InvoicingModule {}

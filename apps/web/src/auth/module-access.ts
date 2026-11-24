@@ -28,6 +28,8 @@ export const MODULE_PERMISSION = {
   '/purchases': 'purchase:read',
   '/reports': 'report:read',
   '/conflicts': 'stock:read',
+  '/accounting': 'accounting:read',
+  '/invoicing': 'invoice:read',
 } as const satisfies Readonly<Record<string, Permission>>;
 
 export type ModuleRoute = keyof typeof MODULE_PERMISSION;

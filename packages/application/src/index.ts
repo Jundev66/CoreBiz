@@ -1,11 +1,3 @@
-/**
- * @corebiz/application — casos de uso y puertos.
- *
- * Define QUE necesita la aplicacion del mundo exterior (los puertos) y orquesta el
- * dominio para cumplir cada caso de uso. No sabe COMO se implementa nada: los
- * adaptadores concretos viven en @corebiz/infrastructure y se inyectan en el
- * composition root de apps/web.
- */
 export * from './ports/index';
 export * from './queries/index';
 export * from './adapters/memory/index';
@@ -41,7 +33,10 @@ export * from './adapters/synapse-vision/corebiz-vision-bridge';
 export * from './use-cases/pos/index';
 export * from './accounting/commands/post-journal-entry.command';
 export * from './accounting/queries/get-trial-balance.query';
+export * from './accounting/queries/list-accounts.query';
+export * from './accounting/queries/list-journal-entries.query';
 export * from './invoicing/commands/issue-invoice.command';
 export * from './invoicing/commands/apply-invoice-payment.command';
+export * from './invoicing/queries/list-invoices.query';
 export * from './use-cases/access/switch-active-tenant.use-case';
 export * from './queries/access/list-user-tenants.query';

@@ -80,6 +80,30 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     return list;
   }
 
+  async listByTenant(tenantId: string): Promise<readonly Invoice[]> {
+    const rows = await this.client.invoices.findMany({
+      where: {
+        tenant_id: tenantId,
+      },
+      include: {
+        invoice_lines: true,
+      },
+      orderBy: {
+        issue_date: 'desc',
+      },
+    });
+
+    const list: Invoice[] = [];
+    for (const row of rows) {
+      const inv = this.mapToDomain(row);
+      if (inv) {
+        list.push(inv);
+      }
+    }
+
+    return list;
+  }
+
   async save(invoice: Invoice): Promise<void> {
     await this.client.invoices.upsert({
       where: {

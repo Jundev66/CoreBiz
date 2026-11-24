@@ -23,6 +23,9 @@ class MockInvoicePaymentRepo implements InvoiceRepository {
   listByCustomer(_tenantId: string, customerId: string): Promise<readonly Invoice[]> {
     return Promise.resolve(this.invoices.filter((i) => i.customerId === customerId));
   }
+  listByTenant(_tenantId: string): Promise<readonly Invoice[]> {
+    return Promise.resolve(this.invoices);
+  }
   save(invoice: Invoice): Promise<void> {
     const idx = this.invoices.findIndex((i) => i.id === invoice.id);
     if (idx >= 0) {

@@ -49,8 +49,11 @@ import {
   systemClock,
   PostJournalEntryCommandHandler,
   GetTrialBalanceQueryHandler,
+  ListAccountsQueryHandler,
+  ListJournalEntriesQueryHandler,
   IssueInvoiceCommandHandler,
   ApplyInvoicePaymentCommandHandler,
+  ListInvoicesQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -218,11 +221,14 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
 
     postJournalEntry: new PostJournalEntryCommandHandler(runtime.accounts, runtime.journalEntries),
     getTrialBalance: new GetTrialBalanceQueryHandler(runtime.accounts, runtime.journalEntries),
+    listAccounts: new ListAccountsQueryHandler(runtime.accounts),
+    listJournalEntries: new ListJournalEntriesQueryHandler(runtime.journalEntries),
     issueInvoice: new IssueInvoiceCommandHandler(runtime.invoices, runtime.journalEntries),
     applyInvoicePayment: new ApplyInvoicePaymentCommandHandler(
       runtime.invoices,
       runtime.journalEntries,
     ),
+    listInvoices: new ListInvoicesQueryHandler(runtime.invoices),
   } as const;
 }
 

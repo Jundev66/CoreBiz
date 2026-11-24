@@ -12,6 +12,7 @@ export class InvoiceRepositoryMock implements InvoiceRepository {
     >();
   private readonly listByCustomerMock =
     vi.fn<(tenantId: string, customerId: string) => Promise<readonly Invoice[]>>();
+  private readonly listByTenantMock = vi.fn<(tenantId: string) => Promise<readonly Invoice[]>>();
 
   async save(invoice: Invoice): Promise<void> {
     await this.saveMock(invoice);
@@ -31,6 +32,10 @@ export class InvoiceRepositoryMock implements InvoiceRepository {
 
   async listByCustomer(tenantId: string, customerId: string): Promise<readonly Invoice[]> {
     return this.listByCustomerMock(tenantId, customerId);
+  }
+
+  async listByTenant(tenantId: string): Promise<readonly Invoice[]> {
+    return this.listByTenantMock(tenantId);
   }
 
   returnOnFindById(invoice: Invoice | null): void {

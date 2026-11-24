@@ -1,7 +1,17 @@
 import { Module } from '@nestjs/common';
-import { PostJournalEntryController, GetTrialBalanceController } from './controllers';
+import {
+  PostJournalEntryController,
+  GetTrialBalanceController,
+  ListAccountsController,
+  ListJournalEntriesController,
+} from './controllers';
 
 @Module({
-  controllers: [PostJournalEntryController, GetTrialBalanceController],
+  controllers: [
+    PostJournalEntryController,
+    GetTrialBalanceController,
+    ListAccountsController,
+    ListJournalEntriesController,
+  ],
 })
 export class AccountingModule {}
