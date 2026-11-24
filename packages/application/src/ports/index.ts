@@ -53,3 +53,4 @@ export type {
 } from './pos';
 export type { PosSyncQueue, PosQueueJobData, PosQueueError } from './pos-queue';
 export type { IdempotencyRecord, IdempotencyStorePort } from './idempotency-store';
+export type { UserTenantMembership, TenantMembershipPort } from './tenant-membership.port';

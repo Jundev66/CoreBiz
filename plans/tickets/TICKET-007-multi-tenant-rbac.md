@@ -70,8 +70,8 @@ plans/tickets/
 
 ## 5. Verification Checklist
 
-- [ ] Define RBAC permission matrix in `@corebiz/domain`
-- [ ] Implement `RolesGuard` and `TenantContextGuard` in `apps/api`
-- [ ] Provide test suite for role authorization and multi-company switching
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Define RBAC permission matrix in `@corebiz/domain`
+- [x] Implement `RolesGuard` and `TenantContextGuard` in `apps/api`
+- [x] Provide test suite for role authorization and multi-company switching
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

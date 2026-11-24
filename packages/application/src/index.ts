@@ -43,3 +43,4 @@ export * from './accounting/commands/post-journal-entry.command';
 export * from './accounting/queries/get-trial-balance.query';
 export * from './invoicing/commands/issue-invoice.command';
 export * from './invoicing/commands/apply-invoice-payment.command';
+export * from './use-cases/access/switch-active-tenant.use-case';

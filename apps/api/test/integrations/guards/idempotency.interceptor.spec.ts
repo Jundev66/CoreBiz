@@ -5,7 +5,7 @@ import {
   type ExecutionContext,
   type CallHandler,
 } from '@nestjs/common';
-import { of, lastValueFrom } from 'rxjs';
+import { of, lastValueFrom, type Observable } from 'rxjs';
 import { IdempotencyInterceptor } from '../../../src/auth/idempotency.interceptor';
 import { InMemoryIdempotencyStore } from '@corebiz/application';
 
@@ -36,8 +36,8 @@ describe('IdempotencyInterceptor', () => {
     } as unknown as ExecutionContext;
   };
 
-  const createMockHandler = (handleFn: ReturnType<typeof vi.fn>): CallHandler => ({
-    handle: handleFn,
+  const createMockHandler = (handleFn: unknown): CallHandler => ({
+    handle: handleFn as () => Observable<unknown>,
   });
 
   it('bypasses idempotency checks for GET requests', async () => {
