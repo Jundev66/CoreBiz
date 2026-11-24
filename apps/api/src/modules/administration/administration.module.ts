@@ -10,6 +10,8 @@ import {
   GetAuditActionsController,
   ExportAuditCsvController,
   GetAuditLogController,
+  ListUserTenantsController,
+  SwitchTenantController,
 } from './controllers';
 
 @Module({
@@ -24,6 +26,8 @@ import {
     GetAuditActionsController,
     ExportAuditCsvController,
     GetAuditLogController,
+    ListUserTenantsController,
+    SwitchTenantController,
   ],
 })
 export class AdministrationModule {}

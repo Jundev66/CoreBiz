@@ -8,3 +8,5 @@ export * from './update-tenant-settings.controller';
 export * from './get-audit-actions.controller';
 export * from './export-audit-csv.controller';
 export * from './get-audit-log.controller';
+export * from './list-user-tenants.controller';
+export * from './switch-tenant.controller';

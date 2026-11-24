@@ -44,3 +44,4 @@ export * from './accounting/queries/get-trial-balance.query';
 export * from './invoicing/commands/issue-invoice.command';
 export * from './invoicing/commands/apply-invoice-payment.command';
 export * from './use-cases/access/switch-active-tenant.use-case';
+export * from './queries/access/list-user-tenants.query';
