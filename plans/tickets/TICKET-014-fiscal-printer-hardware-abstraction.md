@@ -67,10 +67,10 @@ apps/pos/
 
 ## 5. Verification Checklist
 
-- [ ] Define `FiscalPrinterPort` in `@corebiz/fiscal/domain`
-- [ ] Implement `VirtualFiscalPrinterDriver` for headless and automated testing
-- [ ] Implement `HkaFiscalPrinterDriver` for Venezuelan fiscal printers
-- [ ] Implement `EscPosPrinterDriver` for US and general receipt printers
-- [ ] Connect POS hardware printing bridge in `apps/pos`
-- [ ] Zero comments policy strictly respected
-- [ ] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%
+- [x] Define `FiscalPrinterPort` in `@corebiz/fiscal/domain`
+- [x] Implement `VirtualFiscalPrinterDriver` for headless and automated testing
+- [x] Implement `HkaFiscalPrinterDriver` for Venezuelan fiscal printers
+- [x] Implement `EscPosPrinterDriver` for US and general receipt printers
+- [x] Connect POS hardware printing bridge in `apps/pos`
+- [x] Zero comments policy strictly respected
+- [x] `pnpm typecheck`, `pnpm arch`, and `pnpm test:unit` passing 100%

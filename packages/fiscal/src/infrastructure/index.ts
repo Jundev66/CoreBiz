@@ -3,3 +3,6 @@ export * from './united-states-fiscal-engine';
 export * from './fiscal-engine-factory';
 export * from './reports/venezuela-fiscal-book.service';
 export * from './reports/united-states-tax-report.service';
+export * from './hardware/virtual-fiscal-printer.driver';
+export * from './hardware/hka-fiscal-printer.driver';
+export * from './hardware/esc-pos-printer.driver';

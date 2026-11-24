@@ -14,6 +14,7 @@
   "dependencies": {
     "@corebiz/contracts": "workspace:*",
     "@corebiz/domain": "workspace:*",
+    "@corebiz/fiscal": "workspace:*",
     "dexie": "^4.4.7",
     "lucide-react": "^1.45.0",
     "react": "^19.3.0",
