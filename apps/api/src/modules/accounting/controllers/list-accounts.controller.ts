@@ -27,9 +27,13 @@ export class ListAccountsController {
     @Query(new ZodValidationPipe(listAccountsQuerySchema))
     query: z.infer<typeof listAccountsQuerySchema>,
   ) {
+    const taxLabel = this.ctx?.settings?.taxLabel?.toLowerCase() ?? '';
+    const isUs = taxLabel.includes('sales tax') || taxLabel.includes('ein');
+    const defaultCountry = isUs ? 'US' : 'VE';
+
     const result = await this.useCases.listAccounts.execute({
       tenantId: this.ctx.tenantId,
-      fiscalCountry: query.fiscalCountry,
+      fiscalCountry: query.fiscalCountry ?? defaultCountry,
     });
 
     const accounts = unwrapOrThrow(result);

@@ -10,7 +10,7 @@ import {
 import type { AuthenticatedRequest, VerifiedIdentity } from '../auth/authenticated-request';
 import { ACTIVE_CONTEXT, IDENTITY, MEMBERSHIPS, SESSION_INFO, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
-import { MEMORY_TENANT } from './memory-driver';
+import { MEMORY_TENANT, MEMORY_TENANT_US } from './memory-driver';
 import { DEMO_SETTINGS, planFrom, settingsFrom } from './settings';
 import { NoActiveTenantException } from '../http/api-error';
 
@@ -47,30 +47,66 @@ export interface ResolvedContext {
   readonly session: SessionInfo;
 }
 
-const MEMORY_USER_ID = asId<UserId>('00000000-0000-0000-0000-000000000001');
+const MEMORY_TENANT_VE_ID = MEMORY_TENANT as string;
+const MEMORY_TENANT_US_ID = MEMORY_TENANT_US as string;
 
-const MEMORY_SESSION: SessionInfo = {
-  email: null,
-  memberships: [],
+const MEMORY_USER_2 = '00000000-0000-0000-0000-000000000002';
+const MEMORY_USER_3 = '00000000-0000-0000-0000-000000000003';
+
+const MEMORY_TENANT_VE_PROFILE: SessionMembership = {
+  tenantId: MEMORY_TENANT_VE_ID,
+  slug: 'empresa-demo-ve',
+  name: 'Empresa Demo C.A.',
+  role: 'owner',
+  planCode: 'free',
   isDemo: true,
+  status: 'active',
+  taxLabel: 'RIF',
+  taxRateBp: 1600,
+  baseCurrency: 'USD',
+  exchangeRateScaled: 3_650_000_000n,
+  exchangeRateAt: new Date('2026-09-01T00:00:00.000Z'),
   expiresAt: null,
-  memoryDriver: true,
 };
+
+const MEMORY_TENANT_US_PROFILE: SessionMembership = {
+  tenantId: MEMORY_TENANT_US_ID,
+  slug: 'demo-store-us',
+  name: 'Demo Store Inc.',
+  role: 'viewer',
+  planCode: 'free',
+  isDemo: true,
+  status: 'active',
+  taxLabel: 'EIN',
+  taxRateBp: 700,
+  baseCurrency: 'USD',
+  exchangeRateScaled: null,
+  exchangeRateAt: null,
+  expiresAt: null,
+};
+
+function getMemoryMembershipsForUser(userId: string): readonly SessionMembership[] {
+  if (userId === MEMORY_USER_2) {
+    return [
+      { ...MEMORY_TENANT_VE_PROFILE, role: 'sales' },
+      { ...MEMORY_TENANT_US_PROFILE, role: 'admin' },
+    ];
+  }
+  if (userId === MEMORY_USER_3) {
+    return [
+      { ...MEMORY_TENANT_VE_PROFILE, role: 'warehouse' },
+      { ...MEMORY_TENANT_US_PROFILE, role: 'viewer' },
+    ];
+  }
+  return [
+    { ...MEMORY_TENANT_VE_PROFILE, role: 'owner' },
+    { ...MEMORY_TENANT_US_PROFILE, role: 'viewer' },
+  ];
+}
 
 function header(req: AuthenticatedRequest, name: string): string | undefined {
   const value = req.headers[name];
   return typeof value === 'string' ? value : undefined;
-}
-
-function memoryContext(role: Role): TenantContext {
-  return {
-    tenantId: MEMORY_TENANT,
-    tenantSlug: 'comercial-demo',
-    actor: { userId: MEMORY_USER_ID, role },
-    plan: Plan.of('free'),
-    settings: DEMO_SETTINGS,
-    isDemo: true,
-  };
 }
 
 export const identityProvider: FactoryProvider = {
@@ -79,8 +115,6 @@ export const identityProvider: FactoryProvider = {
   inject: [REQUEST],
   useFactory: (req: AuthenticatedRequest): VerifiedIdentity => {
     if (req.auth === undefined) {
-      // Solo puede pasar si una ruta se salta el middleware. Es un fallo de
-      // configuracion, no una peticion sin credenciales: por eso revienta.
       throw new Error('La peticion llego sin identidad: falta AuthMiddleware en esta ruta.');
     }
     return req.auth;
@@ -91,12 +125,10 @@ export const membershipsProvider: FactoryProvider = {
   provide: MEMBERSHIPS,
   scope: Scope.REQUEST,
   inject: [IDENTITY],
-  /*
-   * Memberships and each company's profile arrive together, in ONE transaction. The active
-   * company's settings used to be read in a second one, on every call to the API.
-   */
   useFactory: async (identity: VerifiedIdentity): Promise<readonly SessionMembership[]> =>
-    activeDriver() === 'memory' ? [] : loadSessionContext(databaseUrl(), identity.userId),
+    activeDriver() === 'memory'
+      ? getMemoryMembershipsForUser(identity.userId)
+      : loadSessionContext(databaseUrl(), identity.userId),
 };
 
 export const activeContextProvider: FactoryProvider = {
@@ -112,7 +144,49 @@ export const activeContextProvider: FactoryProvider = {
     const roleOverride: Role | null = rawRole !== undefined && isRole(rawRole) ? rawRole : null;
 
     if (activeDriver() === 'memory') {
-      return { ctx: memoryContext(roleOverride ?? 'owner'), session: MEMORY_SESSION };
+      const userMemberships = getMemoryMembershipsForUser(identity.userId);
+      const requested = header(req, 'x-corebiz-tenant');
+      const active =
+        userMemberships.find((m) => m.tenantId === requested || m.slug === requested) ??
+        userMemberships[0] ??
+        MEMORY_TENANT_VE_PROFILE;
+
+      const membershipRole: Role = isRole(active.role) ? active.role : 'viewer';
+      const role = roleOverride ?? membershipRole;
+      const isUs = active.tenantId === MEMORY_TENANT_US_ID;
+
+      const tenantContext: TenantContext = {
+        tenantId: asId<TenantId>(active.tenantId),
+        tenantSlug: active.slug,
+        actor: { userId: asId<UserId>(identity.userId), role },
+        plan: Plan.of('free'),
+        settings: isUs
+          ? {
+              taxLabel: 'Sales Tax (7.00%)',
+              taxRateBp: 700,
+              baseCurrency: 'USD',
+              exchangeRateScaled: null,
+              exchangeRateAt: null,
+            }
+          : DEMO_SETTINGS,
+        isDemo: true,
+      };
+
+      const session: SessionInfo = {
+        email:
+          identity.email ??
+          (identity.userId === MEMORY_USER_2
+            ? 'cajero@corebiz.local'
+            : identity.userId === MEMORY_USER_3
+              ? 'almacen@corebiz.local'
+              : 'demo@corebiz.local'),
+        memberships: userMemberships,
+        isDemo: true,
+        expiresAt: null,
+        memoryDriver: true,
+      };
+
+      return { ctx: tenantContext, session };
     }
 
     // Cuenta creada pero sin empresa. Pasa cuando el alta exige confirmar el correo

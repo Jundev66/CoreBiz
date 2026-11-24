@@ -17,7 +17,15 @@ export class AuthMiddleware implements NestMiddleware {
 
   async use(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
     if (activeDriver() === 'memory') {
-      req.auth = MEMORY_IDENTITY;
+      const explicitUser = req.headers['x-corebiz-user'];
+      if (typeof explicitUser === 'string' && explicitUser.length > 0) {
+        req.auth = {
+          userId: explicitUser,
+          email: `${explicitUser}@corebiz.test`,
+        };
+      } else {
+        req.auth = MEMORY_IDENTITY;
+      }
       next();
       return;
     }

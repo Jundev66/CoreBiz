@@ -1,3 +1,4 @@
+import { UNITED_STATES_SYNTHETIC_SEED } from '@corebiz/db';
 import {
   Customer,
   DeliveryNote,
@@ -45,6 +46,8 @@ import type { VisionVectorStorePort } from '@synapse-vision/core';
  */
 
 export const MEMORY_TENANT = asId<TenantId>('00000000-0000-0000-0000-0000000000t1');
+export const MEMORY_TENANT_VE = MEMORY_TENANT;
+export const MEMORY_TENANT_US = asId<TenantId>('00000000-0000-0000-0000-0000000000t2');
 const DEMO_USER = asId<UserId>('00000000-0000-0000-0000-000000000001');
 
 const SEEDED_AT = new Date('2026-01-15T10:00:00.000Z');
@@ -418,6 +421,78 @@ function seed(target: MemoryStore): void {
   if (demoRegister.ok) {
     target.posRegisters.set(demoRegister.value.id, demoRegister.value);
   }
+
+  UNITED_STATES_SYNTHETIC_SEED.customers.forEach((c, index) => {
+    const created = Customer.create({
+      id: asId<CustomerId>(`00000000-0000-0000-0000-0000000c0u${pad(index + 1)}`),
+      tenantId: MEMORY_TENANT_US,
+      code: c.code,
+      name: c.name,
+      taxId: c.taxId,
+      email: c.email,
+      creditLimit: null,
+      createdAt: SEEDED_AT,
+    });
+    if (created.ok) {
+      created.value.pullDomainEvents();
+      target.customers.set(created.value.id, created.value);
+    }
+  });
+
+  UNITED_STATES_SYNTHETIC_SEED.products.forEach((p, index) => {
+    const parsedPrice = Money.of((Number(p.priceMinor) / 100).toFixed(2), 'USD');
+    const parsedStock = Quantity.of((Number(p.onHand) / 1000).toFixed(3));
+    if (!parsedPrice.ok || !parsedStock.ok) return;
+
+    const created = Product.create({
+      id: asId<ProductId>(`00000000-0000-0000-0000-0000000p0u${pad(index + 1)}`),
+      tenantId: MEMORY_TENANT_US,
+      sku: p.sku,
+      name: p.name,
+      unit: p.unit,
+      price: parsedPrice.value,
+      initialStock: parsedStock.value,
+      minStock: null,
+      trackStock: true,
+      createdAt: SEEDED_AT,
+    });
+    if (created.ok) {
+      created.value.pullDomainEvents();
+      created.value.pullStockMovements();
+      target.products.set(created.value.id, created.value);
+    }
+  });
+
+  const usSupplier = Supplier.create({
+    id: asId<SupplierId>('00000000-0000-0000-0000-0000000s0u01'),
+    tenantId: MEMORY_TENANT_US,
+    code: 'PRV-US-001',
+    name: 'East Coast Wholesalers LLC',
+    taxId: '11-2233445',
+    contactName: 'John Smith',
+    phone: '305-555-0199',
+    email: 'contact@eastcoast.test',
+    notes: null,
+    createdAt: SEEDED_AT,
+  });
+  if (usSupplier.ok) {
+    usSupplier.value.pullDomainEvents();
+    target.suppliers.set(usSupplier.value.id, usSupplier.value);
+  }
+
+  target.usage.set(`${MEMORY_TENANT_US}:customers`, UNITED_STATES_SYNTHETIC_SEED.customers.length);
+  target.usage.set(`${MEMORY_TENANT_US}:products`, UNITED_STATES_SYNTHETIC_SEED.products.length);
+  target.usage.set(`${MEMORY_TENANT_US}:suppliers`, 1);
+  target.usage.set(`${MEMORY_TENANT_US}:documents_month`, 0);
+  target.usage.set(`${MEMORY_TENANT_US}:payments`, 0);
+  target.usage.set(`${MEMORY_TENANT_US}:users`, 1);
+  target.sequences.set(`${MEMORY_TENANT_US}:delivery_note:`, 0);
+  target.sequences.set(`${MEMORY_TENANT_US}:payment:`, 0);
+  target.sequences.set(
+    `${MEMORY_TENANT_US}:customer:${year}`,
+    UNITED_STATES_SYNTHETIC_SEED.customers.length,
+  );
+  target.sequences.set(`${MEMORY_TENANT_US}:supplier:${year}`, 1);
 }
 
 export function getMemoryUnitOfWork(tenantId: TenantId): InMemoryUnitOfWork {
