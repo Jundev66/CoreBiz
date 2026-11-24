@@ -55,6 +55,30 @@ const VENEZUELA_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
     category: 'EXPENSE',
     isReconcilable: false,
   },
+  {
+    code: '6.1.03',
+    name: 'Logística, Fletes y Transporte',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
+  {
+    code: '6.1.04',
+    name: 'Servicios Públicos y Alquiler',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
+  {
+    code: '6.1.05',
+    name: 'Mantenimiento y Suministros',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
+  {
+    code: '6.1.06',
+    name: 'Aranceles y Trámites Aduanales',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
 ];
 
 const US_GAAP_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
@@ -80,7 +104,26 @@ const US_GAAP_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
   { code: '4010', name: 'Sales Revenue', category: 'REVENUE', isReconcilable: false },
   { code: '5010', name: 'Cost of Goods Sold', category: 'COGS', isReconcilable: false },
   { code: '6010', name: 'Operating Expenses', category: 'EXPENSE', isReconcilable: false },
+  {
+    code: '6020',
+    name: 'Freight and Shipping Logistics',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
+  { code: '6030', name: 'Rent and Utilities', category: 'EXPENSE', isReconcilable: false },
+  {
+    code: '6040',
+    name: 'Repairs, Supplies and Maintenance',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
   { code: '6050', name: 'Bank and Processing Fees', category: 'EXPENSE', isReconcilable: false },
+  {
+    code: '6060',
+    name: 'Customs Duties and Import Taxes',
+    category: 'EXPENSE',
+    isReconcilable: false,
+  },
 ];
 
 export class ChartOfAccountsRegistry {

@@ -16,6 +16,8 @@ import {
   RecordPartnerCashDrawingController,
   RecordPartnerStockDrawingController,
   ListPartnerDrawingsController,
+  RecordDisbursementController,
+  ListDisbursementsController,
 } from './controllers';
 
 @Module({
@@ -36,6 +38,8 @@ import {
     RecordPartnerCashDrawingController,
     RecordPartnerStockDrawingController,
     ListPartnerDrawingsController,
+    RecordDisbursementController,
+    ListDisbursementsController,
   ],
 })
 export class AccountingModule {}

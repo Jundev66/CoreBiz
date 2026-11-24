@@ -25,6 +25,7 @@ import type {
   BankStatementRepository,
   TreasurySwapRepository,
   PartnerDrawingRepository,
+  DisbursementRepository,
 } from '@corebiz/domain';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
@@ -38,6 +39,7 @@ export interface Runtime {
   readonly bankStatements: BankStatementRepository;
   readonly treasurySwaps?: TreasurySwapRepository;
   readonly partnerDrawings?: PartnerDrawingRepository;
+  readonly disbursements?: DisbursementRepository;
 }
 
 /**
@@ -101,6 +103,7 @@ export const runtimeProvider: FactoryProvider = {
         bankStatements: accounting.bankStatements,
         treasurySwaps: accounting.treasurySwaps,
         partnerDrawings: accounting.partnerDrawings,
+        disbursements: accounting.disbursements,
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }

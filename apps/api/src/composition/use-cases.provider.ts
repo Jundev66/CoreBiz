@@ -69,6 +69,8 @@ import {
   RecordPartnerCashDrawingCommandHandler,
   RecordPartnerStockDrawingCommandHandler,
   ListPartnerDrawingsQueryHandler,
+  RecordDisbursementCommandHandler,
+  ListDisbursementsQueryHandler,
   type AiGateway,
   type SecretBox,
   type TenantContext,
@@ -287,6 +289,12 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       runtime.partnerDrawings!,
     ),
     listPartnerDrawings: new ListPartnerDrawingsQueryHandler(runtime.partnerDrawings!),
+    recordDisbursement: new RecordDisbursementCommandHandler(
+      runtime.accounts,
+      runtime.journalEntries,
+      runtime.disbursements!,
+    ),
+    listDisbursements: new ListDisbursementsQueryHandler(runtime.disbursements!),
   } as const;
 }
 

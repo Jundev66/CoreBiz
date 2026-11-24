@@ -10,6 +10,8 @@ import type {
   TreasurySwapRepository,
   PartnerDrawing,
   PartnerDrawingRepository,
+  Disbursement,
+  DisbursementRepository,
 } from '@corebiz/domain';
 
 export class InMemoryAccountRepository implements AccountRepository {
@@ -191,6 +193,44 @@ export class InMemoryPartnerDrawingRepository implements PartnerDrawingRepositor
 
   save(drawing: PartnerDrawing): Promise<void> {
     this.store.set(drawing.id, drawing);
+    return Promise.resolve();
+  }
+}
+
+export class InMemoryDisbursementRepository implements DisbursementRepository {
+  private readonly store: Map<string, Disbursement> = new Map();
+
+  findById(tenantId: string, id: string): Promise<Disbursement | null> {
+    const item = this.store.get(id);
+    if (!item || item.tenantId !== tenantId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(item);
+  }
+
+  nextDisbursementNumber(tenantId: string): Promise<bigint> {
+    let max = 0n;
+    for (const item of this.store.values()) {
+      if (item.tenantId === tenantId && item.disbursementNumber > max) {
+        max = item.disbursementNumber;
+      }
+    }
+    return Promise.resolve(max + 1n);
+  }
+
+  listByTenant(tenantId: string): Promise<readonly Disbursement[]> {
+    const list: Disbursement[] = [];
+    for (const item of this.store.values()) {
+      if (item.tenantId === tenantId) {
+        list.push(item);
+      }
+    }
+    list.sort((a, b) => b.date.getTime() - a.date.getTime());
+    return Promise.resolve(list);
+  }
+
+  save(disbursement: Disbursement): Promise<void> {
+    this.store.set(disbursement.id, disbursement);
     return Promise.resolve();
   }
 }

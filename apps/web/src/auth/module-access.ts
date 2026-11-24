@@ -33,6 +33,7 @@ export const MODULE_PERMISSION = {
   '/accounting/forex': 'accounting:read',
   '/accounting/treasury': 'accounting:read',
   '/accounting/drawings': 'accounting:read',
+  '/accounting/expenses': 'accounting:read',
   '/invoicing': 'invoice:read',
   '/fiscal/sales-book': 'accounting:read',
   '/fiscal/purchases-book': 'accounting:read',

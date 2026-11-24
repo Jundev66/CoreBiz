@@ -53,6 +53,16 @@ test.describe('Accounting Adversarial Test Suite', () => {
       ).toBeVisible();
     });
 
+    test('Operational Expenses and Disbursements screen renders registration form and audit view', async ({
+      page,
+    }) => {
+      await page.goto('/accounting/expenses');
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/gastos operativos/i);
+      await expect(
+        page.getByRole('button', { name: /registrar egreso y asentar en libro diario/i }),
+      ).toBeVisible();
+    });
+
     test('Bank Reconciliation screen renders statement status and adjustments interface', async ({
       page,
     }) => {

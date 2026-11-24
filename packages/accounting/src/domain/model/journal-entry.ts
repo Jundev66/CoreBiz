@@ -8,7 +8,8 @@ export type JournalSourceType =
   | 'ADJUSTMENT'
   | 'EXTERNAL_API'
   | 'TREASURY_SWAP'
-  | 'PARTNER_DRAWING';
+  | 'PARTNER_DRAWING'
+  | 'DISBURSEMENT';
 
 export interface JournalEntryError {
   readonly kind:

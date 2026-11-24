@@ -55,6 +55,7 @@ const STATIC_ROUTES = [
   '/accounting/forex',
   '/accounting/treasury',
   '/accounting/drawings',
+  '/accounting/expenses',
   '/invoicing',
   '/fiscal/sales-book',
   '/fiscal/purchases-book',
