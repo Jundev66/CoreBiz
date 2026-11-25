@@ -1,6 +1,6 @@
 import 'server-only';
-import { get } from './client';
-import type { CreditNoteResponse, DebitNoteResponse } from '@corebiz/contracts';
+import { get, send } from './client';
+import type { CreditNoteResponse, DebitNoteResponse, IssueInvoiceInput } from '@corebiz/contracts';
 
 export interface InvoiceApiItem {
   readonly id: string;
@@ -46,4 +46,13 @@ export async function listDebitNotes(
     `/v1/invoicing/debit-notes${query}`,
   );
   return response?.debitNotes ?? [];
+}
+
+export async function issueInvoice(input: IssueInvoiceInput) {
+  return send<{
+    invoiceId: string;
+    documentNumber: string;
+    totalMinor: string;
+    status: string;
+  }>('POST', '/v1/invoicing/invoices', input);
 }

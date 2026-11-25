@@ -1,10 +1,12 @@
+import Link from 'next/link';
 import { apiForRequest } from '@/api/session';
 import { listInvoices } from '@/api/invoicing';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Badge } from '@/ui/feedback';
+import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
-import { Receipt, ShieldCheck } from 'lucide-react';
+import { Plus, Receipt, ShieldCheck, Truck } from 'lucide-react';
 
 function formatMinor(minorStr: string, currency = 'USD'): string {
   const minor = BigInt(minorStr);
@@ -44,10 +46,28 @@ export default async function InvoicingPage() {
 
   const invoices = await listInvoices().catch(() => []);
 
+  const canWrite = can(ctx.actor, 'invoice:write');
+
   return (
     <Screen
-      title="Facturación Fiscal"
-      subtitle="Emisión y auditoría tributaria de facturas, notas de crédito y control legal"
+      title="Facturas de Venta"
+      subtitle="Emisión comercial, control fiscal y trazabilidad contable de ventas"
+      action={
+        <div className="flex items-center gap-2">
+          <Link
+            href="/invoicing/credit-notes"
+            className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+          >
+            Notas de Crédito & Débito
+          </Link>
+          {canWrite && (
+            <Link href="/invoicing/new" className={buttonClasses({ size: 'sm' })}>
+              <Plus className="size-3.5" />
+              <span>Nueva Factura</span>
+            </Link>
+          )}
+        </div>
+      }
     >
       {invoices.length === 0 ? (
         <Empty>Aún no se han generado facturas para este tenant.</Empty>
@@ -64,6 +84,7 @@ export default async function InvoicingPage() {
               <th className="px-4 py-3 text-right">Total Factura</th>
               <th className="px-4 py-3 text-right">Cobrado</th>
               <th className="px-4 py-3 text-center">Estado</th>
+              <th className="px-4 py-3 text-right">Despacho</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -107,6 +128,15 @@ export default async function InvoicingPage() {
                   <Badge tone={STATUS_TONES[inv.status] ?? 'neutral'}>
                     {STATUS_LABELS[inv.status] ?? inv.status}
                   </Badge>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/delivery-notes/new?customerId=${encodeURIComponent(inv.customerId)}`}
+                    className="inline-flex items-center gap-1 rounded-control border border-line px-2 py-1 text-xs font-medium text-ink hover:bg-subtle"
+                  >
+                    <Truck className="size-3" />
+                    <span>Nota de Entrega</span>
+                  </Link>
                 </td>
               </tr>
             ))}

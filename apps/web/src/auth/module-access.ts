@@ -35,6 +35,7 @@ export const MODULE_PERMISSION = {
   '/accounting/drawings': 'accounting:read',
   '/accounting/expenses': 'accounting:read',
   '/invoicing': 'invoice:read',
+  '/invoicing/new': 'invoice:write',
   '/invoicing/credit-notes': 'invoice:read',
   '/fiscal/sales-book': 'accounting:read',
   '/fiscal/purchases-book': 'accounting:read',

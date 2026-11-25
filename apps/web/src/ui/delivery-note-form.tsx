@@ -60,14 +60,16 @@ export function DeliveryNoteForm({
   customers,
   products,
   taxRateBp,
+  defaultCustomerId,
 }: {
   customers: readonly CustomerOption[];
   products: readonly ProductOption[];
   taxRateBp: number;
+  defaultCustomerId?: string | undefined;
 }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(issueDeliveryNoteAction, INITIAL);
-  const [customerId, setCustomerId] = useState<string>('');
+  const [customerId, setCustomerId] = useState<string>(defaultCustomerId ?? '');
   const [notes, setNotes] = useState<string>('');
   const [lines, setLines] = useState<LineDraft[]>([
     { key: 0, productId: '', quantity: '', unitPrice: '', discount: '' },

@@ -9,9 +9,14 @@ import { DeliveryNoteForm } from '@/ui/delivery-note-form';
 import { notFound } from 'next/navigation';
 import { can } from '@corebiz/domain';
 
-export default async function NewDeliveryNotePage() {
+export default async function NewDeliveryNotePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ customerId?: string }>;
+}) {
   const t = await getTranslations();
   const { ctx, queries } = await apiForRequest();
+  const resolvedParams = searchParams ? await searchParams : {};
 
   // Before reading: the customer list requires `customer:read`, which warehouse lacks, and
   // that 403 broke the issue screen. Whoever can issue can always read customers.
@@ -58,6 +63,7 @@ export default async function NewDeliveryNotePage() {
       ) : (
         <DeliveryNoteForm
           taxRateBp={ctx.settings.taxRateBp}
+          defaultCustomerId={resolvedParams.customerId}
           customers={customers.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` }))}
           products={products.map((p) => ({
             id: p.id,
