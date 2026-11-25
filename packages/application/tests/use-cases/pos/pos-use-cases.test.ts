@@ -464,4 +464,65 @@ describe('POS Application Use Cases & Command Bus', () => {
     if (!saleResult.ok) return;
     expect(saleResult.value.status).toBe('processed');
   });
+
+  it('invokes onSaleProcessed with resolved customer and lines on new sale, but not on duplicate', async () => {
+    const openUseCase = makeOpenCashShift({ uow, ctx, clock, ids: idGen });
+    const openResult = await openUseCase({
+      registerId,
+      deviceId,
+      initialFloatMinor: '5000',
+      currency: 'USD',
+    });
+    if (!openResult.ok) throw new Error('Open failed');
+
+    const captured: { customerId: string; ticketNumber: string; lineCount: number }[] = [];
+    const processSale = makeProcessPosSale({
+      uow,
+      ctx,
+      clock,
+      ids: idGen,
+      onSaleProcessed: (event) => {
+        captured.push({
+          customerId: event.customerId,
+          ticketNumber: event.sale.ticketNumber,
+          lineCount: event.lines.length,
+        });
+        return Promise.resolve();
+      },
+    });
+
+    const input = {
+      operationId: 'op-invoice-sync-1',
+      sequence: 1,
+      payloadHash: 'hash-inv-sync-1',
+      registerId,
+      deviceId,
+      shiftId: openResult.value.shiftId,
+      ticketNumber: 'POS-01-000777',
+      paymentMethod: 'cash' as const,
+      lines: [
+        {
+          id: 'l1',
+          productId,
+          quantity: '2',
+          unitPriceMinor: '250',
+        },
+      ],
+      occurredAt: fixedNow.toISOString(),
+    };
+
+    const first = await processSale(input);
+    expect(first.ok).toBe(true);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]).toEqual({
+      customerId: 'CONSUMIDOR-FINAL',
+      ticketNumber: 'POS-01-000777',
+      lineCount: 1,
+    });
+
+    const replay = await processSale(input);
+    expect(replay.ok).toBe(true);
+    if (replay.ok) expect(replay.value.status).toBe('duplicate');
+    expect(captured).toHaveLength(1);
+  });
 });

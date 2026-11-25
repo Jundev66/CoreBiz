@@ -196,6 +196,67 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     ...(vectorStore !== undefined ? { vectorStore } : {}),
   };
 
+  const issueInvoice = new IssueInvoiceCommandHandler(runtime.invoices, runtime.journalEntries);
+
+  const withPosInvoice = {
+    ...shared,
+    onSaleProcessed: async (event: {
+      sale: {
+        id: string;
+        ticketNumber: string;
+        occurredAt: Date;
+      };
+      customerId: string;
+      lines: readonly {
+        id: string;
+        description: string;
+        quantity: string;
+        unitPriceMinor: bigint;
+        productId?: string | undefined;
+        revenueAccountId?: string | undefined;
+      }[];
+    }) => {
+      const existing = await runtime.invoices.findById(event.sale.id, ctx.tenantId);
+      if (existing) return;
+
+      const accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
+      const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
+        accounts.find((a) => codes.includes(a.code.value))?.id ??
+        accounts.find((a) => a.category === fallbackCategory)?.id ??
+        fallbackId;
+
+      const receivableAccountId = findAccount(['1.1.02', '1200'], 'ASSET', 'tpl-1.1.02');
+      const revenueAccountId = findAccount(['4.1.01', '4010'], 'REVENUE', 'tpl-4.1.01');
+      const taxPayableAccountId = findAccount(['2.1.02', '2050'], 'LIABILITY', 'tpl-2.1.02');
+      const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01');
+
+      await issueInvoice.execute({
+        id: event.sale.id,
+        tenantId: ctx.tenantId,
+        customerId: event.customerId,
+        documentType: 'STANDARD',
+        documentNumber: event.sale.ticketNumber,
+        issueDate: event.sale.occurredAt,
+        dueDate: event.sale.occurredAt,
+        currency: ctx.settings.baseCurrency,
+        receivableAccountId,
+        revenueAccountId,
+        taxPayableAccountId,
+        cashAccountId,
+        paymentCondition: 'CASH',
+        lines: event.lines.map((l) => ({
+          id: l.id,
+          description: l.description,
+          quantity: l.quantity,
+          unitPriceMinor: l.unitPriceMinor,
+          taxPercentage: ctx.settings.taxRateBp / 100,
+          productId: l.productId,
+          revenueAccountId: l.revenueAccountId,
+        })),
+      });
+    },
+  };
+
   return {
     createCustomer: makeCreateCustomer(shared),
     updateCustomer: makeUpdateCustomer(shared),
@@ -248,14 +309,14 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     openCashShift: makeOpenCashShift(shared),
     recordCashMovement: makeRecordCashMovement(shared),
     closeCashShift: makeCloseCashShift(shared),
-    processPosSale: makeProcessPosSale(shared),
+    processPosSale: makeProcessPosSale(withPosInvoice),
     resolveInventoryConflict: makeResolveInventoryConflict(shared),
     posCommandBus: (() => {
       const bus = new PosCommandBus();
       bus.register(new OpenCashShiftCommandHandler(shared));
       bus.register(new RecordCashMovementCommandHandler(shared));
       bus.register(new CloseCashShiftCommandHandler(shared));
-      bus.register(new ProcessPosSaleCommandHandler(shared));
+      bus.register(new ProcessPosSaleCommandHandler(withPosInvoice));
       return bus;
     })(),
     posSyncQueue: ((): PosSyncQueue => {
@@ -270,7 +331,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     getTrialBalance: new GetTrialBalanceQueryHandler(runtime.accounts, runtime.journalEntries),
     listAccounts: new ListAccountsQueryHandler(runtime.accounts),
     listJournalEntries: new ListJournalEntriesQueryHandler(runtime.journalEntries),
-    issueInvoice: new IssueInvoiceCommandHandler(runtime.invoices, runtime.journalEntries),
+    issueInvoice,
     applyInvoicePayment: new ApplyInvoicePaymentCommandHandler(
       runtime.invoices,
       runtime.journalEntries,

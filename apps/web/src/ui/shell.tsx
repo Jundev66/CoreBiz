@@ -80,7 +80,6 @@ export async function AppFrame({
             label: 'Notas de Crédito & Débito',
             icon: 'fileText' as const,
           },
-          { href: '/pos-sales', label: 'Tickets POS (Mostrador)', icon: 'receipt' as const },
           { href: '/delivery-notes', label: 'Notas de Entrega', icon: 'fileText' as const },
           { href: '/payments', label: 'Cobros', icon: 'banknote' as const },
           { href: '/customers', label: t('nav.customers'), icon: 'users' as const },
@@ -180,7 +179,7 @@ export async function AppFrame({
 
   const mobileItems: MobileNavItem[] = [
     { href: '/', label: t('nav.home'), icon: 'home' as const, exact: true },
-    { href: '/pos-sales', label: 'Ventas', short: 'Ventas', icon: 'cart' as const },
+    { href: '/invoicing', label: 'Ventas', short: 'Ventas', icon: 'cart' as const },
     { href: '/products', label: 'Stock', short: 'Stock', icon: 'package' as const },
     { href: '/customers', label: t('nav.customers'), short: 'Clientes', icon: 'users' as const },
     {

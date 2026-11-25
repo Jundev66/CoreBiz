@@ -6,7 +6,8 @@ import { Badge } from '@/ui/feedback';
 import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
-import { Plus, Receipt, ShieldCheck, Truck } from 'lucide-react';
+import { Plus, Receipt, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
+import { getPosTerminalUrl } from '@/ui/pos-link';
 
 function formatMinor(minorStr: string, currency = 'USD'): string {
   const minor = BigInt(minorStr);
@@ -54,6 +55,15 @@ export default async function InvoicingPage() {
       subtitle="Emisión comercial, control fiscal y trazabilidad contable de ventas"
       action={
         <div className="flex items-center gap-2">
+          <a
+            href={getPosTerminalUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+          >
+            <ShoppingCart className="size-3.5" />
+            <span>Terminal POS</span>
+          </a>
           <Link
             href="/invoicing/credit-notes"
             className={buttonClasses({ variant: 'secondary', size: 'sm' })}

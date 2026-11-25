@@ -143,4 +143,57 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
 
     expect(pageErrors).toHaveLength(0);
   });
+
+  test('unifies POS synced tickets into Facturas de Venta without duplicate sidebar entry', async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.goto('/invoicing');
+    await expect(page.getByRole('link', { name: 'Terminal POS', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /tickets pos/i })).toHaveCount(0);
+
+    const ts = Date.now().toString().slice(-6);
+    const ticketNumber = `POS-QA-${ts}`;
+    const opId = crypto.randomUUID();
+    const lineId = crypto.randomUUID();
+
+    const syncRes = await page.request.post('/api/v1/pos/sync', {
+      headers: {
+        'x-corebiz-tenant': '00000000-0000-0000-0000-0000000000t1',
+      },
+      data: {
+        deviceId: 'dev-qa-01',
+        operations: [
+          {
+            operationId: opId,
+            type: 'sale.issue',
+            sequence: 1,
+            payloadHash: 'a'.repeat(64),
+            payload: {
+              operationId: opId,
+              ticketNumber,
+              paymentMethod: 'cash',
+              occurredAt: new Date().toISOString(),
+              lines: [
+                {
+                  id: lineId,
+                  temporaryName: 'Cafe Espresso POS',
+                  quantity: '1',
+                  unitPriceMinor: '500',
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    expect(syncRes.ok(), `status=${syncRes.status()} body=${await syncRes.text()}`).toBe(true);
+
+    await page.reload();
+    await expect(page.getByText(ticketNumber)).toBeVisible();
+
+    expect(pageErrors).toHaveLength(0);
+  });
 });

@@ -66,11 +66,27 @@ export interface ProcessPosSaleOutput {
   readonly conflictId?: string;
 }
 
+export interface PosSaleProcessedLine {
+  readonly id: string;
+  readonly description: string;
+  readonly quantity: string;
+  readonly unitPriceMinor: bigint;
+  readonly productId?: string | undefined;
+  readonly revenueAccountId?: string | undefined;
+}
+
+export interface PosSaleProcessedEvent {
+  readonly sale: PosSale;
+  readonly customerId: string;
+  readonly lines: readonly PosSaleProcessedLine[];
+}
+
 export interface ProcessPosSaleDeps {
   readonly uow: UnitOfWork;
   readonly ctx: TenantContext;
   readonly clock: Clock;
   readonly ids: IdGenerator;
+  readonly onSaleProcessed?: (event: PosSaleProcessedEvent) => Promise<void>;
 }
 
 export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
@@ -155,6 +171,8 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         }
       }
 
+      let resolvedCustomerId = 'CONSUMIDOR-FINAL';
+
       if (
         input.customerDoc &&
         input.customerDoc.trim() &&
@@ -162,7 +180,9 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       ) {
         const cleanDoc = input.customerDoc.trim();
         const existingByDoc = await repos.customers.list({ search: cleanDoc, limit: 1 });
-        if (existingByDoc.items.length === 0) {
+        if (existingByDoc.items.length > 0 && existingByDoc.items[0]) {
+          resolvedCustomerId = existingByDoc.items[0].id;
+        } else {
           const rawDigits = cleanDoc.replace(/[^A-Za-z0-9]/g, '');
           const rawSuffix = rawDigits.slice(-6) || Date.now().toString().slice(-6);
           let custCode = `CLI-${rawSuffix}`;
@@ -182,6 +202,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
           if (custResult.ok) {
             try {
               await repos.customers.save(custResult.value);
+              resolvedCustomerId = custResult.value.id;
             } catch {
               // Ignore unique or race condition constraint conflicts during customer auto-creation
             }
@@ -196,6 +217,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       const postedAt = deps.clock.now();
 
       const computedLines = [];
+      const invoiceLines: PosSaleProcessedLine[] = [];
       const productsToUpdate = [];
       const conflictsToSave: InventoryConflict[] = [];
       let detectedConflictId: string | undefined;
@@ -216,6 +238,8 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         );
 
         const prodId: ProductId | null = line.productId ? asId<ProductId>(line.productId) : null;
+        let lineDescription = line.temporaryName?.trim() || 'Producto POS';
+        let lineRevenueAccountId: string | undefined;
 
         if (!prodId) {
           const conflictId = asId<InventoryConflictId>(deps.ids.next());
@@ -231,6 +255,10 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
           }
         } else {
           const product = await repos.products.findById(prodId);
+          if (product) {
+            lineDescription = product.name;
+            lineRevenueAccountId = product.revenueAccountId ?? undefined;
+          }
           if (product && product.trackStock) {
             const stockBefore = product.onHand.scaledValue;
             const requested = qty.value.scaledValue;
@@ -271,6 +299,15 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
           barcodeScanned: line.barcodeScanned ?? null,
           quantity: qty.value,
           unitPrice,
+        });
+
+        invoiceLines.push({
+          id: line.id,
+          description: lineDescription,
+          quantity: qty.value.toString(),
+          unitPriceMinor: unitPrice.minorUnits,
+          productId: prodId ?? undefined,
+          revenueAccountId: lineRevenueAccountId,
         });
       }
 
@@ -335,6 +372,14 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
           conflictId: detectedConflictId,
         },
       });
+
+      if (deps.onSaleProcessed) {
+        await deps.onSaleProcessed({
+          sale,
+          customerId: resolvedCustomerId,
+          lines: invoiceLines,
+        });
+      }
 
       return ok({
         status: 'processed',
