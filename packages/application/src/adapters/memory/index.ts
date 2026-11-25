@@ -23,3 +23,4 @@ export * from './accounting';
 export * from './invoicing';
 export * from './idempotency-store';
 export * from './tenant-membership';
+export * from './inventory';

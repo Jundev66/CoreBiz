@@ -49,6 +49,14 @@ export * from './accounting/queries/get-forex-exposure.query';
 export * from './accounting/queries/list-treasury-swaps.query';
 export * from './accounting/queries/list-partner-drawings.query';
 export * from './accounting/queries/list-disbursements.query';
+export {
+  GetArAgingReportQueryHandler,
+  GetApAgingReportQueryHandler,
+  type GetArAgingReportQuery,
+  type GetApAgingReportQuery,
+  type ArAgingReportResult,
+  type ApAgingReportResult,
+} from '@corebiz/accounting';
 export * from './invoicing/commands/issue-invoice.command';
 export * from './invoicing/commands/apply-invoice-payment.command';
 export * from './invoicing/queries/list-invoices.query';
@@ -57,3 +65,5 @@ export * from './queries/access/list-user-tenants.query';
 export * from './fiscal/queries/generate-sales-book.query';
 export * from './fiscal/queries/generate-purchases-book.query';
 export * from './fiscal/queries/generate-us-tax-summary.query';
+export * from './inventory/index';
+export * from './adapters/accounting/receivable-invoices-adapter';
