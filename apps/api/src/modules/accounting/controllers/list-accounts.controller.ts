@@ -29,7 +29,7 @@ export class ListAccountsController {
   ) {
     const taxLabel = this.ctx?.settings?.taxLabel?.toLowerCase() ?? '';
     const isUs = taxLabel.includes('sales tax') || taxLabel.includes('ein');
-    const defaultCountry = isUs ? 'US' : 'VE';
+    const defaultCountry = this.ctx?.settings?.fiscalCountry ?? (isUs ? 'US' : 'VE');
 
     const result = await this.useCases.listAccounts.execute({
       tenantId: this.ctx.tenantId,

@@ -17,6 +17,7 @@ const createTenantSchema = z
     taxLabel: z.string().trim().min(2, 'TooShort').max(60, 'TooLong').optional(),
     taxRateBp: z.coerce.number().int().min(0).max(10_000).optional(),
     exchangeRate: z.string().trim().max(32).optional().or(z.literal('')),
+    fiscalCountry: z.enum(['VE', 'US']).optional(),
   })
   .strict();
 
@@ -53,6 +54,7 @@ export class CreateTenantController {
       ...(body.taxLabel !== undefined ? { taxLabel: body.taxLabel } : {}),
       ...(body.taxRateBp !== undefined ? { taxRateBp: body.taxRateBp } : {}),
       ...(exchangeRateScaled !== undefined ? { exchangeRateScaled } : {}),
+      ...(body.fiscalCountry !== undefined ? { fiscalCountry: body.fiscalCountry } : {}),
     });
 
     if (!result.ok || result.tenantId === undefined) {

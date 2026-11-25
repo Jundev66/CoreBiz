@@ -15,6 +15,7 @@ export const DEMO_SETTINGS: TenantContext['settings'] = {
   baseCurrency: 'USD',
   exchangeRateScaled: 3_650_000_000n,
   exchangeRateAt: new Date('2026-09-01T00:00:00.000Z'),
+  fiscalCountry: 'VE',
 };
 
 export function settingsFrom(profile: TenantProfile): TenantContext['settings'] {
@@ -24,6 +25,7 @@ export function settingsFrom(profile: TenantProfile): TenantContext['settings'] 
     baseCurrency: profile.baseCurrency === 'VES' ? 'VES' : 'USD',
     exchangeRateScaled: profile.exchangeRateScaled,
     exchangeRateAt: profile.exchangeRateAt,
+    fiscalCountry: profile.fiscalCountry,
   };
 }
 

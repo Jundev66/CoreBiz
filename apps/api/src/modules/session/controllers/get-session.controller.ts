@@ -56,6 +56,9 @@ export class GetSessionController {
           baseCurrency: ctx.settings.baseCurrency,
           exchangeRateScaled: bigintToString(ctx.settings.exchangeRateScaled),
           exchangeRateAt: dateToIso(ctx.settings.exchangeRateAt),
+          ...(ctx.settings.fiscalCountry !== undefined
+            ? { fiscalCountry: ctx.settings.fiscalCountry }
+            : {}),
         },
       },
       actor: { userId: ctx.actor.userId, role: ctx.actor.role },

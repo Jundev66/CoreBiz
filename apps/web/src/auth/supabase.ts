@@ -94,6 +94,7 @@ export interface AuthenticatedUser {
   readonly email: string;
   readonly displayName: string | null;
   readonly businessName: string | null;
+  readonly country: 'VE' | 'US' | null;
 }
 
 /**
@@ -119,6 +120,7 @@ export async function currentUser(): Promise<AuthenticatedUser | null> {
     email: data.user.email ?? '',
     displayName: typeof metadata.name === 'string' ? metadata.name : null,
     businessName: typeof metadata.business_name === 'string' ? metadata.business_name : null,
+    country: metadata.country === 'US' ? 'US' : metadata.country === 'VE' ? 'VE' : null,
   };
 }
 

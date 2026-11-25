@@ -7,6 +7,7 @@ export class TenantSettingsDto {
   /** Entero escalado, como cadena: un bigint no cabe en un number de JSON. */
   @ApiProperty({ nullable: true, type: String }) exchangeRateScaled!: string | null;
   @ApiProperty({ nullable: true, type: String }) exchangeRateAt!: string | null;
+  @ApiProperty({ required: false, enum: ['VE', 'US'] }) fiscalCountry?: 'VE' | 'US';
 }
 
 export class MembershipDto {

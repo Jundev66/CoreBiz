@@ -74,6 +74,15 @@ export default async function SignUpPage() {
             hint: t('auth.signup.businessHint'),
             minLength: 2,
           },
+          {
+            name: 'country',
+            label: 'País / Jurisdicción fiscal',
+            defaultValue: 'VE',
+            options: [
+              { value: 'VE', label: 'Venezuela (SENIAT / VEN-NIF)' },
+              { value: 'US', label: 'Estados Unidos (US GAAP / Sales Tax)' },
+            ],
+          },
           { name: 'email', label: t('auth.email'), type: 'email', autoComplete: 'email' },
           {
             name: 'password',

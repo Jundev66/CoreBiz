@@ -135,7 +135,20 @@ export async function AppFrame({
           { href: '/fiscal/withholdings', label: 'Retenciones Fiscales', icon: 'receipt' as const },
           { href: '/fiscal/sequences', label: 'Rangos y Vencimientos', icon: 'fileText' as const },
           { href: '/fiscal/us-sales-tax', label: 'Sales Tax US', icon: 'chart' as const },
-        ].filter(({ href }) => canOpen(ctx.actor, href)),
+        ].filter(({ href }) => {
+          if (!canOpen(ctx.actor, href)) return false;
+          const country = ctx.settings.fiscalCountry;
+          if (
+            country === 'US' &&
+            (href === '/fiscal/sales-book' || href === '/fiscal/purchases-book')
+          ) {
+            return false;
+          }
+          if (country === 'VE' && href === '/fiscal/us-sales-tax') {
+            return false;
+          }
+          return true;
+        }),
       },
     },
     {

@@ -90,6 +90,7 @@ export interface TenantProfile {
   readonly baseCurrency: string;
   readonly exchangeRateScaled: bigint | null;
   readonly exchangeRateAt: Date | null;
+  readonly fiscalCountry?: 'VE' | 'US';
 }
 
 /**
@@ -141,6 +142,7 @@ export async function loadTenantProfile(
       baseCurrency: row.base_currency,
       exchangeRateScaled: row.exchange_rate_scaled,
       exchangeRateAt: row.exchange_rate_at,
+      fiscalCountry: row.fiscal_country === 'US' ? 'US' : 'VE',
     };
   });
 }

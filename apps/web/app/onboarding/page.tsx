@@ -41,6 +41,9 @@ export default async function OnboardingPage() {
   // un formulario que fallaria al enviarse.
   if (user === null) redirect('/login');
 
+  const defaultCountry = user.country ?? 'VE';
+  const isUs = defaultCountry === 'US';
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden">
       <div
@@ -73,6 +76,15 @@ export default async function OnboardingPage() {
                 minLength: 2,
               },
               {
+                name: 'fiscalCountry',
+                label: 'País / Jurisdicción fiscal',
+                defaultValue: defaultCountry,
+                options: [
+                  { value: 'VE', label: 'Venezuela (SENIAT / VEN-NIF)' },
+                  { value: 'US', label: 'Estados Unidos (US GAAP / Sales Tax)' },
+                ],
+              },
+              {
                 name: 'baseCurrency',
                 label: t('settings.fields.baseCurrency'),
                 defaultValue: 'USD',
@@ -85,23 +97,20 @@ export default async function OnboardingPage() {
               {
                 name: 'taxLabel',
                 label: t('settings.fields.taxLabel'),
-                defaultValue: 'Impuesto informativo',
+                defaultValue: isUs ? 'Sales Tax' : 'IVA',
                 hint: t('settings.hints.taxLabel'),
                 minLength: 2,
               },
               {
                 name: 'taxRate',
                 label: t('settings.fields.taxRate'),
-                defaultValue: '16',
+                defaultValue: isUs ? '7' : '16',
                 hint: t('settings.hints.taxRate'),
               },
               {
-                // Opcional de verdad: quien opere solo en su moneda base no tiene ninguna
-                // que dar. Pero se pregunta AQUI y no en Ajustes porque sin ella la
-                // empresa no puede emitir, y descubrirlo el primer dia de trabajo es
-                // peor que responder una pregunta de mas hoy.
                 name: 'exchangeRate',
                 label: t('settings.fields.exchangeRate'),
+                defaultValue: isUs ? '1.00' : '',
                 optional: true,
                 hint: t('auth.onboarding.exchangeRateHint'),
               },

@@ -66,6 +66,7 @@ const MEMORY_TENANT_VE_PROFILE: SessionMembership = {
   baseCurrency: 'USD',
   exchangeRateScaled: 3_650_000_000n,
   exchangeRateAt: new Date('2026-09-01T00:00:00.000Z'),
+  fiscalCountry: 'VE',
   expiresAt: null,
 };
 
@@ -80,8 +81,9 @@ const MEMORY_TENANT_US_PROFILE: SessionMembership = {
   taxLabel: 'EIN',
   taxRateBp: 700,
   baseCurrency: 'USD',
-  exchangeRateScaled: null,
-  exchangeRateAt: null,
+  exchangeRateScaled: 100_000_000n,
+  exchangeRateAt: new Date('2026-01-01T00:00:00.000Z'),
+  fiscalCountry: 'US',
   expiresAt: null,
 };
 
@@ -167,6 +169,7 @@ export const activeContextProvider: FactoryProvider = {
               baseCurrency: 'USD',
               exchangeRateScaled: 100_000_000n,
               exchangeRateAt: new Date('2026-01-01T00:00:00.000Z'),
+              fiscalCountry: 'US',
             }
           : DEMO_SETTINGS,
         isDemo: true,

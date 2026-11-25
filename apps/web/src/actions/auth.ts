@@ -43,6 +43,7 @@ const credentials = z.object({
 
 const signUpInput = credentials.extend({
   businessName: z.string().trim().min(2).max(80),
+  country: z.enum(['VE', 'US']).default('VE'),
 });
 
 /**
@@ -162,6 +163,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     email: formData.get('email'),
     password: formData.get('password'),
     businessName: formData.get('businessName'),
+    country: formData.get('country') ?? undefined,
   });
   if (!parsed.success) {
     return {
@@ -179,7 +181,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     // confirmar el correo, la empresa se pueda crear en el primer acceso sin
     // volver a preguntarlo. Nadie deberia tener que escribir dos veces como se
     // llama su negocio.
-    options: { data: { business_name: parsed.data.businessName } },
+    options: { data: { business_name: parsed.data.businessName, country: parsed.data.country } },
   });
 
   if (error !== null) {
@@ -219,9 +221,9 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
  */
 const businessInput = z.object({
   businessName: z.string().trim().min(2).max(80),
+  fiscalCountry: z.enum(['VE', 'US']).default('VE'),
   baseCurrency: z.enum(['USD', 'VES']).default('USD'),
   taxLabel: z.string().trim().min(2).max(60).default('Impuesto informativo'),
-  /** Se teclea en porcentaje —«16»— y viaja en puntos basicos. */
   taxRate: z.coerce.number().min(0).max(100).default(16),
   exchangeRate: z.string().trim().max(32).default(''),
 });
@@ -232,6 +234,7 @@ export async function createBusinessAction(
 ): Promise<AuthState> {
   const parsed = businessInput.safeParse({
     businessName: formData.get('businessName'),
+    fiscalCountry: formData.get('fiscalCountry') ?? undefined,
     baseCurrency: formData.get('baseCurrency') ?? undefined,
     taxLabel: formData.get('taxLabel') ?? undefined,
     taxRate: formData.get('taxRate') ?? undefined,
@@ -251,6 +254,7 @@ export async function createBusinessAction(
 
   const provisioned = await provisionTenantViaApi(data.session.access_token, {
     name: parsed.data.businessName,
+    fiscalCountry: parsed.data.fiscalCountry,
     baseCurrency: parsed.data.baseCurrency,
     taxLabel: parsed.data.taxLabel,
     taxRateBp: Math.round(parsed.data.taxRate * 100),

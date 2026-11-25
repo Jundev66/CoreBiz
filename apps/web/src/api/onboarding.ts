@@ -40,8 +40,8 @@ export interface BusinessDraft {
   readonly baseCurrency?: 'USD' | 'VES';
   readonly taxLabel?: string;
   readonly taxRateBp?: number;
-  /** Decimal en texto, como se teclea: "36,50". Lo valida y escala la API. */
   readonly exchangeRate?: string;
+  readonly fiscalCountry?: 'VE' | 'US';
 }
 
 /** Crea la empresa de quien acaba de registrarse, ya configurada. */

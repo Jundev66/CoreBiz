@@ -63,6 +63,7 @@ export interface SessionMembership extends Membership {
   readonly baseCurrency: string;
   readonly exchangeRateScaled: bigint | null;
   readonly exchangeRateAt: Date | null;
+  readonly fiscalCountry?: 'VE' | 'US';
 }
 
 interface SessionMembershipRow extends MembershipRow {
@@ -87,11 +88,23 @@ export async function loadSessionContext(
   url: string,
   userId: string,
 ): Promise<readonly SessionMembership[]> {
-  const rows = await asUser(
-    getPrisma(url),
-    userId,
-    (tx) => tx.$queryRaw<SessionMembershipRow[]>`select * from app.my_session_context()`,
-  );
+  const { rows, countries } = await asUser(getPrisma(url), userId, async (tx) => {
+    const memberships = await tx.$queryRaw<
+      SessionMembershipRow[]
+    >`select * from app.my_session_context()`;
+    if (memberships.length === 0) {
+      return { rows: memberships, countries: new Map<string, 'VE' | 'US'>() };
+    }
+    const tenantRows = await tx.tenants.findMany({
+      where: { id: { in: memberships.map((m) => m.tenant_id) } },
+      select: { id: true, fiscal_country: true },
+    });
+    const map = new Map<string, 'VE' | 'US'>();
+    for (const t of tenantRows) {
+      map.set(t.id, t.fiscal_country === 'US' ? 'US' : 'VE');
+    }
+    return { rows: memberships, countries: map };
+  });
 
   return rows.map((r) => ({
     tenantId: r.tenant_id,
@@ -107,6 +120,7 @@ export async function loadSessionContext(
     baseCurrency: r.base_currency,
     exchangeRateScaled: r.exchange_rate_scaled,
     exchangeRateAt: r.exchange_rate_at,
+    fiscalCountry: countries.get(r.tenant_id) ?? 'VE',
   }));
 }
 
@@ -130,6 +144,7 @@ export interface ProvisionInput {
   readonly baseCurrency?: 'USD' | 'VES';
   readonly taxLabel?: string;
   readonly taxRateBp?: number;
+  readonly fiscalCountry?: 'VE' | 'US';
   /**
    * Tasa de cambio con la escala del dominio (8 decimales).
    *
@@ -156,11 +171,8 @@ export async function provisionTenant(
   input: ProvisionInput,
 ): Promise<ProvisionResult> {
   try {
-    const rows = await asUser(
-      getPrisma(url),
-      userId,
-      (tx) =>
-        tx.$queryRaw<{ tenant_id: string }[]>`
+    const rows = await asUser(getPrisma(url), userId, async (tx) => {
+      const created = await tx.$queryRaw<{ tenant_id: string }[]>`
         select app.provision_tenant(
           ${input.name},
           ${input.baseCurrency ?? 'USD'},
@@ -169,8 +181,15 @@ export async function provisionTenant(
           ${input.exchangeRateScaled ?? null},
           null
         ) as tenant_id
-      `,
-    );
+      `;
+      const createdTenantId = created[0]?.tenant_id;
+      if (createdTenantId !== undefined && input.fiscalCountry !== undefined) {
+        await tx.$executeRaw`
+          select app.set_tenant_fiscal_country(${createdTenantId}::uuid, ${input.fiscalCountry})
+        `;
+      }
+      return created;
+    });
 
     const tenantId = rows[0]?.tenant_id;
     return tenantId === undefined ? { ok: false, error: 'UNKNOWN' } : { ok: true, tenantId };

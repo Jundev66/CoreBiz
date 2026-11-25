@@ -90,6 +90,7 @@ interface SessionResponse {
       readonly baseCurrency: 'USD' | 'VES';
       readonly exchangeRateScaled: string | null;
       readonly exchangeRateAt: string | null;
+      readonly fiscalCountry?: 'VE' | 'US';
     };
   } | null;
   readonly actor: { readonly userId: string; readonly role: string } | null;
@@ -143,6 +144,7 @@ export const apiForRequest = cache(async (_tenantSlug?: string) => {
         response.tenant.settings.exchangeRateAt === null
           ? null
           : new Date(response.tenant.settings.exchangeRateAt),
+      fiscalCountry: response.tenant.settings.fiscalCountry,
     },
     isDemo: response.tenant.isDemo,
   };

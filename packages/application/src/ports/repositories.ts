@@ -88,6 +88,7 @@ export interface TenantSettings {
   readonly baseCurrency: 'USD' | 'VES';
   readonly exchangeRateScaled: bigint | null;
   readonly exchangeRateAt: Date | null;
+  readonly fiscalCountry?: 'VE' | 'US' | undefined;
 }
 
 /**
