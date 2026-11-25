@@ -151,22 +151,48 @@ export async function receiveGoodsAction(
   }
 
   const reference = formData.get('supplierReference');
+  const controlNumber = formData.get('controlNumber');
+  const paymentCondition = formData.get('paymentCondition');
+  const creditDaysRaw = formData.get('creditDays');
+  const taxPercentRaw = formData.get('taxPercentage');
+  const currencyRaw = formData.get('currency');
+  const officialRate = formData.get('officialRate');
+  const appliedRate = formData.get('appliedRate');
   const notes = formData.get('notes');
+
+  const creditDays =
+    typeof creditDaysRaw === 'string' && creditDaysRaw.trim() !== ''
+      ? Number.parseInt(creditDaysRaw, 10)
+      : 0;
+  const taxPercentage =
+    typeof taxPercentRaw === 'string' && taxPercentRaw.trim() !== ''
+      ? Number.parseFloat(taxPercentRaw.replace(',', '.'))
+      : 0;
 
   const { receiveGoods } = await apiForRequest();
   const result = await receiveGoods({
     supplierId,
     lines: parseLines(formData),
     supplierReference: typeof reference === 'string' && reference !== '' ? reference : null,
+    controlNumber: typeof controlNumber === 'string' && controlNumber !== '' ? controlNumber : '',
+    ...(paymentCondition === 'CASH' || paymentCondition === 'CREDIT' ? { paymentCondition } : {}),
+    ...(Number.isFinite(creditDays) ? { creditDays } : {}),
+    ...(Number.isFinite(taxPercentage) ? { taxPercentage } : {}),
+    ...(currencyRaw === 'USD' || currencyRaw === 'VES' || currencyRaw === 'EUR'
+      ? { currency: currencyRaw }
+      : {}),
+    officialRate: typeof officialRate === 'string' && officialRate !== '' ? officialRate : '',
+    appliedRate: typeof appliedRate === 'string' && appliedRate !== '' ? appliedRate : '',
     notes: typeof notes === 'string' && notes.trim() !== '' ? notes : null,
   });
 
   if (!result.ok) return failure(result.error);
 
-  // La recepcion cambia el inventario, asi que la pantalla de productos y la de
-  // compras dejan de ser validas a la vez.
   revalidatePath('/purchases');
   revalidatePath('/products');
+  revalidatePath('/accounting/trial-balance');
+  revalidatePath('/accounting/aging');
+  revalidatePath('/fiscal/purchases-book');
 
   redirect(`/purchases?creado=${encodeURIComponent(result.value.number)}`);
 }

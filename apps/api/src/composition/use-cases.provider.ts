@@ -94,6 +94,7 @@ import {
   GetArAgingReportQueryHandler,
   GetApAgingReportQueryHandler,
   type AiGateway,
+  type PurchaseRecordedEvent,
   type SecretBox,
   type TenantContext,
 } from '@corebiz/application';
@@ -112,11 +113,18 @@ import {
   IssueWithholdingVoucherCommandHandler,
   VoidWithholdingVoucherCommandHandler,
   ListWithholdingVouchersQueryHandler,
+  resolveFiscalCurrency,
+  computeConvertedMinor,
 } from '@corebiz/fiscal';
+import { JournalEntry, JournalEntryLine, Money } from '@corebiz/domain';
 import { loadEnv } from '../config/env';
 import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../tokens';
 import type { VisionEmbeddingsPort, VisionModelPort } from '@synapse-vision/core';
 import type { Runtime } from './runtime.provider';
+import {
+  listMemoryPurchaseBookTransactions,
+  recordMemoryPurchaseBookTransaction,
+} from './memory-driver';
 
 /**
  * Los casos de uso, ya inyectados.
@@ -257,6 +265,146 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     },
   };
 
+  const withPurchaseAccounting = {
+    ...shared,
+    onPurchaseRecorded: async (event: PurchaseRecordedEvent) => {
+      const subtotalMinor = event.receipt.total.minorUnits;
+      const taxBp = Math.round(event.taxPercentage * 100);
+      const taxMinor = (subtotalMinor * BigInt(taxBp)) / 10000n;
+      const totalWithTaxMinor = subtotalMinor + taxMinor;
+      const currency = event.receipt.currency;
+
+      const accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
+      const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
+        accounts.find((a) => codes.includes(a.code.value))?.id ??
+        accounts.find((a) => a.category === fallbackCategory)?.id ??
+        fallbackId;
+
+      const inventoryAccountId = findAccount(['1.1.04', '5.1.01'], 'ASSET', 'tpl-1.1.04');
+      const taxCreditAccountId = findAccount(['1.1.05', '2.1.02'], 'ASSET', 'tpl-2.1.02');
+      const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01');
+      const payableAccountId = findAccount(['2.1.01', '2010'], 'LIABILITY', 'tpl-2.1.01');
+
+      const docRef = event.supplierReference || event.receipt.number;
+      const lines: JournalEntryLine[] = [];
+
+      const invDebit = JournalEntryLine.create(
+        inventoryAccountId,
+        Money.fromMinor(subtotalMinor, currency),
+        Money.zero(currency),
+        `Purchase inventory - ${docRef}`,
+      );
+      if (invDebit.ok) lines.push(invDebit.value);
+
+      if (taxMinor > 0n) {
+        const taxDebit = JournalEntryLine.create(
+          taxCreditAccountId,
+          Money.fromMinor(taxMinor, currency),
+          Money.zero(currency),
+          `Purchase tax credit - ${docRef}`,
+        );
+        if (taxDebit.ok) lines.push(taxDebit.value);
+      }
+
+      const creditAccountId =
+        event.paymentCondition === 'CREDIT' ? payableAccountId : cashAccountId;
+      const creditLine = JournalEntryLine.create(
+        creditAccountId,
+        Money.zero(currency),
+        Money.fromMinor(totalWithTaxMinor, currency),
+        event.paymentCondition === 'CREDIT'
+          ? `Accounts payable - ${docRef}`
+          : `Cash purchase - ${docRef}`,
+      );
+      if (creditLine.ok) lines.push(creditLine.value);
+
+      if (lines.length >= 2) {
+        const entryNumber = await runtime.journalEntries.nextEntryNumber(ctx.tenantId);
+        const jeResult = JournalEntry.create({
+          id: `pur-je-${event.receipt.id}-${entryNumber}`,
+          tenantId: ctx.tenantId,
+          entryNumber,
+          date: event.receipt.receivedAt ?? new Date(),
+          description: `Purchase invoice ${docRef} (${event.supplier.name})`,
+          sourceType: 'PURCHASE',
+          sourceId: event.receipt.id,
+          lines,
+        });
+        if (jeResult.ok) {
+          await runtime.journalEntries.save(jeResult.value);
+        }
+      }
+
+      const issueDate = event.receipt.receivedAt ?? new Date();
+      if (event.paymentCondition === 'CREDIT' && runtime.payableBills) {
+        const adapter = runtime.payableBills as unknown as {
+          addBill?: (item: {
+            readonly id: string;
+            readonly tenantId: string;
+            readonly supplierId: string;
+            readonly supplierName: string;
+            readonly taxId?: string | undefined;
+            readonly billNumber: string;
+            readonly issueDate: Date;
+            readonly dueDate: Date;
+            readonly total: Money;
+            readonly paidAmount: Money;
+            readonly remainingBalance: Money;
+            readonly status: string;
+          }) => void;
+        };
+        if (typeof adapter.addBill === 'function') {
+          const dueDate = new Date(issueDate.getTime() + event.creditDays * 86_400_000);
+          const totalMoney = Money.fromMinor(totalWithTaxMinor, currency);
+          adapter.addBill({
+            id: event.receipt.id,
+            tenantId: ctx.tenantId,
+            supplierId: event.supplier.id,
+            supplierName: event.supplier.name,
+            taxId: event.supplier.taxId ?? undefined,
+            billNumber: docRef,
+            issueDate,
+            dueDate,
+            total: totalMoney,
+            paidAmount: Money.zero(currency),
+            remainingBalance: totalMoney,
+            status: 'ISSUED',
+          });
+        }
+      }
+
+      const fiscalCurrency = resolveFiscalCurrency(ctx.settings.fiscalCountry ?? 'VE');
+      const parsedRate = Number((event.appliedRate || event.officialRate || '1').replace(',', '.'));
+      const effectiveRate =
+        currency !== fiscalCurrency && Number.isFinite(parsedRate) && parsedRate > 0
+          ? parsedRate
+          : 1;
+
+      const bookSubtotal =
+        effectiveRate !== 1 ? computeConvertedMinor(subtotalMinor, effectiveRate) : subtotalMinor;
+      const bookTax =
+        effectiveRate !== 1 ? computeConvertedMinor(taxMinor, effectiveRate) : taxMinor;
+      const bookTotal = bookSubtotal + bookTax;
+
+      recordMemoryPurchaseBookTransaction(ctx.tenantId, {
+        receiptId: event.receipt.id,
+        receiptDate: issueDate,
+        supplierTaxId: event.supplier.taxId ?? 'J-00000000-0',
+        supplierName: event.supplier.name,
+        documentNumber: docRef,
+        controlNumber: event.controlNumber ?? undefined,
+        documentType: 'FACTURA',
+        totalMinor: bookTotal,
+        exemptMinor: taxMinor === 0n ? bookTotal : 0n,
+        taxableBaseGeneralMinor: taxMinor > 0n ? bookSubtotal : 0n,
+        taxGeneralMinor: bookTax,
+        taxGeneralPercentage: event.taxPercentage,
+        vatWithheldMinor: 0n,
+        currency: effectiveRate !== 1 ? fiscalCurrency : currency,
+      });
+    },
+  };
+
   return {
     createCustomer: makeCreateCustomer(shared),
     updateCustomer: makeUpdateCustomer(shared),
@@ -287,7 +435,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     createSupplier: makeCreateSupplier(shared),
     updateSupplier: makeUpdateSupplier(shared),
     setSupplierStatus: makeSetSupplierStatus(shared),
-    receiveGoods: makeReceiveGoods(shared),
+    receiveGoods: makeReceiveGoods(withPurchaseAccounting),
     confirmVisionReceipt: makeConfirmVisionReceipt(shared),
     voidGoodsReceipt: makeVoidGoodsReceipt(shared),
 
@@ -361,7 +509,9 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     listCreditNotes: new ListCreditNotesQueryHandler(runtime.creditNotes!),
     listDebitNotes: new ListDebitNotesQueryHandler(runtime.debitNotes!),
     generateSalesBook: new GenerateSalesBookQueryHandler(runtime.invoices),
-    generatePurchasesBook: new GeneratePurchasesBookQueryHandler(),
+    generatePurchasesBook: new GeneratePurchasesBookQueryHandler(undefined, (tenantId) =>
+      Promise.resolve(listMemoryPurchaseBookTransactions(tenantId)),
+    ),
     generateUsTaxSummary: new GenerateUsTaxSummaryQueryHandler(runtime.invoices),
     importBankStatement: new ImportBankStatementCommandHandler(
       runtime.accounts,

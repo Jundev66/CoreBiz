@@ -16,4 +16,5 @@ export * from './model/fiscal-sequence-range';
 export * from './model/withholding-voucher';
 export * from './port/withholding-voucher-repository';
 export * from './model/tax-rate-config';
+export * from './model/currency-jurisdiction';
 export * from './port/tax-rate-config-repository';

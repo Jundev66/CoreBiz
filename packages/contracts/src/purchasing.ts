@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { decimalStringSchema, recordIdSchema } from './common';
+import { currencySchema, decimalStringSchema, recordIdSchema } from './common';
 
 /**
  * Esquemas de entrada de compras.
@@ -93,10 +93,15 @@ export const goodsReceiptLineSchema = z
 export const receiveGoodsSchema = z
   .object({
     supplierId: recordIdSchema,
-    /* Sin `.min(1)`: la regla es del dominio. Ver la nota en `sales.ts`. */
     lines: z.array(goodsReceiptLineSchema),
-    /** El numero que trae el documento del proveedor, para poder cuadrar despues. */
     supplierReference: z.string().trim().max(64).optional().or(z.literal('')),
+    controlNumber: z.string().trim().max(64).optional().or(z.literal('')),
+    paymentCondition: z.enum(['CASH', 'CREDIT']).optional(),
+    creditDays: z.number().int().min(0).max(365).optional(),
+    taxPercentage: z.number().min(0).max(100).optional(),
+    currency: currencySchema.optional(),
+    officialRate: decimalStringSchema.optional().or(z.literal('')),
+    appliedRate: decimalStringSchema.optional().or(z.literal('')),
     notes: z.string().trim().max(500).optional().or(z.literal('')),
   })
   .strict();

@@ -6,12 +6,14 @@ import {
   GoodsReceipt,
   Money,
   Quantity,
+  type Currency,
   type Result,
   type FeatureError,
   type GoodsReceiptError,
   type Product,
   type ProductError,
   type ProductId,
+  type Supplier,
   type SupplierId,
   type QuotaError,
 } from '@corebiz/domain';
@@ -41,6 +43,13 @@ export interface ReceiveGoodsInput {
     readonly unitCost?: string | undefined;
   }[];
   readonly supplierReference?: string | null;
+  readonly controlNumber?: string | null;
+  readonly paymentCondition?: 'CASH' | 'CREDIT';
+  readonly creditDays?: number;
+  readonly taxPercentage?: number;
+  readonly currency?: Currency;
+  readonly officialRate?: string | null;
+  readonly appliedRate?: string | null;
   readonly notes?: string | null;
 }
 
@@ -65,11 +74,24 @@ export interface ReceiveGoodsOutput {
   readonly total: string;
 }
 
+export interface PurchaseRecordedEvent {
+  readonly receipt: GoodsReceipt;
+  readonly supplier: Supplier;
+  readonly supplierReference: string | null;
+  readonly controlNumber: string | null;
+  readonly paymentCondition: 'CASH' | 'CREDIT';
+  readonly creditDays: number;
+  readonly taxPercentage: number;
+  readonly officialRate: string | null;
+  readonly appliedRate: string | null;
+}
+
 export interface ReceiveGoodsDeps {
   readonly uow: UnitOfWork;
   readonly ctx: TenantContext;
   readonly clock: Clock;
   readonly ids: IdGenerator;
+  readonly onPurchaseRecorded?: (event: PurchaseRecordedEvent) => Promise<void>;
 }
 
 export function makeReceiveGoods(deps: ReceiveGoodsDeps) {
@@ -83,7 +105,7 @@ export function makeReceiveGoods(deps: ReceiveGoodsDeps) {
       return err({ kind: 'Forbidden' });
     }
 
-    const currency = deps.ctx.settings.baseCurrency;
+    const currency = input.currency ?? deps.ctx.settings.baseCurrency;
 
     return deps.uow.run(async (repos) => {
       // La recepcion cuenta como documento del mes, igual que una nota de
@@ -120,8 +142,10 @@ export function makeReceiveGoods(deps: ReceiveGoodsDeps) {
             return err({ kind: 'InvalidCost', productId: line.productId, raw: line.unitCost });
           }
           unitCostMoney = parsed.value;
-        } else if (product.cost !== null) {
+        } else if (product.cost !== null && product.cost.currency === currency) {
           unitCostMoney = product.cost;
+        } else if (product.cost !== null) {
+          unitCostMoney = Money.fromMinor(product.cost.minorUnits, currency);
         } else {
           return err({
             kind: 'InvalidCost',
@@ -191,6 +215,20 @@ export function makeReceiveGoods(deps: ReceiveGoodsDeps) {
           lines: receipt.lines.length,
         },
       });
+
+      if (deps.onPurchaseRecorded) {
+        await deps.onPurchaseRecorded({
+          receipt,
+          supplier,
+          supplierReference: input.supplierReference?.trim() || null,
+          controlNumber: input.controlNumber?.trim() || null,
+          paymentCondition: input.paymentCondition ?? 'CASH',
+          creditDays: input.creditDays ?? 0,
+          taxPercentage: input.taxPercentage ?? 0,
+          officialRate: input.officialRate?.trim() || null,
+          appliedRate: input.appliedRate?.trim() || null,
+        });
+      }
 
       return ok({ id: receipt.id, number: receipt.number, total: receipt.total.toString() });
     });

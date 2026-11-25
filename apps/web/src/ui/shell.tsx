@@ -155,7 +155,7 @@ export async function AppFrame({
         label: 'Compras',
         icon: 'truck' as const,
         items: [
-          { href: '/purchases', label: 'Recepciones', icon: 'truck' as const },
+          { href: '/purchases', label: 'Facturas de Compra', icon: 'truck' as const },
           { href: '/purchases/suppliers', label: 'Proveedores', icon: 'building' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },

@@ -20,6 +20,7 @@ import {
   type TenantId,
   type UserId,
 } from '@corebiz/domain';
+import type { PurchasesSourceTransaction } from '@corebiz/fiscal';
 import {
   InMemoryUnitOfWork,
   createSalesStores,
@@ -90,6 +91,25 @@ interface MemoryStore extends SalesStores {
   physicalInventoryAuditRepo?: InMemoryPhysicalInventoryAuditRepository;
   payableBillsRepo?: InMemoryPayableBillsAdapter;
   taxRateConfigRepo?: InMemoryTaxRateConfigRepository;
+  purchasesBookTransactions?: Map<string, PurchasesSourceTransaction[]>;
+}
+
+export function recordMemoryPurchaseBookTransaction(
+  tenantId: string,
+  tx: PurchasesSourceTransaction,
+): void {
+  const s = store();
+  s.purchasesBookTransactions ??= new Map();
+  const list = s.purchasesBookTransactions.get(tenantId) ?? [];
+  list.push(tx);
+  s.purchasesBookTransactions.set(tenantId, list);
+}
+
+export function listMemoryPurchaseBookTransactions(
+  tenantId: string,
+): readonly PurchasesSourceTransaction[] {
+  const s = store();
+  return s.purchasesBookTransactions?.get(tenantId) ?? [];
 }
 
 export function memoryAccountingRepos() {
@@ -111,6 +131,7 @@ export function memoryAccountingRepos() {
   s.partnerDrawingRepo ??= new InMemoryPartnerDrawingRepository();
   s.disbursementRepo ??= new InMemoryDisbursementRepository();
   s.taxRateConfigRepo ??= new InMemoryTaxRateConfigRepository();
+  s.purchasesBookTransactions ??= new Map();
   return {
     accounts: s.accountRepo,
     journalEntries: s.journalEntryRepo,

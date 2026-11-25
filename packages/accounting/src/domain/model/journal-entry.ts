@@ -3,6 +3,7 @@ import { type JournalEntryLine } from './journal-entry-line';
 
 export type JournalSourceType =
   | 'INVOICE'
+  | 'PURCHASE'
   | 'PAYMENT'
   | 'MANUAL'
   | 'ADJUSTMENT'

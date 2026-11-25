@@ -30,6 +30,13 @@ export class ReceiveGoodsController {
         supplierId: body.supplierId,
         lines: body.lines,
         supplierReference: body.supplierReference || null,
+        controlNumber: body.controlNumber || null,
+        ...(body.paymentCondition ? { paymentCondition: body.paymentCondition } : {}),
+        ...(body.creditDays !== undefined ? { creditDays: body.creditDays } : {}),
+        ...(body.taxPercentage !== undefined ? { taxPercentage: body.taxPercentage } : {}),
+        ...(body.currency ? { currency: body.currency } : {}),
+        officialRate: body.officialRate || null,
+        appliedRate: body.appliedRate || null,
         notes: body.notes || null,
       }),
     );

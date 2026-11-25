@@ -52,18 +52,34 @@ interface LineDraft {
 export function GoodsReceiptForm({
   suppliers,
   products,
+  defaultCurrency = 'USD',
+  fiscalCountry = 'VE',
+  defaultTaxPercentage = 16,
 }: {
   suppliers: readonly SupplierOption[];
   products: readonly ReceivableProduct[];
+  defaultCurrency?: string;
+  fiscalCountry?: string;
+  defaultTaxPercentage?: number;
 }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(receiveGoodsAction, INITIAL);
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierReference, setSupplierReference] = useState<string>('');
+  const [controlNumber, setControlNumber] = useState<string>('');
+  const [paymentCondition, setPaymentCondition] = useState<'CASH' | 'CREDIT'>('CASH');
+  const [creditDays, setCreditDays] = useState<string>('30');
+  const [currency, setCurrency] = useState<string>(defaultCurrency);
+  const [officialRate, setOfficialRate] = useState<string>('');
+  const [appliedRate, setAppliedRate] = useState<string>('');
+  const [taxPercentage, setTaxPercentage] = useState<string>(String(defaultTaxPercentage));
   const [notes, setNotes] = useState<string>('');
   const [lines, setLines] = useState<LineDraft[]>([
     { key: 0, productId: '', quantity: '', unitCost: '' },
   ]);
+
+  const fiscalCurrency = fiscalCountry === 'VE' ? 'VES' : 'USD';
+  const showFxInputs = currency !== fiscalCurrency;
 
   // Si el usuario viene de escanear un remito en /purchases/scan, hidratamos los datos
   useEffect(() => {
@@ -276,6 +292,125 @@ export function GoodsReceiptForm({
               defaultValue={supplierReference}
             />
 
+            <div>
+              <label htmlFor="controlNumber" className={LABEL_CLASSES}>
+                Nro. Control Fiscal
+                <span className="ml-1.5 text-xs font-normal text-muted">
+                  {t('common.optional')}
+                </span>
+              </label>
+              <input
+                id="controlNumber"
+                name="controlNumber"
+                type="text"
+                value={controlNumber}
+                onChange={(e) => setControlNumber(e.target.value)}
+                placeholder="00-0001234"
+                className={`mt-1.5 ${CONTROL_CLASSES}`}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="paymentCondition" className={LABEL_CLASSES}>
+                Condición de Pago
+              </label>
+              <select
+                id="paymentCondition"
+                name="paymentCondition"
+                value={paymentCondition}
+                onChange={(e) =>
+                  setPaymentCondition(e.target.value === 'CREDIT' ? 'CREDIT' : 'CASH')
+                }
+                className={`mt-1.5 ${CONTROL_CLASSES}`}
+              >
+                <option value="CASH">Contado (Caja / Banco)</option>
+                <option value="CREDIT">Crédito (Cuenta por Pagar)</option>
+              </select>
+            </div>
+
+            {paymentCondition === 'CREDIT' && (
+              <div>
+                <label htmlFor="creditDays" className={LABEL_CLASSES}>
+                  Días de Crédito
+                </label>
+                <input
+                  id="creditDays"
+                  name="creditDays"
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={creditDays}
+                  onChange={(e) => setCreditDays(e.target.value)}
+                  className={`mt-1.5 ${CONTROL_CLASSES}`}
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="currency" className={LABEL_CLASSES}>
+                Moneda del Documento
+              </label>
+              <select
+                id="currency"
+                name="currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className={`mt-1.5 ${CONTROL_CLASSES}`}
+              >
+                <option value="VES">VES (Bolívares)</option>
+                <option value="USD">USD (Dólares)</option>
+                <option value="EUR">EUR (Euros)</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="taxPercentage" className={LABEL_CLASSES}>
+                IVA Compra (%)
+              </label>
+              <input
+                id="taxPercentage"
+                name="taxPercentage"
+                inputMode="decimal"
+                value={taxPercentage}
+                onChange={(e) => setTaxPercentage(e.target.value)}
+                className={`mt-1.5 ${CONTROL_CLASSES}`}
+              />
+            </div>
+
+            {showFxInputs && (
+              <>
+                <div>
+                  <label htmlFor="officialRate" className={LABEL_CLASSES}>
+                    Tasa Oficial BCV ({fiscalCurrency})
+                  </label>
+                  <input
+                    id="officialRate"
+                    name="officialRate"
+                    inputMode="decimal"
+                    value={officialRate}
+                    onChange={(e) => setOfficialRate(e.target.value)}
+                    placeholder="50.00"
+                    className={`mt-1.5 ${CONTROL_CLASSES}`}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="appliedRate" className={LABEL_CLASSES}>
+                    Tasa Aplicada Proveedor ({fiscalCurrency})
+                  </label>
+                  <input
+                    id="appliedRate"
+                    name="appliedRate"
+                    inputMode="decimal"
+                    value={appliedRate}
+                    onChange={(e) => setAppliedRate(e.target.value)}
+                    placeholder="52.50"
+                    className={`mt-1.5 ${CONTROL_CLASSES}`}
+                  />
+                </div>
+              </>
+            )}
+
             {/* Las notas se pintaban en el detalle de la recepcion y no habia forma de
                 escribirlas: salian siempre vacias. Aqui va lo que la recepcion necesita
                 explicar y no cabe en la referencia — «faltaron dos cajas», «llego con el
@@ -431,9 +566,43 @@ export function GoodsReceiptForm({
 
         {/* One compact row on a phone so the pinned bar never covers the line being typed. */}
         <Card className="flex items-center gap-4 p-3 shadow-md sm:block sm:p-5 lg:shadow-xs">
-          <p className="min-w-0 flex-1 text-sm font-medium text-ink tabular-nums">
-            {t('purchases.estimatedTotal', { total: estimated.toFixed(2) })}
-          </p>
+          <div className="min-w-0 flex-1 space-y-1 text-sm tabular-nums">
+            <div className="flex items-center justify-between text-muted">
+              <span>Subtotal:</span>
+              <span>
+                {estimated.toFixed(2)} {currency}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-muted">
+              <span>IVA ({taxPercentage || '0'}%):</span>
+              <span>
+                {(estimated * ((Number(taxPercentage.replace(',', '.')) || 0) / 100)).toFixed(2)}{' '}
+                {currency}
+              </span>
+            </div>
+            <div className="flex items-center justify-between font-semibold text-ink">
+              <span>Total Factura:</span>
+              <span>
+                {(estimated * (1 + (Number(taxPercentage.replace(',', '.')) || 0) / 100)).toFixed(
+                  2,
+                )}{' '}
+                {currency}
+              </span>
+            </div>
+            {showFxInputs && Number((appliedRate || officialRate || '0').replace(',', '.')) > 0 && (
+              <div className="flex items-center justify-between border-t border-line pt-1 text-xs text-muted">
+                <span>Equivalente Fiscal:</span>
+                <span>
+                  {(
+                    estimated *
+                    (1 + (Number(taxPercentage.replace(',', '.')) || 0) / 100) *
+                    Number((appliedRate || officialRate).replace(',', '.'))
+                  ).toFixed(2)}{' '}
+                  {fiscalCurrency}
+                </span>
+              </div>
+            )}
+          </div>
 
           <button
             type="submit"

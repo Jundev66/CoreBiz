@@ -237,6 +237,13 @@ export function httpCommands() {
         supplierId: input.supplierId,
         lines: input.lines,
         supplierReference: orUndefined(input.supplierReference),
+        controlNumber: orUndefined(input.controlNumber),
+        ...(input.paymentCondition ? { paymentCondition: input.paymentCondition } : {}),
+        ...(input.creditDays !== undefined ? { creditDays: input.creditDays } : {}),
+        ...(input.taxPercentage !== undefined ? { taxPercentage: input.taxPercentage } : {}),
+        ...(input.currency ? { currency: input.currency } : {}),
+        officialRate: orUndefined(input.officialRate),
+        appliedRate: orUndefined(input.appliedRate),
         notes: orUndefined(input.notes),
       }),
 

@@ -11,13 +11,22 @@ export interface GeneratePurchasesBookQuery {
   readonly endDate?: Date | undefined;
 }
 
+export type PurchasesBookLoader = (
+  tenantId: string,
+  startDate?: Date,
+  endDate?: Date,
+) => Promise<readonly PurchasesSourceTransaction[]>;
+
 export class GeneratePurchasesBookQueryHandler {
   constructor(
     private readonly fiscalBookService: VenezuelaFiscalBookService = new VenezuelaFiscalBookService(),
+    private readonly loadTransactions?: PurchasesBookLoader,
   ) {}
 
-  async execute(_query: GeneratePurchasesBookQuery): Promise<Result<PurchasesBookSummary, never>> {
-    const transactions: PurchasesSourceTransaction[] = [];
-    return Promise.resolve(ok(this.fiscalBookService.buildPurchasesBook(transactions)));
+  async execute(query: GeneratePurchasesBookQuery): Promise<Result<PurchasesBookSummary, never>> {
+    const transactions = this.loadTransactions
+      ? await this.loadTransactions(query.tenantId, query.startDate, query.endDate)
+      : [];
+    return ok(this.fiscalBookService.buildPurchasesBook(transactions));
   }
 }

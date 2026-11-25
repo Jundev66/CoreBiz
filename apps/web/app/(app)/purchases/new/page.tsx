@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { apiForRequest } from '@/api/session';
+import { listTaxRateConfigs } from '@/api/fiscal';
 import { Screen } from '@/ui/shell';
 import { GoodsReceiptForm } from '@/ui/goods-receipt-form';
 import { notFound } from 'next/navigation';
@@ -11,23 +12,20 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('purchases.new') };
 }
 
-/**
- * Registrar la entrada de mercancia.
- *
- * Es el reverso de emitir una nota de entrega, y la pantalla lo refleja: mismo
- * formulario de lineas, misma forma de anadir y quitar renglones. Alguien que ya
- * sabe despachar sabe recibir sin que nadie se lo explique.
- */
 export default async function NewGoodsReceiptPage() {
   const t = await getTranslations();
   const { ctx, queries } = await apiForRequest();
 
   if (!can(ctx.actor, 'purchase:receive')) notFound();
 
-  const [suppliers, products] = await Promise.all([
+  const [suppliers, products, taxRates] = await Promise.all([
     queries.purchasing.supplierOptions(),
     queries.products.options(),
+    listTaxRateConfigs().catch(() => []),
   ]);
+
+  const defaultTax = taxRates.find((r) => r.isDefault) ?? taxRates[0];
+  const defaultTaxPercentage = defaultTax ? defaultTax.rateBp / 100 : ctx.settings.taxRateBp / 100;
 
   return (
     <Screen
@@ -38,8 +36,6 @@ export default async function NewGoodsReceiptPage() {
       <GoodsReceiptForm
         suppliers={suppliers.map((s) => ({ id: s.id, label: `${s.code} · ${s.name}` }))}
         products={products
-          // Un servicio no se puede recibir: no tiene existencias. Se filtra
-          // aqui para no ofrecer una opcion que el dominio va a rechazar.
           .filter((p) => p.stock !== null)
           .map((p) => ({
             id: p.id,
@@ -47,6 +43,9 @@ export default async function NewGoodsReceiptPage() {
             unit: p.unit,
             cost: p.cost ?? null,
           }))}
+        defaultCurrency={ctx.settings.baseCurrency}
+        fiscalCountry={ctx.settings.fiscalCountry ?? 'VE'}
+        defaultTaxPercentage={defaultTaxPercentage}
       />
     </Screen>
   );
