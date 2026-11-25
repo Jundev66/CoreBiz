@@ -74,7 +74,7 @@ export async function AppFrame({
         label: 'Ventas',
         icon: 'cart' as const,
         items: [
-          { href: '/invoicing', label: 'Facturación Fiscal', icon: 'fileText' as const },
+          { href: '/invoicing', label: 'Facturas de Venta', icon: 'fileText' as const },
           {
             href: '/invoicing/credit-notes',
             label: 'Notas de Crédito & Débito',
@@ -83,6 +83,7 @@ export async function AppFrame({
           { href: '/pos-sales', label: 'Tickets POS (Mostrador)', icon: 'receipt' as const },
           { href: '/delivery-notes', label: 'Notas de Entrega', icon: 'fileText' as const },
           { href: '/payments', label: 'Cobros', icon: 'banknote' as const },
+          { href: '/customers', label: t('nav.customers'), icon: 'users' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
     },
@@ -101,18 +102,8 @@ export async function AppFrame({
           },
           { href: '/accounting/journal-entries', label: 'Libro Diario', icon: 'receipt' as const },
           {
-            href: '/accounting/reconciliation',
-            label: 'Conciliación Bancaria',
-            icon: 'building' as const,
-          },
-          {
             href: '/accounting/aging',
             label: 'Antigüedad de Deuda (Aging)',
-            icon: 'chart' as const,
-          },
-          {
-            href: '/accounting/forex',
-            label: 'Reexpresión (Forex)',
             icon: 'chart' as const,
           },
           {
@@ -121,19 +112,12 @@ export async function AppFrame({
             icon: 'banknote' as const,
           },
           {
-            href: '/accounting/drawings',
-            label: 'Retiros & Autoconsumo',
-            icon: 'users' as const,
-          },
-          {
             href: '/accounting/expenses',
             label: 'Gastos & Logística',
             icon: 'truck' as const,
           },
           { href: '/fiscal/sales-book', label: 'Libro de Ventas', icon: 'fileText' as const },
           { href: '/fiscal/purchases-book', label: 'Libro de Compras', icon: 'truck' as const },
-          { href: '/fiscal/withholdings', label: 'Retenciones Fiscales', icon: 'receipt' as const },
-          { href: '/fiscal/sequences', label: 'Rangos y Vencimientos', icon: 'fileText' as const },
           { href: '/fiscal/us-sales-tax', label: 'Sales Tax US', icon: 'chart' as const },
         ].filter(({ href }) => {
           if (!canOpen(ctx.actor, href)) return false;
@@ -176,10 +160,6 @@ export async function AppFrame({
           { href: '/purchases/suppliers', label: 'Proveedores', icon: 'building' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
-    },
-    {
-      type: 'link' as const,
-      item: { href: '/customers', label: t('nav.customers'), icon: 'users' as const },
     },
     {
       type: 'group' as const,

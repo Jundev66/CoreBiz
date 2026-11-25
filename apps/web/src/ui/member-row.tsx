@@ -73,7 +73,7 @@ export function MemberRow({ member, canManage }: { member: MemberRowData; canMan
       </td>
 
       <td className="order-3 sm:px-4 sm:py-3">
-        {canManage ? (
+        {canManage && !member.isYou ? (
           <form action={changeRole}>
             <input type="hidden" name="userId" value={member.userId} />
             <label htmlFor={`role-${member.userId}`} className="sr-only">

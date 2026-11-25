@@ -539,6 +539,19 @@ export function getMemoryUnitOfWork(tenantId: TenantId): InMemoryUnitOfWork {
   return new InMemoryUnitOfWork(current, current.usage, tenantId);
 }
 
+export function getMemoryTenantSettings(tenantId: string) {
+  return store().tenantSettings.get(tenantId) as
+    | {
+        readonly name?: string;
+        readonly taxLabel?: string;
+        readonly taxRateBp?: number;
+        readonly baseCurrency?: 'USD' | 'VES';
+        readonly exchangeRateScaled?: bigint;
+        readonly exchangeRateAt?: Date;
+      }
+    | undefined;
+}
+
 /**
  * Lado de LECTURA (CQRS ligero).
  *

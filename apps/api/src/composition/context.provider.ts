@@ -10,7 +10,7 @@ import {
 import type { AuthenticatedRequest, VerifiedIdentity } from '../auth/authenticated-request';
 import { ACTIVE_CONTEXT, IDENTITY, MEMBERSHIPS, SESSION_INFO, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
-import { MEMORY_TENANT, MEMORY_TENANT_US } from './memory-driver';
+import { MEMORY_TENANT, MEMORY_TENANT_US, getMemoryTenantSettings } from './memory-driver';
 import { DEMO_SETTINGS, planFrom, settingsFrom } from './settings';
 import { NoActiveTenantException } from '../http/api-error';
 
@@ -157,21 +157,24 @@ export const activeContextProvider: FactoryProvider = {
       const role = roleOverride ?? membershipRole;
       const isUs = active.tenantId === MEMORY_TENANT_US_ID;
 
+      const baseSettings = isUs
+        ? {
+            taxLabel: 'Sales Tax (7.00%)',
+            taxRateBp: 700,
+            baseCurrency: 'USD' as const,
+            exchangeRateScaled: 100_000_000n,
+            exchangeRateAt: new Date('2026-01-01T00:00:00.000Z'),
+            fiscalCountry: 'US' as const,
+          }
+        : DEMO_SETTINGS;
+      const savedSettings = getMemoryTenantSettings(active.tenantId);
+
       const tenantContext: TenantContext = {
         tenantId: asId<TenantId>(active.tenantId),
         tenantSlug: active.slug,
         actor: { userId: asId<UserId>(identity.userId), role },
         plan: Plan.of('free'),
-        settings: isUs
-          ? {
-              taxLabel: 'Sales Tax (7.00%)',
-              taxRateBp: 700,
-              baseCurrency: 'USD',
-              exchangeRateScaled: 100_000_000n,
-              exchangeRateAt: new Date('2026-01-01T00:00:00.000Z'),
-              fiscalCountry: 'US',
-            }
-          : DEMO_SETTINGS,
+        settings: savedSettings ? { ...baseSettings, ...savedSettings } : baseSettings,
         isDemo: true,
       };
 

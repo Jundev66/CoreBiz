@@ -78,6 +78,10 @@ export function makeChangeMemberRole(deps: ManageTeamDeps) {
         return err({ kind: 'OnlyOwnerManagesOwners' });
       }
 
+      if (input.userId === deps.ctx.actor.userId && member.role === 'owner' && role !== 'owner') {
+        return err({ kind: 'LastOwner' });
+      }
+
       // Cambiar el rol al que ya tiene no es un error, pero tampoco es un cambio:
       // registrarlo en la auditoria solo ensuciaria el rastro.
       if (member.role === role) {

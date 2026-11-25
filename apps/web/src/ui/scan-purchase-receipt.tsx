@@ -28,7 +28,8 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { demoDocumentBase64, DEMO_PRESETS, type VisionExtractResponse } from '@synapse-vision/core';
+import { demoDocumentBase64, DEMO_PRESETS } from '@synapse-vision/core/demo';
+import type { VisionExtractResponse } from '@synapse-vision/core';
 import {
   createFetchVisionTransport,
   VisionTransportError,

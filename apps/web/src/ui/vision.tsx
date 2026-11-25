@@ -25,11 +25,8 @@ import {
   FileCheck,
   RotateCcw,
 } from 'lucide-react';
-import {
-  demoDocumentBase64,
-  DEMO_FILENAME,
-  type VisionExtractResponse,
-} from '@synapse-vision/core';
+import { demoDocumentBase64, DEMO_FILENAME } from '@synapse-vision/core/demo';
+import type { VisionExtractResponse } from '@synapse-vision/core';
 import { createFetchVisionTransport, useVision, type VisionFileInput } from '@synapse-vision/ui';
 import type { AssistantStatusView } from '@/api/ai';
 import { buttonClasses } from '@/ui/button';
