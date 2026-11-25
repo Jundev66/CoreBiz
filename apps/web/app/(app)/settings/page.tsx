@@ -36,6 +36,7 @@ export default async function SettingsPage() {
               // 1600. La conversion a puntos basicos ocurre en el borde.
               taxRatePercent: (ctx.settings.taxRateBp / 100).toString(),
               baseCurrency: ctx.settings.baseCurrency,
+              fiscalCountry: ctx.settings.fiscalCountry ?? 'VE',
               exchangeRate:
                 ctx.settings.exchangeRateScaled === null
                   ? ''

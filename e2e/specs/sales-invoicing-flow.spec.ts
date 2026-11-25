@@ -241,6 +241,14 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     const updatedRow = page.locator('tr', { hasText: creditDocNum });
     await expect(updatedRow.getByText(/abonada parcial/i)).toBeVisible();
 
+    await page.goto('/settings');
+    await expect(page.locator('input[name="taxRatePercent"]')).toHaveAttribute('type', 'hidden');
+    await expect(page.locator('input[name="taxLabel"]')).toHaveAttribute('type', 'hidden');
+    await expect(page.getByRole('link', { name: /configuración → impuestos/i })).toBeVisible();
+
+    await page.goto('/pos-sales');
+    await expect(page).toHaveURL(/\/invoicing$/);
+
     expect(pageErrors).toHaveLength(0);
   });
 });

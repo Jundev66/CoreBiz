@@ -131,8 +131,8 @@ export default async function ReportsPage({
         reportTitle: 'Compras y Proveedores',
         metrics: [
           { label: 'Total Invertido en Compras', value: `$ ${totalPurchasesNum.toFixed(2)}` },
-          { label: 'Recepciones Realizadas', value: String(validPurchases.length) },
-          { label: 'Promedio por Recepción', value: `$ ${avgPurchaseReceipt.toFixed(2)}` },
+          { label: 'Facturas de Compra', value: String(validPurchases.length) },
+          { label: 'Promedio por Compra', value: `$ ${avgPurchaseReceipt.toFixed(2)}` },
           { label: 'Proveedores Registrados', value: String(suppliers.items.length) },
         ],
         tableHeaders: ['Número', 'Proveedor', 'Líneas', 'Total ($)'],
@@ -288,7 +288,7 @@ export default async function ReportsPage({
                   $ {totalPurchasesNum.toFixed(2)}
                 </p>
                 <p className="mt-1 text-[11px] text-muted">
-                  {validPurchases.length} recepciones registradas
+                  {validPurchases.length} facturas de compra registradas
                 </p>
               </div>
 
@@ -515,7 +515,7 @@ export default async function ReportsPage({
                 tone="sky"
               />
               <Stat
-                label="Recepciones Registradas"
+                label="Facturas de Compra"
                 value={String(validPurchases.length)}
                 icon={Truck}
                 tone="violet"
@@ -536,10 +536,10 @@ export default async function ReportsPage({
 
             <section aria-labelledby="purchases-table">
               <h2 id="purchases-table" className="text-base font-semibold text-ink mb-3">
-                Historial de Recepciones de Mercancía
+                Historial de Facturas de Compra
               </h2>
               {validPurchases.length === 0 ? (
-                <Empty icon={Truck}>No hay recepciones de compra registradas todavía.</Empty>
+                <Empty icon={Truck}>No hay facturas de compra registradas todavía.</Empty>
               ) : (
                 <>
                   <DesktopOnly>

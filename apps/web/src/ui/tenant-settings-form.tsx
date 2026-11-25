@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { updateTenantSettingsAction, type AdminState } from '@/actions/administration';
 import { buttonClasses } from '@/ui/button';
@@ -15,6 +16,7 @@ export interface TenantSettingsDefaults {
   readonly taxRatePercent: string;
   readonly baseCurrency: 'USD' | 'VES';
   readonly exchangeRate: string;
+  readonly fiscalCountry: string;
 }
 
 export function TenantSettingsForm({
@@ -72,41 +74,36 @@ export function TenantSettingsForm({
 
       <fieldset disabled={!canWrite || pending} className="space-y-6">
         <legend className="sr-only">{t('settings.business.heading')}</legend>
+        <input type="hidden" name="taxLabel" value={defaults.taxLabel} />
+        <input type="hidden" name="taxRatePercent" value={defaults.taxRatePercent} />
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
-            name="taxLabel"
-            label={t('settings.fields.taxLabel')}
-            hint={t('settings.hints.taxLabel')}
-            defaultValue={defaults.taxLabel}
-          />
-
-          <Field
-            name="taxRatePercent"
-            label={t('settings.fields.taxRate')}
-            hint={t('settings.hints.taxRate')}
-            defaultValue={defaults.taxRatePercent}
-            inputMode="decimal"
-          />
-
-          <Field
             name="baseCurrency"
-            label={t('settings.fields.baseCurrency')}
-            hint={t('settings.hints.baseCurrency')}
+            label="Moneda de Precios / Operación"
+            hint={`Moneda comercial para listas de precios y cotizaciones. La moneda fiscal fija para ${defaults.fiscalCountry === 'VE' ? 'Venezuela (SENIAT) es VES' : 'EE. UU. es USD'}.`}
             defaultValue={defaults.baseCurrency}
             options={[
-              { value: 'USD', label: 'USD' },
-              { value: 'VES', label: 'VES' },
+              { value: 'VES', label: 'VES (Bolívares)' },
+              { value: 'USD', label: 'USD (Dólares)' },
             ]}
           />
 
           <Field
             name="exchangeRate"
-            label={t('settings.fields.exchangeRate')}
-            hint={t('settings.hints.exchangeRate')}
+            label="Tasa Oficial de Referencia (BCV)"
+            hint="Tasa de referencia usada para convertir precios entre USD y VES."
             defaultValue={defaults.exchangeRate}
             inputMode="decimal"
           />
+        </div>
+
+        <div className="rounded-control border border-line bg-canvas px-4 py-3 text-xs text-muted">
+          Los impuestos aplicables (IVA 16%, Reducido 8%, Exento, etc.) se administran en{' '}
+          <Link href="/settings/taxes" className="font-semibold text-brand hover:underline">
+            Configuración → Impuestos
+          </Link>
+          .
         </div>
 
         {state.status === 'error' && state.errorKind !== undefined && (

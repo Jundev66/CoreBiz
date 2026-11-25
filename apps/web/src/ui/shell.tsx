@@ -80,8 +80,6 @@ export async function AppFrame({
             label: 'Notas de Crédito & Débito',
             icon: 'fileText' as const,
           },
-          { href: '/delivery-notes', label: 'Notas de Entrega', icon: 'fileText' as const },
-          { href: '/payments', label: 'Cobros', icon: 'banknote' as const },
           { href: '/customers', label: t('nav.customers'), icon: 'users' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
@@ -179,17 +177,9 @@ export async function AppFrame({
 
   const mobileItems: MobileNavItem[] = [
     { href: '/', label: t('nav.home'), icon: 'home' as const, exact: true },
-    { href: '/invoicing', label: 'Ventas', short: 'Ventas', icon: 'cart' as const },
+    { href: '/invoicing', label: 'Facturas', short: 'Facturas', icon: 'fileText' as const },
     { href: '/products', label: 'Stock', short: 'Stock', icon: 'package' as const },
     { href: '/customers', label: t('nav.customers'), short: 'Clientes', icon: 'users' as const },
-    {
-      href: '/delivery-notes',
-      label: t('nav.deliveryNotes'),
-      short: 'Despachos',
-      icon: 'fileText' as const,
-    },
-    { href: '/payments', label: t('nav.payments'), short: 'Cobros', icon: 'banknote' as const },
-    { href: '/invoicing', label: 'Facturas', short: 'Facturas', icon: 'fileText' as const },
     { href: '/accounting', label: 'Contabilidad', short: 'Contab.', icon: 'banknote' as const },
     { href: '/purchases', label: t('nav.purchases'), short: 'Compras', icon: 'truck' as const },
     { href: '/reports', label: t('nav.reports'), short: 'Reportes', icon: 'chart' as const },

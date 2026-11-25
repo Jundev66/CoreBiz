@@ -180,11 +180,11 @@ export function GoodsReceiptForm({
   useEffect(() => {
     if (state.status === 'error') {
       if (state.errorKind === 'Required' && state.errorParams?.field === 'supplierId') {
-        toast.error('Debe seleccionar un proveedor para registrar la recepción.', {
+        toast.error('Debe seleccionar un proveedor para registrar la factura de compra.', {
           title: 'Proveedor requerido',
         });
       } else if (state.errorKind === 'NoLines') {
-        toast.error('La recepción debe contener al menos un producto recibido.', {
+        toast.error('La factura de compra debe contener al menos un producto.', {
           title: 'Renglón requerido',
         });
       } else if (state.errorKind) {
@@ -196,7 +196,7 @@ export function GoodsReceiptForm({
   const handleAction = (formData: FormData) => {
     const supplierId = formData.get('supplierId');
     if (typeof supplierId !== 'string' || !supplierId.trim()) {
-      toast.error('Debe seleccionar un proveedor para registrar la recepción de mercancía.', {
+      toast.error('Debe seleccionar un proveedor para registrar la factura de compra.', {
         title: 'Proveedor requerido',
       });
       return;
@@ -227,7 +227,7 @@ export function GoodsReceiptForm({
       if (seen.has(line.productId)) {
         const prod = products.find((p) => p.id === line.productId);
         toast.warning(
-          `El producto "${prod?.label ?? 'seleccionado'}" está duplicado en la recepción. Sume las unidades en un solo renglón.`,
+          `El producto "${prod?.label ?? 'seleccionado'}" está duplicado en la factura. Sume las unidades en un solo renglón.`,
           { title: 'Producto repetido' },
         );
         return;
