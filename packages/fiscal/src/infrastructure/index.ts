@@ -6,3 +6,5 @@ export * from './reports/united-states-tax-report.service';
 export * from './hardware/virtual-fiscal-printer.driver';
 export * from './hardware/hka-fiscal-printer.driver';
 export * from './hardware/esc-pos-printer.driver';
+export * from './memory/in-memory-fiscal-sequence-range-repository';
+export * from './memory/in-memory-withholding-voucher-repository';

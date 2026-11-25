@@ -1,6 +1,6 @@
 # SDD Specification: TICKET-020 — Statutory Fiscal Withholdings Engine (SENIAT IVA/ISLR & US 1099)
 
-**Status**: `PROPOSED (Ready for Implementation)`  
+**Status**: `COMPLETED`  
 **Scope**: `packages/fiscal`, `packages/accounting`, `packages/contracts`, `apps/api`, `apps/web`
 
 ---

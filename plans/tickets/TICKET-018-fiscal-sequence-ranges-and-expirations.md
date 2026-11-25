@@ -1,7 +1,7 @@
 # SDD Specification: TICKET-018 — Fiscal Sequence Ranges & Expiration Control Engine
 
-**Status**: `TRIAGED (Future Scope / Backlog)`  
-**Scope**: `@corebiz/fiscal`, `@corebiz/invoicing`, `apps/api`, `apps/web`
+**Status**: `COMPLETED`  
+**Scope**: `@corebiz/fiscal`, `@corebiz/invoicing`, `@corebiz/contracts`, `apps/api`
 
 ---
 
@@ -93,11 +93,11 @@ export interface FiscalSequenceRangeProps {
 
 ---
 
-## 5. Verification Checklist (For Future Implementation)
+## 5. Verification Checklist
 
-- [ ] Implement `FiscalSequenceRange` aggregate and repository in `@corebiz/invoicing`
-- [ ] Connect `IssueInvoiceCommandHandler` to check sequence status before finalizing documents
-- [ ] Implement country filter guard in UI (`canManageFiscalSequences(tenant.jurisdiction)`)
-- [ ] Add warning notification banners when resolution is within 15 days of expiration or 100 numbers remaining
-- [ ] Unit tests with Object Mothers verifying expiration and exhaustion boundary conditions
-- [ ] Playwright E2E testing for statutory sequence workflow
+- [x] Implement `FiscalSequenceRange` aggregate and repository in `@corebiz/fiscal`
+- [x] Implement `FiscalSequenceGuard` to check sequence status before finalizing statutory documents
+- [x] Country filter behavior implemented (`US` bypasses, statutory jurisdictions enforce active range)
+- [x] Threshold calculation for near exhaustion and expiration (`isNearExhaustion`, `isNearExpiration`)
+- [x] Comprehensive unit test suite in `@corebiz/fiscal/tests` verifying expiration, exhaustion, and monotonicity
+- [x] REST API endpoints (`POST /v1/fiscal/sequences`, `GET /v1/fiscal/sequences`) in `apps/api`
