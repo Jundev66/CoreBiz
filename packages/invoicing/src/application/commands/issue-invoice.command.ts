@@ -11,6 +11,7 @@ import {
   type InvoiceType,
   type FiscalControlData,
   type InvoiceRepository,
+  type PaymentCondition,
 } from '../../domain/index';
 
 export interface InvoiceLineCreationInput {
@@ -38,6 +39,9 @@ export interface IssueInvoiceCommand {
   readonly revenueAccountId: string;
   readonly taxPayableAccountId: string;
   readonly lines: readonly InvoiceLineCreationInput[];
+  readonly paymentCondition?: PaymentCondition | undefined;
+  readonly cashAccountId?: string | undefined;
+  readonly creditDays?: number | undefined;
 }
 
 export interface IssueInvoiceError {
@@ -86,6 +90,8 @@ export class IssueInvoiceCommandHandler {
       domainLines.push(lineResult.value);
     }
 
+    const paymentCondition = command.paymentCondition ?? 'CREDIT';
+
     const invoiceResult = Invoice.create({
       id: command.id,
       tenantId: command.tenantId,
@@ -97,6 +103,7 @@ export class IssueInvoiceCommandHandler {
       issueDate: command.issueDate,
       dueDate: command.dueDate,
       lines: domainLines,
+      paymentCondition,
     });
 
     if (!invoiceResult.ok) {
@@ -105,17 +112,25 @@ export class IssueInvoiceCommandHandler {
 
     const invoice = invoiceResult.value;
 
-    const debitReceivableLine = JournalEntryLine.create(
-      command.receivableAccountId,
+    const isCash = paymentCondition === 'CASH';
+    const debitAccountId = isCash
+      ? (command.cashAccountId ?? command.receivableAccountId)
+      : command.receivableAccountId;
+    const debitDescription = isCash
+      ? `Cash sale - Invoice ${command.documentNumber}`
+      : `Accounts receivable - Invoice ${command.documentNumber}`;
+
+    const debitLine = JournalEntryLine.create(
+      debitAccountId,
       invoice.total,
       Money.zero(command.currency),
-      `Accounts receivable - Invoice ${command.documentNumber}`,
+      debitDescription,
     );
 
-    if (!debitReceivableLine.ok) {
+    if (!debitLine.ok) {
       return err({
         kind: 'JournalEntryError',
-        details: 'Failed to create receivable journal line',
+        details: 'Failed to create debit journal line',
       });
     }
 
@@ -145,7 +160,7 @@ export class IssueInvoiceCommandHandler {
       revenueLines.push(creditRevenueLine.value);
     }
 
-    const journalLines: JournalEntryLine[] = [debitReceivableLine.value, ...revenueLines];
+    const journalLines: JournalEntryLine[] = [debitLine.value, ...revenueLines];
 
     if (invoice.taxTotal.isPositive) {
       const creditTaxLine = JournalEntryLine.create(
@@ -162,11 +177,13 @@ export class IssueInvoiceCommandHandler {
 
     const entryNumber = await this.journalEntryRepository.nextEntryNumber(command.tenantId);
     const journalEntryResult = JournalEntry.create({
-      id: `je-${command.id}`,
+      id: `inv-je-${command.id}-${entryNumber}`,
       tenantId: command.tenantId,
       entryNumber,
       date: command.issueDate,
-      description: `Auto journal entry for Invoice ${command.documentNumber}`,
+      description: isCash
+        ? `Cash sale entry for Invoice ${command.documentNumber}`
+        : `Billing entry for Invoice ${command.documentNumber}`,
       sourceType: 'INVOICE',
       sourceId: command.id,
       lines: journalLines,
@@ -179,6 +196,9 @@ export class IssueInvoiceCommandHandler {
     await this.invoiceRepository.save(invoice);
     await this.journalEntryRepository.save(journalEntryResult.value);
 
-    return ok({ invoiceId: invoice.id, journalEntryId: journalEntryResult.value.id });
+    return ok({
+      invoiceId: invoice.id,
+      journalEntryId: journalEntryResult.value.id,
+    });
   }
 }

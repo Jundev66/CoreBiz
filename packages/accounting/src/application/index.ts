@@ -16,3 +16,5 @@ export * from './queries/get-forex-exposure.query';
 export * from './queries/list-treasury-swaps.query';
 export * from './queries/list-partner-drawings.query';
 export * from './queries/list-disbursements.query';
+export * from './queries/get-ar-aging-report.query';
+export * from './queries/get-ap-aging-report.query';

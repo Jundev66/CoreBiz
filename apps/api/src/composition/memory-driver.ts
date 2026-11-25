@@ -32,9 +32,20 @@ import {
   InMemoryTreasurySwapRepository,
   InMemoryPartnerDrawingRepository,
   InMemoryDisbursementRepository,
+  InMemoryPaymentReceiptRepository,
+  InMemoryWarehouseRepository,
+  InMemoryTransferRepository,
+  InMemoryPhysicalInventoryAuditRepository,
+  InvoicingReceivableInvoicesAdapter,
   type ReadModels,
   type SalesStores,
 } from '@corebiz/application';
+import {
+  InMemoryFiscalSequenceRangeRepository,
+  InMemoryWithholdingVoucherRepository,
+} from '@corebiz/fiscal';
+import { InMemoryCreditNoteRepository, InMemoryDebitNoteRepository } from '@corebiz/invoicing';
+import { InMemoryPayableBillsAdapter } from '@corebiz/accounting';
 import type { VisionVectorStorePort } from '@synapse-vision/core';
 
 /**
@@ -68,6 +79,15 @@ interface MemoryStore extends SalesStores {
   treasurySwapRepo?: InMemoryTreasurySwapRepository;
   partnerDrawingRepo?: InMemoryPartnerDrawingRepository;
   disbursementRepo?: InMemoryDisbursementRepository;
+  paymentReceiptRepo?: InMemoryPaymentReceiptRepository;
+  creditNoteRepo?: InMemoryCreditNoteRepository;
+  debitNoteRepo?: InMemoryDebitNoteRepository;
+  fiscalSequenceRangeRepo?: InMemoryFiscalSequenceRangeRepository;
+  withholdingVoucherRepo?: InMemoryWithholdingVoucherRepository;
+  warehouseRepo?: InMemoryWarehouseRepository;
+  transferRepo?: InMemoryTransferRepository;
+  physicalInventoryAuditRepo?: InMemoryPhysicalInventoryAuditRepository;
+  payableBillsRepo?: InMemoryPayableBillsAdapter;
 }
 
 export function memoryAccountingRepos() {
@@ -75,6 +95,15 @@ export function memoryAccountingRepos() {
   s.accountRepo ??= new InMemoryAccountRepository();
   s.journalEntryRepo ??= new InMemoryJournalEntryRepository();
   s.invoiceRepo ??= new InMemoryInvoiceRepository();
+  s.paymentReceiptRepo ??= new InMemoryPaymentReceiptRepository();
+  s.creditNoteRepo ??= new InMemoryCreditNoteRepository();
+  s.debitNoteRepo ??= new InMemoryDebitNoteRepository();
+  s.fiscalSequenceRangeRepo ??= new InMemoryFiscalSequenceRangeRepository();
+  s.withholdingVoucherRepo ??= new InMemoryWithholdingVoucherRepository();
+  s.warehouseRepo ??= new InMemoryWarehouseRepository();
+  s.transferRepo ??= new InMemoryTransferRepository();
+  s.physicalInventoryAuditRepo ??= new InMemoryPhysicalInventoryAuditRepository();
+  s.payableBillsRepo ??= new InMemoryPayableBillsAdapter();
   s.bankStatementRepo ??= new InMemoryBankStatementRepository();
   s.treasurySwapRepo ??= new InMemoryTreasurySwapRepository();
   s.partnerDrawingRepo ??= new InMemoryPartnerDrawingRepository();
@@ -83,6 +112,16 @@ export function memoryAccountingRepos() {
     accounts: s.accountRepo,
     journalEntries: s.journalEntryRepo,
     invoices: s.invoiceRepo,
+    paymentReceipts: s.paymentReceiptRepo,
+    creditNotes: s.creditNoteRepo,
+    debitNotes: s.debitNoteRepo,
+    fiscalSequenceRanges: s.fiscalSequenceRangeRepo,
+    withholdingVouchers: s.withholdingVoucherRepo,
+    warehouses: s.warehouseRepo,
+    transfers: s.transferRepo,
+    physicalInventoryAudits: s.physicalInventoryAuditRepo,
+    payableBills: s.payableBillsRepo,
+    receivableInvoices: new InvoicingReceivableInvoicesAdapter(s.invoiceRepo),
     bankStatements: s.bankStatementRepo,
     treasurySwaps: s.treasurySwapRepo,
     partnerDrawings: s.partnerDrawingRepo,

@@ -26,7 +26,15 @@ import type {
   TreasurySwapRepository,
   PartnerDrawingRepository,
   DisbursementRepository,
+  PaymentReceiptRepository,
+  WarehouseRepository,
+  TransferRepository,
+  PhysicalInventoryAuditRepository,
+  CreditNoteRepository,
+  DebitNoteRepository,
 } from '@corebiz/domain';
+import type { FiscalSequenceRangeRepository, WithholdingVoucherRepository } from '@corebiz/fiscal';
+import type { ReceivableInvoicesPort, PayableBillsPort } from '@corebiz/accounting';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 export interface Runtime {
@@ -37,6 +45,16 @@ export interface Runtime {
   readonly journalEntries: JournalEntryRepository;
   readonly invoices: InvoiceRepository;
   readonly bankStatements: BankStatementRepository;
+  readonly paymentReceipts?: PaymentReceiptRepository;
+  readonly creditNotes?: CreditNoteRepository;
+  readonly debitNotes?: DebitNoteRepository;
+  readonly fiscalSequenceRanges?: FiscalSequenceRangeRepository;
+  readonly withholdingVouchers?: WithholdingVoucherRepository;
+  readonly warehouses?: WarehouseRepository;
+  readonly transfers?: TransferRepository;
+  readonly physicalInventoryAudits?: PhysicalInventoryAuditRepository;
+  readonly receivableInvoices?: ReceivableInvoicesPort;
+  readonly payableBills?: PayableBillsPort;
   readonly treasurySwaps?: TreasurySwapRepository;
   readonly partnerDrawings?: PartnerDrawingRepository;
   readonly disbursements?: DisbursementRepository;
@@ -100,6 +118,16 @@ export const runtimeProvider: FactoryProvider = {
         accounts: accounting.accounts,
         journalEntries: accounting.journalEntries,
         invoices: accounting.invoices,
+        paymentReceipts: accounting.paymentReceipts,
+        creditNotes: accounting.creditNotes,
+        debitNotes: accounting.debitNotes,
+        fiscalSequenceRanges: accounting.fiscalSequenceRanges,
+        withholdingVouchers: accounting.withholdingVouchers,
+        warehouses: accounting.warehouses,
+        transfers: accounting.transfers,
+        physicalInventoryAudits: accounting.physicalInventoryAudits,
+        receivableInvoices: accounting.receivableInvoices,
+        payableBills: accounting.payableBills,
         bankStatements: accounting.bankStatements,
         treasurySwaps: accounting.treasurySwaps,
         partnerDrawings: accounting.partnerDrawings,

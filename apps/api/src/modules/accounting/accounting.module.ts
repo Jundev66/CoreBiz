@@ -18,6 +18,8 @@ import {
   ListPartnerDrawingsController,
   RecordDisbursementController,
   ListDisbursementsController,
+  GetArAgingController,
+  GetApAgingController,
 } from './controllers';
 
 @Module({
@@ -40,6 +42,8 @@ import {
     ListPartnerDrawingsController,
     RecordDisbursementController,
     ListDisbursementsController,
+    GetArAgingController,
+    GetApAgingController,
   ],
 })
 export class AccountingModule {}

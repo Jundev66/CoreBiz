@@ -16,3 +16,5 @@ export { RecordPartnerStockDrawingController } from './record-partner-stock-draw
 export { ListPartnerDrawingsController } from './list-partner-drawings.controller';
 export { RecordDisbursementController } from './record-disbursement.controller';
 export { ListDisbursementsController } from './list-disbursements.controller';
+export { GetArAgingController } from './get-ar-aging.controller';
+export { GetApAgingController } from './get-ap-aging.controller';

@@ -1,3 +1,10 @@
 export { IssueInvoiceController } from './issue-invoice.controller';
 export { ApplyPaymentController } from './apply-payment.controller';
 export { ListInvoicesController } from './list-invoices.controller';
+export { CreateCollectionReceiptController } from './create-collection-receipt.controller';
+export { VoidCollectionReceiptController } from './void-collection-receipt.controller';
+export { ListInvoiceReceiptsController } from './list-invoice-receipts.controller';
+export { IssueCreditNoteController } from './issue-credit-note.controller';
+export { ListCreditNotesController } from './list-credit-notes.controller';
+export { IssueDebitNoteController } from './issue-debit-note.controller';
+export { ListDebitNotesController } from './list-debit-notes.controller';

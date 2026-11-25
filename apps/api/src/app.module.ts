@@ -24,6 +24,7 @@ import { PosModule } from './modules/pos/pos.module';
 import { AccountingModule } from './modules/accounting/accounting.module';
 import { InvoicingModule } from './modules/invoicing/invoicing.module';
 import { FiscalModule } from './modules/fiscal/fiscal.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 /**
  * Raiz de la aplicacion.
@@ -56,6 +57,7 @@ import { FiscalModule } from './modules/fiscal/fiscal.module';
     AccountingModule,
     InvoicingModule,
     FiscalModule,
+    InventoryModule,
   ],
   // Global and singleton on purpose: see the note in `WriteThrottleGuard`.
   providers: [

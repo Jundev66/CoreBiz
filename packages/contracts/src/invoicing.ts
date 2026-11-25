@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { currencySchema, decimalStringSchema, recordIdSchema } from './common';
+import { paymentConditionSchema } from './payment-receipts';
 
 export const invoiceTypeSchema = z.enum(['STANDARD', 'CREDIT_NOTE', 'DEBIT_NOTE', 'EXPORT']);
 
@@ -28,6 +29,9 @@ export const issueInvoiceSchema = z
     receivableAccountId: recordIdSchema,
     revenueAccountId: recordIdSchema,
     taxPayableAccountId: recordIdSchema,
+    paymentCondition: paymentConditionSchema.default('CREDIT'),
+    cashAccountId: recordIdSchema.optional(),
+    creditDays: z.number().int().min(0).max(365).optional(),
     lines: z.array(issueInvoiceLineSchema).min(1),
   })
   .strict();

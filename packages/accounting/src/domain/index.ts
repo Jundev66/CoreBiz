@@ -18,4 +18,5 @@ export * from './port/bank-statement-repository';
 export * from './port/treasury-swap-repository';
 export * from './port/partner-drawing-repository';
 export * from './port/disbursement-repository';
+export * from './port/aging-ports';
 export * from './templates/default-chart-of-accounts';

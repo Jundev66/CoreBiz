@@ -3,15 +3,19 @@ import type { InvoiceStatus } from './invoice-status';
 import type { InvoiceType } from './invoice-type';
 import type { InvoiceLine } from './invoice-line';
 import type { FiscalControlData } from './fiscal-control-data';
+import type { PaymentCondition } from './payment-condition';
 
 export interface InvoiceError {
   readonly kind:
     | 'EmptyInvoiceLines'
     | 'InvoiceCurrencyMismatch'
     | 'PaymentExceedsRemainingBalance'
+    | 'PaymentExceedsPaidAmount'
     | 'CannotPayNonIssuedInvoice'
     | 'CannotVoidPaidInvoice'
-    | 'InvoiceAlreadyVoid';
+    | 'InvoiceAlreadyVoid'
+    | 'CreditExceedsRemainingBalance'
+    | 'CannotCreditVoidInvoice';
   readonly currentStatus?: InvoiceStatus;
   readonly remainingBalance?: bigint;
   readonly attemptedPayment?: bigint;
@@ -30,7 +34,9 @@ export interface InvoiceProps {
   readonly lines: readonly InvoiceLine[];
   readonly status?: InvoiceStatus;
   readonly paidAmount?: Money;
+  readonly creditedAmount?: Money | undefined;
   readonly igtfTotal?: Money;
+  readonly paymentCondition?: PaymentCondition | undefined;
 }
 
 export class Invoice {
@@ -50,7 +56,9 @@ export class Invoice {
   readonly igtfTotal: Money;
   readonly total: Money;
   readonly paidAmount: Money;
+  readonly creditedAmount: Money;
   readonly remainingBalance: Money;
+  readonly paymentCondition: PaymentCondition;
 
   private constructor(
     props: InvoiceProps,
@@ -59,8 +67,10 @@ export class Invoice {
     igtfTotal: Money,
     total: Money,
     paidAmount: Money,
+    creditedAmount: Money,
     remainingBalance: Money,
     status: InvoiceStatus,
+    paymentCondition: PaymentCondition,
   ) {
     this.id = props.id;
     this.tenantId = props.tenantId;
@@ -78,7 +88,9 @@ export class Invoice {
     this.igtfTotal = igtfTotal;
     this.total = total;
     this.paidAmount = paidAmount;
+    this.creditedAmount = creditedAmount;
     this.remainingBalance = remainingBalance;
+    this.paymentCondition = paymentCondition;
   }
 
   static create(props: InvoiceProps): Result<Invoice, InvoiceError> {
@@ -109,11 +121,24 @@ export class Invoice {
     const totalMinor = subtotalMinor + taxMinor + igtfTotal.minorUnits;
     const total = Money.fromMinor(totalMinor, currency);
 
-    const paidAmount = props.paidAmount ?? Money.zero(currency);
-    const remainingMinor = totalMinor - paidAmount.minorUnits;
-    const remainingBalance = Money.fromMinor(remainingMinor, currency);
+    const paymentCondition = props.paymentCondition ?? 'CREDIT';
+    const creditedAmount = props.creditedAmount ?? Money.zero(currency);
 
-    const status = props.status ?? 'ISSUED';
+    let paidAmount: Money;
+    let remainingBalance: Money;
+    let status: InvoiceStatus;
+
+    if (paymentCondition === 'CASH' && !props.status) {
+      paidAmount = total;
+      remainingBalance = Money.zero(currency);
+      status = 'PAID';
+    } else {
+      paidAmount = props.paidAmount ?? Money.zero(currency);
+      const remainingMinor = totalMinor - paidAmount.minorUnits - creditedAmount.minorUnits;
+      const safeRemaining = remainingMinor > 0n ? remainingMinor : 0n;
+      remainingBalance = Money.fromMinor(safeRemaining, currency);
+      status = props.status ?? (safeRemaining === 0n && totalMinor > 0n ? 'PAID' : 'ISSUED');
+    }
 
     return ok(
       new Invoice(
@@ -123,8 +148,53 @@ export class Invoice {
         igtfTotal,
         total,
         paidAmount,
+        creditedAmount,
         remainingBalance,
         status,
+        paymentCondition,
+      ),
+    );
+  }
+
+  applyCredit(creditAmount: Money): Result<Invoice, InvoiceError> {
+    if (this.status === 'VOID') {
+      return err({ kind: 'CannotCreditVoidInvoice' });
+    }
+
+    if (creditAmount.currency !== this.total.currency) {
+      return err({ kind: 'InvoiceCurrencyMismatch' });
+    }
+
+    if (creditAmount.minorUnits > this.remainingBalance.minorUnits) {
+      return err({
+        kind: 'CreditExceedsRemainingBalance',
+        remainingBalance: this.remainingBalance.minorUnits,
+        attemptedPayment: creditAmount.minorUnits,
+      });
+    }
+
+    const newCreditedAmount = Money.fromMinor(
+      this.creditedAmount.minorUnits + creditAmount.minorUnits,
+      this.total.currency,
+    );
+    const newRemainingMinor =
+      this.total.minorUnits - this.paidAmount.minorUnits - newCreditedAmount.minorUnits;
+    const safeRemaining = newRemainingMinor > 0n ? newRemainingMinor : 0n;
+    const newRemainingBalance = Money.fromMinor(safeRemaining, this.total.currency);
+    const newStatus: InvoiceStatus = newRemainingBalance.isZero ? 'PAID' : 'PARTIALLY_PAID';
+
+    return ok(
+      new Invoice(
+        this,
+        this.subtotal,
+        this.taxTotal,
+        this.igtfTotal,
+        this.total,
+        this.paidAmount,
+        newCreditedAmount,
+        newRemainingBalance,
+        newStatus,
+        this.paymentCondition,
       ),
     );
   }
@@ -150,10 +220,10 @@ export class Invoice {
       this.paidAmount.minorUnits + payment.minorUnits,
       this.total.currency,
     );
-    const newRemainingBalance = Money.fromMinor(
-      this.total.minorUnits - newPaidAmount.minorUnits,
-      this.total.currency,
-    );
+    const newRemainingMinor =
+      this.total.minorUnits - newPaidAmount.minorUnits - this.creditedAmount.minorUnits;
+    const safeRemaining = newRemainingMinor > 0n ? newRemainingMinor : 0n;
+    const newRemainingBalance = Money.fromMinor(safeRemaining, this.total.currency);
     const newStatus: InvoiceStatus = newRemainingBalance.isZero ? 'PAID' : 'PARTIALLY_PAID';
 
     return ok(
@@ -164,8 +234,46 @@ export class Invoice {
         this.igtfTotal,
         this.total,
         newPaidAmount,
+        this.creditedAmount,
         newRemainingBalance,
         newStatus,
+        this.paymentCondition,
+      ),
+    );
+  }
+
+  restorePayment(refundedAmount: Money): Result<Invoice, InvoiceError> {
+    if (refundedAmount.currency !== this.total.currency) {
+      return err({ kind: 'InvoiceCurrencyMismatch' });
+    }
+
+    if (refundedAmount.minorUnits > this.paidAmount.minorUnits) {
+      return err({
+        kind: 'PaymentExceedsPaidAmount',
+        remainingBalance: this.paidAmount.minorUnits,
+        attemptedPayment: refundedAmount.minorUnits,
+      });
+    }
+
+    const newPaidMinor = this.paidAmount.minorUnits - refundedAmount.minorUnits;
+    const newPaidAmount = Money.fromMinor(newPaidMinor, this.total.currency);
+    const newRemainingMinor = this.total.minorUnits - newPaidMinor - this.creditedAmount.minorUnits;
+    const safeRemaining = newRemainingMinor > 0n ? newRemainingMinor : 0n;
+    const newRemainingBalance = Money.fromMinor(safeRemaining, this.total.currency);
+    const newStatus: InvoiceStatus = newPaidMinor === 0n ? 'ISSUED' : 'PARTIALLY_PAID';
+
+    return ok(
+      new Invoice(
+        this,
+        this.subtotal,
+        this.taxTotal,
+        this.igtfTotal,
+        this.total,
+        newPaidAmount,
+        this.creditedAmount,
+        newRemainingBalance,
+        newStatus,
+        this.paymentCondition,
       ),
     );
   }
@@ -175,7 +283,7 @@ export class Invoice {
       return err({ kind: 'InvoiceAlreadyVoid' });
     }
 
-    if (this.paidAmount.isPositive) {
+    if (this.paidAmount.isPositive || this.creditedAmount.isPositive) {
       return err({ kind: 'CannotVoidPaidInvoice' });
     }
 
@@ -187,8 +295,10 @@ export class Invoice {
         this.igtfTotal,
         this.total,
         this.paidAmount,
+        this.creditedAmount,
         Money.zero(this.total.currency),
         'VOID',
+        this.paymentCondition,
       ),
     );
   }

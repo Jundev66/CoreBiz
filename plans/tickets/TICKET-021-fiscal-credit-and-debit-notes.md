@@ -1,6 +1,6 @@
 # SDD Specification: TICKET-021 — Fiscal Credit & Debit Notes Engine
 
-**Status**: `PROPOSED (Ready for Implementation)`  
+**Status**: `COMPLETED`  
 **Scope**: `packages/invoicing`, `packages/fiscal`, `packages/accounting`, `packages/contracts`, `apps/api`, `apps/web`
 
 ---

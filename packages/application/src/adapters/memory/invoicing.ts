@@ -53,3 +53,5 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     return Promise.resolve();
   }
 }
+
+export { InMemoryPaymentReceiptRepository } from '@corebiz/invoicing/infrastructure';

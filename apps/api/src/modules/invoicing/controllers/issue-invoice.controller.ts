@@ -51,9 +51,12 @@ export class IssueInvoiceController {
       issueDate: body.issueDate,
       dueDate: body.dueDate,
       currency: body.currency,
-      receivableAccountId: body.receivableAccountId,
+      receivableAccountId: body.receivableAccountId ?? body.cashAccountId ?? '',
       revenueAccountId: body.revenueAccountId,
       taxPayableAccountId: body.taxPayableAccountId,
+      paymentCondition: body.paymentCondition,
+      cashAccountId: body.cashAccountId,
+      creditDays: body.creditDays,
       lines,
     });
 

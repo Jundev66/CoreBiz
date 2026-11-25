@@ -16,6 +16,7 @@ export class IssueInvoiceDtoMother {
       receivableAccountId: '018e245a-0000-7000-8000-000000000010',
       revenueAccountId: '018e245a-0000-7000-8000-000000000020',
       taxPayableAccountId: '018e245a-0000-7000-8000-000000000030',
+      paymentCondition: 'CREDIT',
       lines: [
         {
           description: 'Consultoria Contable Especializada',
