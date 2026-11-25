@@ -1,4 +1,5 @@
 import { ok, type Result } from '@corebiz/shared-kernel';
+import type { Account } from '../../domain/model/account';
 import type { AccountRepository } from '../../domain/port/accounting-repository';
 import { ChartOfAccountsRegistry } from '../../domain/templates/default-chart-of-accounts';
 
@@ -21,7 +22,12 @@ export class ListAccountsQueryHandler {
   constructor(private readonly accountRepository: AccountRepository) {}
 
   async execute(query: ListAccountsQuery): Promise<Result<readonly AccountViewItem[], never>> {
-    const existing = await this.accountRepository.listByTenant(query.tenantId);
+    let existing: readonly Account[];
+    try {
+      existing = await this.accountRepository.listByTenant(query.tenantId);
+    } catch {
+      existing = [];
+    }
 
     if (existing.length > 0) {
       return ok(

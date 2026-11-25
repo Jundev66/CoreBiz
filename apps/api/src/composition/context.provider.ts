@@ -165,8 +165,8 @@ export const activeContextProvider: FactoryProvider = {
               taxLabel: 'Sales Tax (7.00%)',
               taxRateBp: 700,
               baseCurrency: 'USD',
-              exchangeRateScaled: null,
-              exchangeRateAt: null,
+              exchangeRateScaled: 100_000_000n,
+              exchangeRateAt: new Date('2026-01-01T00:00:00.000Z'),
             }
           : DEMO_SETTINGS,
         isDemo: true,
