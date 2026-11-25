@@ -16,7 +16,7 @@ import { InMemoryBankStatementRepository } from '@corebiz/accounting/infrastruct
 import type { VisionVectorStorePort } from '@synapse-vision/core';
 import { PrismaUnitOfWork } from './prisma/unit-of-work';
 import type { AuditTrace } from './prisma/audit';
-import { readOnly } from './prisma/session';
+import { readOnly, withTenant } from './prisma/session';
 import { prismaVisionVectorStore } from './prisma/vector-store';
 import { prismaReadModels } from './queries/read-models';
 import { PrismaAccountRepository } from './prisma/accounts';
@@ -68,9 +68,50 @@ export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
       ...(deps.trace !== undefined ? { trace: deps.trace } : {}),
     }),
     queries: prismaReadModels(prisma, deps.ctx, deps.clock),
-    accounts: new PrismaAccountRepository(prisma),
-    journalEntries: new PrismaJournalEntryRepository(prisma),
-    invoices: new PrismaInvoiceRepository(prisma),
+    accounts: {
+      findById: (tenantId, id) =>
+        readOnly(prisma, deps.ctx, (tx) => new PrismaAccountRepository(tx).findById(tenantId, id)),
+      findByCode: (tenantId, code) =>
+        readOnly(prisma, deps.ctx, (tx) =>
+          new PrismaAccountRepository(tx).findByCode(tenantId, code),
+        ),
+      listByTenant: (tenantId) =>
+        readOnly(prisma, deps.ctx, (tx) => new PrismaAccountRepository(tx).listByTenant(tenantId)),
+      save: (account) =>
+        withTenant(prisma, deps.ctx, (tx) => new PrismaAccountRepository(tx).save(account)),
+    },
+    journalEntries: {
+      findById: (tenantId, id) =>
+        readOnly(prisma, deps.ctx, (tx) =>
+          new PrismaJournalEntryRepository(tx).findById(tenantId, id),
+        ),
+      nextEntryNumber: (tenantId) =>
+        readOnly(prisma, deps.ctx, (tx) =>
+          new PrismaJournalEntryRepository(tx).nextEntryNumber(tenantId),
+        ),
+      save: (entry) =>
+        withTenant(prisma, deps.ctx, (tx) => new PrismaJournalEntryRepository(tx).save(entry)),
+      listByDateRange: (tenantId, startDate, endDate) =>
+        readOnly(prisma, deps.ctx, (tx) =>
+          new PrismaJournalEntryRepository(tx).listByDateRange(tenantId, startDate, endDate),
+        ),
+    },
+    invoices: {
+      findById: (tenantId, id) =>
+        readOnly(prisma, deps.ctx, (tx) => new PrismaInvoiceRepository(tx).findById(tenantId, id)),
+      findByNumber: (tenantId, documentType, documentNumber) =>
+        readOnly(prisma, deps.ctx, (tx) =>
+          new PrismaInvoiceRepository(tx).findByNumber(tenantId, documentType, documentNumber),
+        ),
+      listByCustomer: (tenantId, customerId) =>
+        readOnly(prisma, deps.ctx, (tx) =>
+          new PrismaInvoiceRepository(tx).listByCustomer(tenantId, customerId),
+        ),
+      listByTenant: (tenantId) =>
+        readOnly(prisma, deps.ctx, (tx) => new PrismaInvoiceRepository(tx).listByTenant(tenantId)),
+      save: (invoice) =>
+        withTenant(prisma, deps.ctx, (tx) => new PrismaInvoiceRepository(tx).save(invoice)),
+    },
     bankStatements: new InMemoryBankStatementRepository(),
     ...(deps.vectorModel !== undefined
       ? { vectorStore: prismaVisionVectorStore(prisma, deps.ctx, { model: deps.vectorModel }) }

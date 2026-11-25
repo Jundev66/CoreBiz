@@ -10,6 +10,8 @@ import {
   FileText,
   LayoutDashboard,
   Package,
+  PanelLeftClose,
+  PanelLeftOpen,
   Receipt,
   Search,
   Settings,
@@ -89,6 +91,7 @@ export function SidebarNav({ items }: SidebarNavProps) {
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [navFilter, setNavFilter] = useState('');
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
 
   const groups = useMemo(
     () =>
@@ -200,31 +203,58 @@ export function SidebarNav({ items }: SidebarNavProps) {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-nav-line/60 px-3 py-2.5">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-nav-muted" />
-          <input
-            ref={searchInputRef}
-            type="search"
-            value={navFilter}
-            onChange={(e) => setNavFilter(e.target.value)}
-            placeholder="Buscar módulo (Ctrl+K)..."
-            aria-label="Filtrar navegación"
-            className="h-8 w-full rounded-xl border border-nav-line/70 bg-nav-raised/50 pr-7 pl-8 text-xs text-nav-ink placeholder:text-nav-muted/70 transition focus:border-brand focus:bg-surface focus:outline-none"
-          />
-          {navFilter && (
+    <div
+      className={`flex h-full flex-col transition-all duration-200 ${isPanelOpen || q ? 'w-72' : 'w-[72px]'}`}
+    >
+      {isPanelOpen || q ? (
+        <div className="flex items-center gap-1.5 border-b border-nav-line/60 px-3 py-2.5">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-nav-muted" />
+            <input
+              ref={searchInputRef}
+              type="search"
+              value={navFilter}
+              onChange={(e) => setNavFilter(e.target.value)}
+              placeholder="Buscar módulo (Ctrl+K)..."
+              aria-label="Filtrar navegación"
+              className="h-8 w-full rounded-xl border border-nav-line/70 bg-nav-raised/50 pr-7 pl-8 text-xs text-nav-ink placeholder:text-nav-muted/70 transition focus:border-brand focus:bg-surface focus:outline-none"
+            />
+            {navFilter && (
+              <button
+                type="button"
+                onClick={() => setNavFilter('')}
+                aria-label="Limpiar búsqueda"
+                className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-nav-muted hover:text-nav-ink"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+          {!q && (
             <button
               type="button"
-              onClick={() => setNavFilter('')}
-              aria-label="Limpiar búsqueda"
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-nav-muted hover:text-nav-ink"
+              onClick={() => setIsPanelOpen(false)}
+              title="Ocultar submódulos"
+              aria-label="Ocultar submódulos"
+              className="grid size-8 shrink-0 place-items-center rounded-xl border border-nav-line/70 bg-surface text-nav-muted transition hover:border-brand/60 hover:text-nav-ink"
             >
-              <X className="size-3" />
+              <PanelLeftClose className="size-3.5" />
             </button>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="flex justify-center border-b border-nav-line/60 py-2.5">
+          <button
+            type="button"
+            onClick={() => setIsPanelOpen(true)}
+            title="Mostrar submódulos"
+            aria-label="Mostrar submódulos"
+            className="grid size-8 place-items-center rounded-xl border border-nav-line/70 bg-surface text-nav-muted transition hover:border-brand/60 hover:text-nav-ink"
+          >
+            <PanelLeftOpen className="size-3.5" />
+          </button>
+        </div>
+      )}
 
       {q ? (
         <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Resultados de módulos">
@@ -293,7 +323,10 @@ export function SidebarNav({ items }: SidebarNavProps) {
                   aria-selected={isSelected}
                   title={group.label}
                   aria-label={group.label}
-                  onClick={() => setSelectedGroupId(group.id)}
+                  onClick={() => {
+                    setSelectedGroupId(group.id);
+                    setIsPanelOpen(true);
+                  }}
                   className="group relative flex flex-col items-center gap-1 focus:outline-none"
                 >
                   <span
@@ -323,23 +356,25 @@ export function SidebarNav({ items }: SidebarNavProps) {
             })}
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-2.5 py-3" aria-label="Navegación principal">
-            {activeGroup && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between px-2 pb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-ink">
-                    {activeGroup.label}
-                  </span>
-                  <span className="rounded-pill bg-nav-raised px-1.5 py-0.5 font-mono text-[10px] text-nav-muted">
-                    {activeGroup.items.length}
-                  </span>
+          {isPanelOpen && (
+            <nav className="flex-1 overflow-y-auto px-2.5 py-3" aria-label="Navegación principal">
+              {activeGroup && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-2 pb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-ink">
+                      {activeGroup.label}
+                    </span>
+                    <span className="rounded-pill bg-nav-raised px-1.5 py-0.5 font-mono text-[10px] text-nav-muted">
+                      {activeGroup.items.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {activeGroup.items.map((sub) => renderLeaf(sub))}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  {activeGroup.items.map((sub) => renderLeaf(sub))}
-                </div>
-              </div>
-            )}
-          </nav>
+              )}
+            </nav>
+          )}
         </div>
       )}
     </div>

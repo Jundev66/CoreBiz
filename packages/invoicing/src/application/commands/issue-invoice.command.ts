@@ -177,7 +177,7 @@ export class IssueInvoiceCommandHandler {
 
     const entryNumber = await this.journalEntryRepository.nextEntryNumber(command.tenantId);
     const journalEntryResult = JournalEntry.create({
-      id: `inv-je-${command.id}-${entryNumber}`,
+      id: crypto.randomUUID(),
       tenantId: command.tenantId,
       entryNumber,
       date: command.issueDate,

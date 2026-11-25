@@ -97,7 +97,9 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
       return err({ kind: 'Forbidden' });
     }
 
-    return deps.uow.run(async (repos) => {
+    const uowResult = await deps.uow.run<
+      Result<ProcessPosSaleOutput & { readonly event?: PosSaleProcessedEvent }, ProcessPosSaleError>
+    >(async (repos) => {
       const existingOp = await repos.posSyncOperations.findByOperationId(input.operationId);
       if (existingOp) {
         if (existingOp.payloadHash !== input.payloadHash) {
@@ -402,20 +404,32 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         },
       });
 
-      if (deps.onSaleProcessed) {
-        await deps.onSaleProcessed({
-          sale,
-          customerId: resolvedCustomerId,
-          lines: invoiceLines,
-        });
-      }
-
       return ok({
         status: 'processed',
         saleId: sale.id,
         ticketNumber: sale.ticketNumber,
         ...(detectedConflictId ? { conflictId: detectedConflictId } : {}),
+        event: {
+          sale,
+          customerId: resolvedCustomerId,
+          lines: invoiceLines,
+        },
       });
+    });
+
+    if (!uowResult.ok) {
+      return uowResult;
+    }
+
+    if (deps.onSaleProcessed && uowResult.value.event) {
+      await deps.onSaleProcessed(uowResult.value.event);
+    }
+
+    return ok({
+      status: uowResult.value.status,
+      saleId: uowResult.value.saleId,
+      ticketNumber: uowResult.value.ticketNumber,
+      ...(uowResult.value.conflictId ? { conflictId: uowResult.value.conflictId } : {}),
     });
   };
 }

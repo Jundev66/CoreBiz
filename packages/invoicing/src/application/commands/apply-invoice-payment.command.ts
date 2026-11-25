@@ -85,7 +85,7 @@ export class ApplyInvoicePaymentCommandHandler {
 
     const entryNumber = await this.journalEntryRepository.nextEntryNumber(command.tenantId);
     const journalEntryResult = JournalEntry.create({
-      id: `pay-je-${command.invoiceId}-${entryNumber}`,
+      id: crypto.randomUUID(),
       tenantId: command.tenantId,
       entryNumber,
       date: command.paymentDate,

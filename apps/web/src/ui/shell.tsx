@@ -199,7 +199,7 @@ export async function AppFrame({
 
       <aside
         data-surface="nav"
-        className="hidden border-r border-nav-line bg-nav lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:shrink-0 lg:flex-col"
+        className="hidden border-r border-nav-line bg-nav lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-auto lg:shrink-0 lg:flex-col"
       >
         <div className="flex h-16 items-center px-5">
           <Link href="/" className="rounded-control">
@@ -211,15 +211,16 @@ export async function AppFrame({
           <SidebarNav items={sidebarItems} />
         </div>
 
-        <div className="mt-auto border-t border-nav-line/70 p-3">
+        <div className="mt-auto border-t border-nav-line/70 p-2.5">
           <a
             href={getPosTerminalUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
+            title="Terminal POS PWA"
+            className="flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-brand px-2.5 py-2.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
           >
-            <ShoppingCart className="size-4" />
-            Terminal POS PWA
+            <ShoppingCart className="size-4 shrink-0" />
+            <span className="truncate">POS</span>
           </a>
         </div>
       </aside>

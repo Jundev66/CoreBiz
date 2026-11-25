@@ -91,7 +91,7 @@ export class VoidCollectionReceiptCommandHandler {
 
     const entryNumber = await this.journalEntryRepository.nextEntryNumber(command.tenantId);
     const journalEntryResult = JournalEntry.create({
-      id: `void-rc-je-${receipt.id}-${entryNumber}`,
+      id: crypto.randomUUID(),
       tenantId: command.tenantId,
       entryNumber,
       date: command.voidedAt,

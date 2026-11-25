@@ -180,7 +180,7 @@ export class CreateCollectionReceiptCommandHandler {
 
     const entryNumber = await this.journalEntryRepository.nextEntryNumber(command.tenantId);
     const journalEntryResult = JournalEntry.create({
-      id: `rc-je-${receipt.id}-${entryNumber}`,
+      id: crypto.randomUUID(),
       tenantId: command.tenantId,
       entryNumber,
       date: command.receiptDate,
