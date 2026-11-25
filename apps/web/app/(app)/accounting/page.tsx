@@ -1,20 +1,11 @@
 import Link from 'next/link';
 import { apiForRequest } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
-import { Screen, TableFrame, Empty } from '@/ui/shell';
-import { Badge } from '@/ui/feedback';
+import { Screen, Empty } from '@/ui/shell';
 import { NoAccess } from '@/ui/no-access';
+import { ChartOfAccountsView } from '@/ui/chart-of-accounts-view';
 import { can } from '@corebiz/domain';
-import { BarChart3, BookOpen, Layers, ArrowRightLeft, UserMinus } from 'lucide-react';
-
-const CATEGORY_NAMES: Record<string, string> = {
-  ASSET: 'Activos',
-  LIABILITY: 'Pasivos',
-  EQUITY: 'Patrimonio',
-  REVENUE: 'Ingresos',
-  COGS: 'Costos de Venta',
-  EXPENSE: 'Gastos de Operación',
-};
+import { BarChart3, BookOpen, ArrowRightLeft, UserMinus } from 'lucide-react';
 
 export default async function AccountingPage() {
   const { ctx } = await apiForRequest();
@@ -28,13 +19,14 @@ export default async function AccountingPage() {
   }
 
   const accounts = await listAccounts().catch(() => []);
+  const canWrite = can(ctx.actor, 'accounting:write');
 
   return (
     <Screen
       title="Plan de Cuentas"
-      subtitle="Estructura contable oficial y catálogo de cuentas por partida doble"
+      subtitle="Árbol contable ramificado por tipo de cuenta y estructura de partida doble"
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/accounting/trial-balance"
             className="flex items-center gap-2 rounded-control border border-border px-3 py-1.5 text-xs font-semibold text-text hover:bg-surface-raised"
@@ -54,7 +46,7 @@ export default async function AccountingPage() {
             className="flex items-center gap-2 rounded-control border border-border px-3 py-1.5 text-xs font-semibold text-text hover:bg-surface-raised"
           >
             <ArrowRightLeft className="size-3.5" />
-            <span>Tesorería & Cripto</span>
+            <span>Tesorería & Swaps</span>
           </Link>
           <Link
             href="/accounting/drawings"
@@ -69,49 +61,7 @@ export default async function AccountingPage() {
       {accounts.length === 0 ? (
         <Empty>No se han configurado cuentas contables para este tenant.</Empty>
       ) : (
-        <TableFrame>
-          <thead>
-            <tr className="border-b border-border bg-surface-raised/40 text-xs font-medium text-text-muted">
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Nombre de la Cuenta</th>
-              <th className="px-4 py-3">Categoría</th>
-              <th className="px-4 py-3">Naturaleza</th>
-              <th className="px-4 py-3 text-center">Conciliable</th>
-              <th className="px-4 py-3 text-right">Estado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {accounts.map((acc) => (
-              <tr key={acc.id} className="hover:bg-surface-raised/20 transition-colors">
-                <td className="px-4 py-3 font-mono font-semibold text-brand">{acc.code}</td>
-                <td className="px-4 py-3 font-medium text-text">{acc.name}</td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-1 text-xs text-text-muted">
-                    <Layers className="size-3" />
-                    {CATEGORY_NAMES[acc.category] ?? acc.category}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <Badge tone={acc.normalSide === 'DEBIT' ? 'neutral' : 'brand'}>
-                    {acc.normalSide === 'DEBIT' ? 'Deudora (Débito)' : 'Acreedora (Crédito)'}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {acc.isReconcilable ? (
-                    <span className="text-xs text-emerald-600 font-medium">Sí</span>
-                  ) : (
-                    <span className="text-xs text-text-muted">No</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Badge tone={acc.isActive ? 'success' : 'neutral'}>
-                    {acc.isActive ? 'Activa' : 'Inactiva'}
-                  </Badge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </TableFrame>
+        <ChartOfAccountsView accounts={accounts} canWrite={canWrite} />
       )}
     </Screen>
   );

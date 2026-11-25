@@ -1,12 +1,13 @@
 import 'server-only';
-import { get } from './client';
-import type { AgingReportResponse } from '@corebiz/contracts';
+import { get, send } from './client';
+import type { AgingReportResponse, CreateAccountInput } from '@corebiz/contracts';
 
 export interface AccountApiItem {
   readonly id: string;
   readonly code: string;
   readonly name: string;
   readonly category: string;
+  readonly parentId: string | null;
   readonly normalSide: string;
   readonly isReconcilable: boolean;
   readonly isActive: boolean;
@@ -55,6 +56,10 @@ export async function listAccounts(fiscalCountry?: string): Promise<readonly Acc
     `/v1/accounting/accounts${query}`,
   );
   return response.accounts;
+}
+
+export async function createAccount(input: CreateAccountInput) {
+  return send<{ accountId: string; code: string }>('POST', '/v1/accounting/accounts', input);
 }
 
 export async function getTrialBalance(

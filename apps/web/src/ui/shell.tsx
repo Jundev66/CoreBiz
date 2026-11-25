@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { can } from '@corebiz/domain';
 import { Inbox, ShoppingCart, UserRound, type LucideIcon } from 'lucide-react';
 import { signupConfig } from '@/demo/sandbox';
 import { canOpen } from '@/auth/module-access';
@@ -225,6 +226,49 @@ export async function AppFrame({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <header
+          data-surface="nav"
+          className="sticky top-0 z-30 hidden h-14 items-center justify-between gap-4 border-b border-nav-line/80 bg-nav/90 px-8 backdrop-blur-md lg:flex"
+        >
+          <div className="flex items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-surface px-2.5 py-1 font-medium text-ink">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              {ctx.settings.fiscalCountry === 'VE' ? 'Venezuela · SENIAT' : 'EE. UU. · US GAAP'}
+            </span>
+            <span className="rounded-pill bg-subtle px-2.5 py-1 font-mono text-[11px] text-muted">
+              Fiscal: {ctx.settings.fiscalCountry === 'VE' ? 'VES' : 'USD'} · Precios:{' '}
+              {ctx.settings.baseCurrency}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {can(ctx.actor, 'invoice:write') && (
+              <Link
+                href="/invoicing/new"
+                className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
+              >
+                + Factura Venta
+              </Link>
+            )}
+            {can(ctx.actor, 'purchase:receive') && (
+              <Link
+                href="/purchases/new"
+                className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
+              >
+                + Factura Compra
+              </Link>
+            )}
+            {can(ctx.actor, 'accounting:read') && (
+              <Link
+                href="/accounting"
+                className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
+              >
+                Plan de Cuentas
+              </Link>
+            )}
+          </div>
+        </header>
+
         <header
           data-surface="nav"
           className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-nav-line bg-nav/95 px-4 backdrop-blur-md lg:hidden"

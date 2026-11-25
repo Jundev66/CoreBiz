@@ -43,6 +43,7 @@ export class ListAccountsController {
         code: acc.code,
         name: acc.name,
         category: acc.category,
+        parentId: acc.parentId,
         normalSide: acc.normalSide,
         isReconcilable: acc.isReconcilable,
         isActive: acc.isActive,

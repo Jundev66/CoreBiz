@@ -468,6 +468,8 @@ export class Product extends AggregateRoot<ProductId> {
     description?: string | null;
     unit?: string;
     taxable?: boolean;
+    revenueAccountId?: string | null;
+    inventoryAccountId?: string | null;
   }): Result<void, ProductError> {
     const description =
       'description' in input ? input.description?.trim() || null : this.props.description;
@@ -480,6 +482,14 @@ export class Product extends AggregateRoot<ProductId> {
       unit,
       taxable:
         'taxable' in input && input.taxable !== undefined ? input.taxable : this.props.taxable,
+      revenueAccountId:
+        'revenueAccountId' in input
+          ? input.revenueAccountId?.trim() || null
+          : (this.props.revenueAccountId ?? null),
+      inventoryAccountId:
+        'inventoryAccountId' in input
+          ? input.inventoryAccountId?.trim() || null
+          : (this.props.inventoryAccountId ?? null),
     };
     return ok(undefined);
   }

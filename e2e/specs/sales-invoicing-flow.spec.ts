@@ -87,11 +87,9 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     page.on('pageerror', (err) => pageErrors.push(err));
 
     await page.goto('/settings/accounting');
-    await expect(
-      page.getByRole('heading', { name: /mapeo contable de la empresa/i }),
-    ).toBeVisible();
-    await expect(page.getByText(/ingresos por ventas/i).first()).toBeVisible();
-    await expect(page.getByText(/cuentas por cobrar/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /flujo de ventas & cobros/i })).toBeVisible();
+    await expect(page.locator('label', { hasText: /ingresos por ventas/i }).first()).toBeVisible();
+    await expect(page.locator('label', { hasText: /cuentas por cobrar/i }).first()).toBeVisible();
 
     await page.goto('/products/new');
     const revSelect = page.locator('select[name="revenueAccountId"]');

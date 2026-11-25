@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
+import { readCompanyAccountMapping } from '@/api/accounting-mapping';
 import { listInvoices } from '@/api/invoicing';
 import { Screen } from '@/ui/shell';
 import { NoAccess } from '@/ui/no-access';
@@ -36,13 +37,9 @@ export default async function CollectInvoicePage({ params }: { params: Promise<{
     notFound();
   }
 
-  const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
-    accounts.find((a) => codes.includes(a.code))?.id ??
-    accounts.find((a) => a.category === fallbackCategory)?.id ??
-    fallbackId;
-
-  const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01');
-  const receivableAccountId = findAccount(['1.1.02', '1200'], 'ASSET', 'tpl-1.1.02');
+  const mapping = await readCompanyAccountMapping(ctx.tenantId, accounts);
+  const cashAccountId = mapping.cashAccountId;
+  const receivableAccountId = mapping.receivableAccountId;
 
   const remainingMinor = BigInt(invoice.totalMinor) - BigInt(invoice.paidMinor);
   const fiscalCurrency = ctx.settings.fiscalCountry === 'VE' ? 'VES' : 'USD';

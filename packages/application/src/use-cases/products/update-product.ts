@@ -52,6 +52,8 @@ export interface UpdateProductInput {
   readonly unit?: string | null;
   readonly minStock?: string | null;
   readonly taxable?: boolean;
+  readonly revenueAccountId?: string | null;
+  readonly inventoryAccountId?: string | null;
 }
 
 export type UpdateProductError =
@@ -118,6 +120,12 @@ export function makeUpdateProduct(deps: UpdateProductDeps) {
         description: input.description ?? null,
         ...(input.unit != null ? { unit: input.unit } : {}),
         ...(input.taxable !== undefined ? { taxable: input.taxable } : {}),
+        ...(input.revenueAccountId !== undefined
+          ? { revenueAccountId: input.revenueAccountId }
+          : {}),
+        ...(input.inventoryAccountId !== undefined
+          ? { inventoryAccountId: input.inventoryAccountId }
+          : {}),
       });
       if (!catalogued.ok) return catalogued;
 

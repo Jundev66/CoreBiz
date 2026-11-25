@@ -1,3 +1,4 @@
+export * from './commands/create-account.command';
 export * from './commands/post-journal-entry.command';
 export * from './commands/import-bank-statement.command';
 export * from './commands/match-reconciliation.command';

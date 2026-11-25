@@ -50,6 +50,7 @@ import {
   PostJournalEntryCommandHandler,
   GetTrialBalanceQueryHandler,
   ListAccountsQueryHandler,
+  CreateAccountCommandHandler,
   ListJournalEntriesQueryHandler,
   IssueInvoiceCommandHandler,
   ApplyInvoicePaymentCommandHandler,
@@ -478,6 +479,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     postJournalEntry: new PostJournalEntryCommandHandler(runtime.accounts, runtime.journalEntries),
     getTrialBalance: new GetTrialBalanceQueryHandler(runtime.accounts, runtime.journalEntries),
     listAccounts: new ListAccountsQueryHandler(runtime.accounts),
+    createAccount: new CreateAccountCommandHandler(runtime.accounts),
     listJournalEntries: new ListJournalEntriesQueryHandler(runtime.journalEntries),
     issueInvoice,
     applyInvoicePayment: new ApplyInvoicePaymentCommandHandler(

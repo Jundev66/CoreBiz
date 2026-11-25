@@ -235,6 +235,44 @@ export async function updateProductAction(
   redirect(`/products/${encodeURIComponent(parsed.data.productId)}?guardado=1`);
 }
 
+export async function updateProductAccountsAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const productId = field(formData, 'productId').trim();
+  const revenueAccountId = field(formData, 'revenueAccountId').trim();
+  const inventoryAccountId = field(formData, 'inventoryAccountId').trim();
+
+  if (!productId) {
+    return { status: 'error', errorKind: 'InvalidFormat' };
+  }
+
+  const { queries, updateProduct } = await apiForRequest();
+  const existing = await queries.products.byId(productId);
+  if (!existing) {
+    return { status: 'error', errorKind: 'NotFound' };
+  }
+
+  const result = await updateProduct({
+    productId,
+    name: existing.name,
+    price: existing.price,
+    unit: existing.unit,
+    cost: existing.cost ?? '',
+    minStock: existing.minStock ?? '',
+    description: existing.description ?? '',
+    taxable: existing.taxable,
+    revenueAccountId: revenueAccountId || '',
+    inventoryAccountId: inventoryAccountId || '',
+  });
+
+  if (!result.ok) return toFormFailure(result.error);
+
+  revalidatePath('/products');
+  revalidatePath(`/products/${productId}`);
+  return { status: 'success' };
+}
+
 /**
  * Server Action: cuadrar el inventario tras un conteo fisico.
  *

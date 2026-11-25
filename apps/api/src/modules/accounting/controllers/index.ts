@@ -1,6 +1,7 @@
 export { PostJournalEntryController } from './post-journal-entry.controller';
 export { GetTrialBalanceController } from './get-trial-balance.controller';
 export { ListAccountsController } from './list-accounts.controller';
+export { CreateAccountController } from './create-account.controller';
 export { ListJournalEntriesController } from './list-journal-entries.controller';
 export { ImportBankStatementController } from './import-bank-statement.controller';
 export { MatchReconciliationController } from './match-reconciliation.controller';

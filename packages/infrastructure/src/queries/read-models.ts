@@ -351,6 +351,9 @@ class PrismaProductQueries implements ProductQueries {
         minStock: p.min_stock === null ? null : quantity(p.min_stock),
         taxable: p.taxable,
         description: p.description,
+        revenueAccountId: (p as { revenue_account_id?: string | null }).revenue_account_id ?? null,
+        inventoryAccountId:
+          (p as { inventory_account_id?: string | null }).inventory_account_id ?? null,
       };
     });
   }

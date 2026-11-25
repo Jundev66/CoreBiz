@@ -221,6 +221,8 @@ class InMemoryProductQueries implements ProductQueries {
       minStock: snapshot.minStock?.toCompactString() ?? null,
       taxable: snapshot.taxable,
       description: snapshot.description,
+      revenueAccountId: snapshot.revenueAccountId ?? null,
+      inventoryAccountId: snapshot.inventoryAccountId ?? null,
     });
   }
 

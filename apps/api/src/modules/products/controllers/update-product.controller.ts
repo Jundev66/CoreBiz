@@ -34,6 +34,12 @@ export class UpdateProductController {
         minStock: body.minStock || null,
         description: body.description || null,
         ...(body.taxable !== undefined ? { taxable: body.taxable } : {}),
+        ...(body.revenueAccountId !== undefined
+          ? { revenueAccountId: body.revenueAccountId || null }
+          : {}),
+        ...(body.inventoryAccountId !== undefined
+          ? { inventoryAccountId: body.inventoryAccountId || null }
+          : {}),
       }),
     );
   }

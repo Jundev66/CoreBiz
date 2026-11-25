@@ -108,6 +108,12 @@ export function httpCommands() {
           minStock: input.minStock ?? '',
           description: input.description ?? '',
           taxable: input.taxable,
+          ...(input.revenueAccountId !== undefined
+            ? { revenueAccountId: input.revenueAccountId }
+            : {}),
+          ...(input.inventoryAccountId !== undefined
+            ? { inventoryAccountId: input.inventoryAccountId }
+            : {}),
         },
       ),
 

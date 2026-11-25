@@ -1,6 +1,7 @@
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
+import { readCompanyAccountMapping } from '@/api/accounting-mapping';
 import { listInvoices } from '@/api/invoicing';
 import { listTaxRateConfigs } from '@/api/fiscal';
 import { Screen } from '@/ui/shell';
@@ -29,16 +30,12 @@ export default async function NewInvoicePage() {
     listTaxRateConfigs().catch(() => []),
   ]);
 
-  const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
-    accounts.find((a) => codes.includes(a.code))?.id ??
-    accounts.find((a) => a.category === fallbackCategory)?.id ??
-    fallbackId;
-
+  const mapping = await readCompanyAccountMapping(ctx.tenantId, accounts);
   const accountDefaults = {
-    receivableAccountId: findAccount(['1.1.02', '1200'], 'ASSET', 'tpl-1.1.02'),
-    revenueAccountId: findAccount(['4.1.01', '4010'], 'REVENUE', 'tpl-4.1.01'),
-    taxPayableAccountId: findAccount(['2.1.02', '2050'], 'LIABILITY', 'tpl-2.1.02'),
-    cashAccountId: findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01'),
+    receivableAccountId: mapping.receivableAccountId,
+    revenueAccountId: mapping.revenueAccountId,
+    taxPayableAccountId: mapping.taxPayableAccountId,
+    cashAccountId: mapping.cashAccountId,
   };
 
   const nextNum = String(existingInvoices.length + 1).padStart(6, '0');

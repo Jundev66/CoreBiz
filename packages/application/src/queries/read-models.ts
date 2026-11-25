@@ -94,6 +94,8 @@ export interface ProductDetail extends ProductListItem {
   readonly minStock: string | null;
   readonly taxable: boolean;
   readonly description: string | null;
+  readonly revenueAccountId: string | null;
+  readonly inventoryAccountId: string | null;
 }
 
 /**

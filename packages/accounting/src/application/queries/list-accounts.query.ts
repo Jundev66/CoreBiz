@@ -13,6 +13,7 @@ export interface AccountViewItem {
   readonly code: string;
   readonly name: string;
   readonly category: string;
+  readonly parentId: string | null;
   readonly normalSide: 'DEBIT' | 'CREDIT';
   readonly isReconcilable: boolean;
   readonly isActive: boolean;
@@ -36,6 +37,7 @@ export class ListAccountsQueryHandler {
           code: acc.code.value,
           name: acc.name,
           category: acc.category,
+          parentId: acc.parentId ?? null,
           normalSide: acc.normalSide,
           isReconcilable: acc.isReconcilable,
           isActive: acc.isActive,
@@ -50,6 +52,7 @@ export class ListAccountsQueryHandler {
         code: tmpl.code,
         name: tmpl.name,
         category: tmpl.category,
+        parentId: null,
         normalSide:
           tmpl.category === 'ASSET' || tmpl.category === 'EXPENSE' || tmpl.category === 'COGS'
             ? 'DEBIT'
