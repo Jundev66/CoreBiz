@@ -79,4 +79,38 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
 
     expect(pageErrors).toHaveLength(0);
   });
+
+  test('verifies company account determination settings and item-level account override UI', async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.goto('/settings/accounting');
+    await expect(
+      page.getByRole('heading', { name: /mapeo contable de la empresa/i }),
+    ).toBeVisible();
+    await expect(page.getByText(/ingresos por ventas/i).first()).toBeVisible();
+    await expect(page.getByText(/cuentas por cobrar/i).first()).toBeVisible();
+
+    await page.goto('/products/new');
+    const revSelect = page.locator('select[name="revenueAccountId"]');
+    await expect(revSelect).toBeVisible();
+    const invSelect = page.locator('select[name="inventoryAccountId"]');
+    await expect(invSelect).toBeVisible();
+
+    const ts = Date.now().toString().slice(-4);
+    await page.locator('input[name="sku"]').fill(`ACC-ITEM-${ts}`);
+    await page.locator('input[name="name"]').fill(`Item Cuenta Propia ${ts}`);
+    await page.locator('input[name="price"]').fill('19.99');
+    const revOpt = await revSelect.locator('option').nth(1).getAttribute('value');
+    if (revOpt) {
+      await revSelect.selectOption(revOpt);
+    }
+    await page.getByRole('button', { name: /guardar|save/i }).click();
+    await page.waitForURL(/\/products(\?|$)/);
+    await expect(page.getByRole('cell', { name: `Item Cuenta Propia ${ts}` })).toBeVisible();
+
+    expect(pageErrors).toHaveLength(0);
+  });
 });

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
+import { listAccounts } from '@/api/accounting';
 import { Screen } from '@/ui/shell';
 import { Card } from '@/ui/primitives';
 import { ProductForm } from '@/ui/product-form';
@@ -28,8 +29,18 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   if (!can(ctx.actor, 'product:write')) notFound();
 
-  const product = await queries.products.byId(id);
+  const [product, accounts] = await Promise.all([
+    queries.products.byId(id),
+    listAccounts().catch(() => []),
+  ]);
   if (product === null) notFound();
+
+  const revenueAccounts = accounts
+    .filter((a) => a.category === 'REVENUE')
+    .map((a) => ({ id: a.id, label: `${a.code} · ${a.name}` }));
+  const inventoryAccounts = accounts
+    .filter((a) => a.category === 'ASSET')
+    .map((a) => ({ id: a.id, label: `${a.code} · ${a.name}` }));
 
   return (
     <Screen
@@ -39,6 +50,8 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     >
       <Card className="max-w-2xl p-5 sm:p-6">
         <ProductForm
+          revenueAccounts={revenueAccounts}
+          inventoryAccounts={inventoryAccounts}
           product={{
             id: product.id,
             sku: product.sku,

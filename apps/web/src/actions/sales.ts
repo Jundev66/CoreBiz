@@ -168,6 +168,8 @@ export async function createProductAction(
   // `exactOptionalPropertyTypes` distingue "ausente" de "presente pero undefined".
   // Un campo opcional vacio se OMITE, en lugar de enviarse como undefined.
   const unit = field(formData, 'unit').trim();
+  const revenueAccountId = field(formData, 'revenueAccountId').trim();
+  const inventoryAccountId = field(formData, 'inventoryAccountId').trim();
 
   const result = await createProduct({
     sku: field(formData, 'sku'),
@@ -177,9 +179,8 @@ export async function createProductAction(
     initialStock: field(formData, 'initialStock') || null,
     minStock: field(formData, 'minStock') || null,
     ...(unit ? { unit } : {}),
-    // Una casilla sin marcar NO viaja en el formulario. Se manda el booleano explicito
-    // en los dos sentidos, porque el dominio da ambos por ciertos cuando faltan y
-    // omitirlos convertiria un "no" en un "si".
+    ...(revenueAccountId ? { revenueAccountId } : {}),
+    ...(inventoryAccountId ? { inventoryAccountId } : {}),
     taxable: formData.has('taxable'),
     trackStock: formData.has('trackStock'),
   });

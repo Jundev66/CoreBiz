@@ -12,17 +12,21 @@ import { can, type Actor, type Permission } from '@corebiz/domain';
  * La pestana activa lleva `aria-current="page"` ademas del color. El color solo
  * lo ve quien puede verlo.
  */
-export type SettingsSection = 'business' | 'team' | 'audit' | 'ai';
+export type SettingsSection = 'business' | 'accounting' | 'team' | 'audit' | 'ai';
 
-/**
- * `permission` is what is needed for the tab to lead somewhere.
- *
- * "Team" and "Audit" only exist for whoever can read them: without this, three of the five
- * roles had two tabs there that answered with an error. "Business" needs no permission
- * because it reads nothing from the API — it renders what the session context carries.
- */
-const SECTIONS: readonly { id: SettingsSection; href: string; permission?: Permission }[] = [
+const SECTIONS: readonly {
+  id: SettingsSection;
+  href: string;
+  permission?: Permission;
+  customLabel?: string;
+}[] = [
   { id: 'business', href: '/settings' },
+  {
+    id: 'accounting',
+    href: '/settings/accounting',
+    permission: 'accounting:read',
+    customLabel: 'Cuentas Contables',
+  },
   { id: 'team', href: '/settings/team', permission: 'user:read' },
   { id: 'audit', href: '/settings/audit', permission: 'audit:read' },
   { id: 'ai', href: '/settings/ai', permission: 'ai:configure' },
@@ -48,7 +52,7 @@ export async function SettingsNav({ current, actor }: { current: SettingsSection
                 active ? 'bg-surface text-ink shadow-xs' : 'text-muted hover:text-ink'
               }`}
             >
-              {t(`settings.tabs.${section.id}`)}
+              {section.customLabel ?? t(`settings.tabs.${section.id}`)}
             </Link>
           );
         })}

@@ -29,6 +29,7 @@ export const MODULE_PERMISSION = {
   '/reports': 'report:read',
   '/conflicts': 'stock:read',
   '/accounting': 'accounting:read',
+  '/settings/accounting': 'accounting:read',
   '/accounting/reconciliation': 'accounting:read',
   '/accounting/forex': 'accounting:read',
   '/accounting/treasury': 'accounting:read',

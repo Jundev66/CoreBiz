@@ -15,6 +15,11 @@ import { detectBarcodeFromMedia, createKeyboardWedgeListener } from '@/ui/barcod
 
 const INITIAL: ActionState = { status: 'idle' };
 
+export interface ProductAccountOption {
+  readonly id: string;
+  readonly label: string;
+}
+
 export interface ProductFormValues {
   readonly id: string;
   readonly sku: string;
@@ -25,9 +30,19 @@ export interface ProductFormValues {
   readonly minStock: string | null;
   readonly description: string | null;
   readonly taxable: boolean;
+  readonly revenueAccountId?: string | null;
+  readonly inventoryAccountId?: string | null;
 }
 
-export function ProductForm({ product }: { product?: ProductFormValues }) {
+export function ProductForm({
+  product,
+  revenueAccounts = [],
+  inventoryAccounts = [],
+}: {
+  product?: ProductFormValues;
+  revenueAccounts?: readonly ProductAccountOption[];
+  inventoryAccounts?: readonly ProductAccountOption[];
+}) {
   const t = useTranslations();
   const editing = product !== undefined;
   const [sku, setSku] = useState(product?.sku ?? '');
@@ -279,6 +294,40 @@ export function ProductForm({ product }: { product?: ProductFormValues }) {
           )}
         </fieldset>
       </div>
+
+      {(revenueAccounts.length > 0 || inventoryAccounts.length > 0) && (
+        <div className="border-t border-line pt-6 space-y-4">
+          <h3 className="text-base font-semibold text-ink">
+            Configuración Contable del Ítem (Opcional)
+          </h3>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {revenueAccounts.length > 0 && (
+              <Field
+                name="revenueAccountId"
+                label="Cuenta de Ingresos"
+                hint="Sobrescribe la cuenta de ventas por defecto de la empresa."
+                defaultValue={product?.revenueAccountId ?? ''}
+                options={[
+                  { value: '', label: 'Usar cuenta por defecto de la empresa' },
+                  ...revenueAccounts.map((a) => ({ value: a.id, label: a.label })),
+                ]}
+              />
+            )}
+            {inventoryAccounts.length > 0 && (
+              <Field
+                name="inventoryAccountId"
+                label="Cuenta de Inventario"
+                hint="Sobrescribe la cuenta de inventario por defecto de la empresa."
+                defaultValue={product?.inventoryAccountId ?? ''}
+                options={[
+                  { value: '', label: 'Usar cuenta por defecto de la empresa' },
+                  ...inventoryAccounts.map((a) => ({ value: a.id, label: a.label })),
+                ]}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {state.status === 'error' && state.errorKind && (
         <Alert tone="danger" role="alert">
