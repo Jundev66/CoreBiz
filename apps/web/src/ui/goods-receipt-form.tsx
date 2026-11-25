@@ -29,6 +29,7 @@ export interface ReceivableProduct {
   readonly label: string;
   readonly unit: string;
   readonly cost?: string | null;
+  readonly taxPercentage?: string | null;
 }
 
 interface LineDraft {
@@ -55,12 +56,14 @@ export function GoodsReceiptForm({
   defaultCurrency = 'USD',
   fiscalCountry = 'VE',
   defaultTaxPercentage = 16,
+  accountingConfigured = true,
 }: {
   suppliers: readonly SupplierOption[];
   products: readonly ReceivableProduct[];
   defaultCurrency?: string;
   fiscalCountry?: string;
   defaultTaxPercentage?: number;
+  accountingConfigured?: boolean;
 }) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(receiveGoodsAction, INITIAL);
@@ -473,6 +476,9 @@ export function GoodsReceiptForm({
                           productId: newProductId,
                           unitCost: prod?.cost ? prod.cost : line.unitCost,
                         });
+                        if (prod?.taxPercentage !== undefined && prod.taxPercentage !== null) {
+                          setTaxPercentage(prod.taxPercentage);
+                        }
                       }}
                       className={CONTROL_CLASSES}
                     >
@@ -606,7 +612,7 @@ export function GoodsReceiptForm({
 
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || !accountingConfigured}
             className={buttonClasses({ size: 'lg', className: 'shrink-0 sm:mt-4 sm:w-full' })}
           >
             {pending ? '…' : t('purchases.receive')}

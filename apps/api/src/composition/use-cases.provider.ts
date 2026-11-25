@@ -117,7 +117,14 @@ import {
   resolveFiscalCurrency,
   computeConvertedMinor,
 } from '@corebiz/fiscal';
-import { JournalEntry, JournalEntryLine, Money } from '@corebiz/domain';
+import {
+  createDefaultAccountsForJurisdiction,
+  deterministicAccountUuid,
+  JournalEntry,
+  JournalEntryLine,
+  Money,
+  QUANTITY_SCALE,
+} from '@corebiz/domain';
 import { loadEnv } from '../config/env';
 import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../tokens';
 import type { VisionEmbeddingsPort, VisionModelPort } from '@synapse-vision/core';
@@ -228,16 +235,26 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       const existing = await runtime.invoices.findById(ctx.tenantId, event.sale.id);
       if (existing) return;
 
-      const accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
-      const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
+      let accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
+      if (accounts.length === 0) {
+        const seeded = createDefaultAccountsForJurisdiction(
+          ctx.tenantId,
+          ctx.settings.fiscalCountry ?? 'VE',
+        );
+        for (const acc of seeded) {
+          await runtime.accounts.save(acc).catch(() => {});
+        }
+        accounts = seeded;
+      }
+      const findAccount = (codes: string[], fallbackCategory: string, fallbackCode: string) =>
         accounts.find((a) => codes.includes(a.code.value))?.id ??
         accounts.find((a) => a.category === fallbackCategory)?.id ??
-        fallbackId;
+        deterministicAccountUuid(ctx.tenantId, fallbackCode);
 
-      const receivableAccountId = findAccount(['1.1.02', '1200'], 'ASSET', 'tpl-1.1.02');
-      const revenueAccountId = findAccount(['4.1.01', '4010'], 'REVENUE', 'tpl-4.1.01');
-      const taxPayableAccountId = findAccount(['2.1.02', '2050'], 'LIABILITY', 'tpl-2.1.02');
-      const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01');
+      const receivableAccountId = findAccount(['1.1.02', '1200'], 'ASSET', '1.1.02');
+      const revenueAccountId = findAccount(['4.1.01', '4010'], 'REVENUE', '4.1.01');
+      const taxPayableAccountId = findAccount(['2.1.02', '2050'], 'LIABILITY', '2.1.02');
+      const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', '1.1.01');
 
       const invoiceRes = await issueInvoice.execute({
         id: event.sale.id,
@@ -278,16 +295,30 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       const totalWithTaxMinor = subtotalMinor + taxMinor;
       const currency = event.receipt.currency;
 
-      const accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
-      const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
+      let accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
+      if (accounts.length === 0) {
+        const seeded = createDefaultAccountsForJurisdiction(
+          ctx.tenantId,
+          ctx.settings.fiscalCountry ?? 'VE',
+        );
+        for (const acc of seeded) {
+          await runtime.accounts.save(acc).catch(() => {});
+        }
+        accounts = seeded;
+      }
+      const findAccount = (codes: string[], fallbackCategory: string, fallbackCode: string) =>
         accounts.find((a) => codes.includes(a.code.value))?.id ??
         accounts.find((a) => a.category === fallbackCategory)?.id ??
-        fallbackId;
+        deterministicAccountUuid(ctx.tenantId, fallbackCode);
 
-      const inventoryAccountId = findAccount(['1.1.04', '5.1.01'], 'ASSET', 'tpl-1.1.04');
-      const taxCreditAccountId = findAccount(['1.1.05', '2.1.02'], 'ASSET', 'tpl-2.1.02');
-      const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01');
-      const payableAccountId = findAccount(['2.1.01', '2010'], 'LIABILITY', 'tpl-2.1.01');
+      const inventoryAccountId = findAccount(
+        ['1.1.03', '1400', '1.1.04', '5.1.01'],
+        'ASSET',
+        '1.1.03',
+      );
+      const taxCreditAccountId = findAccount(['1.1.05', '2.1.02', '2050'], 'ASSET', '2.1.02');
+      const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', '1.1.01');
+      const payableAccountId = findAccount(['2.1.01', '2010'], 'LIABILITY', '2.1.01');
 
       const docRef = event.supplierReference || event.receipt.number;
       const lines: JournalEntryLine[] = [];
@@ -415,7 +446,71 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     setCustomerStatus: makeSetCustomerStatus(shared),
     createProduct: makeCreateProduct(shared),
     updateProduct: makeUpdateProduct(shared),
-    adjustStock: makeAdjustStock(shared),
+    adjustStock: makeAdjustStock({
+      ...shared,
+      onStockAdjusted: async (event) => {
+        const absDelta = event.deltaScaled < 0n ? -event.deltaScaled : event.deltaScaled;
+        const valuationUnit =
+          event.unitCost && event.unitCost.minorUnits > 0n ? event.unitCost : event.unitPrice;
+        if (absDelta <= 0n || !valuationUnit || valuationUnit.minorUnits <= 0n) return;
+        const amount = valuationUnit.multiplyScaled(absDelta, QUANTITY_SCALE);
+        if (amount.minorUnits <= 0n) return;
+
+        let accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
+        if (accounts.length === 0) {
+          const seeded = createDefaultAccountsForJurisdiction(
+            ctx.tenantId,
+            ctx.settings.fiscalCountry ?? 'VE',
+          );
+          for (const acc of seeded) {
+            await runtime.accounts.save(acc).catch(() => {});
+          }
+          accounts = seeded;
+        }
+        const findAccount = (codes: string[], fallbackCategory: string, fallbackCode: string) =>
+          accounts.find((a) => codes.includes(a.code.value))?.id ??
+          accounts.find((a) => a.category === fallbackCategory)?.id ??
+          deterministicAccountUuid(ctx.tenantId, fallbackCode);
+
+        const inventoryAcc =
+          event.inventoryAccountId || findAccount(['1.1.03', '1400'], 'ASSET', '1.1.03');
+        const adjustmentAcc = findAccount(['6.1.05', '5.1.01', '6.1.01'], 'EXPENSE', '6.1.05');
+        const currency = valuationUnit.currency;
+        const zero = Money.zero(currency);
+
+        const debitAccount = event.deltaScaled > 0n ? inventoryAcc : adjustmentAcc;
+        const creditAccount = event.deltaScaled > 0n ? adjustmentAcc : inventoryAcc;
+
+        const debitLine = JournalEntryLine.create(
+          debitAccount,
+          amount,
+          zero,
+          `Ajuste stock (${event.sku}) - ${event.reason}`,
+        );
+        const creditLine = JournalEntryLine.create(
+          creditAccount,
+          zero,
+          amount,
+          `Ajuste stock (${event.sku}) - ${event.reason}`,
+        );
+
+        if (debitLine.ok && creditLine.ok) {
+          const entry = JournalEntry.create({
+            id: uuidv7(),
+            tenantId: ctx.tenantId,
+            entryNumber: BigInt(Date.now() % 1_000_000),
+            date: event.adjustedAt,
+            description: `Ajuste de inventario ${event.sku}: ${event.reason}`,
+            sourceType: 'ADJUSTMENT',
+            sourceId: event.productId,
+            lines: [debitLine.value, creditLine.value],
+          });
+          if (entry.ok) {
+            await runtime.journalEntries.save(entry.value).catch(() => {});
+          }
+        }
+      },
+    }),
     setProductStatus: makeSetProductStatus(shared),
     issueDeliveryNote: makeIssueDeliveryNote(shared),
     // Almacen puede confirmar la entrega aunque no pueda emitir ni anular: es el unico

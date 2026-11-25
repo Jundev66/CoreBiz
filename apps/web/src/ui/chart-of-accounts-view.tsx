@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -17,6 +18,7 @@ import { buttonClasses } from '@/ui/button';
 import { Alert, Badge } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 import { Card } from '@/ui/primitives';
+import { toast } from '@/ui/toast';
 
 type AccountCategoryKey = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'COGS' | 'EXPENSE';
 
@@ -132,19 +134,28 @@ function suggestNextChildCode(
   category: AccountCategoryKey,
   accounts: readonly AccountApiItem[],
 ): string {
+  const existingCodes = new Set(accounts.map((a) => a.code));
   if (!parentId) {
     const prefix = CATEGORY_META[category].prefix;
-    const sameCat = accounts.filter((a) => a.category === category);
-    const nextIdx = sameCat.length + 1;
-    return `${prefix}.1.${String(nextIdx).padStart(2, '0')}`;
+    let idx = accounts.filter((a) => a.category === category).length + 1;
+    let candidate = `${prefix}.1.${String(idx).padStart(2, '0')}`;
+    while (existingCodes.has(candidate)) {
+      idx += 1;
+      candidate = `${prefix}.1.${String(idx).padStart(2, '0')}`;
+    }
+    return candidate;
   }
   const parent = accounts.find((a) => a.id === parentId);
   if (!parent) return '';
-  const siblings = accounts.filter(
-    (a) => a.parentId === parentId || a.code.startsWith(`${parent.code}.`),
-  );
-  const nextSub = siblings.length + 1;
-  return `${parent.code}.${String(nextSub).padStart(2, '0')}`;
+  let subIdx =
+    accounts.filter((a) => a.parentId === parentId || a.code.startsWith(`${parent.code}.`)).length +
+    1;
+  let candidate = `${parent.code}.${String(subIdx).padStart(2, '0')}`;
+  while (existingCodes.has(candidate)) {
+    subIdx += 1;
+    candidate = `${parent.code}.${String(subIdx).padStart(2, '0')}`;
+  }
+  return candidate;
 }
 
 const INITIAL: AccountActionState = { status: 'idle' };
@@ -156,6 +167,7 @@ export function ChartOfAccountsView({
   readonly accounts: readonly AccountApiItem[];
   readonly canWrite: boolean;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(createAccountAction, INITIAL);
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | AccountCategoryKey>('ALL');
   const [search, setSearch] = useState('');
@@ -166,6 +178,17 @@ export function ChartOfAccountsView({
   const [draftParentId, setDraftParentId] = useState<string>('');
   const [draftCode, setDraftCode] = useState<string>(suggestNextChildCode('', 'ASSET', accounts));
   const [draftName, setDraftName] = useState<string>('');
+
+  useEffect(() => {
+    if (state.status === 'success' && state.createdCode) {
+      setShowCreate(false);
+      setDraftName('');
+      toast.success(`Cuenta ${state.createdCode} creada en el árbol contable.`);
+      router.refresh();
+    } else if (state.status === 'error' && state.errorKind) {
+      toast.error(`No se pudo crear la cuenta (${state.errorKind}).`);
+    }
+  }, [state, router]);
 
   const filteredAccounts = useMemo(() => {
     const q = search.trim().toLowerCase();

@@ -242,12 +242,13 @@ export async function updateProductAccountsAction(
   const productId = field(formData, 'productId').trim();
   const revenueAccountId = field(formData, 'revenueAccountId').trim();
   const inventoryAccountId = field(formData, 'inventoryAccountId').trim();
+  const taxPercentage = field(formData, 'taxPercentage').trim();
 
   if (!productId) {
     return { status: 'error', errorKind: 'InvalidFormat' };
   }
 
-  const { queries, updateProduct } = await apiForRequest();
+  const { ctx, queries, updateProduct } = await apiForRequest();
   const existing = await queries.products.byId(productId);
   if (!existing) {
     return { status: 'error', errorKind: 'NotFound' };
@@ -261,15 +262,34 @@ export async function updateProductAccountsAction(
     cost: existing.cost ?? '',
     minStock: existing.minStock ?? '',
     description: existing.description ?? '',
-    taxable: existing.taxable,
+    taxable: taxPercentage === '0' ? false : existing.taxable,
     revenueAccountId: revenueAccountId || '',
     inventoryAccountId: inventoryAccountId || '',
   });
 
   if (!result.ok) return toFormFailure(result.error);
 
+  const { cookies } = await import('next/headers');
+  const { productTaxCookieName, readProductTaxMap } = await import('@/api/accounting-mapping');
+  const currentMap = await readProductTaxMap(ctx.tenantId);
+  const nextMap = { ...currentMap };
+  if (taxPercentage) {
+    nextMap[productId] = taxPercentage;
+  } else {
+    delete nextMap[productId];
+  }
+  const store = await cookies();
+  store.set(productTaxCookieName(ctx.tenantId), JSON.stringify(nextMap), {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
   revalidatePath('/products');
   revalidatePath(`/products/${productId}`);
+  revalidatePath('/invoicing/new');
+  revalidatePath('/purchases/new');
   return { status: 'success' };
 }
 

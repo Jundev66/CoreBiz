@@ -44,6 +44,11 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     const firstProductVal = await productSelect.locator('option').nth(1).getAttribute('value');
     expect(firstProductVal).toBeTruthy();
     await productSelect.selectOption(firstProductVal);
+    const cashTaxSelect = page.locator('select[name="line-tax"]').first();
+    if ((await cashTaxSelect.count()) > 0 && !(await cashTaxSelect.inputValue())) {
+      const firstTaxVal = await cashTaxSelect.locator('option').nth(1).getAttribute('value');
+      if (firstTaxVal) await cashTaxSelect.selectOption(firstTaxVal);
+    }
     await page.locator('input[name="line-quantity"]').first().fill('2');
 
     await page.getByRole('button', { name: /emitir factura de venta/i }).click();
@@ -58,6 +63,11 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     await page.locator('select[name="paymentCondition"]').selectOption('CREDIT');
     await page.locator('input[name="creditDays"]').fill('30');
     await page.locator('select[name="line-product"]').first().selectOption(firstProductVal);
+    const creditTaxSelect = page.locator('select[name="line-tax"]').first();
+    if ((await creditTaxSelect.count()) > 0 && !(await creditTaxSelect.inputValue())) {
+      const firstTaxVal = await creditTaxSelect.locator('option').nth(1).getAttribute('value');
+      if (firstTaxVal) await creditTaxSelect.selectOption(firstTaxVal);
+    }
     await page.locator('input[name="line-quantity"]').first().fill('3');
 
     await page.getByRole('button', { name: /emitir factura de venta/i }).click();
@@ -214,6 +224,11 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     const productSelect = page.locator('select[name="line-product"]').first();
     const firstProductVal = await productSelect.locator('option').nth(1).getAttribute('value');
     await productSelect.selectOption(firstProductVal);
+    const cashTaxSelect = page.locator('select[name="line-tax"]').first();
+    if ((await cashTaxSelect.count()) > 0 && !(await cashTaxSelect.inputValue())) {
+      const firstTaxVal = await cashTaxSelect.locator('option').nth(1).getAttribute('value');
+      if (firstTaxVal) await cashTaxSelect.selectOption(firstTaxVal);
+    }
     await page.locator('input[name="line-quantity"]').first().fill('2');
 
     await page.getByRole('button', { name: /emitir factura de venta/i }).click();

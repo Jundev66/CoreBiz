@@ -20,6 +20,7 @@ export interface InvoiceProductOption {
   readonly label: string;
   readonly name: string;
   readonly price: string;
+  readonly taxPercentage?: string | null;
 }
 
 export interface InvoiceAccountDefaults {
@@ -52,6 +53,7 @@ export function InvoiceForm({
   defaultTaxPercentage,
   taxRates = [],
   accounts,
+  accountingConfigured = true,
 }: {
   customers: readonly InvoiceCustomerOption[];
   products: readonly InvoiceProductOption[];
@@ -60,6 +62,7 @@ export function InvoiceForm({
   defaultTaxPercentage: number;
   taxRates?: readonly InvoiceTaxOption[];
   accounts: InvoiceAccountDefaults;
+  accountingConfigured?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(issueInvoiceAction, INITIAL);
   const [paymentCondition, setPaymentCondition] = useState<'CASH' | 'CREDIT'>('CASH');
@@ -89,6 +92,12 @@ export function InvoiceForm({
       productId: found.id,
       description: found.name,
       unitPrice: found.price,
+      taxPercentage:
+        found.taxPercentage !== undefined && found.taxPercentage !== null
+          ? found.taxPercentage
+          : taxRates.length > 0
+            ? ''
+            : String(defaultTaxPercentage),
     });
   };
 
@@ -337,10 +346,14 @@ export function InvoiceForm({
                 {taxRates.length > 0 ? (
                   <select
                     name="line-tax"
+                    required
                     value={line.taxPercentage}
                     onChange={(e) => updateLine(line.key, { taxPercentage: e.target.value })}
                     className={CONTROL_CLASSES}
                   >
+                    <option value="" disabled>
+                      Seleccionar impuesto...
+                    </option>
                     {taxRates.map((tr) => (
                       <option key={tr.id} value={tr.percentage}>
                         {tr.label}
@@ -393,7 +406,11 @@ export function InvoiceForm({
       </Card>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={pending} className={buttonClasses()}>
+        <button
+          type="submit"
+          disabled={pending || !accountingConfigured}
+          className={buttonClasses()}
+        >
           {pending ? 'Emitiendo...' : 'Emitir Factura de Venta'}
         </button>
       </div>

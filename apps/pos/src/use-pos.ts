@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   posDb,
   type LocalProduct,
@@ -20,6 +20,7 @@ import {
   syncOutbox,
   syncCustomersFromErp,
   registerOnlineSyncListener,
+  type SyncResult,
 } from './sync-engine';
 import { createKeyboardWedgeListener } from './barcode';
 
@@ -52,6 +53,9 @@ export function usePos(apiBaseUrl = '') {
   const [syncStatusMessage, setSyncStatusMessage] = useState<string | null>(null);
   const [defaultExchangeRate, setDefaultExchangeRate] = useState<string>('36.50');
   const [jurisdiction, setJurisdictionState] = useState<PosJurisdiction>('VE');
+  const syncChainRef = useRef<Promise<SyncResult>>(
+    Promise.resolve({ syncedCount: 0, failedCount: 0, errors: [] }),
+  );
 
   const activeJurisdictionConfig = useMemo(
     () => getJurisdictionConfig(jurisdiction),
@@ -112,56 +116,62 @@ export function usePos(apiBaseUrl = '') {
     setSales(recentSales);
   }, []);
 
-  const triggerSync = useCallback(async () => {
-    setIsSyncing(true);
-    setSyncStatusMessage('Sincronizando con ERP...');
-
-    try {
-      await syncCustomersFromErp(apiBaseUrl);
-
-      const devIdEntry = await posDb.config.get('device_id');
-      const tokenEntry = await posDb.config.get('device_token');
-
-      const token = tokenEntry?.value || DEMO_DEVICE_TOKEN;
-      const deviceId = devIdEntry?.value || DEMO_DEVICE_ID;
+  const triggerSync = useCallback(() => {
+    const run = async (): Promise<SyncResult> => {
+      setIsSyncing(true);
+      setSyncStatusMessage('Sincronizando con ERP...');
 
       try {
-        await syncCatalog(apiBaseUrl, token);
-      } catch (e) {
-        console.warn('Catalog sync error (non-blocking):', e);
-      }
+        await syncCustomersFromErp(apiBaseUrl);
 
-      const outboxResult = await syncOutbox(apiBaseUrl, token, deviceId);
-      if (outboxResult.errors.length > 0) {
-        console.error('POS Outbox sync errors:', outboxResult.errors);
+        const devIdEntry = await posDb.config.get('device_id');
+        const tokenEntry = await posDb.config.get('device_token');
+
+        const token = tokenEntry?.value || DEMO_DEVICE_TOKEN;
+        const deviceId = devIdEntry?.value || DEMO_DEVICE_ID;
+
+        try {
+          await syncCatalog(apiBaseUrl, token);
+        } catch (e) {
+          console.warn('Catalog sync error (non-blocking):', e);
+        }
+
+        const outboxResult = await syncOutbox(apiBaseUrl, token, deviceId);
+        if (outboxResult.errors.length > 0) {
+          console.error('POS Outbox sync errors:', outboxResult.errors);
+          setSyncStatusMessage(
+            'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
+          );
+        } else if (outboxResult.syncedCount > 0) {
+          setSyncStatusMessage(
+            `${outboxResult.syncedCount} operación(es) sincronizada(s) con éxito.`,
+          );
+        } else {
+          setSyncStatusMessage('Operaciones al día con el ERP.');
+        }
+        return outboxResult;
+      } catch (err) {
+        console.error('POS Sync error:', err);
         setSyncStatusMessage(
           'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
         );
-      } else if (outboxResult.syncedCount > 0) {
-        setSyncStatusMessage(
-          `${outboxResult.syncedCount} operación(es) sincronizada(s) con éxito.`,
-        );
-      } else {
-        setSyncStatusMessage('Operaciones al día con el ERP.');
+        return {
+          syncedCount: 0,
+          failedCount: 0,
+          errors: [err instanceof Error ? err.message : 'Error en sincronización'],
+        };
+      } finally {
+        setIsSyncing(false);
+        await refreshState();
+        setTimeout(() => {
+          setSyncStatusMessage(null);
+        }, 5000);
       }
-      return outboxResult;
-    } catch (err) {
-      console.error('POS Sync error:', err);
-      setSyncStatusMessage(
-        'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
-      );
-      return {
-        syncedCount: 0,
-        failedCount: 0,
-        errors: [err instanceof Error ? err.message : 'Error en sincronización'],
-      };
-    } finally {
-      setIsSyncing(false);
-      await refreshState();
-      setTimeout(() => {
-        setSyncStatusMessage(null);
-      }, 5000);
-    }
+    };
+
+    const next = syncChainRef.current.then(run, run);
+    syncChainRef.current = next;
+    return next;
   }, [apiBaseUrl, refreshState]);
 
   const reloadDemoCatalog = useCallback(async () => {
@@ -663,6 +673,13 @@ export function usePos(apiBaseUrl = '') {
                 deviceToken: string;
                 tenantId: string;
               };
+              const prevTenantId = (await posDb.config.get('tenant_id'))?.value;
+              if (prevTenantId && prevTenantId !== data.tenantId) {
+                await posDb.catalog.clear();
+                await posDb.sales.clear();
+                await posDb.outbox.clear();
+                await posDb.config.delete('last_catalog_sync_at');
+              }
               await posDb.config.put({ key: 'device_id', value: data.deviceId });
               await posDb.config.put({ key: 'register_id', value: data.registerId });
               await posDb.config.put({ key: 'register_code', value: data.registerCode });

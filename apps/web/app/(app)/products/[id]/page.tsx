@@ -6,6 +6,8 @@ import { Pencil } from 'lucide-react';
 import { can } from '@corebiz/domain';
 import { withSession } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
+import { readAccountingConfigStatus, readProductTaxMap } from '@/api/accounting-mapping';
+import { listTaxRateConfigs } from '@/api/fiscal';
 import { setProductStatusAction } from '@/actions/sales';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { buttonClasses } from '@/ui/button';
@@ -53,10 +55,17 @@ export default async function ProductDetailPage({
   // The movements wait for the product: whether there is a ledger depends on it tracking
   // stock, and they need `stock:read`, which a role can lack while still seeing the product.
 
-  const [movements, accounts] = await Promise.all([
+  const [movements, accounts, taxRates, productTaxMap] = await Promise.all([
     product.trackStock ? queries.products.movements(product.id, 50) : Promise.resolve([]),
     can(ctx.actor, 'accounting:read') ? listAccounts().catch(() => []) : Promise.resolve([]),
+    listTaxRateConfigs().catch(() => []),
+    readProductTaxMap(ctx.tenantId),
   ]);
+  const accountingStatus = await readAccountingConfigStatus(ctx.tenantId, accounts, [
+    'inventoryAccountId',
+    'revenueAccountId',
+  ]);
+  const itemTaxPercentage = productTaxMap[product.id] ?? (product.taxable === false ? '0' : '');
   const canWrite = can(ctx.actor, 'product:write');
 
   return (
@@ -129,8 +138,24 @@ export default async function ProductDetailPage({
             revenueAccountId={product.revenueAccountId}
             inventoryAccountId={product.inventoryAccountId}
             trackStock={product.trackStock}
+            taxRates={taxRates.map((r) => ({
+              id: r.id,
+              label: r.name,
+              percentage: String(r.rateBp / 100),
+            }))}
+            defaultTaxPercentage={itemTaxPercentage}
             canWrite={canWrite}
           />
+        )}
+
+        {product.trackStock && !product.archived && canWrite && !accountingStatus.isConfigured && (
+          <Alert tone="warn" role="status">
+            Faltan cuentas contables configuradas ({accountingStatus.missingRoles.join(', ')}).{' '}
+            <Link href="/settings/accounting" className="font-semibold underline">
+              Configurá las cuentas de la empresa
+            </Link>{' '}
+            para que los ajustes de stock generen asientos automáticos en el Libro Diario.
+          </Alert>
         )}
 
         {product.trackStock && !product.archived && canWrite && (

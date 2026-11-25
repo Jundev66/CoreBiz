@@ -1,7 +1,10 @@
 import { ok, type Result } from '@corebiz/shared-kernel';
 import type { Account } from '../../domain/model/account';
 import type { AccountRepository } from '../../domain/port/accounting-repository';
-import { ChartOfAccountsRegistry } from '../../domain/templates/default-chart-of-accounts';
+import {
+  ChartOfAccountsRegistry,
+  deterministicAccountUuid,
+} from '../../domain/templates/default-chart-of-accounts';
 
 export interface ListAccountsQuery {
   readonly tenantId: string;
@@ -48,7 +51,7 @@ export class ListAccountsQueryHandler {
     if (query.fiscalCountry && ChartOfAccountsRegistry.has(query.fiscalCountry)) {
       const templates = ChartOfAccountsRegistry.get(query.fiscalCountry);
       const items: AccountViewItem[] = templates.map((tmpl) => ({
-        id: `tpl-${tmpl.code}`,
+        id: deterministicAccountUuid(query.tenantId, tmpl.code),
         code: tmpl.code,
         name: tmpl.name,
         category: tmpl.category,

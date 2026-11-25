@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { signIn } from '../session';
 
-test.describe('Chart of Accounts Tree, Flow Mapping, Item Accounts & Modern Shell', () => {
+test.describe('Chart of Accounts Tree, Flow Mapping, Item Accounts/Tax, Stock Accounting & Modern Shell', () => {
   test.beforeEach(async ({ page, context }) => {
     await signIn(page);
     await page.addInitScript(() => {
@@ -17,7 +17,7 @@ test.describe('Chart of Accounts Tree, Flow Mapping, Item Accounts & Modern Shel
     ]);
   });
 
-  test('creates branched sub-account, assigns it in company flow mapping, and edits accounts in product detail', async ({
+  test('navigates circular rail sidebar, creates root & subaccount, configures item tax & stock adjustment journal, and verifies POS sync', async ({
     page,
   }) => {
     const pageErrors: Error[] = [];
@@ -28,14 +28,37 @@ test.describe('Chart of Accounts Tree, Flow Mapping, Item Accounts & Modern Shel
     await expect(page.getByText(/venezuela · seniat/i)).toBeVisible();
     await expect(page.locator('#navbar-tenantId')).toBeVisible();
     await expect(page.getByLabel('Usuario y cuenta')).toBeVisible();
-    await expect(page.getByLabel('Filtrar navegación')).toBeVisible();
+
+    await expect(page.getByRole('tab', { name: 'Ventas' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Facturas de Venta' })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Ventas' }).click();
+    await expect(page.getByRole('link', { name: 'Facturas de Venta' })).toBeVisible();
+
+    const navSearch = page.getByLabel('Filtrar navegación');
+    await navSearch.fill('Libro Diario');
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Resultados de módulos' })
+        .getByRole('link', { name: /libro diario/i }),
+    ).toBeVisible();
+    await navSearch.fill('');
+    await page.getByRole('tab', { name: 'Contabilidad' }).click();
+
+    const ts = Date.now().toString().slice(-3);
+    const rootCode = `1.9.${ts}`;
+    const rootName = `Activos QA ${ts}`;
+
+    await page.getByRole('button', { name: /nueva cuenta/i }).click();
+    await expect(page.getByRole('heading', { name: /nueva cuenta contable/i })).toBeVisible();
+    await page.locator('input[name="code"]').fill(rootCode);
+    await page.locator('input[name="name"]').fill(rootName);
+    await page.getByRole('button', { name: /crear cuenta/i }).click();
+    await expect(page.getByText(rootName, { exact: true })).toBeVisible();
 
     const subButton = page.getByRole('button', { name: /\+ subcuenta/i }).first();
     await expect(subButton).toBeVisible();
     await subButton.click();
 
-    await expect(page.getByRole('heading', { name: /nueva cuenta contable/i })).toBeVisible();
-    const ts = Date.now().toString().slice(-3);
     const subCode = `1.1.01.${ts}`;
     const subName = `Banco QA ${ts}`;
 
@@ -61,15 +84,37 @@ test.describe('Chart of Accounts Tree, Flow Mapping, Item Accounts & Modern Shel
     const firstProductLink = page.locator('table tbody tr td a').first();
     await firstProductLink.click();
     await expect(page).toHaveURL(/\/products\/.+/);
+    const configuredProductId = page.url().split('/').pop()!;
 
-    await expect(page.getByRole('heading', { name: /cuentas contables del ítem/i })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /contabilidad e impuesto del ítem/i }),
+    ).toBeVisible();
     const revSelect = page.locator('select[name="revenueAccountId"]');
     const revOpt = await revSelect.locator('option').nth(1).getAttribute('value');
     if (revOpt) {
       await revSelect.selectOption(revOpt);
     }
-    await page.getByRole('button', { name: /guardar cuentas del ítem/i }).click();
-    await expect(page.getByText(/cuentas contables del ítem actualizadas/i)).toBeVisible();
+    await page.locator('select[name="taxPercentage"]').selectOption('0');
+    await page.getByRole('button', { name: /guardar configuración del ítem/i }).click();
+    await expect(
+      page.getByText(/configuración contable y fiscal del ítem actualizada/i),
+    ).toBeVisible();
+
+    await page.locator('input[name="newBalance"]').fill('50');
+    await page.locator('input[name="reason"]').fill(`Conteo QA ${ts}`);
+    await page.getByRole('button', { name: /guardar el ajuste/i }).click();
+    await expect(page.getByText(`Conteo QA ${ts}`)).toBeVisible();
+
+    await page.goto('/accounting/journal-entries');
+    await expect(page.getByText(new RegExp(`Conteo QA ${ts}`)).first()).toBeVisible();
+
+    await page.goto('/invoicing/new');
+    const productSelect = page.locator('select[name="line-product"]').first();
+    await productSelect.selectOption(configuredProductId);
+    const lineTax = page.locator('select[name="line-tax"]').first();
+    if ((await lineTax.count()) > 0) {
+      await expect(lineTax).toHaveValue('0');
+    }
 
     expect(pageErrors).toHaveLength(0);
   });

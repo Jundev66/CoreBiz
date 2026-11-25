@@ -1,10 +1,16 @@
+import Link from 'next/link';
 import { can } from '@corebiz/domain';
 import { apiForRequest } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
-import { readCompanyAccountMapping } from '@/api/accounting-mapping';
+import {
+  readAccountingConfigStatus,
+  readCompanyAccountMapping,
+  readProductTaxMap,
+} from '@/api/accounting-mapping';
 import { listInvoices } from '@/api/invoicing';
 import { listTaxRateConfigs } from '@/api/fiscal';
 import { Screen } from '@/ui/shell';
+import { Alert } from '@/ui/feedback';
 import { NoAccess } from '@/ui/no-access';
 import { InvoiceForm } from '@/ui/invoice-form';
 
@@ -22,15 +28,25 @@ export default async function NewInvoicePage() {
     );
   }
 
-  const [customers, products, accounts, existingInvoices, taxRates] = await Promise.all([
-    queries.customers.options(),
-    queries.products.options(),
-    listAccounts().catch(() => []),
-    listInvoices().catch(() => []),
-    listTaxRateConfigs().catch(() => []),
-  ]);
+  const [customers, products, accounts, existingInvoices, taxRates, productTaxMap] =
+    await Promise.all([
+      queries.customers.options(),
+      queries.products.options(),
+      listAccounts().catch(() => []),
+      listInvoices().catch(() => []),
+      listTaxRateConfigs().catch(() => []),
+      readProductTaxMap(ctx.tenantId),
+    ]);
 
-  const mapping = await readCompanyAccountMapping(ctx.tenantId, accounts);
+  const [mapping, accountingStatus] = await Promise.all([
+    readCompanyAccountMapping(ctx.tenantId, accounts),
+    readAccountingConfigStatus(ctx.tenantId, accounts, [
+      'cashAccountId',
+      'receivableAccountId',
+      'revenueAccountId',
+      'taxPayableAccountId',
+    ]),
+  ]);
   const accountDefaults = {
     receivableAccountId: mapping.receivableAccountId,
     revenueAccountId: mapping.revenueAccountId,
@@ -49,6 +65,15 @@ export default async function NewInvoicePage() {
       subtitle="Emisión comercial con asiento contable automático en Libro Diario"
       back={{ href: '/invoicing', label: 'Facturas de Venta' }}
     >
+      {!accountingStatus.isConfigured && (
+        <Alert tone="warn" role="alert" className="mb-6">
+          Faltan cuentas contables configuradas para emitir facturas de venta (
+          {accountingStatus.missingRoles.join(', ')}).{' '}
+          <Link href="/settings/accounting" className="font-semibold underline">
+            Configurar Cuentas Contables
+          </Link>
+        </Alert>
+      )}
       <InvoiceForm
         customers={customers.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` }))}
         products={products.map((p) => ({
@@ -56,6 +81,7 @@ export default async function NewInvoicePage() {
           label: `${p.sku} · ${p.name}`,
           name: p.name,
           price: p.price,
+          taxPercentage: productTaxMap[p.id] ?? null,
         }))}
         defaultDocumentNumber={`FAC-${nextNum}`}
         defaultCurrency={ctx.settings.baseCurrency}
@@ -66,6 +92,7 @@ export default async function NewInvoicePage() {
           percentage: String(r.rateBp / 100),
         }))}
         accounts={accountDefaults}
+        accountingConfigured={accountingStatus.isConfigured}
       />
     </Screen>
   );

@@ -3,7 +3,10 @@ import { Account } from '../../domain/model/account';
 import { AccountCode } from '../../domain/model/account-code';
 import type { AccountCategory } from '../../domain/model/account-type';
 import type { AccountRepository } from '../../domain/port/accounting-repository';
-import { ChartOfAccountsRegistry } from '../../domain/templates/default-chart-of-accounts';
+import {
+  ChartOfAccountsRegistry,
+  deterministicAccountUuid,
+} from '../../domain/templates/default-chart-of-accounts';
 
 export interface CreateAccountCommand {
   readonly id: string;
@@ -48,7 +51,7 @@ export class CreateAccountCommandHandler {
         if (!tmplCode.ok) continue;
         await this.accountRepository.save(
           new Account({
-            id: `tpl-${item.code}`,
+            id: deterministicAccountUuid(command.tenantId, item.code),
             tenantId: command.tenantId,
             code: tmplCode.value,
             name: item.name,

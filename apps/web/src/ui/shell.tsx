@@ -199,7 +199,7 @@ export async function AppFrame({
 
       <aside
         data-surface="nav"
-        className="hidden border-r border-nav-line bg-nav lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col"
+        className="hidden border-r border-nav-line bg-nav lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:shrink-0 lg:flex-col"
       >
         <div className="flex h-16 items-center px-5">
           <Link href="/" className="rounded-control">

@@ -13,28 +13,49 @@ export interface CompanyAccountMapping {
   readonly cogsAccountId: string;
 }
 
+export interface AccountingConfigStatus {
+  readonly isConfigured: boolean;
+  readonly hasExplicitMapping: boolean;
+  readonly missingRoles: readonly string[];
+}
+
 export function accountMappingCookieName(tenantId: string): string {
   return `corebiz_acc_map_${tenantId}`;
+}
+
+export function productTaxCookieName(tenantId: string): string {
+  return `corebiz_prod_tax_${tenantId}`;
+}
+
+export async function readProductTaxMap(tenantId: string): Promise<Record<string, string>> {
+  try {
+    const store = await cookies();
+    const raw = store.get(productTaxCookieName(tenantId))?.value;
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, string>;
+  } catch {
+    return {};
+  }
 }
 
 export async function readCompanyAccountMapping(
   tenantId: string,
   accounts: readonly AccountApiItem[],
 ): Promise<CompanyAccountMapping> {
-  const findAccount = (codes: string[], fallbackCategory: string, fallbackId: string) =>
+  const findAccount = (codes: string[], fallbackCategory: string) =>
     accounts.find((a) => codes.includes(a.code))?.id ??
     accounts.find((a) => a.category === fallbackCategory)?.id ??
-    fallbackId;
+    '';
 
   const defaults: CompanyAccountMapping = {
-    cashAccountId: findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01'),
-    receivableAccountId: findAccount(['1.1.02', '1200'], 'ASSET', 'tpl-1.1.02'),
-    inventoryAccountId: findAccount(['1.1.03', '1400'], 'ASSET', 'tpl-1.1.03'),
-    payableAccountId: findAccount(['2.1.01', '2010'], 'LIABILITY', 'tpl-2.1.01'),
-    taxPayableAccountId: findAccount(['2.1.02', '2050'], 'LIABILITY', 'tpl-2.1.02'),
-    taxCreditAccountId: findAccount(['1.1.05', '2.1.02', '2050'], 'LIABILITY', 'tpl-2.1.02'),
-    revenueAccountId: findAccount(['4.1.01', '4010'], 'REVENUE', 'tpl-4.1.01'),
-    cogsAccountId: findAccount(['5.1.01', '5010'], 'COGS', 'tpl-5.1.01'),
+    cashAccountId: findAccount(['1.1.01', '1010'], 'ASSET'),
+    receivableAccountId: findAccount(['1.1.02', '1200'], 'ASSET'),
+    inventoryAccountId: findAccount(['1.1.03', '1400'], 'ASSET'),
+    payableAccountId: findAccount(['2.1.01', '2010'], 'LIABILITY'),
+    taxPayableAccountId: findAccount(['2.1.02', '2050'], 'LIABILITY'),
+    taxCreditAccountId: findAccount(['1.1.05', '2.1.02', '2050'], 'LIABILITY'),
+    revenueAccountId: findAccount(['4.1.01', '4010'], 'REVENUE'),
+    cogsAccountId: findAccount(['5.1.01', '5010'], 'COGS'),
   };
 
   try {
@@ -55,4 +76,40 @@ export async function readCompanyAccountMapping(
   } catch {
     return defaults;
   }
+}
+
+export async function readAccountingConfigStatus(
+  tenantId: string,
+  accounts: readonly AccountApiItem[],
+  requiredKeys: readonly (keyof CompanyAccountMapping)[],
+): Promise<AccountingConfigStatus> {
+  const mapping = await readCompanyAccountMapping(tenantId, accounts);
+  const store = await cookies();
+  const hasExplicitMapping = Boolean(store.get(accountMappingCookieName(tenantId))?.value);
+  const validIds = new Set(accounts.map((a) => a.id));
+
+  const roleLabels: Record<keyof CompanyAccountMapping, string> = {
+    cashAccountId: 'Caja / Bancos',
+    receivableAccountId: 'Cuentas por Cobrar',
+    inventoryAccountId: 'Inventario',
+    payableAccountId: 'Cuentas por Pagar',
+    taxPayableAccountId: 'IVA Débito Fiscal',
+    taxCreditAccountId: 'IVA Crédito Fiscal',
+    revenueAccountId: 'Ingresos por Ventas',
+    cogsAccountId: 'Costo de Ventas',
+  };
+
+  const missingRoles: string[] = [];
+  for (const key of requiredKeys) {
+    const id = mapping[key];
+    if (!id || !validIds.has(id)) {
+      missingRoles.push(roleLabels[key]);
+    }
+  }
+
+  return {
+    isConfigured: accounts.length > 0 && missingRoles.length === 0,
+    hasExplicitMapping,
+    missingRoles,
+  };
 }

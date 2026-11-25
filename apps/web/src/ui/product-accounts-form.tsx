@@ -11,12 +11,20 @@ import { Card, SectionTitle } from '@/ui/primitives';
 
 const INITIAL: ActionState = { status: 'idle' };
 
+export interface ProductTaxRateOption {
+  readonly id: string;
+  readonly label: string;
+  readonly percentage: string;
+}
+
 export function ProductAccountsForm({
   productId,
   accounts,
   revenueAccountId,
   inventoryAccountId,
   trackStock,
+  taxRates = [],
+  defaultTaxPercentage = '',
   canWrite,
 }: {
   readonly productId: string;
@@ -24,6 +32,8 @@ export function ProductAccountsForm({
   readonly revenueAccountId: string | null;
   readonly inventoryAccountId: string | null;
   readonly trackStock: boolean;
+  readonly taxRates?: readonly ProductTaxRateOption[];
+  readonly defaultTaxPercentage?: string;
   readonly canWrite: boolean;
 }) {
   const [state, formAction, pending] = useActionState(updateProductAccountsAction, INITIAL);
@@ -33,23 +43,23 @@ export function ProductAccountsForm({
 
   return (
     <section>
-      <SectionTitle>Cuentas Contables del Ítem</SectionTitle>
+      <SectionTitle>Contabilidad e Impuesto del Ítem</SectionTitle>
       <Card className="p-5 sm:p-6">
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="productId" value={productId} />
 
           {state.status === 'success' && (
             <Alert tone="success" role="status">
-              Cuentas contables del ítem actualizadas.
+              Configuración contable y fiscal del ítem actualizada.
             </Alert>
           )}
           {state.status === 'error' && (
             <Alert tone="danger" role="alert">
-              No se pudieron actualizar las cuentas contables del ítem.
+              No se pudo actualizar la configuración del ítem.
             </Alert>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label htmlFor="item-revenue-account" className={LABEL_CLASSES}>
                 Cuenta de Ingresos (Ventas)
@@ -91,12 +101,35 @@ export function ProductAccountsForm({
                 </select>
               </div>
             )}
+
+            <div>
+              <label htmlFor="item-tax-percentage" className={LABEL_CLASSES}>
+                Impuesto del Ítem (Alícuota)
+              </label>
+              <select
+                id="item-tax-percentage"
+                name="taxPercentage"
+                defaultValue={defaultTaxPercentage}
+                disabled={!canWrite}
+                className={`mt-1.5 ${CONTROL_CLASSES}`}
+              >
+                <option value="">Sin impuesto específico (seleccionar en factura)</option>
+                <option value="0">Exento (0%)</option>
+                {taxRates
+                  .filter((tr) => tr.percentage !== '0')
+                  .map((tr) => (
+                    <option key={tr.id} value={tr.percentage}>
+                      {tr.label} ({tr.percentage}%)
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           {canWrite && (
             <div className="flex justify-end border-t border-line pt-4">
               <button type="submit" disabled={pending} className={buttonClasses({ size: 'sm' })}>
-                {pending ? 'Guardando...' : 'Guardar Cuentas del Ítem'}
+                {pending ? 'Guardando...' : 'Guardar Configuración del Ítem'}
               </button>
             </div>
           )}

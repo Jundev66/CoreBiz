@@ -151,20 +151,45 @@ export class ChartOfAccountsRegistry {
   }
 }
 
+export function deterministicAccountUuid(tenantId: string, code: string): string {
+  const input = `${tenantId}:${code}`;
+  const words: number[] = [];
+  for (let pass = 0; pass < 4; pass++) {
+    let hash = (0x811c9dc5 ^ (pass * 0x9e3779b9)) >>> 0;
+    for (let i = 0; i < input.length; i++) {
+      hash ^= input.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    words.push(hash);
+  }
+  const w0 = (words[0] ?? 0).toString(16).padStart(8, '0');
+  const w1 = (words[1] ?? 0).toString(16).padStart(8, '0');
+  const w2 = (words[2] ?? 0).toString(16).padStart(8, '0');
+  const w3 = (words[3] ?? 0).toString(16).padStart(8, '0');
+  const raw = `${w0}${w1}${w2}${w3}`;
+  const part1 = raw.slice(0, 8);
+  const part2 = raw.slice(8, 12);
+  const part3 = `4${raw.slice(13, 16)}`;
+  const variantNibble = ['8', '9', 'a', 'b'][(words[2] ?? 0) & 3] ?? '8';
+  const part4 = `${variantNibble}${raw.slice(17, 20)}`;
+  const part5 = raw.slice(20, 32);
+  return `${part1}-${part2}-${part3}-${part4}-${part5}`;
+}
+
 export function createDefaultAccountsForJurisdiction(
   tenantId: string,
   jurisdiction: string,
 ): readonly Account[] {
   const template = ChartOfAccountsRegistry.get(jurisdiction);
 
-  return template.map((item, index) => {
+  return template.map((item) => {
     const codeResult = AccountCode.create(item.code);
     if (!codeResult.ok) {
       throw new Error(`Invalid code in template: ${item.code}`);
     }
 
     return new Account({
-      id: `${tenantId}-acc-${index + 1}`,
+      id: deterministicAccountUuid(tenantId, item.code),
       tenantId,
       code: codeResult.value,
       name: item.name,
