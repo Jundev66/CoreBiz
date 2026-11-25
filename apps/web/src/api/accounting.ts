@@ -1,5 +1,6 @@
 import 'server-only';
 import { get } from './client';
+import type { AgingReportResponse } from '@corebiz/contracts';
 
 export interface AccountApiItem {
   readonly id: string;
@@ -79,4 +80,30 @@ export async function listJournalEntries(
     `/v1/accounting/journal-entries${query}`,
   );
   return response.entries;
+}
+
+export async function getArAging(
+  asOfDate?: string,
+  customerId?: string,
+  currency?: string,
+): Promise<AgingReportResponse | null> {
+  const params = new URLSearchParams();
+  if (asOfDate) params.set('asOfDate', asOfDate);
+  if (customerId) params.set('customerId', customerId);
+  if (currency) params.set('currency', currency);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return get<AgingReportResponse>(`/v1/accounting/aging/ar${query}`);
+}
+
+export async function getApAging(
+  asOfDate?: string,
+  supplierId?: string,
+  currency?: string,
+): Promise<AgingReportResponse | null> {
+  const params = new URLSearchParams();
+  if (asOfDate) params.set('asOfDate', asOfDate);
+  if (supplierId) params.set('supplierId', supplierId);
+  if (currency) params.set('currency', currency);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return get<AgingReportResponse>(`/v1/accounting/aging/ap${query}`);
 }

@@ -75,6 +75,11 @@ export async function AppFrame({
         icon: 'cart' as const,
         items: [
           { href: '/invoicing', label: 'Facturación Fiscal', icon: 'fileText' as const },
+          {
+            href: '/invoicing/credit-notes',
+            label: 'Notas de Crédito & Débito',
+            icon: 'fileText' as const,
+          },
           { href: '/pos-sales', label: 'Tickets POS (Mostrador)', icon: 'receipt' as const },
           { href: '/delivery-notes', label: 'Notas de Entrega', icon: 'fileText' as const },
           { href: '/payments', label: 'Cobros', icon: 'banknote' as const },
@@ -101,6 +106,11 @@ export async function AppFrame({
             icon: 'building' as const,
           },
           {
+            href: '/accounting/aging',
+            label: 'Antigüedad de Deuda (Aging)',
+            icon: 'chart' as const,
+          },
+          {
             href: '/accounting/forex',
             label: 'Reexpresión (Forex)',
             icon: 'chart' as const,
@@ -122,6 +132,8 @@ export async function AppFrame({
           },
           { href: '/fiscal/sales-book', label: 'Libro de Ventas', icon: 'fileText' as const },
           { href: '/fiscal/purchases-book', label: 'Libro de Compras', icon: 'truck' as const },
+          { href: '/fiscal/withholdings', label: 'Retenciones Fiscales', icon: 'receipt' as const },
+          { href: '/fiscal/sequences', label: 'Rangos y Vencimientos', icon: 'fileText' as const },
           { href: '/fiscal/us-sales-tax', label: 'Sales Tax US', icon: 'chart' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },
@@ -134,6 +146,8 @@ export async function AppFrame({
         icon: 'package' as const,
         items: [
           { href: '/products', label: 'Productos & Stock', icon: 'package' as const },
+          { href: '/inventory/transfers', label: 'Depósitos & Traslados', icon: 'truck' as const },
+          { href: '/inventory/audits', label: 'Tomas Físicas & Mermas', icon: 'package' as const },
           { href: '/conflicts', label: 'Inconsistencias POS', icon: 'alert' as const },
         ].filter(({ href }) => canOpen(ctx.actor, href)),
       },

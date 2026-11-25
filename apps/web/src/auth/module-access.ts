@@ -35,9 +35,15 @@ export const MODULE_PERMISSION = {
   '/accounting/drawings': 'accounting:read',
   '/accounting/expenses': 'accounting:read',
   '/invoicing': 'invoice:read',
+  '/invoicing/credit-notes': 'invoice:read',
   '/fiscal/sales-book': 'accounting:read',
   '/fiscal/purchases-book': 'accounting:read',
   '/fiscal/us-sales-tax': 'accounting:read',
+  '/fiscal/withholdings': 'accounting:read',
+  '/fiscal/sequences': 'accounting:read',
+  '/accounting/aging': 'accounting:read',
+  '/inventory/transfers': 'stock:read',
+  '/inventory/audits': 'stock:read',
 } as const satisfies Readonly<Record<string, Permission>>;
 
 export type ModuleRoute = keyof typeof MODULE_PERMISSION;

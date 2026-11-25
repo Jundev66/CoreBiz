@@ -1,5 +1,6 @@
 import 'server-only';
 import { get } from './client';
+import type { CreditNoteResponse, DebitNoteResponse } from '@corebiz/contracts';
 
 export interface InvoiceApiItem {
   readonly id: string;
@@ -20,5 +21,29 @@ export interface InvoiceApiItem {
 
 export async function listInvoices(): Promise<readonly InvoiceApiItem[]> {
   const response = await get<{ invoices: readonly InvoiceApiItem[] }>('/v1/invoicing/invoices');
-  return response.invoices;
+  return response?.invoices ?? [];
+}
+
+export async function listCreditNotes(
+  affectedInvoiceId?: string,
+): Promise<readonly CreditNoteResponse[]> {
+  const query = affectedInvoiceId
+    ? `?affectedInvoiceId=${encodeURIComponent(affectedInvoiceId)}`
+    : '';
+  const response = await get<{ creditNotes: readonly CreditNoteResponse[] }>(
+    `/v1/invoicing/credit-notes${query}`,
+  );
+  return response?.creditNotes ?? [];
+}
+
+export async function listDebitNotes(
+  affectedInvoiceId?: string,
+): Promise<readonly DebitNoteResponse[]> {
+  const query = affectedInvoiceId
+    ? `?affectedInvoiceId=${encodeURIComponent(affectedInvoiceId)}`
+    : '';
+  const response = await get<{ debitNotes: readonly DebitNoteResponse[] }>(
+    `/v1/invoicing/debit-notes${query}`,
+  );
+  return response?.debitNotes ?? [];
 }
