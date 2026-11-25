@@ -1,13 +1,12 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   AlertTriangle,
   Banknote,
   BarChart3,
   Building2,
-  ChevronDown,
   FileText,
   LayoutDashboard,
   Package,
@@ -62,74 +61,73 @@ interface SidebarNavProps {
 
 export function SidebarNav({ items }: SidebarNavProps) {
   const pathname = usePathname();
-
-  const findActiveGroupId = (): string | null => {
-    for (const item of items) {
-      if (item.type === 'group') {
-        const hasActiveChild = item.group.items.some((sub) =>
-          sub.exact
-            ? pathname === sub.href
-            : pathname === sub.href || pathname.startsWith(`${sub.href}/`),
-        );
-        if (hasActiveChild) return item.group.id;
-      }
-    }
-    return null;
-  };
-
-  const [openGroup, setOpenGroup] = useState<string | null>(findActiveGroupId);
   const [navFilter, setNavFilter] = useState('');
-
-  useEffect(() => {
-    const active = findActiveGroupId();
-    if (active) {
-      setOpenGroup(active);
-    }
-  }, [pathname]);
-
-  const toggleGroup = (id: string) => {
-    setOpenGroup((prev) => (prev === id ? null : id));
-  };
-
   const q = navFilter.trim().toLowerCase();
 
+  const renderLeaf = (item: NavLeafItem) => {
+    const Icon = ICON_MAP[item.icon] ?? LayoutDashboard;
+    const isActive = item.exact
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+    return (
+      <NavLink
+        key={item.href}
+        href={item.href}
+        {...(item.exact === true ? { exact: true } : {})}
+        hint="inline"
+        className={`group relative flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition-all ${
+          isActive ? 'bg-brand/12 text-ink font-semibold shadow-2xs' : ''
+        }`}
+        activeClassName="bg-brand/12 text-ink font-semibold"
+        idleClassName="text-nav-muted hover:bg-nav-raised/80 hover:text-nav-ink"
+      >
+        {isActive && (
+          <span
+            aria-hidden="true"
+            className="absolute top-1.5 bottom-1.5 left-0 w-1 rounded-r-full bg-brand"
+          />
+        )}
+        <span
+          className={`grid size-6 shrink-0 place-items-center rounded-lg transition-colors ${
+            isActive
+              ? 'bg-brand text-brand-ink shadow-xs'
+              : 'bg-nav-raised/70 text-nav-muted group-hover:bg-nav-raised group-hover:text-nav-ink'
+          }`}
+        >
+          <Icon
+            aria-hidden="true"
+            className={`size-3.5 ${isActive ? 'text-current' : NAV_ICON[moduleTone(item.href)]}`}
+            strokeWidth={2}
+          />
+        </span>
+        <span className="truncate">{item.label}</span>
+      </NavLink>
+    );
+  };
+
   return (
-    <div className="flex flex-col gap-2 px-3 py-2">
+    <div className="flex flex-col gap-4 px-3 py-3">
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-nav-muted" />
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-nav-muted" />
         <input
           type="search"
           value={navFilter}
           onChange={(e) => setNavFilter(e.target.value)}
-          placeholder="Ir a módulo..."
+          placeholder="Buscar módulo..."
           aria-label="Filtrar navegación"
-          className="h-8 w-full rounded-control border border-nav-line/80 bg-nav-raised/60 pr-2.5 pl-8 text-xs text-nav-ink placeholder:text-nav-muted/80 focus:border-brand focus:outline-none"
+          className="h-8 w-full rounded-xl border border-nav-line/70 bg-nav-raised/50 pr-3 pl-8 text-xs text-nav-ink placeholder:text-nav-muted/70 transition focus:border-brand focus:bg-surface focus:outline-none"
         />
       </div>
 
-      <nav className="flex flex-col gap-1" aria-label="Navegación principal">
+      <nav className="flex flex-col gap-4" aria-label="Navegación principal">
         {items.map((entry) => {
           if (entry.type === 'link') {
-            const item = entry.item;
-            if (q && !item.label.toLowerCase().includes(q)) return null;
-            const Icon = ICON_MAP[item.icon] ?? LayoutDashboard;
+            if (q && !entry.item.label.toLowerCase().includes(q)) return null;
             return (
-              <NavLink
-                key={item.href}
-                href={item.href}
-                {...(item.exact === true ? { exact: true } : {})}
-                hint="inline"
-                className="group flex items-center gap-3 rounded-control px-3 py-2 text-sm font-medium transition-all"
-                activeClassName="bg-brand text-brand-ink shadow-xs"
-                idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
-              >
-                <Icon
-                  aria-hidden="true"
-                  className={`size-[18px] shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(item.href)]}`}
-                  strokeWidth={1.75}
-                />
-                <span>{item.label}</span>
-              </NavLink>
+              <div key={entry.item.href} className="flex flex-col gap-1">
+                {renderLeaf(entry.item)}
+              </div>
             );
           }
 
@@ -143,65 +141,12 @@ export function SidebarNav({ items }: SidebarNavProps) {
 
           if (q && visibleItems.length === 0) return null;
 
-          const isOpen = q ? true : openGroup === group.id;
-          const isGroupActive = group.items.some((sub) =>
-            sub.exact
-              ? pathname === sub.href
-              : pathname === sub.href || pathname.startsWith(`${sub.href}/`),
-          );
-          const GroupIcon = ICON_MAP[group.icon] ?? LayoutDashboard;
-
           return (
-            <div key={group.id} className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                className={`group flex w-full items-center justify-between rounded-control px-3 py-2 text-sm font-medium transition-colors ${
-                  isGroupActive
-                    ? 'bg-nav-raised/70 text-nav-ink font-semibold'
-                    : 'text-nav-muted hover:bg-nav-raised hover:text-nav-ink'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <GroupIcon
-                    aria-hidden="true"
-                    className={`size-[18px] shrink-0 ${isGroupActive ? 'text-brand' : 'text-nav-muted group-hover:text-nav-ink'}`}
-                    strokeWidth={1.75}
-                  />
-                  <span>{group.label}</span>
-                </div>
-                <ChevronDown
-                  className={`size-4 text-nav-muted transition-transform duration-200 ${
-                    isOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {isOpen && (
-                <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-nav-line/70 pl-2.5">
-                  {visibleItems.map((subItem) => {
-                    const SubIcon = ICON_MAP[subItem.icon] ?? LayoutDashboard;
-                    return (
-                      <NavLink
-                        key={subItem.href}
-                        href={subItem.href}
-                        {...(subItem.exact === true ? { exact: true } : {})}
-                        hint="inline"
-                        className="group flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-xs font-medium transition-colors"
-                        activeClassName="bg-brand text-brand-ink font-semibold shadow-xs"
-                        idleClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-ink"
-                      >
-                        <SubIcon
-                          aria-hidden="true"
-                          className={`size-3.5 shrink-0 group-aria-[current=page]:text-current ${NAV_ICON[moduleTone(subItem.href)]}`}
-                          strokeWidth={1.75}
-                        />
-                        <span>{subItem.label}</span>
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
+            <div key={group.id} className="flex flex-col gap-1">
+              <div className="px-2.5 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-nav-muted/70">
+                {group.label}
+              </div>
+              <div className="flex flex-col gap-0.5">{visibleItems.map(renderLeaf)}</div>
             </div>
           );
         })}

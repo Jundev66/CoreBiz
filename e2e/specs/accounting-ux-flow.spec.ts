@@ -26,6 +26,9 @@ test.describe('Chart of Accounts Tree, Flow Mapping, Item Accounts & Modern Shel
     await page.goto('/accounting');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/plan de cuentas/i);
     await expect(page.getByText(/venezuela · seniat/i)).toBeVisible();
+    await expect(page.locator('#navbar-tenantId')).toBeVisible();
+    await expect(page.getByLabel('Usuario y cuenta')).toBeVisible();
+    await expect(page.getByLabel('Filtrar navegación')).toBeVisible();
 
     const subButton = page.getByRole('button', { name: /\+ subcuenta/i }).first();
     await expect(subButton).toBeVisible();

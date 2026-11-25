@@ -225,7 +225,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
         revenueAccountId?: string | undefined;
       }[];
     }) => {
-      const existing = await runtime.invoices.findById(event.sale.id, ctx.tenantId);
+      const existing = await runtime.invoices.findById(ctx.tenantId, event.sale.id);
       if (existing) return;
 
       const accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
@@ -239,7 +239,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       const taxPayableAccountId = findAccount(['2.1.02', '2050'], 'LIABILITY', 'tpl-2.1.02');
       const cashAccountId = findAccount(['1.1.01', '1010'], 'ASSET', 'tpl-1.1.01');
 
-      await issueInvoice.execute({
+      const invoiceRes = await issueInvoice.execute({
         id: event.sale.id,
         tenantId: ctx.tenantId,
         customerId: event.customerId,
@@ -263,6 +263,9 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
           revenueAccountId: l.revenueAccountId,
         })),
       });
+      if (!invoiceRes.ok) {
+        console.error('[POS -> IssueInvoice] Failed:', invoiceRes.error);
+      }
     },
   };
 

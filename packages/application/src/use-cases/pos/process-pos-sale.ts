@@ -171,7 +171,7 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
         }
       }
 
-      let resolvedCustomerId = 'CONSUMIDOR-FINAL';
+      let resolvedCustomerId = '';
 
       if (
         input.customerDoc &&
@@ -208,6 +208,35 @@ export function makeProcessPosSale(deps: ProcessPosSaleDeps) {
             }
           }
         }
+      }
+
+      if (!resolvedCustomerId && repos.customers) {
+        const existingCf = await repos.customers.findByCode('CLI-CF');
+        if (existingCf) {
+          resolvedCustomerId = existingCf.id;
+        } else {
+          const cfResult = Customer.create({
+            id: asId<CustomerId>(deps.ids.next()),
+            tenantId: deps.ctx.tenantId,
+            code: 'CLI-CF',
+            name: input.customerName?.trim() || 'Consumidor Final',
+            taxId: 'V-00000000',
+            createdAt: deps.clock.now(),
+          });
+          if (cfResult.ok) {
+            try {
+              await repos.customers.save(cfResult.value);
+              resolvedCustomerId = cfResult.value.id;
+            } catch {
+              const retryCf = await repos.customers.findByCode('CLI-CF');
+              resolvedCustomerId = retryCf?.id ?? cfResult.value.id;
+            }
+          }
+        }
+      }
+
+      if (!resolvedCustomerId) {
+        resolvedCustomerId = 'CONSUMIDOR-FINAL';
       }
 
       const saleId: PosSaleId = input.saleId

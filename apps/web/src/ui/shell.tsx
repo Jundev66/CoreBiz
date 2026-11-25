@@ -211,24 +211,23 @@ export async function AppFrame({
           <SidebarNav items={sidebarItems} />
         </div>
 
-        <div className="mt-auto border-t border-line p-4 space-y-3">
+        <div className="mt-auto border-t border-nav-line/70 p-3">
           <a
             href={getPosTerminalUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-control bg-brand-soft px-3 py-2 text-xs font-semibold text-brand transition hover:bg-brand/20"
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
           >
             <ShoppingCart className="size-4" />
             Terminal POS PWA
           </a>
-          <AccountArea session={session} activeTenantId={ctx.tenantId} />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header
           data-surface="nav"
-          className="sticky top-0 z-30 hidden h-14 items-center justify-between gap-4 border-b border-nav-line/80 bg-nav/90 px-8 backdrop-blur-md lg:flex"
+          className="sticky top-0 z-30 hidden h-14 items-center justify-between gap-4 border-b border-nav-line/80 bg-nav/90 px-6 backdrop-blur-md lg:flex"
         >
           <div className="flex items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-surface px-2.5 py-1 font-medium text-ink">
@@ -241,11 +240,11 @@ export async function AppFrame({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {can(ctx.actor, 'invoice:write') && (
               <Link
                 href="/invoicing/new"
-                className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
               >
                 + Factura Venta
               </Link>
@@ -253,19 +252,59 @@ export async function AppFrame({
             {can(ctx.actor, 'purchase:receive') && (
               <Link
                 href="/purchases/new"
-                className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
               >
                 + Factura Compra
               </Link>
             )}
-            {can(ctx.actor, 'accounting:read') && (
-              <Link
-                href="/accounting"
-                className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
-              >
-                Plan de Cuentas
-              </Link>
+
+            {session.memberships.length > 0 && (
+              <form action={switchTenantAction} className="flex items-center gap-1.5">
+                <label htmlFor="navbar-tenantId" className="sr-only">
+                  {t('auth.switchBusiness')}
+                </label>
+                <select
+                  id="navbar-tenantId"
+                  name="tenantId"
+                  defaultValue={ctx.tenantId}
+                  aria-label="Cambiar de empresa"
+                  className="h-8 max-w-[190px] rounded-xl border border-line bg-surface px-2.5 text-xs font-medium text-ink focus:border-brand focus:outline-none"
+                >
+                  {session.memberships.map((m) => (
+                    <option key={m.tenantId} value={m.tenantId}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                {session.memberships.length > 1 && (
+                  <button
+                    type="submit"
+                    className={buttonClasses({ variant: 'secondary', size: 'sm' })}
+                  >
+                    {t('common.change')}
+                  </button>
+                )}
+              </form>
             )}
+
+            <NavDetails className="relative">
+              <summary
+                aria-label="Usuario y cuenta"
+                className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-xl border border-line bg-surface px-2.5 text-xs font-medium text-ink transition hover:bg-subtle [&::-webkit-details-marker]:hidden"
+              >
+                <span className="grid size-5 place-items-center rounded-full bg-brand-soft text-[11px] font-bold text-brand">
+                  {session.email !== null ? (
+                    session.email.charAt(0).toUpperCase()
+                  ) : (
+                    <UserRound aria-hidden="true" className="size-3" />
+                  )}
+                </span>
+                <span className="max-w-[140px] truncate">{session.email ?? 'Usuario'}</span>
+              </summary>
+              <div className="absolute top-[calc(100%+0.5rem)] right-0 z-40 w-64 rounded-card border border-line bg-surface p-4 shadow-lg">
+                <AccountArea session={session} activeTenantId={ctx.tenantId} />
+              </div>
+            </NavDetails>
           </div>
         </header>
 
