@@ -32,6 +32,13 @@ export class ApplyPaymentController {
     const amountParsed = Money.of(body.amount, body.currency);
     const amountMinor = amountParsed.ok ? amountParsed.value.minorUnits : 0n;
 
+    const issueExchangeRate = body.issueExchangeRate
+      ? Number.parseFloat(body.issueExchangeRate.replace(',', '.'))
+      : undefined;
+    const paymentExchangeRate = body.paymentExchangeRate
+      ? Number.parseFloat(body.paymentExchangeRate.replace(',', '.'))
+      : undefined;
+
     const result = await this.useCases.applyInvoicePayment.execute({
       tenantId: this.ctx.tenantId,
       invoiceId,
@@ -41,12 +48,22 @@ export class ApplyPaymentController {
       cashAccountId: body.cashAccountId,
       receivableAccountId: body.receivableAccountId,
       reference: body.reference,
+      issueExchangeRate:
+        issueExchangeRate !== undefined && Number.isFinite(issueExchangeRate)
+          ? issueExchangeRate
+          : undefined,
+      paymentExchangeRate:
+        paymentExchangeRate !== undefined && Number.isFinite(paymentExchangeRate)
+          ? paymentExchangeRate
+          : undefined,
+      fxGainLossAccountId: body.fxGainLossAccountId,
     });
 
     const val = unwrapOrThrow(result);
     return {
       invoiceId: val.invoiceId,
       remainingBalanceMinor: val.remainingBalanceMinor.toString(),
+      fxDifferenceMinor: val.fxDifferenceMinor.toString(),
     };
   }
 }

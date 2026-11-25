@@ -6,7 +6,7 @@ import { Badge } from '@/ui/feedback';
 import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
-import { Plus, Receipt, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
+import { Banknote, Plus, Receipt, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
 import { getPosTerminalUrl } from '@/ui/pos-link';
 
 function formatMinor(minorStr: string, currency = 'USD'): string {
@@ -140,13 +140,24 @@ export default async function InvoicingPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/delivery-notes/new?customerId=${encodeURIComponent(inv.customerId)}`}
-                    className="inline-flex items-center gap-1 rounded-control border border-line px-2 py-1 text-xs font-medium text-ink hover:bg-subtle"
-                  >
-                    <Truck className="size-3" />
-                    <span>Nota de Entrega</span>
-                  </Link>
+                  <div className="flex items-center justify-end gap-1.5">
+                    {(inv.status === 'ISSUED' || inv.status === 'PARTIALLY_PAID') && (
+                      <Link
+                        href={`/invoicing/${inv.id}/collect`}
+                        className="inline-flex items-center gap-1 rounded-control bg-brand-soft px-2 py-1 text-xs font-semibold text-brand hover:bg-brand/20"
+                      >
+                        <Banknote className="size-3" />
+                        <span>Cobrar</span>
+                      </Link>
+                    )}
+                    <Link
+                      href={`/delivery-notes/new?customerId=${encodeURIComponent(inv.customerId)}`}
+                      className="inline-flex items-center gap-1 rounded-control border border-line px-2 py-1 text-xs font-medium text-ink hover:bg-subtle"
+                    >
+                      <Truck className="size-3" />
+                      <span>Nota de Entrega</span>
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

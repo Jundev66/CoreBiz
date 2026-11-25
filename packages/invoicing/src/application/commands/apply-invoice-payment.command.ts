@@ -15,6 +15,9 @@ export interface ApplyInvoicePaymentCommand {
   readonly cashAccountId: string;
   readonly receivableAccountId: string;
   readonly reference?: string | undefined;
+  readonly issueExchangeRate?: number | undefined;
+  readonly paymentExchangeRate?: number | undefined;
+  readonly fxGainLossAccountId?: string | undefined;
 }
 
 export interface ApplyInvoicePaymentError {
@@ -31,7 +34,10 @@ export class ApplyInvoicePaymentCommandHandler {
   async execute(
     command: ApplyInvoicePaymentCommand,
   ): Promise<
-    Result<{ invoiceId: string; remainingBalanceMinor: bigint }, ApplyInvoicePaymentError>
+    Result<
+      { invoiceId: string; remainingBalanceMinor: bigint; fxDifferenceMinor: bigint },
+      ApplyInvoicePaymentError
+    >
   > {
     const invoice = await this.invoiceRepository.findById(command.tenantId, command.invoiceId);
     if (!invoice) {
@@ -46,18 +52,31 @@ export class ApplyInvoicePaymentCommandHandler {
 
     const updatedInvoice = paidResult.value;
 
+    const issueRate = command.issueExchangeRate ?? 0;
+    const paymentRate = command.paymentExchangeRate ?? 0;
+    const fxDifferenceMinor =
+      issueRate > 0 && paymentRate > 0 && issueRate !== paymentRate
+        ? (command.amountMinor * BigInt(Math.round(paymentRate * 10000))) / 10000n -
+          (command.amountMinor * BigInt(Math.round(issueRate * 10000))) / 10000n
+        : 0n;
+
+    const fxNote =
+      fxDifferenceMinor !== 0n
+        ? ` [FX Rate ${issueRate} -> ${paymentRate}, Diff: ${fxDifferenceMinor.toString()}]`
+        : '';
+
     const debitCashLine = JournalEntryLine.create(
       command.cashAccountId,
       paymentMoney,
       Money.zero(command.currency),
-      `Cash received - Invoice ${invoice.documentNumber}`,
+      `Cash received - Invoice ${invoice.documentNumber}${fxNote}`,
     );
 
     const creditReceivableLine = JournalEntryLine.create(
       command.receivableAccountId,
       Money.zero(command.currency),
       paymentMoney,
-      `Receivable collection - Invoice ${invoice.documentNumber}`,
+      `Receivable collection - Invoice ${invoice.documentNumber}${fxNote}`,
     );
 
     if (!debitCashLine.ok || !creditReceivableLine.ok) {
@@ -70,7 +89,7 @@ export class ApplyInvoicePaymentCommandHandler {
       tenantId: command.tenantId,
       entryNumber,
       date: command.paymentDate,
-      description: `Collection entry for Invoice ${invoice.documentNumber}`,
+      description: `Collection entry for Invoice ${invoice.documentNumber}${fxNote}`,
       sourceType: 'PAYMENT',
       sourceId: command.invoiceId,
       lines: [debitCashLine.value, creditReceivableLine.value],
@@ -86,6 +105,7 @@ export class ApplyInvoicePaymentCommandHandler {
     return ok({
       invoiceId: updatedInvoice.id,
       remainingBalanceMinor: updatedInvoice.remainingBalance.minorUnits,
+      fxDifferenceMinor,
     });
   }
 }

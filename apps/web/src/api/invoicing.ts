@@ -1,6 +1,11 @@
 import 'server-only';
 import { get, send } from './client';
-import type { CreditNoteResponse, DebitNoteResponse, IssueInvoiceInput } from '@corebiz/contracts';
+import type {
+  ApplyInvoicePaymentInput,
+  CreditNoteResponse,
+  DebitNoteResponse,
+  IssueInvoiceInput,
+} from '@corebiz/contracts';
 
 export interface InvoiceApiItem {
   readonly id: string;
@@ -55,4 +60,12 @@ export async function issueInvoice(input: IssueInvoiceInput) {
     totalMinor: string;
     status: string;
   }>('POST', '/v1/invoicing/invoices', input);
+}
+
+export async function applyInvoicePayment(invoiceId: string, input: ApplyInvoicePaymentInput) {
+  return send<{
+    invoiceId: string;
+    remainingBalanceMinor: string;
+    fxDifferenceMinor: string;
+  }>('POST', `/v1/invoicing/invoices/${encodeURIComponent(invoiceId)}/payments`, input);
 }

@@ -196,4 +196,51 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
 
     expect(pageErrors).toHaveLength(0);
   });
+
+  test('collects partial payment on a CREDIT invoice with FX rate difference', async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.goto('/invoicing/new');
+
+    const ts = Date.now().toString().slice(-4);
+    const creditDocNum = `FAC-PARTIAL-${ts}`;
+
+    const customerSelect = page.locator('select[name="customerId"]');
+    const firstCustomerVal = await customerSelect.locator('option').nth(1).getAttribute('value');
+    await customerSelect.selectOption(firstCustomerVal);
+    await page.locator('input[name="documentNumber"]').fill(creditDocNum);
+    await page.locator('select[name="paymentCondition"]').selectOption('CREDIT');
+    await page.locator('input[name="creditDays"]').fill('30');
+
+    const productSelect = page.locator('select[name="line-product"]').first();
+    const firstProductVal = await productSelect.locator('option').nth(1).getAttribute('value');
+    await productSelect.selectOption(firstProductVal);
+    await page.locator('input[name="line-quantity"]').first().fill('2');
+
+    await page.getByRole('button', { name: /emitir factura de venta/i }).click();
+    await page.waitForURL(/\/invoicing$/);
+
+    const row = page.locator('tr', { hasText: creditDocNum });
+    await expect(row).toBeVisible();
+    await row.getByRole('link', { name: /cobrar/i }).click();
+    await expect(page).toHaveURL(/\/invoicing\/.+\/collect$/);
+
+    await page.locator('input[name="amount"]').fill('2.00');
+    await page.locator('input[name="reference"]').fill(`TRF-${ts}`);
+    const issueRateInput = page.locator('input[name="issueExchangeRate"]');
+    if (await issueRateInput.isVisible()) {
+      await issueRateInput.fill('50.00');
+      await page.locator('input[name="paymentExchangeRate"]').fill('55.00');
+      await expect(page.getByText('+10.00 VES')).toBeVisible();
+    }
+
+    await page.getByRole('button', { name: /registrar cobro/i }).click();
+    await page.waitForURL(/\/invoicing$/);
+
+    const updatedRow = page.locator('tr', { hasText: creditDocNum });
+    await expect(updatedRow.getByText(/abonada parcial/i)).toBeVisible();
+
+    expect(pageErrors).toHaveLength(0);
+  });
 });

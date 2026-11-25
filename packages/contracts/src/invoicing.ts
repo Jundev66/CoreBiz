@@ -45,6 +45,9 @@ export const applyInvoicePaymentSchema = z
     cashAccountId: recordIdSchema,
     receivableAccountId: recordIdSchema,
     reference: z.string().trim().max(100).optional(),
+    issueExchangeRate: decimalStringSchema.optional(),
+    paymentExchangeRate: decimalStringSchema.optional(),
+    fxGainLossAccountId: recordIdSchema.optional(),
   })
   .strict();
 
