@@ -113,4 +113,34 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
 
     expect(pageErrors).toHaveLength(0);
   });
+
+  test('manages dynamic tax catalog in settings and applies custom tax in new invoice', async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
+    await page.goto('/settings/taxes');
+    await expect(page.getByRole('heading', { name: /agregar nuevo impuesto/i })).toBeVisible();
+    await expect(page.getByText('IVA_16')).toBeVisible();
+
+    const ts = Date.now().toString().slice(-3);
+    const customCode = `IVA_QA_${ts}`;
+    const customName = `IVA Especial QA (${ts})`;
+
+    await page.locator('input[name="code"]').fill(customCode);
+    await page.locator('input[name="name"]').fill(customName);
+    await page.locator('input[name="ratePercent"]').fill('22');
+    await page.getByRole('button', { name: /crear impuesto/i }).click();
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText(customCode)).toBeVisible();
+
+    await page.goto('/invoicing/new');
+    const lineTaxSelect = page.locator('select[name="line-tax"]').first();
+    await expect(lineTaxSelect).toBeVisible();
+    await expect(lineTaxSelect.locator('option', { hasText: customName })).toHaveCount(1);
+
+    expect(pageErrors).toHaveLength(0);
+  });
 });

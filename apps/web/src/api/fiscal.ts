@@ -1,6 +1,11 @@
 import 'server-only';
-import { get } from './client';
-import type { WithholdingVoucherResponse, FiscalSequenceRangeResponse } from '@corebiz/contracts';
+import { get, send } from './client';
+import type {
+  WithholdingVoucherResponse,
+  FiscalSequenceRangeResponse,
+  TaxRateConfigResponse,
+  CreateTaxRateConfigInput,
+} from '@corebiz/contracts';
 
 export async function listWithholdingVouchers(
   entityId?: string,
@@ -17,4 +22,21 @@ export async function listFiscalSequenceRanges(): Promise<readonly FiscalSequenc
     '/v1/fiscal/sequences/ranges',
   );
   return res?.ranges ?? [];
+}
+
+export async function listTaxRateConfigs(): Promise<readonly TaxRateConfigResponse[]> {
+  const res = await get<{ taxRates: readonly TaxRateConfigResponse[] }>('/v1/fiscal/tax-rates');
+  return res?.taxRates ?? [];
+}
+
+export async function createTaxRateConfig(input: CreateTaxRateConfigInput) {
+  return send<TaxRateConfigResponse>('POST', '/v1/fiscal/tax-rates', input);
+}
+
+export async function setDefaultTaxRateConfig(id: string) {
+  return send<{ updated: boolean; id: string }>(
+    'PATCH',
+    `/v1/fiscal/tax-rates/${encodeURIComponent(id)}/default`,
+    {},
+  );
 }

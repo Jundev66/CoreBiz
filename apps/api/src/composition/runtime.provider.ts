@@ -33,6 +33,7 @@ import type {
   CreditNoteRepository,
   DebitNoteRepository,
 } from '@corebiz/domain';
+import type { TaxRateConfigRepository } from '@corebiz/fiscal/domain';
 import type { FiscalSequenceRangeRepository, WithholdingVoucherRepository } from '@corebiz/fiscal';
 import type { ReceivableInvoicesPort, PayableBillsPort } from '@corebiz/accounting';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
@@ -58,6 +59,7 @@ export interface Runtime {
   readonly treasurySwaps?: TreasurySwapRepository;
   readonly partnerDrawings?: PartnerDrawingRepository;
   readonly disbursements?: DisbursementRepository;
+  readonly taxRateConfigs?: TaxRateConfigRepository;
 }
 
 /**
@@ -132,17 +134,22 @@ export const runtimeProvider: FactoryProvider = {
         treasurySwaps: accounting.treasurySwaps,
         partnerDrawings: accounting.partnerDrawings,
         disbursements: accounting.disbursements,
+        taxRateConfigs: accounting.taxRateConfigs,
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }
 
-    return postgresRuntime({
-      url: databaseUrl(),
-      ctx,
-      ids: { next: () => uuidv7() },
-      clock: systemClock,
-      trace: traceOf(req),
-      ...(semantic ? { vectorModel: env.VISION_EMBEDDINGS_MODEL } : {}),
-    });
+    const fallbackTaxConfigs = memoryAccountingRepos().taxRateConfigs;
+    return {
+      ...postgresRuntime({
+        url: databaseUrl(),
+        ctx,
+        ids: { next: () => uuidv7() },
+        clock: systemClock,
+        trace: traceOf(req),
+        ...(semantic ? { vectorModel: env.VISION_EMBEDDINGS_MODEL } : {}),
+      }),
+      taxRateConfigs: fallbackTaxConfigs,
+    };
   },
 };

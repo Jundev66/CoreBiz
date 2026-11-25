@@ -12,7 +12,7 @@ import { can, type Actor, type Permission } from '@corebiz/domain';
  * La pestana activa lleva `aria-current="page"` ademas del color. El color solo
  * lo ve quien puede verlo.
  */
-export type SettingsSection = 'business' | 'accounting' | 'team' | 'audit' | 'ai';
+export type SettingsSection = 'business' | 'taxes' | 'accounting' | 'team' | 'audit' | 'ai';
 
 const SECTIONS: readonly {
   id: SettingsSection;
@@ -21,6 +21,12 @@ const SECTIONS: readonly {
   customLabel?: string;
 }[] = [
   { id: 'business', href: '/settings' },
+  {
+    id: 'taxes',
+    href: '/settings/taxes',
+    permission: 'settings:read',
+    customLabel: 'Impuestos',
+  },
   {
     id: 'accounting',
     href: '/settings/accounting',

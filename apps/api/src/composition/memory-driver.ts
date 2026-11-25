@@ -43,6 +43,7 @@ import {
 import {
   InMemoryFiscalSequenceRangeRepository,
   InMemoryWithholdingVoucherRepository,
+  InMemoryTaxRateConfigRepository,
 } from '@corebiz/fiscal';
 import { InMemoryCreditNoteRepository, InMemoryDebitNoteRepository } from '@corebiz/invoicing';
 import { InMemoryPayableBillsAdapter } from '@corebiz/accounting';
@@ -88,6 +89,7 @@ interface MemoryStore extends SalesStores {
   transferRepo?: InMemoryTransferRepository;
   physicalInventoryAuditRepo?: InMemoryPhysicalInventoryAuditRepository;
   payableBillsRepo?: InMemoryPayableBillsAdapter;
+  taxRateConfigRepo?: InMemoryTaxRateConfigRepository;
 }
 
 export function memoryAccountingRepos() {
@@ -108,6 +110,7 @@ export function memoryAccountingRepos() {
   s.treasurySwapRepo ??= new InMemoryTreasurySwapRepository();
   s.partnerDrawingRepo ??= new InMemoryPartnerDrawingRepository();
   s.disbursementRepo ??= new InMemoryDisbursementRepository();
+  s.taxRateConfigRepo ??= new InMemoryTaxRateConfigRepository();
   return {
     accounts: s.accountRepo,
     journalEntries: s.journalEntryRepo,
@@ -126,6 +129,7 @@ export function memoryAccountingRepos() {
     treasurySwaps: s.treasurySwapRepo,
     partnerDrawings: s.partnerDrawingRepo,
     disbursements: s.disbursementRepo,
+    taxRateConfigs: s.taxRateConfigRepo,
   };
 }
 

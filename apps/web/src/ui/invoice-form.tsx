@@ -29,6 +29,12 @@ export interface InvoiceAccountDefaults {
   readonly cashAccountId: string;
 }
 
+export interface InvoiceTaxOption {
+  readonly id: string;
+  readonly label: string;
+  readonly percentage: string;
+}
+
 interface LineDraft {
   readonly key: number;
   productId: string;
@@ -44,6 +50,7 @@ export function InvoiceForm({
   defaultDocumentNumber,
   defaultCurrency,
   defaultTaxPercentage,
+  taxRates = [],
   accounts,
 }: {
   customers: readonly InvoiceCustomerOption[];
@@ -51,6 +58,7 @@ export function InvoiceForm({
   defaultDocumentNumber: string;
   defaultCurrency: 'USD' | 'VES';
   defaultTaxPercentage: number;
+  taxRates?: readonly InvoiceTaxOption[];
   accounts: InvoiceAccountDefaults;
 }) {
   const [state, formAction, pending] = useActionState(issueInvoiceAction, INITIAL);
@@ -325,14 +333,29 @@ export function InvoiceForm({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted">IVA %</label>
-                <input
-                  type="text"
-                  name="line-tax"
-                  value={line.taxPercentage}
-                  onChange={(e) => updateLine(line.key, { taxPercentage: e.target.value })}
-                  className={`text-right ${CONTROL_CLASSES}`}
-                />
+                <label className="mb-1 block text-xs font-medium text-muted">Impuesto</label>
+                {taxRates.length > 0 ? (
+                  <select
+                    name="line-tax"
+                    value={line.taxPercentage}
+                    onChange={(e) => updateLine(line.key, { taxPercentage: e.target.value })}
+                    className={CONTROL_CLASSES}
+                  >
+                    {taxRates.map((tr) => (
+                      <option key={tr.id} value={tr.percentage}>
+                        {tr.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    name="line-tax"
+                    value={line.taxPercentage}
+                    onChange={(e) => updateLine(line.key, { taxPercentage: e.target.value })}
+                    className={`text-right ${CONTROL_CLASSES}`}
+                  />
+                )}
               </div>
 
               <button

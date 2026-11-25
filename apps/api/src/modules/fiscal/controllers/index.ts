@@ -6,3 +6,6 @@ export { ListFiscalSequenceRangesController } from './list-fiscal-sequence-range
 export { IssueWithholdingVoucherController } from './issue-withholding-voucher.controller';
 export { VoidWithholdingVoucherController } from './void-withholding-voucher.controller';
 export { ListWithholdingVouchersController } from './list-withholding-vouchers.controller';
+export { ListTaxRateConfigsController } from './list-tax-rate-configs.controller';
+export { CreateTaxRateConfigController } from './create-tax-rate-config.controller';
+export { SetDefaultTaxRateConfigController } from './set-default-tax-rate-config.controller';

@@ -8,3 +8,4 @@ export * from './hardware/hka-fiscal-printer.driver';
 export * from './hardware/esc-pos-printer.driver';
 export * from './memory/in-memory-fiscal-sequence-range-repository';
 export * from './memory/in-memory-withholding-voucher-repository';
+export * from './memory/in-memory-tax-rate-config-repository';

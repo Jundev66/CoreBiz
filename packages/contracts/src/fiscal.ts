@@ -41,3 +41,26 @@ export const calculateTaxesInputSchema = z
 export type TaxJurisdiction = z.infer<typeof taxJurisdictionSchema>;
 export type TaxProfileInput = z.infer<typeof taxProfileSchema>;
 export type CalculateTaxesInput = z.infer<typeof calculateTaxesInputSchema>;
+
+export const createTaxRateConfigSchema = z
+  .object({
+    code: z.string().trim().min(1).max(32),
+    name: z.string().trim().min(2).max(100),
+    rateBp: z.coerce.number().int().min(0).max(10_000),
+    jurisdiction: taxJurisdictionSchema.default('VE'),
+    isDefault: z.boolean().default(false),
+  })
+  .strict();
+
+export const taxRateConfigResponseSchema = z.object({
+  id: recordIdSchema,
+  code: z.string(),
+  name: z.string(),
+  rateBp: z.number().int(),
+  jurisdiction: taxJurisdictionSchema,
+  isDefault: z.boolean(),
+  isActive: z.boolean(),
+});
+
+export type CreateTaxRateConfigInput = z.infer<typeof createTaxRateConfigSchema>;
+export type TaxRateConfigResponse = z.infer<typeof taxRateConfigResponseSchema>;
