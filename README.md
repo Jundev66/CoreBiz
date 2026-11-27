@@ -1,14 +1,12 @@
 # CoreBiz
 
-Sistema de gestión comercial multi-tenant: inventario, ventas y documentos de entrega.
-Arquitectura hexagonal en TypeScript, aislamiento de datos con Row Level Security de
-PostgreSQL y una pirámide de tests completa.
+ERP multi-tenant con **facturación, contabilidad por partida doble, motor fiscal multi-país y Terminal POS PWA offline-first**. Arquitectura hexagonal en TypeScript, aislamiento de datos con Row Level Security de PostgreSQL y una pirámide de tests completa.
 
-> **Aviso legal.** CoreBiz genera **notas de entrega**: documentos internos **no fiscales**.
-> No emite facturas fiscales, no aplica numeración de control ni cumple los requisitos de
-> facturación de ninguna jurisdicción. El campo de impuesto es **informativo** y no constituye
-> un tributo declarado. Cada documento generado lleva impresa la leyenda
-> _"Documento no fiscal / sin valor fiscal"_.
+> **Aviso de demostración (datos temporales y 100% sintéticos).** CoreBiz implementa flujos completos de
+> facturación (facturas de venta/compra, notas de entrega, notas de crédito/débito),
+> secuencias de control, retenciones, libros fiscales y contabilidad por partida doble, pero
+> **se encuentra en fase de demostración y opera exclusivamente con datos temporales y ficticios**.
+> No ingreses datos reales, personales ni confidenciales: los sandboxes de prueba se purgan automáticamente.
 
 ---
 
@@ -118,7 +116,7 @@ Las decisiones con su contexto y sus alternativas descartadas están en [`docs/a
 
 1. [Arquitectura hexagonal con el dominio sin dependencias](docs/adr/001-arquitectura-hexagonal.md)
 2. [Dinero en bigint y moneda dual con tasa congelada](docs/adr/002-dinero-y-moneda-dual.md)
-3. [Notas de entrega en lugar de facturas fiscales](docs/adr/003-notas-de-entrega.md)
+3. [Notas de entrega en lugar de facturas fiscales](docs/adr/003-notas-de-entrega.md) — decisión inicial; hoy coexiste con facturación y motor fiscal multi-país en modo demostrativo
 4. [Drizzle sobre postgres.js, no PostgREST](docs/adr/004-drizzle-sobre-postgrest.md) — supersedida por la 10
 5. [Aislamiento multi-tenant en cuatro capas](docs/adr/005-aislamiento-multi-tenant.md)
 6. [Autenticación enteramente en el servidor](docs/adr/006-autenticacion-solo-en-el-servidor.md)
@@ -150,13 +148,12 @@ CoreBiz es una demostración integral y de nivel senior con un costo de infraest
 El análisis STRIDE completo, con los riesgos aceptados de forma consciente, está en
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
-## Qué falta
+## Estado actual y despliegue
 
-El ciclo de venta funciona sobre Postgres real, con las políticas RLS ejecutándose en cada
-push y con autenticación de verdad. Lo que queda ya no es fundacional: el **despliegue**, que
-es lo único que no se puede hacer desde el repositorio porque necesita cuentas de Supabase y
-Vercel. [`docs/ROADMAP.md`](docs/ROADMAP.md) dice exactamente qué queda, en qué
-orden y por qué ese orden, incluyendo el estado honesto de cada capa.
+El ciclo completo (ERP web, API NestJS, POS PWA offline-first, Supabase con RLS y sandboxes
+efímeros en `/demo`) está operativo sobre Postgres real y desplegado en Vercel + Supabase
+bajo arquitectura free-tier (`$0`). [`docs/ROADMAP.md`](docs/ROADMAP.md) detalla la evolución
+por capas y el alcance planificado.
 
 ### La migración a NestJS no cambió ni un test
 
@@ -189,7 +186,7 @@ sus listados. Si un enlace dejara de existir, la aprobación falla por el motivo
 - **Comercial, CxC y Cobros**: Clientes con límite de crédito estricto, Notas de Entrega imprimibles, Facturas de Venta (contado/crédito), cobros totales, parciales y multi-imputación con diferencial cambiario FX, anulación con motivo y Notas de Crédito/Débito.
 - **Compras, CxP y Visión IA**: Proveedores, Facturas de Compra en USD/VES con doble tasa, pagos totales/parciales a proveedores, escaneo/recepción asistida de remitos y ajuste automático de inventario.
 - **Contabilidad por Partida Doble**: Invariante $\sum \text{Débitos} \equiv \sum \text{Créditos}$ validado en dominio, Plan de Cuentas jerárquico por país, Balance de Comprobación, Libro Diario, Antigüedad de Saldos (CxC/CxP), Tesorería & Swaps, Gastos Operativos, Retiros de Socios, Conciliación Bancaria y Reexpresión Cambiaria.
-- **Motor Fiscal Multi-País (`FiscalJurisdictionPort`)**: Arquitectura multifiscal con **base operativa actual en Venezuela (`VE` · SENIAT: IVA 16%, IGTF 3%, Retenciones, Libros de Compras y Ventas, Rangos de Secuencias Fiscales)**; el adaptador de **Estados Unidos (`US`)** se encuentra en etapa demostrativa/experimental y estará habilitado para uso completo en futuras versiones. Todos los cálculos y documentos del entorno demo son estrictamente ilustrativos y no sustituyen facturación fiscal homologada.
+- **Motor Fiscal Multi-País (`FiscalJurisdictionPort`)**: Estrategia desacoplada con soporte para **Venezuela (`VE` · SENIAT: IVA 16%/8%/0%, IGTF 3%, Retenciones IVA/ISLR, Libros de Compras y Ventas, Rangos de Secuencias Fiscales)** y **Estados Unidos (`US` · US GAAP / Sales Tax configurable por jurisdicción)**. Todos los cálculos y documentos del entorno demo son estrictamente ilustrativos y temporales.
 - **Terminal POS Offline-First (`apps/pos`)**: Caja registradora PWA con apertura/arqueo ciego de turno, catálogo local en IndexedDB, soporte dual USD/VES con tasa BCV, cálculo automático de IGTF 3% en efectivo USD y sincronización idempotente hacia el ERP.
 
 ### Nadie escribe un código
