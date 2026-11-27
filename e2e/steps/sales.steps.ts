@@ -130,7 +130,10 @@ Then('I should see the best selling products', async ({ page }) => {
 Then('the reports link is available', async ({ page }) => {
   const reportsLink = page.getByRole('link', { name: /Reports/ });
   if (!(await reportsLink.isVisible())) {
-    const adminGroup = page.getByRole('button', { name: /Gestión/i });
+    const adminGroup = page
+      .getByRole('tab', { name: /Gestión|Management/i })
+      .or(page.getByRole('button', { name: /Gestión|Management/i }))
+      .first();
     if (await adminGroup.isVisible()) {
       await adminGroup.click();
     }

@@ -78,6 +78,7 @@ const SPECIAL_CASED = [
   'audit_log',
   'demo_sessions',
   'vision_embeddings',
+  'inventory_conflict_movements',
   'inventory_conflicts',
   'pos_cash_movements',
   'pos_cash_shifts',
