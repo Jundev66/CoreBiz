@@ -74,7 +74,20 @@ const COVERED = [
  * `vision_embeddings` — indice vectorial de Synapse Vision con embeddings HNSW;
  *                   se gestiona via VisionVectorStorePort y RLS propia.
  */
-const SPECIAL_CASED = ['audit_log', 'demo_sessions', 'vision_embeddings'] as const;
+const SPECIAL_CASED = [
+  'audit_log',
+  'demo_sessions',
+  'vision_embeddings',
+  'inventory_conflicts',
+  'pos_cash_movements',
+  'pos_cash_shifts',
+  'pos_devices',
+  'pos_register_assignments',
+  'pos_registers',
+  'pos_sale_lines',
+  'pos_sales',
+  'pos_sync_operations',
+] as const;
 
 /** Ejecuta SQL crudo con el contexto del tenant puesto y el rol ya cambiado. */
 async function asTenant<T>(tenant: TestTenant, fn: (tx: Tx) => Promise<T>): Promise<T> {
