@@ -18,6 +18,7 @@ import { BackLink } from '@/ui/primitives';
 import { NavDetails } from '@/ui/nav-link';
 import { ThemeToggle } from '@/ui/theme-toggle';
 import { getPosTerminalUrl } from '@/ui/pos-link';
+import { MobileMenuDrawer } from '@/ui/mobile-menu-drawer';
 
 /**
  * Marco comun de las pantallas de la aplicacion.
@@ -188,7 +189,7 @@ export async function AppFrame({
   ].filter(({ href }) => canOpen(ctx.actor, href));
 
   return (
-    <div className="min-h-screen lg:flex">
+    <div className="min-h-screen overflow-x-clip lg:flex">
       {/*
        * Help lives in the FRAME rather than on each screen, like the "done" toast: it
        * belongs to the system, not to a list. Being here also keeps it out of (auth) and
@@ -306,11 +307,21 @@ export async function AppFrame({
           data-surface="nav"
           className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-nav-line bg-nav/95 px-4 backdrop-blur-md lg:hidden"
         >
-          <Link href="/" className="rounded-control">
-            <Logo name={t('app.name')} />
-          </Link>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <MobileMenuDrawer
+              items={sidebarItems}
+              appName={t('app.name')}
+              posUrl={getPosTerminalUrl()}
+              fiscalLabel={
+                ctx.settings.fiscalCountry === 'VE' ? 'Venezuela · SENIAT' : 'EE. UU. · US GAAP'
+              }
+            />
+            <Link href="/" className="min-w-0 truncate rounded-control">
+              <Logo name={t('app.name')} />
+            </Link>
+          </div>
 
-          <NavDetails className="relative">
+          <NavDetails className="relative shrink-0">
             <summary
               aria-label={t('nav.account')}
               className="grid size-9 cursor-pointer list-none place-items-center rounded-pill bg-brand-soft text-sm font-semibold text-brand [&::-webkit-details-marker]:hidden"

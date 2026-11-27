@@ -17,6 +17,27 @@ import { DetailList, StatusBadge, StatusToggle } from '@/ui/detail';
 import { ProductAccountsForm } from '@/ui/product-accounts-form';
 import { StockAdjustForm } from '@/ui/stock-adjust-form';
 
+function formatMovementReference(reason: string | null, reference: string | null): string {
+  if (reason && reason.trim().length > 0) return reason;
+  if (!reference) return '—';
+
+  const [refType, rawId = ''] = reference.split(':');
+  const shortId = rawId ? rawId.slice(0, 8).toUpperCase() : '';
+
+  const labels: Record<string, string> = {
+    delivery_note: 'Nota de entrega',
+    goods_receipt: 'Recepción de compra',
+    invoice: 'Factura de venta',
+    pos_sale: 'Venta POS',
+    audit: 'Ajuste por auditoría',
+    transfer: 'Traslado entre almacenes',
+    manual: 'Ajuste manual',
+  };
+
+  const label = labels[refType ?? ''] ?? refType ?? 'Movimiento';
+  return shortId ? `${label} · #${shortId}` : label;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
   return { title: t('products.detail') };
@@ -218,7 +239,7 @@ export default async function ProductDetailPage({
                         {movement.balance}
                       </td>
                       <td className="px-4 py-3 text-muted">
-                        {movement.reason ?? movement.reference ?? '—'}
+                        {formatMovementReference(movement.reason, movement.reference)}
                       </td>
                     </tr>
                   ))}

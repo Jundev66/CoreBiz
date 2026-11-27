@@ -54,7 +54,7 @@ export default async function InvoicingPage() {
       title="Facturas de Venta"
       subtitle="Emisión comercial, control fiscal y trazabilidad contable de ventas"
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href={getPosTerminalUrl()}
             target="_blank"
@@ -84,7 +84,7 @@ export default async function InvoicingPage() {
       ) : (
         <TableFrame>
           <thead>
-            <tr className="border-b border-border bg-surface-raised/40 text-xs font-medium text-text-muted">
+            <tr className="border-b border-line bg-canvas text-xs font-medium text-muted">
               <th className="px-4 py-3">Nro. Factura</th>
               <th className="px-4 py-3">Control Fiscal</th>
               <th className="px-4 py-3">Fecha Emisión</th>
@@ -97,13 +97,13 @@ export default async function InvoicingPage() {
               <th className="px-4 py-3 text-right">Despacho</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-line">
             {invoices.map((inv) => (
-              <tr key={inv.id} className="hover:bg-surface-raised/20 transition-colors">
+              <tr key={inv.id}>
                 <td className="px-4 py-3">
                   <Link
                     href={`/invoicing/${inv.id}`}
-                    className="inline-flex items-center gap-2 font-mono font-bold text-text hover:text-brand hover:underline"
+                    className="inline-flex items-center gap-2 font-mono font-bold text-ink hover:text-brand hover:underline"
                   >
                     <Receipt className="size-4 text-brand" />
                     <span>{inv.documentNumber}</span>
@@ -111,30 +111,30 @@ export default async function InvoicingPage() {
                 </td>
                 <td className="px-4 py-3">
                   {inv.controlNumber ? (
-                    <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 font-mono text-xs text-ok">
                       <ShieldCheck className="size-3" />
                       {inv.controlNumber}
                     </span>
                   ) : (
-                    <span className="text-xs text-text-muted">—</span>
+                    <span className="text-xs text-muted">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-xs text-text-muted">
+                <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
                   {new Date(inv.issueDate).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3 text-xs text-text-muted">
+                <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
                   {new Date(inv.dueDate).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-xs">
+                <td className="px-4 py-3 text-right font-mono text-xs tabular-nums">
                   {formatMinor(inv.subtotalMinor, inv.currency)}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-xs">
+                <td className="px-4 py-3 text-right font-mono text-xs tabular-nums">
                   {formatMinor(inv.taxMinor, inv.currency)}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-xs font-bold text-text">
+                <td className="px-4 py-3 text-right font-mono text-xs font-bold text-ink tabular-nums">
                   {formatMinor(inv.totalMinor, inv.currency)}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                <td className="px-4 py-3 text-right font-mono text-xs text-ok tabular-nums">
                   {formatMinor(inv.paidMinor, inv.currency)}
                 </td>
                 <td className="px-4 py-3 text-center">

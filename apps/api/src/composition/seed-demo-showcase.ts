@@ -9,7 +9,7 @@ import {
   RecordPartnerCashDrawingCommandHandler,
 } from '@corebiz/accounting';
 import { ApplyInvoicePaymentCommandHandler, IssueInvoiceCommandHandler } from '@corebiz/invoicing';
-import { systemClock, type TenantContext } from '@corebiz/application';
+import { makeReceiveGoods, systemClock, type TenantContext } from '@corebiz/application';
 import { asId, Money, Plan, type TenantId, type UserId } from '@corebiz/domain';
 import { postgresRuntime } from '@corebiz/infrastructure';
 import { DEMO_SEEDER } from '../tokens';
@@ -98,6 +98,9 @@ export async function seedDemoShowcase(
   const findAcc = (code: string) => seededAccounts.find((a) => a.code.value === code)?.id ?? '';
   const cashId = findAcc('1.1.01');
   const arId = findAcc('1.1.02');
+  const inventoryId = findAcc('1.1.03');
+  const taxCreditId = findAcc('1.1.05');
+  const apId = findAcc('2.1.01');
   const taxPayableId = findAcc('2.1.02');
   const equityId = findAcc('3.1.01');
   const drawingsAccId = findAcc('3.1.02');
@@ -135,7 +138,7 @@ export async function seedDemoShowcase(
       tenantId: rawTenantId,
       entryNumber,
       date: new Date(),
-      description: 'Asiento de apertura - Capital Social',
+      description: 'Asiento de apertura - Capital Social USD',
       sourceType: 'MANUAL',
       sourceId: rawTenantId,
       lines: openingLines,
@@ -145,12 +148,129 @@ export async function seedDemoShowcase(
     }
   }
 
-  const customersPage = await runtime.queries.customers.list({ limit: 10 });
-  const productsPage = await runtime.queries.products.list({ limit: 10 });
+  const openingVesLines = [
+    JournalEntryLine.create(
+      cashId,
+      Money.fromMinor(250_000_00n, 'VES'),
+      Money.zero('VES'),
+      'Fondo operativo apertura VES',
+    ),
+    JournalEntryLine.create(
+      equityId,
+      Money.zero('VES'),
+      Money.fromMinor(250_000_00n, 'VES'),
+      'Capital de trabajo inicial VES',
+    ),
+  ]
+    .filter((r) => r.ok)
+    .map((r) => r.value);
+
+  if (openingVesLines.length === 2) {
+    const entryNumber = await runtime.journalEntries.nextEntryNumber(rawTenantId);
+    const openingVesEntry = JournalEntry.create({
+      id: uuidv7(),
+      tenantId: rawTenantId,
+      entryNumber,
+      date: new Date(),
+      description: 'Asiento de apertura - Fondo operativo VES',
+      sourceType: 'MANUAL',
+      sourceId: rawTenantId,
+      lines: openingVesLines,
+    });
+    if (openingVesEntry.ok) {
+      await runtime.journalEntries.save(openingVesEntry.value).catch(() => {});
+    }
+  }
+
+  const [customersPage, productsPage, suppliersPage] = await Promise.all([
+    runtime.queries.customers.list({ limit: 10 }),
+    runtime.queries.products.list({ limit: 10 }),
+    runtime.queries.purchasing.suppliers({ limit: 5 }),
+  ]);
   const firstCustomer =
     customersPage.items.find((c) => c.code !== 'CLI-CF') ?? customersPage.items[0];
   const secondCustomer = customersPage.items[1] ?? firstCustomer;
   const firstProduct = productsPage.items[0];
+  const firstSupplier = suppliersPage.items[0];
+
+  if (firstSupplier && firstProduct) {
+    const receiveGoods = makeReceiveGoods({
+      uow: runtime.uow,
+      ctx,
+      clock: systemClock,
+      ids: { next: () => uuidv7() },
+      onPurchaseRecorded: async (event) => {
+        const subtotalMinor = event.receipt.total.minorUnits;
+        const taxBp = Math.round(event.taxPercentage * 100);
+        const taxMinor = (subtotalMinor * BigInt(taxBp)) / 10000n;
+        const totalWithTaxMinor = subtotalMinor + taxMinor;
+        const currency = event.receipt.currency;
+        const docRef = event.supplierReference || event.receipt.number;
+
+        const purchaseLines = [
+          JournalEntryLine.create(
+            inventoryId,
+            Money.fromMinor(subtotalMinor, currency),
+            Money.zero(currency),
+            `Compra inventario - ${docRef}`,
+          ),
+          ...(taxMinor > 0n
+            ? [
+                JournalEntryLine.create(
+                  taxCreditId || taxPayableId,
+                  Money.fromMinor(taxMinor, currency),
+                  Money.zero(currency),
+                  `IVA Crédito Fiscal - ${docRef}`,
+                ),
+              ]
+            : []),
+          JournalEntryLine.create(
+            apId,
+            Money.zero(currency),
+            Money.fromMinor(totalWithTaxMinor, currency),
+            `Cuentas por Pagar - ${docRef}`,
+          ),
+        ]
+          .filter((r) => r.ok)
+          .map((r) => r.value);
+
+        if (purchaseLines.length >= 2) {
+          const entryNumber = await runtime.journalEntries.nextEntryNumber(rawTenantId);
+          const jeResult = JournalEntry.create({
+            id: uuidv7(),
+            tenantId: rawTenantId,
+            entryNumber,
+            date: event.receipt.receivedAt ?? new Date(),
+            description: `Factura de compra ${docRef} (${event.supplier.name})`,
+            sourceType: 'PURCHASE',
+            sourceId: event.receipt.id,
+            lines: purchaseLines,
+          });
+          if (jeResult.ok) {
+            await runtime.journalEntries.save(jeResult.value).catch(() => {});
+          }
+        }
+      },
+    });
+
+    await receiveGoods({
+      supplierId: firstSupplier.id,
+      lines: [
+        {
+          productId: firstProduct.id,
+          quantity: '25',
+          unitCost: '18.00',
+        },
+      ],
+      supplierReference: 'FC-PROV-0001',
+      controlNumber: '00-000412',
+      paymentCondition: 'CREDIT',
+      creditDays: 30,
+      taxPercentage: 16,
+      currency: 'USD',
+      notes: 'Reposición inicial de inventario demo',
+    }).catch(() => {});
+  }
 
   const today = new Date();
   if (firstCustomer) {

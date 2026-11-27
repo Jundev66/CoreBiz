@@ -60,7 +60,7 @@ export function MobileNav({ items, moreLabel }: MobileNavProps) {
                 <MoreHorizontal aria-hidden="true" className="size-5" strokeWidth={1.75} />
                 <span>{moreLabel}</span>
               </MoreSummary>
-              <div className="absolute right-2 bottom-[calc(100%+0.5rem)] w-56 rounded-card border border-line bg-surface p-1.5 shadow-lg">
+              <div className="absolute right-2 bottom-[calc(100%+0.5rem)] max-h-[65vh] w-56 overflow-y-auto rounded-card border border-line bg-surface p-1.5 shadow-lg">
                 {moreItems.map((item) => {
                   const Icon = ICON_MAP[item.icon];
                   return (

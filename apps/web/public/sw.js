@@ -1,12 +1,4 @@
-/**
- * CoreBiz Service Worker (PWA)
- *
- * Provee:
- * - Cache de assets estáticos y shell para arranque instantáneo.
- * - Modo network-first para navegación con fallback elegante a /offline.
- * - Sin interferir en peticiones de API o autenticación.
- */
-const CACHE_NAME = 'corebiz-v1';
+const CACHE_NAME = 'corebiz-v2';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = ['/offline', '/icon.svg', '/manifest.webmanifest'];
@@ -28,6 +20,7 @@ self.addEventListener('activate', (event) => {
           if (key !== CACHE_NAME) {
             return caches.delete(key);
           }
+          return undefined;
         }),
       ),
     ),
@@ -39,17 +32,18 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
 
-  // Excluir endpoints de backend y de sesión
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/v1/') ||
-    url.pathname.startsWith('/auth/')
+    url.pathname.startsWith('/auth/') ||
+    url.searchParams.has('_rsc') ||
+    event.request.headers.get('RSC') === '1'
   ) {
     return;
   }
 
-  // Navegación: Network-first con fallback a /offline
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(async () => {
@@ -71,7 +65,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos (iconos, fuentes, CSS/JS de Next): Stale-While-Revalidate
+  const isStaticAsset =
+    url.pathname.startsWith('/_next/static/') ||
+    /\.(?:svg|png|jpg|jpeg|webp|ico|woff2?|css|js|webmanifest)$/i.test(url.pathname);
+
+  if (!isStaticAsset) return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
@@ -88,7 +87,14 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => cachedResponse);
+        .catch(
+          () =>
+            cachedResponse ??
+            new Response('', {
+              status: 504,
+              statusText: 'Gateway Timeout',
+            }),
+        );
 
       return cachedResponse || fetchPromise;
     }),
