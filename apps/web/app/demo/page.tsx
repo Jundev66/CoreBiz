@@ -26,14 +26,29 @@ const DEMO_EMAIL_DOMAIN = '@corebiz.demo';
  * end on the one page that must never have one. A regular account without a company is not a
  * demo, so it keeps the plain "enter" path to onboarding.
  */
+function isRedirectError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'digest' in error &&
+    typeof (error as { digest?: unknown }).digest === 'string' &&
+    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  );
+}
+
 async function sessionState(): Promise<DemoSessionState> {
   if (!supabaseIsConfigured()) return 'none';
-  const user = await currentUser();
-  if (user === null) return 'none';
+  try {
+    const user = await currentUser();
+    if (user === null) return 'none';
 
-  if (!(user.email ?? '').endsWith(DEMO_EMAIL_DOMAIN)) return 'active';
-  const session = await get<{ tenant: unknown }>('/v1/session');
-  return session.tenant === null ? 'expired' : 'active';
+    if (!(user.email ?? '').endsWith(DEMO_EMAIL_DOMAIN)) return 'active';
+    const session = await get<{ tenant: unknown }>('/v1/session');
+    return session.tenant === null ? 'expired' : 'active';
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return 'expired';
+  }
 }
 
 /**
