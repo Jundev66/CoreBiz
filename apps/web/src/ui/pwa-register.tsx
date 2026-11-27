@@ -11,6 +11,15 @@ import { useEffect } from 'react';
 export function PwaRegister() {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      if (process.env.NODE_ENV !== 'production') {
+        void navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            void registration.unregister();
+          }
+        });
+        return;
+      }
+
       // Registrar tras carga para no competir con el rendering inicial
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {

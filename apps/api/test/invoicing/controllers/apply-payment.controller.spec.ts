@@ -20,6 +20,7 @@ describe('ApplyPaymentController', () => {
           ok({
             invoiceId: '018e245a-0000-7000-8000-000000000050',
             remainingBalanceMinor: 5000n,
+            fxDifferenceMinor: 0n,
           }),
         ),
       },
@@ -46,6 +47,7 @@ describe('ApplyPaymentController', () => {
     expect(response).toEqual({
       invoiceId: '018e245a-0000-7000-8000-000000000050',
       remainingBalanceMinor: '5000',
+      fxDifferenceMinor: '0',
     });
     expect(useCasesMock.applyInvoicePayment.execute).toHaveBeenCalled();
   });

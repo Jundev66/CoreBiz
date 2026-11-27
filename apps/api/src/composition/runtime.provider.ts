@@ -139,7 +139,7 @@ export const runtimeProvider: FactoryProvider = {
       };
     }
 
-    const fallbackTaxConfigs = memoryAccountingRepos().taxRateConfigs;
+    const fallback = memoryAccountingRepos();
     return {
       ...postgresRuntime({
         url: databaseUrl(),
@@ -149,7 +149,19 @@ export const runtimeProvider: FactoryProvider = {
         trace: traceOf(req),
         ...(semantic ? { vectorModel: env.VISION_EMBEDDINGS_MODEL } : {}),
       }),
-      taxRateConfigs: fallbackTaxConfigs,
+      paymentReceipts: fallback.paymentReceipts,
+      creditNotes: fallback.creditNotes,
+      debitNotes: fallback.debitNotes,
+      fiscalSequenceRanges: fallback.fiscalSequenceRanges,
+      withholdingVouchers: fallback.withholdingVouchers,
+      warehouses: fallback.warehouses,
+      transfers: fallback.transfers,
+      physicalInventoryAudits: fallback.physicalInventoryAudits,
+      bankStatements: fallback.bankStatements,
+      treasurySwaps: fallback.treasurySwaps,
+      partnerDrawings: fallback.partnerDrawings,
+      disbursements: fallback.disbursements,
+      taxRateConfigs: fallback.taxRateConfigs,
     };
   },
 };

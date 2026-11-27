@@ -60,7 +60,6 @@ const STATIC_ROUTES = [
   '/fiscal/sales-book',
   '/fiscal/purchases-book',
   '/fiscal/us-sales-tax',
-  '/pos-sales',
   '/conflicts',
 ] as const;
 

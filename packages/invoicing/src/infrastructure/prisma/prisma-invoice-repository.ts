@@ -194,6 +194,8 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       lines.push(lineRes.value);
     }
 
+    const isCash = row.issue_date.getTime() === row.due_date.getTime() && row.status === 'PAID';
+
     const invRes = Invoice.create({
       id: row.id,
       tenantId: row.tenant_id,
@@ -207,6 +209,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       status: row.status as InvoiceStatus,
       paidAmount: Money.fromMinor(row.paid_minor, row.currency as Currency),
       igtfTotal: Money.fromMinor(row.igtf_minor, row.currency as Currency),
+      paymentCondition: isCash ? 'CASH' : 'CREDIT',
     });
 
     return invRes.ok ? invRes.value : null;

@@ -36,10 +36,11 @@ export class ImportBankStatementController {
     const startingBalanceMinor = startMoney.ok ? startMoney.value.minorUnits : 0n;
     const endingBalanceMinor = endMoney.ok ? endMoney.value.minorUnits : 0n;
 
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const lines = body.lines.map((l) => {
       const parsedAmount = Money.of(l.amount, body.currency);
       return {
-        id: l.id,
+        id: uuidRe.test(l.id) ? l.id : randomUUID(),
         lineType: l.lineType,
         amountMinor: parsedAmount.ok ? parsedAmount.value.minorUnits : 0n,
         transactionDate: l.transactionDate,

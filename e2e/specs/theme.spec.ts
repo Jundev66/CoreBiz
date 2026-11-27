@@ -12,6 +12,9 @@ import { signIn } from '../session';
 
 test.beforeEach(async ({ page }) => {
   await signIn(page);
+  await page.addInitScript(() => {
+    localStorage.setItem('corebiz_cookie_consent', 'accepted');
+  });
 });
 
 test('the switch changes the theme and the choice survives a reload', async ({ page }) => {
@@ -19,6 +22,10 @@ test('the switch changes the theme and the choice survives a reload', async ({ p
   const html = page.locator('html');
   await expect(html).toHaveAttribute('data-theme', 'light');
 
+  await page
+    .getByText(/demo@corebiz\.local|usuario y cuenta/i)
+    .first()
+    .click();
   await page.getByRole('button', { name: /modo oscuro|dark mode/i }).click();
   await expect(html).toHaveAttribute('data-theme', 'dark');
 
@@ -27,6 +34,10 @@ test('the switch changes the theme and the choice survives a reload', async ({ p
   // Still on the same screen: switching theme is not a navigation.
   await expect(page).toHaveURL(/\/customers$/);
 
+  await page
+    .getByText(/demo@corebiz\.local|usuario y cuenta/i)
+    .first()
+    .click();
   await page.getByRole('button', { name: /modo claro|light mode/i }).click();
   await expect(html).toHaveAttribute('data-theme', 'light');
 });

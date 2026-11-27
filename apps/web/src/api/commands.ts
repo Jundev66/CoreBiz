@@ -22,7 +22,12 @@ import type {
   VoidDeliveryNoteInput,
   VoidGoodsReceiptInput,
 } from '@corebiz/application';
-import type { AiDraftInput, AskAssistantBody, SaveAiSettingsBody } from '@corebiz/contracts';
+import type {
+  AiDraftInput,
+  AskAssistantBody,
+  PayGoodsReceiptInput,
+  SaveAiSettingsBody,
+} from '@corebiz/contracts';
 import { SLOW_REQUEST_TIMEOUT_MS, send } from './client';
 
 /**
@@ -269,6 +274,21 @@ export function httpCommands() {
         `/v1/purchasing/receipts/${encodeURIComponent(input.goodsReceiptId)}/void`,
         { reason: input.reason },
       ),
+
+    payGoodsReceipt: (input: PayGoodsReceiptInput & { goodsReceiptId: string }) =>
+      send<{
+        receiptId: string;
+        journalEntryId: string;
+        paidMinor: string;
+        remainingBalanceMinor: string;
+      }>('POST', `/v1/purchasing/receipts/${encodeURIComponent(input.goodsReceiptId)}/payments`, {
+        amount: input.amount,
+        currency: input.currency,
+        paymentDate: input.paymentDate,
+        sourceAccountId: input.sourceAccountId,
+        ...(input.payableAccountId ? { payableAccountId: input.payableAccountId } : {}),
+        ...(input.reference ? { reference: input.reference } : {}),
+      }),
 
     // ── Cobros ────────────────────────────────────────────────────────────────
     receiveCustomerPayment: (input: ReceiveCustomerPaymentInput) =>

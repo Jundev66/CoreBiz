@@ -24,9 +24,61 @@ export interface InvoiceApiItem {
   readonly status: string;
 }
 
+export interface InvoiceLineDetailApiItem {
+  readonly id: string;
+  readonly productId: string | null;
+  readonly description: string;
+  readonly quantity: string;
+  readonly unitPriceMinor: string;
+  readonly taxPercentage: number;
+  readonly subtotalMinor: string;
+  readonly taxMinor: string;
+  readonly totalMinor: string;
+}
+
+export interface InvoiceDetailApiItem extends InvoiceApiItem {
+  readonly paymentCondition: string;
+  readonly creditedMinor: string;
+  readonly remainingBalanceMinor: string;
+  readonly lines: readonly InvoiceLineDetailApiItem[];
+}
+
+export interface InvoiceReceiptApiItem {
+  readonly id: string;
+  readonly receiptNumber: string;
+  readonly customerId: string;
+  readonly amount: string;
+  readonly currency: string;
+  readonly paymentMethod: string;
+  readonly bankAccountId: string;
+  readonly receiptDate: string;
+  readonly reference: string | null;
+  readonly status: string;
+  readonly notes: string | null;
+}
+
 export async function listInvoices(): Promise<readonly InvoiceApiItem[]> {
   const response = await get<{ invoices: readonly InvoiceApiItem[] }>('/v1/invoicing/invoices');
   return response?.invoices ?? [];
+}
+
+export async function getInvoiceById(id: string): Promise<InvoiceDetailApiItem | null> {
+  try {
+    return await get<InvoiceDetailApiItem>(`/v1/invoicing/invoices/${encodeURIComponent(id)}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function listInvoiceReceipts(id: string): Promise<readonly InvoiceReceiptApiItem[]> {
+  try {
+    const response = await get<readonly InvoiceReceiptApiItem[]>(
+      `/v1/invoicing/invoices/${encodeURIComponent(id)}/receipts`,
+    );
+    return response ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function listCreditNotes(

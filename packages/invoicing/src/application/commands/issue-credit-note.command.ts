@@ -177,7 +177,7 @@ export class IssueCreditNoteCommandHandler {
 
       const entryNumber = await this.journalEntryRepo.nextEntryNumber(command.tenantId);
       const journalEntryRes = JournalEntry.create({
-        id: `${creditNote.id}-journal`,
+        id: crypto.randomUUID(),
         tenantId: command.tenantId,
         entryNumber,
         date: command.issueDate,

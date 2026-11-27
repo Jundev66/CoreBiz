@@ -243,3 +243,38 @@ export async function voidGoodsReceiptAction(
   revalidatePath(`/purchases/${goodsReceiptId}`);
   return { status: 'success' };
 }
+
+export async function payGoodsReceiptAction(
+  _prev: PurchasingState,
+  formData: FormData,
+): Promise<PurchasingState> {
+  const goodsReceiptId = campo(formData, 'goodsReceiptId');
+  const amount = campo(formData, 'amount');
+  const currencyRaw = campo(formData, 'currency');
+  const currency = currencyRaw === 'VES' ? 'VES' : 'USD';
+  const paymentDateRaw = campo(formData, 'paymentDate');
+  const sourceAccountId = campo(formData, 'sourceAccountId');
+  const reference = campo(formData, 'reference');
+
+  const paymentDate = paymentDateRaw ? new Date(`${paymentDateRaw}T12:00:00.000Z`) : new Date();
+
+  const { payGoodsReceipt } = await apiForRequest();
+  const result = await payGoodsReceipt({
+    goodsReceiptId,
+    amount,
+    currency,
+    paymentDate,
+    sourceAccountId,
+    ...(reference ? { reference } : {}),
+  });
+
+  if (!result.ok) return failure(result.error);
+
+  revalidatePath('/purchases');
+  revalidatePath(`/purchases/${goodsReceiptId}`);
+  revalidatePath('/accounting/trial-balance');
+  revalidatePath('/accounting/journal-entries');
+  revalidatePath('/accounting/aging');
+
+  redirect(`/purchases/${encodeURIComponent(goodsReceiptId)}`);
+}

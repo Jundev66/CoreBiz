@@ -4,6 +4,9 @@ import { signIn } from '../session';
 test.describe('Synapse Chatbot & Responsive Demo Security QA Spec', () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('corebiz_cookie_consent', 'accepted');
+    });
   });
 
   test('asistente flotante es responsive en desktop, interactúa y se abre/cierra limpiamente', async ({
@@ -136,7 +139,7 @@ test.describe('Synapse Chatbot & Responsive Demo Security QA Spec', () => {
     await expect(customerPagination).toBeVisible();
     await expect(customerPagination.getByText(/Mostrar:/i)).toBeVisible();
     await expect(customerPagination.getByRole('link', { name: '5', exact: true })).toBeVisible();
-    await expect(customerPagination.getByText('10', { exact: true })).toBeVisible();
+    await expect(customerPagination.getByRole('link', { name: '10', exact: true })).toBeVisible();
 
     // 2. Productos
     await page.goto('/products');

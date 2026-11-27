@@ -1,16 +1,23 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { apiForRequest } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
 import { listTreasurySwaps } from '@/api/treasury';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
-import { Badge } from '@/ui/feedback';
+import { Alert, Badge } from '@/ui/feedback';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
 import { ArrowLeft, ArrowRightLeft, DollarSign, Wallet, ShieldCheck } from 'lucide-react';
 import { executeTreasurySwapAction } from '@/actions/treasury';
+import { filterLiquidAssetAccounts } from '@/ui/account-filters';
 
-export default async function TreasurySwapsPage() {
+export default async function TreasurySwapsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const { ctx } = await apiForRequest();
+  const { error: errorKind } = await searchParams;
 
   if (!can(ctx.actor, 'accounting:read')) {
     return (
@@ -25,8 +32,9 @@ export default async function TreasurySwapsPage() {
     listAccounts().catch(() => []),
   ]);
 
-  const assetAccounts = accounts.filter((a) => a.category === 'ASSET');
+  const assetAccounts = filterLiquidAssetAccounts(accounts);
   const expenseAccounts = accounts.filter((a) => a.category === 'EXPENSE' || a.category === 'COGS');
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
 
   const defaultSourceAccount =
     assetAccounts.find((a) => a.code.startsWith('1.1.01') || a.code === '1010') ?? assetAccounts[0];
@@ -40,7 +48,11 @@ export default async function TreasurySwapsPage() {
 
   async function handleSwapSubmit(formData: FormData) {
     'use server';
-    await executeTreasurySwapAction({ status: 'idle' }, formData);
+    const res = await executeTreasurySwapAction({ status: 'idle' }, formData);
+    if (res.status === 'error') {
+      redirect(`/accounting/treasury?error=${encodeURIComponent(res.error ?? 'Error')}`);
+    }
+    redirect('/accounting/treasury');
   }
 
   return (
@@ -97,6 +109,13 @@ export default async function TreasurySwapsPage() {
 
       {can(ctx.actor, 'accounting:write') && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 mb-8">
+          {errorKind && (
+            <Alert tone="danger" role="alert" className="mb-4">
+              {errorKind === 'InsufficientFunds'
+                ? 'Fondos insuficientes en la cuenta origen seleccionada para ejecutar esta operación.'
+                : `No se pudo ejecutar la operación (${errorKind}).`}
+            </Alert>
+          )}
           <h2 className="text-sm font-semibold text-zinc-200 mb-4 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-emerald-400" />
             Registrar Swap de Tesorería (Compra de USDT / Divisas)
@@ -289,6 +308,8 @@ export default async function TreasurySwapsPage() {
             <tr>
               <th className="py-2.5 px-3"># Swap</th>
               <th className="py-2.5 px-3">Fecha</th>
+              <th className="py-2.5 px-3">Cuenta Origen</th>
+              <th className="py-2.5 px-3">Cuenta Destino</th>
               <th className="py-2.5 px-3 text-right">Monto Origen</th>
               <th className="py-2.5 px-3 text-right">Monto Destino</th>
               <th className="py-2.5 px-3 text-right">Tasa</th>
@@ -299,36 +320,54 @@ export default async function TreasurySwapsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/50">
-            {swaps.map((s) => (
-              <tr key={s.id} className="hover:bg-zinc-800/30">
-                <td className="py-2.5 px-3 font-mono font-medium text-zinc-200">#{s.swapNumber}</td>
-                <td className="py-2.5 px-3">{s.date.slice(0, 10)}</td>
-                <td className="py-2.5 px-3 text-right font-mono text-amber-400">
-                  -{s.sourceAmount} {s.sourceCurrency}
-                </td>
-                <td className="py-2.5 px-3 text-right font-mono text-emerald-400">
-                  +{s.targetAmount} {s.targetCurrency}
-                </td>
-                <td className="py-2.5 px-3 text-right font-mono">{s.exchangeRate}</td>
-                <td className="py-2.5 px-3 text-right font-mono text-rose-400">
-                  {s.feeAmount} {s.targetCurrency}
-                </td>
-                <td className="py-2.5 px-3 font-mono text-zinc-400 truncate max-w-[150px]">
-                  {s.counterpartyReference}
-                </td>
-                <td className="py-2.5 px-3 font-mono text-zinc-400">
-                  <Link
-                    href="/accounting/journal-entries"
-                    className="text-blue-400 hover:underline"
-                  >
-                    {s.journalEntryId.slice(0, 8)}...
-                  </Link>
-                </td>
-                <td className="py-2.5 px-3 text-center">
-                  <Badge tone={s.status === 'COMPLETED' ? 'success' : 'neutral'}>{s.status}</Badge>
-                </td>
-              </tr>
-            ))}
+            {swaps.map((s) => {
+              const sourceAcc = accountById.get(s.sourceAccountId);
+              const targetAcc = accountById.get(s.targetAccountId);
+              return (
+                <tr key={s.id} className="hover:bg-zinc-800/30">
+                  <td className="py-2.5 px-3 font-mono font-medium text-zinc-200">
+                    #{s.swapNumber}
+                  </td>
+                  <td className="py-2.5 px-3">{s.date.slice(0, 10)}</td>
+                  <td className="py-2.5 px-3 text-xs text-zinc-300">
+                    {sourceAcc
+                      ? `${sourceAcc.code} · ${sourceAcc.name}`
+                      : s.sourceAccountId.slice(0, 8)}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs text-zinc-300">
+                    {targetAcc
+                      ? `${targetAcc.code} · ${targetAcc.name}`
+                      : s.targetAccountId.slice(0, 8)}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-amber-400">
+                    -{s.sourceAmount} {s.sourceCurrency}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono text-emerald-400">
+                    +{s.targetAmount} {s.targetCurrency}
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-mono">{s.exchangeRate}</td>
+                  <td className="py-2.5 px-3 text-right font-mono text-rose-400">
+                    {s.feeAmount} {s.targetCurrency}
+                  </td>
+                  <td className="py-2.5 px-3 font-mono text-zinc-400 truncate max-w-[150px]">
+                    {s.counterpartyReference}
+                  </td>
+                  <td className="py-2.5 px-3 font-mono text-zinc-400">
+                    <Link
+                      href="/accounting/journal-entries"
+                      className="text-blue-400 hover:underline"
+                    >
+                      {s.journalEntryId.slice(0, 8)}...
+                    </Link>
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    <Badge tone={s.status === 'COMPLETED' ? 'success' : 'neutral'}>
+                      {s.status}
+                    </Badge>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </TableFrame>
       )}

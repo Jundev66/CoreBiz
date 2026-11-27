@@ -8,6 +8,7 @@ import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
 import { ArrowLeft, Truck, ReceiptText, ShieldCheck, DollarSign } from 'lucide-react';
 import { recordDisbursementAction } from '@/actions/disbursements';
+import { filterLiquidAssetAccounts } from '@/ui/account-filters';
 
 export default async function ExpensesPage() {
   const { ctx } = await apiForRequest();
@@ -25,7 +26,7 @@ export default async function ExpensesPage() {
     listAccounts().catch(() => []),
   ]);
 
-  const assetAccounts = accounts.filter((a) => a.category === 'ASSET');
+  const assetAccounts = filterLiquidAssetAccounts(accounts);
   const expenseAccounts = accounts.filter((a) => a.category === 'EXPENSE' || a.category === 'COGS');
 
   const defaultSourceAccount =

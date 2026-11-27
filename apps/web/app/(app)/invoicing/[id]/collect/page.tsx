@@ -7,6 +7,7 @@ import { listInvoices } from '@/api/invoicing';
 import { Screen } from '@/ui/shell';
 import { NoAccess } from '@/ui/no-access';
 import { CollectInvoiceForm } from '@/ui/collect-invoice-form';
+import { filterLiquidAssetAccounts } from '@/ui/account-filters';
 
 function formatDecimal(minorStr: string): string {
   const minor = BigInt(minorStr || '0');
@@ -40,6 +41,11 @@ export default async function CollectInvoicePage({ params }: { params: Promise<{
   const mapping = await readCompanyAccountMapping(ctx.tenantId, accounts);
   const cashAccountId = mapping.cashAccountId;
   const receivableAccountId = mapping.receivableAccountId;
+  const assetAccounts = filterLiquidAssetAccounts(accounts).map((a) => ({
+    id: a.id,
+    code: a.code,
+    name: a.name,
+  }));
 
   const remainingMinor = BigInt(invoice.totalMinor) - BigInt(invoice.paidMinor);
   const fiscalCurrency = ctx.settings.fiscalCountry === 'VE' ? 'VES' : 'USD';
@@ -60,6 +66,7 @@ export default async function CollectInvoicePage({ params }: { params: Promise<{
         cashAccountId={cashAccountId}
         receivableAccountId={receivableAccountId}
         fiscalCurrency={fiscalCurrency}
+        assetAccounts={assetAccounts}
       />
     </Screen>
   );

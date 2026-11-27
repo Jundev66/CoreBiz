@@ -115,7 +115,13 @@ export function App() {
   const [newCustPhone, setNewCustPhone] = useState('');
 
   const [initialFloatInput, setInitialFloatInput] = useState('50.00');
-  const [openShiftRateInput, setOpenShiftRateInput] = useState('36.50');
+  const [openShiftRateInput, setOpenShiftRateInput] = useState(defaultExchangeRate || '36.50');
+
+  useEffect(() => {
+    if (defaultExchangeRate && defaultExchangeRate !== '36.50') {
+      setOpenShiftRateInput(defaultExchangeRate);
+    }
+  }, [defaultExchangeRate]);
   const [newRateInput, setNewRateInput] = useState('');
   const [rateChangeReasonInput, setRateChangeReasonInput] = useState('');
   const [declaredCashInput, setDeclaredCashInput] = useState('');
@@ -460,6 +466,9 @@ export function App() {
 
   const rateNum = parseFloat(activeExchangeRate || '36.50') || 36.5;
   const totalDecimal = Number(totals.totalMinor) / 100;
+  const igtfRateBp = activeJurisdictionConfig.igtfRateBp ?? 0n;
+  const igtfDecimal = igtfRateBp > 0n ? Math.round(totalDecimal * Number(igtfRateBp)) / 10000 : 0;
+  const cashUsdTotalDecimal = Number((totalDecimal + igtfDecimal).toFixed(2));
   const totalVesDecimal = totalDecimal * rateNum;
   const totalItemCount = cart.reduce((acc, l) => acc + l.quantity, 0);
 
@@ -476,7 +485,7 @@ export function App() {
   };
 
   const tenderedNumber = parseFloat(cashTenderedInput || '0');
-  const changeValue = Math.max(0, tenderedNumber - totalDecimal);
+  const changeValue = Math.max(0, tenderedNumber - cashUsdTotalDecimal);
 
   const vesTenderedNumber = parseFloat(vesTenderedInput || '0');
   const vesChangeValue = Math.max(0, vesTenderedNumber - totalVesDecimal);
@@ -1755,7 +1764,9 @@ export function App() {
                         <span className="font-mono text-[10px] text-muted">
                           {isVes
                             ? `Bs. ${totalVesDecimal.toFixed(2)}`
-                            : `$${totalDecimal.toFixed(2)}`}
+                            : opt.id === 'cash_usd'
+                              ? `$${cashUsdTotalDecimal.toFixed(2)}`
+                              : `$${totalDecimal.toFixed(2)}`}
                         </span>
                       </button>
                     );
@@ -1783,9 +1794,11 @@ export function App() {
                     </div>
 
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {[totalDecimal, 5, 10, 20, 50, 100].map((amount) => {
-                        if (amount < totalDecimal && amount !== totalDecimal) return null;
-                        const label = amount === totalDecimal ? 'Exacto' : `$${amount.toFixed(0)}`;
+                      {[cashUsdTotalDecimal, 5, 10, 20, 50, 100].map((amount) => {
+                        if (amount < cashUsdTotalDecimal && amount !== cashUsdTotalDecimal)
+                          return null;
+                        const label =
+                          amount === cashUsdTotalDecimal ? 'Exacto' : `$${amount.toFixed(0)}`;
                         return (
                           <button
                             key={amount}
@@ -1800,6 +1813,17 @@ export function App() {
                     </div>
                   </div>
 
+                  {igtfDecimal > 0 && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-amber-700 dark:text-amber-300">
+                        IGTF (3% Pago en Divisa)
+                      </span>
+                      <span className="font-mono font-bold text-amber-700 dark:text-amber-300">
+                        +${igtfDecimal.toFixed(2)} (Total: ${cashUsdTotalDecimal.toFixed(2)})
+                      </span>
+                    </div>
+                  )}
+
                   <div className="rounded-xl border border-line bg-canvas p-2.5 flex items-center justify-between">
                     <div>
                       <p className="text-[11px] font-bold text-muted">Vuelto a entregar:</p>
@@ -1811,7 +1835,7 @@ export function App() {
                     </div>
                     <span
                       className={`font-mono text-xl font-black ${
-                        tenderedNumber >= totalDecimal ? 'text-emerald-600' : 'text-danger'
+                        tenderedNumber >= cashUsdTotalDecimal ? 'text-emerald-600' : 'text-danger'
                       }`}
                     >
                       ${changeValue.toFixed(2)}
@@ -1963,7 +1987,7 @@ export function App() {
                 type="button"
                 disabled={
                   !selectedCustomer ||
-                  (checkoutPaymentMethod === 'cash_usd' && tenderedNumber < totalDecimal) ||
+                  (checkoutPaymentMethod === 'cash_usd' && tenderedNumber < cashUsdTotalDecimal) ||
                   (checkoutPaymentMethod === 'cash_ves' && vesTenderedNumber < totalVesDecimal) ||
                   ((checkoutPaymentMethod === 'pago_movil' ||
                     checkoutPaymentMethod === 'punto_debito' ||
@@ -1992,7 +2016,7 @@ export function App() {
                 }`}
               >
                 {checkoutPaymentMethod === 'cash_usd' &&
-                  `Confirmar Cobro ($${totalDecimal.toFixed(2)})`}
+                  `Confirmar Cobro ($${cashUsdTotalDecimal.toFixed(2)})`}
                 {checkoutPaymentMethod === 'cash_ves' &&
                   `Confirmar Cobro (Bs. ${totalVesDecimal.toFixed(2)})`}
                 {checkoutPaymentMethod === 'pago_movil' &&

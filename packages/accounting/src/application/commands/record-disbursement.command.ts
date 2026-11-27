@@ -116,7 +116,7 @@ export class RecordDisbursementCommandHandler {
     }
 
     const journalResult = JournalEntry.create({
-      id: `${command.id}-journal`,
+      id: crypto.randomUUID(),
       tenantId: command.tenantId,
       entryNumber: nextEntryNumber,
       date: command.date,

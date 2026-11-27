@@ -24,7 +24,7 @@ test.describe('Senior ERP, POS, Accounting & Fiscal Master QA Suite', () => {
       await page.goto('/');
       await expect(page.locator('main')).toBeVisible();
 
-      const tenantSelector = page.locator('select#tenantId').first();
+      const tenantSelector = page.locator('select#navbar-tenantId').first();
       await expect(tenantSelector).toBeVisible();
 
       const optionCount = await tenantSelector.locator('option').count();
@@ -47,7 +47,10 @@ test.describe('Senior ERP, POS, Accounting & Fiscal Master QA Suite', () => {
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(/us sales tax/i);
 
       await page.goto('/');
-      await page.locator('select#tenantId').first().selectOption({ label: 'Empresa Demo C.A.' });
+      await page
+        .locator('select#navbar-tenantId')
+        .first()
+        .selectOption({ label: 'Empresa Demo C.A.' });
       await page
         .getByRole('button', { name: /cambiar|change/i })
         .first()
@@ -228,7 +231,7 @@ test.describe('Senior ERP, POS, Accounting & Fiscal Master QA Suite', () => {
 
       await page.goto('/accounting');
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(/plan de cuentas/i);
-      await expect(page.locator('table')).toBeVisible();
+      await expect(page.getByText(/1\.1\.01/i).first()).toBeVisible();
 
       await page.goto('/accounting/trial-balance');
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(/balance de comprobación/i);
@@ -289,7 +292,8 @@ test.describe('Senior ERP, POS, Accounting & Fiscal Master QA Suite', () => {
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(/us sales tax/i);
 
       await page.goto('/pos-sales');
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/ventas de caja/i);
+      await expect(page).toHaveURL(/\/invoicing$/);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/facturas de venta/i);
 
       await page.goto('/conflicts');
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(

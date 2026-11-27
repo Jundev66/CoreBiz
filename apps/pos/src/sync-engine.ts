@@ -322,8 +322,26 @@ export async function syncCatalog(
       barcode?: string | null;
       updatedAt?: string;
     }>;
+    settings?: {
+      exchangeRate?: string | null;
+      baseCurrency?: string;
+      fiscalCountry?: 'VE' | 'US';
+    };
     serverTime: string;
   };
+
+  if (data.settings?.exchangeRate) {
+    await posDb.config.put({
+      key: 'exchange_rate_bcv',
+      value: data.settings.exchangeRate,
+    });
+  }
+  if (data.settings?.fiscalCountry) {
+    await posDb.config.put({
+      key: 'jurisdiction',
+      value: data.settings.fiscalCountry,
+    });
+  }
 
   const localItems: LocalProduct[] = data.items.map((p) => ({
     id: p.id,
@@ -349,13 +367,36 @@ export async function syncCatalog(
   return { updatedCount: localItems.length };
 }
 
-export async function syncCustomersFromErp(apiBaseUrl = ''): Promise<number> {
+export async function syncCustomersFromErp(apiBaseUrl = '', token?: string): Promise<number> {
   try {
-    const res = await fetch(`${apiBaseUrl}/v1/pos/demo-customers`);
+    const effectiveToken =
+      token || (await posDb.config.get('device_token'))?.value || DEMO_DEVICE_TOKEN;
+    const isRealDevice = effectiveToken !== DEMO_DEVICE_TOKEN;
+    const tenantId = (await posDb.config.get('tenant_id'))?.value;
+
+    const url = isRealDevice
+      ? `${apiBaseUrl}/v1/pos/customers`
+      : `${apiBaseUrl}/v1/pos/demo-customers`;
+    const res = await fetch(
+      url,
+      isRealDevice
+        ? {
+            headers: {
+              Authorization: `Bearer ${effectiveToken}`,
+              ...(tenantId ? { 'x-corebiz-tenant': tenantId } : {}),
+            },
+          }
+        : undefined,
+    );
     if (res.ok) {
       const data = (await res.json()) as { items: LocalCustomer[] };
-      if (data.items && data.items.length > 0) {
-        await posDb.customers.bulkPut(data.items);
+      if (data.items) {
+        if (isRealDevice) {
+          await posDb.customers.clear();
+        }
+        if (data.items.length > 0) {
+          await posDb.customers.bulkPut(data.items);
+        }
         return data.items.length;
       }
     }

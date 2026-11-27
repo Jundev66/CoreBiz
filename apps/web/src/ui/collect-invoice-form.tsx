@@ -9,6 +9,12 @@ import { Card } from '@/ui/primitives';
 
 const INITIAL: InvoiceFormState = { status: 'idle' };
 
+export interface CollectAssetAccountOption {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+}
+
 export function CollectInvoiceForm({
   invoiceId,
   documentNumber,
@@ -19,6 +25,7 @@ export function CollectInvoiceForm({
   cashAccountId,
   receivableAccountId,
   fiscalCurrency,
+  assetAccounts = [],
 }: {
   readonly invoiceId: string;
   readonly documentNumber: string;
@@ -29,6 +36,7 @@ export function CollectInvoiceForm({
   readonly cashAccountId: string;
   readonly receivableAccountId: string;
   readonly fiscalCurrency: string;
+  readonly assetAccounts?: readonly CollectAssetAccountOption[];
 }) {
   const [state, formAction, pending] = useActionState(applyInvoicePaymentAction, INITIAL);
   const [amount, setAmount] = useState<string>(remainingDecimal);
@@ -50,7 +58,9 @@ export function CollectInvoiceForm({
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="invoiceId" value={invoiceId} />
       <input type="hidden" name="currency" value={currency} />
-      <input type="hidden" name="cashAccountId" value={cashAccountId} />
+      {assetAccounts.length === 0 && (
+        <input type="hidden" name="cashAccountId" value={cashAccountId} />
+      )}
       <input type="hidden" name="receivableAccountId" value={receivableAccountId} />
 
       {state.status === 'error' && (
@@ -105,6 +115,27 @@ export function CollectInvoiceForm({
               className={`mt-1.5 ${CONTROL_CLASSES}`}
             />
           </div>
+
+          {assetAccounts.length > 0 && (
+            <div className="sm:col-span-2">
+              <label htmlFor="collect-account" className={LABEL_CLASSES}>
+                Cuenta Destino (Caja / Banco / USD / USDT)
+              </label>
+              <select
+                id="collect-account"
+                name="cashAccountId"
+                required
+                defaultValue={cashAccountId}
+                className={`mt-1.5 ${CONTROL_CLASSES}`}
+              >
+                {assetAccounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} · {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {currency !== fiscalCurrency && (
             <>

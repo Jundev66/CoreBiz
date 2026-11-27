@@ -4,6 +4,9 @@ import { signIn } from '../session';
 test.describe('Cobros y Cuentas por Cobrar (E2E)', () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('corebiz_cookie_consent', 'accepted');
+    });
   });
 
   test('Flujo completo: emisión con crédito, cobro total, cobro parcial, límite de crédito, anulación y vista de impresión', async ({

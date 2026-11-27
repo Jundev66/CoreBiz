@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Inject,
   NotFoundException,
   Post,
   UseGuards,
@@ -21,6 +22,9 @@ import { loadEnv } from '../../../config/env';
 import { activeDriver, databaseUrl } from '../../../config/driver';
 import { domainError } from '../../../http/api-error';
 import { ZodValidationPipe } from '../../../http/zod-validation.pipe';
+import { DEMO_SEEDER } from '../../../tokens';
+
+type DemoSeeder = (url: string, rawTenantId: string, rawUserId: string) => Promise<void>;
 
 const DEMO_TEMPLATE_TENANT_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -45,6 +49,8 @@ export interface DemoCredentials {
 @UseGuards(InternalSecretGuard)
 @Controller('v1/demo')
 export class StartDemoSandboxController {
+  constructor(@Inject(DEMO_SEEDER) private readonly seedDemoShowcase: DemoSeeder) {}
+
   @Post('sandboxes')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Entregar credenciales propias a un visitante' })
@@ -90,6 +96,12 @@ export class StartDemoSandboxController {
     });
 
     if (!result.ok) throw domainError('Unavailable');
+
+    if (!result.readonly) {
+      await this.seedDemoShowcase(url, result.tenantId, result.userId).catch((err) => {
+        console.error('[Demo Showcase Seeder] Error:', err);
+      });
+    }
 
     if (body.leadEmail) {
       void recordDemoLead(url, {

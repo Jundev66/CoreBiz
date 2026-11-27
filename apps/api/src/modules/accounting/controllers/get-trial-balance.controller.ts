@@ -27,11 +27,16 @@ export class GetTrialBalanceController {
     @Query(new ZodValidationPipe(getTrialBalanceQuerySchema))
     query: z.infer<typeof getTrialBalanceQuerySchema>,
   ) {
+    const taxLabel = this.ctx?.settings?.taxLabel?.toLowerCase() ?? '';
+    const isUs = taxLabel.includes('sales tax') || taxLabel.includes('ein');
+    const fiscalCountry = this.ctx?.settings?.fiscalCountry ?? (isUs ? 'US' : 'VE');
+
     const result = await this.useCases.getTrialBalance.execute({
       tenantId: this.ctx.tenantId,
       startDate: query.startDate,
       endDate: query.endDate,
       currency: query.currency,
+      fiscalCountry,
     });
 
     const val = unwrapOrThrow(result);

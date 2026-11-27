@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import {
   ACTIVE_CONTEXT,
+  DEMO_SEEDER,
   IDENTITY,
   INTEGRATIONS_RUNTIME,
   MEMBERSHIPS,
@@ -18,6 +19,7 @@ import {
 } from './context.provider';
 import { runtimeProvider } from './runtime.provider';
 import { integrationsRuntimeProvider } from './integrations-runtime.provider';
+import { demoSeederProvider } from './seed-demo-showcase';
 import { useCasesProvider } from './use-cases.provider';
 
 /**
@@ -40,6 +42,7 @@ import { useCasesProvider } from './use-cases.provider';
     runtimeProvider,
     integrationsRuntimeProvider,
     useCasesProvider,
+    demoSeederProvider,
   ],
   exports: [
     IDENTITY,
@@ -50,6 +53,7 @@ import { useCasesProvider } from './use-cases.provider';
     RUNTIME,
     INTEGRATIONS_RUNTIME,
     USE_CASES,
+    DEMO_SEEDER,
   ],
 })
 export class CompositionModule {}

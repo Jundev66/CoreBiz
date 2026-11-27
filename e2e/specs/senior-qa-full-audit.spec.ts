@@ -45,7 +45,7 @@ test.describe('Senior QA Master Audit: Multi-Company, Multi-Country, Accounting,
     }
 
     await page.goto('/');
-    const tenantSelector = page.locator('select#tenantId').first();
+    const tenantSelector = page.locator('select#navbar-tenantId').first();
     await expect(tenantSelector).toBeVisible();
     await tenantSelector.selectOption({ label: 'Demo Store Inc.' });
     await page
@@ -84,7 +84,7 @@ test.describe('Senior QA Master Audit: Multi-Company, Multi-Country, Accounting,
 
     await page.goto('/accounting');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/plan de cuentas/i);
-    await expect(page.locator('table')).toBeVisible();
+    await expect(page.getByText(/1\.1\.01/i).first()).toBeVisible();
 
     await page.goto('/accounting/expenses');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/gastos operativos/i);
@@ -129,7 +129,7 @@ test.describe('Senior QA Master Audit: Multi-Company, Multi-Country, Accounting,
     page,
   }) => {
     await page.goto('/');
-    const tenantSelector = page.locator('select#tenantId').first();
+    const tenantSelector = page.locator('select#navbar-tenantId').first();
     await expect(tenantSelector).toBeVisible();
     await tenantSelector.selectOption({ label: 'Demo Store Inc.' });
     await page

@@ -11,6 +11,7 @@ export interface PosCountryConfig {
   readonly countryName: string;
   readonly defaultCurrency: string;
   readonly taxRateBp: bigint;
+  readonly igtfRateBp?: bigint;
   readonly taxLabel: string;
   readonly taxIdLabel: string;
   readonly isDualCurrency: boolean;
@@ -27,6 +28,7 @@ export const VENEZUELA_POS_CONFIG: PosCountryConfig = {
   countryName: 'Venezuela',
   defaultCurrency: 'USD',
   taxRateBp: 1600n,
+  igtfRateBp: 300n,
   taxLabel: 'IVA (16%)',
   taxIdLabel: 'RIF / C.I.',
   isDualCurrency: true,
@@ -49,6 +51,7 @@ export const UNITED_STATES_POS_CONFIG: PosCountryConfig = {
   countryName: 'United States',
   defaultCurrency: 'USD',
   taxRateBp: 700n,
+  igtfRateBp: 0n,
   taxLabel: 'Sales Tax (7.00%)',
   taxIdLabel: 'Tax ID / EIN',
   isDualCurrency: false,

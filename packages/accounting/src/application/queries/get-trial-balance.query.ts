@@ -5,12 +5,17 @@ import {
   ok,
   type Result,
 } from '../../domain/index';
+import {
+  ChartOfAccountsRegistry,
+  deterministicAccountUuid,
+} from '../../domain/templates/default-chart-of-accounts';
 
 export interface GetTrialBalanceQuery {
   readonly tenantId: string;
   readonly startDate: Date;
   readonly endDate: Date;
   readonly currency: Currency;
+  readonly fiscalCountry?: string | undefined;
 }
 
 export interface TrialBalanceAccountItem {
@@ -37,12 +42,32 @@ export class GetTrialBalanceQueryHandler {
   ) {}
 
   async execute(query: GetTrialBalanceQuery): Promise<Result<TrialBalanceResponse, never>> {
-    const accounts = await this.accountRepository.listByTenant(query.tenantId);
+    const persistedAccounts = await this.accountRepository.listByTenant(query.tenantId);
     const entries = await this.journalEntryRepository.listByDateRange(
       query.tenantId,
       query.startDate,
       query.endDate,
     );
+
+    const accounts =
+      persistedAccounts.length > 0
+        ? persistedAccounts.map((acc) => ({
+            id: acc.id,
+            code: acc.code.value,
+            name: acc.name,
+            normalSide: acc.normalSide,
+          }))
+        : query.fiscalCountry && ChartOfAccountsRegistry.has(query.fiscalCountry)
+          ? ChartOfAccountsRegistry.get(query.fiscalCountry).map((tmpl) => ({
+              id: deterministicAccountUuid(query.tenantId, tmpl.code),
+              code: tmpl.code,
+              name: tmpl.name,
+              normalSide:
+                tmpl.category === 'ASSET' || tmpl.category === 'EXPENSE' || tmpl.category === 'COGS'
+                  ? ('DEBIT' as const)
+                  : ('CREDIT' as const),
+            }))
+          : [];
 
     const debitSums = new Map<string, bigint>();
     const creditSums = new Map<string, bigint>();
@@ -74,7 +99,7 @@ export class GetTrialBalanceQueryHandler {
 
       items.push({
         accountId: account.id,
-        code: account.code.value,
+        code: account.code,
         name: account.name,
         normalSide: account.normalSide,
         totalDebitMinor: debit,

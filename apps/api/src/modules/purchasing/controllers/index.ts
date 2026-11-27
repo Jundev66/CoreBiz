@@ -10,3 +10,4 @@ export * from './list-goods-receipts.controller';
 export * from './receive-goods.controller';
 export * from './void-goods-receipt.controller';
 export * from './get-goods-receipt-by-id.controller';
+export * from './pay-goods-receipt.controller';

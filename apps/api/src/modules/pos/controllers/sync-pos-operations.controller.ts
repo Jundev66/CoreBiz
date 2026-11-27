@@ -227,10 +227,18 @@ export class SyncPosOperationsController {
         const dispatchResult = await this.useCases.posCommandBus.dispatch(cmd);
 
         if (!dispatchResult.ok) {
-          const errObj = dispatchResult.error as { kind?: string } | undefined;
-          const errorMsg = errObj?.kind ?? 'OperationRejected';
-          console.warn(
-            `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) rejected: ${errorMsg}`,
+          const errObj = dispatchResult.error as Record<string, unknown> | undefined;
+          const kind = typeof errObj?.kind === 'string' ? errObj.kind : 'OperationRejected';
+          const detailKeys = errObj
+            ? Object.entries(errObj)
+                .filter(([k]) => k !== 'kind')
+                .map(([k, v]) => `${k}=${String(v)}`)
+                .join(', ')
+            : '';
+          const errorMsg = detailKeys ? `${kind} (${detailKeys})` : kind;
+          console.error(
+            `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) rejected:`,
+            JSON.stringify(dispatchResult.error),
           );
           results.push({
             operationId: op.operationId,
@@ -263,13 +271,13 @@ export class SyncPosOperationsController {
         }
 
         console.error(
-          `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) exception:`,
-          errorMsg,
+          `[API /v1/pos/sync] Operation ${op.operationId} (${op.type}) exception: ${errorMsg}`,
+          err instanceof Error ? err.stack : err,
         );
         results.push({
           operationId: op.operationId,
           status: 'failed',
-          error: errorMsg,
+          error: `[${op.type}] ${errorMsg}`,
         });
       }
     }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetSalesBookController } from '../../../src/modules/fiscal/controllers/get-sales-book.controller';
 import { ok } from '@corebiz/domain';
 import type { UseCases } from '../../../src/composition/use-cases.provider';
+import type { Runtime } from '../../../src/composition/runtime.provider';
 import type { TenantContext } from '@corebiz/application';
 
 describe('GetSalesBookController', () => {
@@ -61,7 +62,19 @@ describe('GetSalesBookController', () => {
       tenantId: '018e245a-0000-7000-8000-000000000001',
     } as unknown as TenantContext;
 
-    controller = new GetSalesBookController(useCasesMock as unknown as UseCases, tenantCtxMock);
+    const runtimeMock = {
+      queries: {
+        customers: {
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        },
+      },
+    } as unknown as Runtime;
+
+    controller = new GetSalesBookController(
+      useCasesMock as unknown as UseCases,
+      tenantCtxMock,
+      runtimeMock,
+    );
   });
 
   it('delegates to generateSalesBook and returns formatted response', async () => {

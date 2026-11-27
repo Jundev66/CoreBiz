@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getTranslations, getFormatter } from 'next-intl/server';
 import { Plus, ScanLine, Truck, UsersRound } from 'lucide-react';
 import { withSession } from '@/api/session';
+import { listJournalEntries } from '@/api/accounting';
 import { Screen, PrimaryLink, TableFrame, Empty } from '@/ui/shell';
 import { ButtonLink } from '@/ui/button';
 import { Badge } from '@/ui/feedback';
@@ -35,12 +36,25 @@ export default async function PurchasesPage({
   const createdCode = noticeCode(creado);
   const format = await getFormatter();
   const pageSize = limite ? Math.min(100, Math.max(5, parseInt(limite, 10) || 50)) : 50;
-  const { ctx, data: page } = await withSession((queries) =>
-    queries.purchasing.receipts({
-      limit: pageSize,
-      ...(cursor !== undefined ? { cursor } : {}),
-    }),
-  );
+  const [{ ctx, data: page }, journalEntries] = await Promise.all([
+    withSession((queries) =>
+      queries.purchasing.receipts({
+        limit: pageSize,
+        ...(cursor !== undefined ? { cursor } : {}),
+      }),
+    ),
+    listJournalEntries().catch(() => []),
+  ]);
+
+  const grossTotalByReceiptId = new Map<string, string>();
+  for (const entry of journalEntries) {
+    if (entry.sourceType === 'PURCHASE' && entry.sourceId) {
+      const minor = BigInt(entry.totalCreditMinor || '0');
+      const major = minor / 100n;
+      const cents = (minor % 100n).toString().padStart(2, '0');
+      grossTotalByReceiptId.set(entry.sourceId, `${major}.${cents}`);
+    }
+  }
 
   /*
    * The session and the list travel together; the role still decides what is shown. A 403
@@ -147,55 +161,60 @@ export default async function PurchasesPage({
                 </tr>
               </thead>
               <tbody>
-                {page.items.map((receipt) => (
-                  <tr
-                    key={receipt.id}
-                    className="border-b border-line transition-colors last:border-0 hover:bg-subtle/40"
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {/* The link text is ONLY the number; the voided badge sits beside it. */}
-                      <Link
-                        href={`/purchases/${receipt.id}`}
-                        className="font-mono text-xs font-medium text-brand underline-offset-2 hover:underline"
-                      >
-                        {receipt.number}
-                      </Link>
-                      {receipt.status === 'voided' && (
-                        <span className="ml-2">
-                          <Badge tone="danger">{t('purchases.voided')}</Badge>
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-ink">{receipt.supplierName}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-muted">
-                      {receivedOn(receipt.receivedAt)}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{receipt.lineCount}</td>
-                    <td className="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums">
-                      $ {receipt.total}
-                    </td>
-                  </tr>
-                ))}
+                {page.items.map((receipt) => {
+                  const displayTotal = grossTotalByReceiptId.get(receipt.id) ?? receipt.total;
+                  return (
+                    <tr
+                      key={receipt.id}
+                      className="border-b border-line transition-colors last:border-0 hover:bg-subtle/40"
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Link
+                          href={`/purchases/${receipt.id}`}
+                          className="font-mono text-xs font-medium text-brand underline-offset-2 hover:underline"
+                        >
+                          {receipt.number}
+                        </Link>
+                        {receipt.status === 'voided' && (
+                          <span className="ml-2">
+                            <Badge tone="danger">{t('purchases.voided')}</Badge>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-ink">{receipt.supplierName}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-muted">
+                        {receivedOn(receipt.receivedAt)}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">{receipt.lineCount}</td>
+                      <td className="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums">
+                        $ {displayTotal}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </TableFrame>
           </DesktopOnly>
 
           <MobileList>
-            {page.items.map((receipt) => (
-              <MobileListItem
-                key={receipt.id}
-                href={`/purchases/${receipt.id}`}
-                title={<span className="font-mono text-sm">{receipt.number}</span>}
-                subtitle={`${receipt.supplierName} · ${receivedOn(receipt.receivedAt)}`}
-                trailing={`$ ${receipt.total}`}
-                {...(receipt.status === 'voided'
-                  ? {
-                      trailingHint: <Badge tone="danger">{t('purchases.voided')}</Badge>,
-                      muted: true,
-                    }
-                  : {})}
-              />
-            ))}
+            {page.items.map((receipt) => {
+              const displayTotal = grossTotalByReceiptId.get(receipt.id) ?? receipt.total;
+              return (
+                <MobileListItem
+                  key={receipt.id}
+                  href={`/purchases/${receipt.id}`}
+                  title={<span className="font-mono text-sm">{receipt.number}</span>}
+                  subtitle={`${receipt.supplierName} · ${receivedOn(receipt.receivedAt)}`}
+                  trailing={`$ ${displayTotal}`}
+                  {...(receipt.status === 'voided'
+                    ? {
+                        trailingHint: <Badge tone="danger">{t('purchases.voided')}</Badge>,
+                        muted: true,
+                      }
+                    : {})}
+                />
+              );
+            })}
           </MobileList>
 
           <Pagination

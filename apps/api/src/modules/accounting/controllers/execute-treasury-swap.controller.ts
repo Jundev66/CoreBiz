@@ -57,6 +57,7 @@ export class ExecuteTreasurySwapController {
       counterpartyReference: body.counterpartyReference,
       operatorUserId: this.ctx.actor.userId,
       description: body.description,
+      validateAvailableBalance: true,
     });
 
     const val = unwrapOrThrow(result);

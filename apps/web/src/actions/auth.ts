@@ -115,6 +115,13 @@ async function consumeAttempt(policy: keyof typeof RATE_LIMITS): Promise<AuthSta
 
 // ─── Acceso ──────────────────────────────────────────────────────────────────
 
+function safeNextPath(raw: FormDataEntryValue | null): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return null;
+  return trimmed;
+}
+
 export async function signInAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const blocked = await consumeAttempt('login');
   if (blocked !== null) return blocked;
@@ -145,7 +152,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   // una empresa que este usuario quiza ni siquiera tiene.
   (await cookies()).delete(ACTIVE_TENANT_COOKIE);
 
-  redirect('/');
+  redirect(safeNextPath(formData.get('next')) ?? '/');
 }
 
 // ─── Registro ────────────────────────────────────────────────────────────────
@@ -208,7 +215,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
    * Ahora hay uno solo, y es el que pregunta por moneda, impuesto y tasa con la
    * persona ya dentro. Registrarse sigue costando tres campos.
    */
-  redirect('/onboarding');
+  redirect(safeNextPath(formData.get('next')) ?? '/onboarding');
 }
 
 /**

@@ -5,6 +5,7 @@ export * from './commands/void-collection-receipt.command';
 export * from './commands/issue-credit-note.command';
 export * from './commands/issue-debit-note.command';
 export * from './queries/list-invoices.query';
+export * from './queries/get-invoice-by-id.query';
 export * from './queries/list-invoice-receipts.query';
 export * from './queries/list-credit-notes.query';
 export * from './queries/list-debit-notes.query';

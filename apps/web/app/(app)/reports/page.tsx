@@ -14,6 +14,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { withSession } from '@/api/session';
+import { listInvoices } from '@/api/invoicing';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Stat } from '@/ui/primitives';
 import { DesktopOnly, MobileList, MobileStaticItem } from '@/ui/list';
@@ -42,15 +43,17 @@ export default async function ReportsPage({
   const { tab = 'resumen' } = await searchParams;
 
   const { ctx, data } = await withSession(async (queries) => {
-    const [report, deliveryNotes, purchases, products, customers, suppliers] = await Promise.all([
-      queries.reports.salesSummary(),
-      queries.deliveryNotes.list({ limit: 100 }),
-      queries.purchasing.receipts({ limit: 100 }),
-      queries.products.list({ limit: 100, includeArchived: true }),
-      queries.customers.list({ limit: 100, includeArchived: true }),
-      queries.purchasing.suppliers({ limit: 100, includeArchived: true }),
-    ]);
-    return { report, deliveryNotes, purchases, products, customers, suppliers };
+    const [report, deliveryNotes, purchases, products, customers, suppliers, invoices] =
+      await Promise.all([
+        queries.reports.salesSummary(),
+        queries.deliveryNotes.list({ limit: 100 }),
+        queries.purchasing.receipts({ limit: 100 }),
+        queries.products.list({ limit: 100, includeArchived: true }),
+        queries.customers.list({ limit: 100, includeArchived: true }),
+        queries.purchasing.suppliers({ limit: 100, includeArchived: true }),
+        listInvoices().catch(() => []),
+      ]);
+    return { report, deliveryNotes, purchases, products, customers, suppliers, invoices };
   });
 
   if (!can(ctx.actor, 'report:read') || !data || data.report === null) {
@@ -61,7 +64,15 @@ export default async function ReportsPage({
     );
   }
 
-  const { report, deliveryNotes: _deliveryNotes, purchases, products, customers, suppliers } = data;
+  const {
+    report,
+    deliveryNotes: _deliveryNotes,
+    purchases,
+    products,
+    customers,
+    suppliers,
+    invoices,
+  } = data;
 
   const units = (value: number): string =>
     value.toLocaleString('es-VE', { maximumFractionDigits: 3 });
@@ -81,8 +92,18 @@ export default async function ReportsPage({
     return parseFloat(str) || 0;
   };
 
-  // Cálculos de Ventas
-  const totalSalesNum = parseAmount(report.salesTotal);
+  const validInvoices = invoices.filter(
+    (inv) => inv.status !== 'VOIDED' && inv.status !== 'CANCELLED',
+  );
+  const invoiceSalesNum = validInvoices.reduce(
+    (acc, inv) => acc + Number(BigInt(inv.subtotalMinor || '0')) / 100,
+    0,
+  );
+  const totalSalesNum = parseAmount(report.salesTotal) + invoiceSalesNum;
+  const effectiveDocCount = report.documentCount + validInvoices.length;
+  const effectiveAvgTicket = effectiveDocCount > 0 ? totalSalesNum / effectiveDocCount : 0;
+  const effectiveSalesStr = totalSalesNum.toFixed(2);
+  const effectiveAvgTicketStr = effectiveAvgTicket.toFixed(2);
   const maxRevenue = Math.max(...report.bestSellers.map((b) => parseAmount(b.revenue)), 1);
   const totalUnitsSold = report.bestSellers.reduce((acc, curr) => acc + curr.units, 0);
 
@@ -117,9 +138,9 @@ export default async function ReportsPage({
       exportData = {
         reportTitle: 'Ventas y Despachos',
         metrics: [
-          { label: 'Ventas del Período', value: `$ ${report.salesTotal}` },
-          { label: 'Documentos Emitidos', value: String(report.documentCount) },
-          { label: 'Ticket Promedio', value: `$ ${report.averageTicket}` },
+          { label: 'Ventas del Período', value: `$ ${effectiveSalesStr}` },
+          { label: 'Documentos Emitidos', value: String(effectiveDocCount) },
+          { label: 'Ticket Promedio', value: `$ ${effectiveAvgTicketStr}` },
           { label: 'Unidades Vendidas', value: `${units(totalUnitsSold)} uds` },
         ],
         tableHeaders: ['Producto', 'Unidades', 'Ingresos ($)'],
@@ -186,12 +207,12 @@ export default async function ReportsPage({
       exportData = {
         reportTitle: 'Resumen Ejecutivo General',
         metrics: [
-          { label: 'Ventas del Período', value: `$ ${report.salesTotal}` },
+          { label: 'Ventas del Período', value: `$ ${effectiveSalesStr}` },
           { label: 'Total Compras', value: `$ ${totalPurchasesNum.toFixed(2)}` },
           { label: 'Margen Bruto Estimado', value: `$ ${grossMarginNum.toFixed(2)}` },
           { label: 'Valoración del Inventario', value: `$ ${report.inventoryValue}` },
-          { label: 'Documentos Emitidos', value: String(report.documentCount) },
-          { label: 'Ticket Promedio', value: `$ ${report.averageTicket}` },
+          { label: 'Documentos Emitidos', value: String(effectiveDocCount) },
+          { label: 'Ticket Promedio', value: `$ ${effectiveAvgTicketStr}` },
         ],
         tableHeaders: ['Producto Destacado', 'Unidades', 'Ingresos ($)'],
         tableRows: report.bestSellers.map((b) => [b.name, units(b.units), `$ ${b.revenue}`]),
@@ -253,19 +274,19 @@ export default async function ReportsPage({
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <Stat
                 label={t('reports.salesTotal')}
-                value={`$ ${report.salesTotal}`}
+                value={`$ ${effectiveSalesStr}`}
                 icon={Wallet}
                 tone="emerald"
               />
               <Stat
                 label={t('reports.documentsIssued')}
-                value={String(report.documentCount)}
+                value={String(effectiveDocCount)}
                 icon={FileText}
                 tone="violet"
               />
               <Stat
                 label={t('reports.averageTicket')}
-                value={`$ ${report.averageTicket}`}
+                value={`$ ${effectiveAvgTicketStr}`}
                 icon={TrendingUp}
                 tone="sky"
               />
@@ -406,19 +427,19 @@ export default async function ReportsPage({
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <Stat
                 label={t('reports.salesTotal')}
-                value={`$ ${report.salesTotal}`}
+                value={`$ ${effectiveSalesStr}`}
                 icon={Wallet}
                 tone="emerald"
               />
               <Stat
                 label={t('reports.documentsIssued')}
-                value={String(report.documentCount)}
+                value={String(effectiveDocCount)}
                 icon={FileText}
                 tone="violet"
               />
               <Stat
                 label={t('reports.averageTicket')}
-                value={`$ ${report.averageTicket}`}
+                value={`$ ${effectiveAvgTicketStr}`}
                 icon={TrendingUp}
                 tone="sky"
               />

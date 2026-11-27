@@ -52,6 +52,7 @@ import {
   ListAccountsQueryHandler,
   CreateAccountCommandHandler,
   ListJournalEntriesQueryHandler,
+  GetInvoiceByIdQueryHandler,
   IssueInvoiceCommandHandler,
   ApplyInvoicePaymentCommandHandler,
   CreateCollectionReceiptCommandHandler,
@@ -107,6 +108,8 @@ import {
   httpVisionGateway,
   BullMqPosSyncQueue,
 } from '@corebiz/infrastructure';
+import { makePayGoodsReceipt } from './pay-goods-receipt';
+import { makeAgingPorts } from './aging-ports';
 import {
   CreateFiscalSequenceRangeCommandHandler,
   ListFiscalSequenceRangesQueryHandler,
@@ -356,7 +359,7 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       if (lines.length >= 2) {
         const entryNumber = await runtime.journalEntries.nextEntryNumber(ctx.tenantId);
         const jeResult = JournalEntry.create({
-          id: `pur-je-${event.receipt.id}-${entryNumber}`,
+          id: uuidv7(),
           tenantId: ctx.tenantId,
           entryNumber,
           date: event.receipt.receivedAt ?? new Date(),
@@ -440,6 +443,11 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     },
   };
 
+  const fallbackAging =
+    !runtime.receivableInvoices || !runtime.payableBills ? makeAgingPorts(runtime, ctx) : undefined;
+
+  const adjustStockBase = makeAdjustStock(shared);
+
   return {
     createCustomer: makeCreateCustomer(shared),
     updateCustomer: makeUpdateCustomer(shared),
@@ -512,6 +520,97 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       },
     }),
     setProductStatus: makeSetProductStatus(shared),
+    deductStockForInvoice: async (input: {
+      invoiceId: string;
+      documentNumber: string;
+      lines: readonly { productId?: string | undefined; quantity: number | string }[];
+    }) => {
+      let totalCogsMinor = 0n;
+      let inventoryAccountId: string | null = null;
+      const currency = ctx.settings.baseCurrency;
+
+      for (const line of input.lines) {
+        if (!line.productId) continue;
+        const product = await runtime.queries.products.byId(line.productId);
+        if (!product || !product.trackStock || product.onHand === null) continue;
+
+        const currentOnHand = parseFloat(product.onHand) || 0;
+        const soldQty = parseFloat(String(line.quantity)) || 0;
+        if (soldQty <= 0) continue;
+
+        const nextBalance = Math.max(0, currentOnHand - soldQty);
+        await adjustStockBase({
+          productId: line.productId,
+          newBalance: nextBalance.toFixed(3).replace(/\.?0+$/, ''),
+          reason: `Venta Factura ${input.documentNumber}`,
+        });
+
+        if (product.cost) {
+          const costMoney = Money.of(product.cost, currency);
+          const qtyScaled = BigInt(Math.round(soldQty * 1000));
+          if (costMoney.ok && qtyScaled > 0n) {
+            const lineCogs = costMoney.value.multiplyScaled(qtyScaled, QUANTITY_SCALE);
+            totalCogsMinor += lineCogs.minorUnits;
+          }
+        }
+        if (!inventoryAccountId && product.inventoryAccountId) {
+          inventoryAccountId = product.inventoryAccountId;
+        }
+      }
+
+      if (totalCogsMinor > 0n) {
+        let accounts = await runtime.accounts.listByTenant(ctx.tenantId).catch(() => []);
+        if (accounts.length === 0) {
+          const seeded = createDefaultAccountsForJurisdiction(
+            ctx.tenantId,
+            ctx.settings.fiscalCountry ?? 'VE',
+          );
+          for (const acc of seeded) {
+            await runtime.accounts.save(acc).catch(() => {});
+          }
+          accounts = seeded;
+        }
+        const findAccount = (codes: string[], fallbackCategory: string, fallbackCode: string) =>
+          accounts.find((a) => codes.includes(a.code.value))?.id ??
+          accounts.find((a) => a.category === fallbackCategory)?.id ??
+          deterministicAccountUuid(ctx.tenantId, fallbackCode);
+
+        const cogsAcc = findAccount(['5.1.01', '5010'], 'COGS', '5.1.01');
+        const invAcc = inventoryAccountId || findAccount(['1.1.03', '1400'], 'ASSET', '1.1.03');
+        const cogsMoney = Money.fromMinor(totalCogsMinor, currency);
+        const zero = Money.zero(currency);
+
+        const debitLine = JournalEntryLine.create(
+          cogsAcc,
+          cogsMoney,
+          zero,
+          `Costo de ventas - Factura ${input.documentNumber}`,
+        );
+        const creditLine = JournalEntryLine.create(
+          invAcc,
+          zero,
+          cogsMoney,
+          `Salida inventario - Factura ${input.documentNumber}`,
+        );
+
+        if (debitLine.ok && creditLine.ok) {
+          const entryNumber = await runtime.journalEntries.nextEntryNumber(ctx.tenantId);
+          const entry = JournalEntry.create({
+            id: uuidv7(),
+            tenantId: ctx.tenantId,
+            entryNumber,
+            date: new Date(),
+            description: `Costo de ventas Factura ${input.documentNumber}`,
+            sourceType: 'INVOICE',
+            sourceId: input.invoiceId,
+            lines: [debitLine.value, creditLine.value],
+          });
+          if (entry.ok) {
+            await runtime.journalEntries.save(entry.value).catch(() => {});
+          }
+        }
+      }
+    },
     issueDeliveryNote: makeIssueDeliveryNote(shared),
     // Almacen puede confirmar la entrega aunque no pueda emitir ni anular: es el unico
     // punto donde ese rol actua sobre un documento de venta, y es deliberado. Quien
@@ -595,7 +694,10 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
       runtime.journalEntries,
     ),
     listInvoices: new ListInvoicesQueryHandler(runtime.invoices),
-    listInvoiceReceipts: new ListInvoiceReceiptsQueryHandler(runtime.paymentReceipts!),
+    getInvoiceById: new GetInvoiceByIdQueryHandler(runtime.invoices),
+    listInvoiceReceipts: runtime.paymentReceipts
+      ? new ListInvoiceReceiptsQueryHandler(runtime.paymentReceipts)
+      : { execute: () => Promise.resolve([]) },
     issueCreditNote: new IssueCreditNoteCommandHandler(
       runtime.creditNotes!,
       runtime.invoices,
@@ -693,8 +795,18 @@ export function assembleUseCases(runtime: Runtime, ctx: TenantContext) {
     getInventoryAuditDetails: new GetInventoryAuditDetailsQueryHandler(
       runtime.physicalInventoryAudits!,
     ),
-    getArAgingReport: new GetArAgingReportQueryHandler(runtime.receivableInvoices!),
-    getApAgingReport: new GetApAgingReportQueryHandler(runtime.payableBills!),
+    getArAgingReport: new GetArAgingReportQueryHandler(
+      runtime.receivableInvoices ?? fallbackAging!.receivableInvoices,
+    ),
+    getApAgingReport: new GetApAgingReportQueryHandler(
+      runtime.payableBills ?? fallbackAging!.payableBills,
+    ),
+    payGoodsReceipt: makePayGoodsReceipt({
+      ctx,
+      purchasingQueries: runtime.queries.purchasing,
+      accounts: runtime.accounts,
+      journalEntries: runtime.journalEntries,
+    }),
   } as const;
 }
 

@@ -136,7 +136,7 @@ export class ApproveInventoryAuditCommandHandler {
       if (journalLines.length > 0) {
         const entryNumber = await this.journalEntryRepo.nextEntryNumber(command.tenantId);
         const journalRes = JournalEntry.create({
-          id: `${audit.id}-journal`,
+          id: crypto.randomUUID(),
           tenantId: command.tenantId,
           entryNumber,
           date: command.approvedAt ?? new Date(),

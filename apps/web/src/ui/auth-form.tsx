@@ -60,6 +60,7 @@ interface AuthFormProps {
   readonly pendingLabel: string;
   /** Mensaje de exito cuando la accion no navega a otra pantalla. */
   readonly sentMessage?: string;
+  readonly next?: string | undefined;
 }
 
 export function AuthForm({
@@ -68,6 +69,7 @@ export function AuthForm({
   submitLabel,
   pendingLabel,
   sentMessage,
+  next,
 }: AuthFormProps) {
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(action, INITIAL);
@@ -143,6 +145,7 @@ export function AuthForm({
 
   return (
     <form action={formAction} onSubmit={handleSubmit} className="space-y-5" noValidate>
+      {next !== undefined && next !== '' && <input type="hidden" name="next" value={next} />}
       {fields.map((field) => (
         <AuthField key={field.name} field={field} error={state.fieldErrors?.[field.name]} />
       ))}

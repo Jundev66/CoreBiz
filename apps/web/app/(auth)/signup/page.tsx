@@ -11,8 +11,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('auth.signup.title'), robots: { index: false, follow: false } };
 }
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const t = await getTranslations();
+  const { next } = await searchParams;
 
   /*
    * Con el alta cerrada la pantalla EXPLICA y ofrece la demostracion, en lugar de
@@ -66,6 +71,7 @@ export default async function SignUpPage() {
         submitLabel={t('auth.signup.submit')}
         pendingLabel={t('auth.signup.pending')}
         sentMessage={t('auth.signup.checkEmail')}
+        next={next}
         fields={[
           {
             name: 'businessName',
@@ -78,7 +84,10 @@ export default async function SignUpPage() {
             name: 'country',
             label: 'País / Jurisdicción fiscal',
             defaultValue: 'VE',
-            options: [{ value: 'VE', label: 'Venezuela (SENIAT / VEN-NIF)' }],
+            options: [
+              { value: 'VE', label: 'Venezuela (SENIAT / VEN-NIF)' },
+              { value: 'US', label: 'Estados Unidos (US GAAP / Sales Tax)' },
+            ],
           },
           { name: 'email', label: t('auth.email'), type: 'email', autoComplete: 'email' },
           {

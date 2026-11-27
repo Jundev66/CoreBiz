@@ -78,6 +78,14 @@ const CATEGORY_ORDER: readonly AccountCategoryKey[] = [
   'EXPENSE',
 ];
 
+const DEPTH_PADDING_CLASSES = [
+  'pl-4',
+  'pl-11',
+  'pl-[4.5rem]',
+  'pl-[6.25rem]',
+  'pl-[8rem]',
+] as const;
+
 interface TreeNode {
   readonly account: AccountApiItem;
   readonly children: readonly TreeNode[];
@@ -241,10 +249,9 @@ export function ChartOfAccountsView({
     return (
       <div key={account.id}>
         <div
-          className={`group flex flex-wrap items-center justify-between gap-3 border-b border-line/70 px-4 py-3 transition-colors hover:bg-subtle/40 ${
-            depth > 0 ? 'bg-canvas/50' : ''
-          }`}
-          style={{ paddingLeft: `${1 + depth * 1.75}rem` }}
+          className={`group flex flex-wrap items-center justify-between gap-3 border-b border-line/70 pr-4 py-3 transition-colors hover:bg-subtle/40 ${
+            DEPTH_PADDING_CLASSES[Math.min(depth, DEPTH_PADDING_CLASSES.length - 1)] ?? 'pl-4'
+          } ${depth > 0 ? 'bg-canvas/50' : ''}`}
         >
           <div className="flex min-w-0 items-center gap-3">
             {depth > 0 && (

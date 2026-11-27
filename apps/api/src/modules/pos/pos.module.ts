@@ -3,6 +3,7 @@ import { EnrollPosDeviceController } from './controllers/enroll-pos-device.contr
 import { CreatePosHandoffController } from './controllers/create-pos-handoff.controller';
 import { ConsumePosHandoffController } from './controllers/consume-pos-handoff.controller';
 import { GetPosCatalogController } from './controllers/get-pos-catalog.controller';
+import { GetPosCustomersController } from './controllers/get-pos-customers.controller';
 import { GetDemoPosCatalogController } from './controllers/get-demo-pos-catalog.controller';
 import { GetDemoPosCustomersController } from './controllers/get-demo-pos-customers.controller';
 import { SyncPosOperationsController } from './controllers/sync-pos-operations.controller';
@@ -17,6 +18,7 @@ import { GetPosSaleByIdController } from './controllers/get-pos-sale-by-id.contr
     CreatePosHandoffController,
     ConsumePosHandoffController,
     GetPosCatalogController,
+    GetPosCustomersController,
     GetDemoPosCatalogController,
     GetDemoPosCustomersController,
     SyncPosOperationsController,

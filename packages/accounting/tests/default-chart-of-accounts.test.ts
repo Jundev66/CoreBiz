@@ -9,11 +9,12 @@ describe('createDefaultAccountsForJurisdiction & ChartOfAccountsRegistry', () =>
 
   it('generates Venezuelan FCCPV chart with IVA, IGTF, and retentions accounts', () => {
     const accounts = createDefaultAccountsForJurisdiction(tenantId, 'VE');
-    expect(accounts.length).toBe(19);
+    expect(accounts.length).toBe(20);
 
     const codes = accounts.map((a) => a.code.value);
     expect(codes).toContain('1.1.01');
     expect(codes).toContain('1.1.04');
+    expect(codes).toContain('1.1.05');
     expect(codes).toContain('1.2.01');
     expect(codes).toContain('2.1.02');
     expect(codes).toContain('2.1.03');

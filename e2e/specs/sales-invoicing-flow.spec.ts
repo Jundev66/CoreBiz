@@ -29,16 +29,13 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     await page.getByRole('link', { name: /nueva factura/i }).click();
     await expect(page).toHaveURL(/\/invoicing\/new$/);
 
-    const ts = Date.now().toString().slice(-4);
-    const cashDocNum = `FAC-QA-C-${ts}`;
-    const creditDocNum = `FAC-QA-R-${ts}`;
+    const cashDocNum = await page.locator('input[name="documentNumber"]').inputValue();
+    expect(cashDocNum).toMatch(/^FAC-/);
 
     const customerSelect = page.locator('select[name="customerId"]');
     const firstCustomerVal = await customerSelect.locator('option').nth(1).getAttribute('value');
     expect(firstCustomerVal).toBeTruthy();
     await customerSelect.selectOption(firstCustomerVal);
-
-    await page.locator('input[name="documentNumber"]').fill(cashDocNum);
 
     const productSelect = page.locator('select[name="line-product"]').first();
     const firstProductVal = await productSelect.locator('option').nth(1).getAttribute('value');
@@ -59,7 +56,8 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     await expect(page).toHaveURL(/\/invoicing\/new$/);
 
     await page.locator('select[name="customerId"]').selectOption(firstCustomerVal);
-    await page.locator('input[name="documentNumber"]').fill(creditDocNum);
+    const creditDocNum = await page.locator('input[name="documentNumber"]').inputValue();
+    expect(creditDocNum).toMatch(/^FAC-/);
     await page.locator('select[name="paymentCondition"]').selectOption('CREDIT');
     await page.locator('input[name="creditDays"]').fill('30');
     await page.locator('select[name="line-product"]').first().selectOption(firstProductVal);
@@ -212,12 +210,12 @@ test.describe('Sales Invoicing Flow & Invoice-to-DeliveryNote Integration', () =
     await page.goto('/invoicing/new');
 
     const ts = Date.now().toString().slice(-4);
-    const creditDocNum = `FAC-PARTIAL-${ts}`;
 
     const customerSelect = page.locator('select[name="customerId"]');
     const firstCustomerVal = await customerSelect.locator('option').nth(1).getAttribute('value');
     await customerSelect.selectOption(firstCustomerVal);
-    await page.locator('input[name="documentNumber"]').fill(creditDocNum);
+    const creditDocNum = await page.locator('input[name="documentNumber"]').inputValue();
+    expect(creditDocNum).toMatch(/^FAC-/);
     await page.locator('select[name="paymentCondition"]').selectOption('CREDIT');
     await page.locator('input[name="creditDays"]').fill('30');
 

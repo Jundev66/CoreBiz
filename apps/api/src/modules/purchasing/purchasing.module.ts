@@ -11,6 +11,7 @@ import {
   ReceiveGoodsController,
   VoidGoodsReceiptController,
   GetGoodsReceiptByIdController,
+  PayGoodsReceiptController,
 } from './controllers';
 
 @Module({
@@ -26,6 +27,7 @@ import {
     ReceiveGoodsController,
     VoidGoodsReceiptController,
     GetGoodsReceiptByIdController,
+    PayGoodsReceiptController,
   ],
 })
 export class PurchasingModule {}

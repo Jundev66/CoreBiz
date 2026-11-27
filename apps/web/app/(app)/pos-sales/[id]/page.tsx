@@ -63,7 +63,7 @@ export default async function PosSaleDetailPage({ params }: { params: Promise<{ 
       subtitle={`Venta completada el ${format.dateTime(new Date(sale.occurredAt), { dateStyle: 'full', timeStyle: 'short' })}`}
       action={
         <Link
-          href="/pos-sales"
+          href="/invoicing"
           className="inline-flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
         >
           <ArrowLeft className="size-3.5" />

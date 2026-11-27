@@ -4,6 +4,9 @@ import { signIn } from '../session';
 test.describe('Ciclo completo de usuario desde formularios (E2E)', () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('corebiz_cookie_consent', 'accepted');
+    });
   });
 
   test('usuario crea producto con costo, compra con costo estándar automático, vende y revisa IA', async ({
@@ -97,7 +100,10 @@ test.describe('Ciclo completo de usuario desde formularios (E2E)', () => {
 
     // ── 5. Emitir Venta (Nota de Entrega) ───────────────────────────────────────
     // Navegación visible: comprobar que el menú diga "Ventas"
-    const salesNavLink = page.getByRole('link', { name: /ventas/i }).first();
+    const salesNavLink = page
+      .getByRole('tab', { name: /ventas/i })
+      .or(page.getByRole('link', { name: /ventas/i }))
+      .first();
     await expect(salesNavLink).toBeVisible();
 
     await page.goto('/delivery-notes/new');

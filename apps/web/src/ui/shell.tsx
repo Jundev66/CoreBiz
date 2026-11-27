@@ -13,7 +13,6 @@ import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
 import { DestroyDemoButton } from '@/ui/destroy-demo-button';
 import { buttonClasses } from '@/ui/button';
-
 import { Logo } from '@/ui/logo';
 import { BackLink } from '@/ui/primitives';
 import { NavDetails } from '@/ui/nav-link';
@@ -201,14 +200,8 @@ export async function AppFrame({
         data-surface="nav"
         className="hidden border-r border-nav-line bg-nav lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-auto lg:shrink-0 lg:flex-col"
       >
-        <div className="flex h-16 items-center px-5">
-          <Link href="/" className="rounded-control">
-            <Logo name={t('app.name')} />
-          </Link>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <SidebarNav items={sidebarItems} />
+        <div className="min-h-0 flex-1">
+          <SidebarNav items={sidebarItems} appName={t('app.name')} />
         </div>
 
         <div className="mt-auto border-t border-nav-line/70 p-2.5">
@@ -230,22 +223,22 @@ export async function AppFrame({
           data-surface="nav"
           className="sticky top-0 z-30 hidden h-14 items-center justify-between gap-4 border-b border-nav-line/80 bg-nav/90 px-6 backdrop-blur-md lg:flex"
         >
-          <div className="flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-surface px-2.5 py-1 font-medium text-ink">
+          <div className="flex shrink-0 items-center gap-2 text-xs">
+            <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill border border-line bg-surface px-2.5 py-1 font-medium text-ink">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               {ctx.settings.fiscalCountry === 'VE' ? 'Venezuela · SENIAT' : 'EE. UU. · US GAAP'}
             </span>
-            <span className="rounded-pill bg-subtle px-2.5 py-1 font-mono text-[11px] text-muted">
+            <span className="shrink-0 whitespace-nowrap rounded-pill bg-subtle px-2.5 py-1 font-mono text-[11px] text-muted">
               Fiscal: {ctx.settings.fiscalCountry === 'VE' ? 'VES' : 'USD'} · Precios:{' '}
               {ctx.settings.baseCurrency}
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {can(ctx.actor, 'invoice:write') && (
               <Link
                 href="/invoicing/new"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
+                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink shadow-xs transition hover:bg-brand-hover"
               >
                 + Factura Venta
               </Link>
@@ -253,7 +246,7 @@ export async function AppFrame({
             {can(ctx.actor, 'purchase:receive') && (
               <Link
                 href="/purchases/new"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
+                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-subtle"
               >
                 + Factura Compra
               </Link>

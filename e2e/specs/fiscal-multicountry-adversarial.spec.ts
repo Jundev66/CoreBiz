@@ -33,13 +33,14 @@ test.describe('Fiscal Multi-Country & Invoicing Adversarial Test Suite', () => {
       page,
     }) => {
       await page.goto('/invoicing');
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/facturación fiscal/i);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/facturas de venta/i);
       await expect(page.locator('main')).toBeVisible();
     });
 
     test('POS sales register lists point of sale tickets', async ({ page }) => {
       await page.goto('/pos-sales');
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/ventas de caja/i);
+      await expect(page).toHaveURL(/\/invoicing$/);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/facturas de venta/i);
       await expect(page.locator('main')).toBeVisible();
     });
   });

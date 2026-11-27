@@ -61,6 +61,11 @@ export class IssueInvoiceController {
     });
 
     const val = unwrapOrThrow(result);
+    await this.useCases.deductStockForInvoice?.({
+      invoiceId: val.invoiceId,
+      documentNumber: body.documentNumber,
+      lines: body.lines,
+    });
     return {
       invoiceId: val.invoiceId,
       journalEntryId: val.journalEntryId,

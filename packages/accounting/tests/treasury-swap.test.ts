@@ -186,4 +186,29 @@ describe('ExecuteTreasurySwapCommandHandler & ListTreasurySwapsQueryHandler', ()
       expect(wrongCategoryResult.error.kind).toBe('SourceAccountNotAsset');
     }
   });
+
+  it('rejects swap with InsufficientFunds when validateAvailableBalance is enabled on empty source account', async () => {
+    const result = await executeHandler.execute({
+      id: 'swap-insufficient-01',
+      tenantId,
+      date: new Date('2026-11-24T12:00:00Z'),
+      sourceAccountId: usdBankAccountId,
+      sourceCurrency: 'USD',
+      sourceAmountMinor: 500_00n,
+      targetAccountId: usdtWalletAccountId,
+      targetCurrency: 'USD',
+      targetAmountMinor: 500_00n,
+      feeAccountId,
+      feeAmountMinor: 0n,
+      exchangeRateScaled: 1_0000_0000n,
+      counterpartyReference: 'TEST-EMPTY',
+      operatorUserId: 'user-treasury-ops-01',
+      validateAvailableBalance: true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe('InsufficientFunds');
+    }
+  });
 });

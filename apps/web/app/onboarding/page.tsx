@@ -79,7 +79,10 @@ export default async function OnboardingPage() {
                 name: 'fiscalCountry',
                 label: 'País / Jurisdicción fiscal',
                 defaultValue: defaultCountry,
-                options: [{ value: 'VE', label: 'Venezuela (SENIAT / VEN-NIF)' }],
+                options: [
+                  { value: 'VE', label: 'Venezuela (SENIAT / VEN-NIF)' },
+                  { value: 'US', label: 'Estados Unidos (US GAAP / Sales Tax)' },
+                ],
               },
               {
                 name: 'baseCurrency',

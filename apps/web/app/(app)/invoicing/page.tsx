@@ -6,7 +6,7 @@ import { Badge } from '@/ui/feedback';
 import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
-import { Banknote, Plus, Receipt, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
+import { Banknote, Eye, Plus, Receipt, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
 import { getPosTerminalUrl } from '@/ui/pos-link';
 
 function formatMinor(minorStr: string, currency = 'USD'): string {
@@ -101,10 +101,13 @@ export default async function InvoicingPage() {
             {invoices.map((inv) => (
               <tr key={inv.id} className="hover:bg-surface-raised/20 transition-colors">
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
+                  <Link
+                    href={`/invoicing/${inv.id}`}
+                    className="inline-flex items-center gap-2 font-mono font-bold text-text hover:text-brand hover:underline"
+                  >
                     <Receipt className="size-4 text-brand" />
-                    <span className="font-mono font-bold text-text">{inv.documentNumber}</span>
-                  </div>
+                    <span>{inv.documentNumber}</span>
+                  </Link>
                 </td>
                 <td className="px-4 py-3">
                   {inv.controlNumber ? (
@@ -141,6 +144,13 @@ export default async function InvoicingPage() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1.5">
+                    <Link
+                      href={`/invoicing/${inv.id}`}
+                      className="inline-flex items-center gap-1 rounded-control border border-line px-2 py-1 text-xs font-medium text-ink hover:bg-subtle"
+                    >
+                      <Eye className="size-3" />
+                      <span>Detalle</span>
+                    </Link>
                     {(inv.status === 'ISSUED' || inv.status === 'PARTIALLY_PAID') && (
                       <Link
                         href={`/invoicing/${inv.id}/collect`}

@@ -56,7 +56,7 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={handleConsent}
-            className="rounded-xl bg-brand px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-brand-hover transition cursor-pointer"
+            className="rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition cursor-pointer"
           >
             {t('cookieAccept')}
           </button>

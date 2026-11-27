@@ -8,6 +8,11 @@ import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 import { Card } from '@/ui/primitives';
+import {
+  filterInventoryAccounts,
+  filterLiquidAssetAccounts,
+  filterReceivableAccounts,
+} from '@/ui/account-filters';
 
 const INITIAL: AccountActionState = { status: 'idle' };
 
@@ -84,7 +89,14 @@ export function AccountingMappingForm({
   const [state, formAction, pending] = useActionState(saveCompanyAccountMappingAction, INITIAL);
 
   const renderField = (field: FlowField) => {
-    const filtered = accounts.filter((a) => field.categories.includes(a.category));
+    const filtered =
+      field.name === 'cashAccountId'
+        ? filterLiquidAssetAccounts(accounts)
+        : field.name === 'receivableAccountId'
+          ? filterReceivableAccounts(accounts)
+          : field.name === 'inventoryAccountId'
+            ? filterInventoryAccounts(accounts)
+            : accounts.filter((a) => field.categories.includes(a.category));
     const options = filtered.length > 0 ? filtered : accounts;
 
     return (

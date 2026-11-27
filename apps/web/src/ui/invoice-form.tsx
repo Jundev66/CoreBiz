@@ -95,9 +95,7 @@ export function InvoiceForm({
       taxPercentage:
         found.taxPercentage !== undefined && found.taxPercentage !== null
           ? found.taxPercentage
-          : taxRates.length > 0
-            ? ''
-            : String(defaultTaxPercentage),
+          : String(defaultTaxPercentage),
     });
   };
 
@@ -198,8 +196,10 @@ export function InvoiceForm({
               name="documentNumber"
               type="text"
               required
+              readOnly
+              aria-readonly="true"
               defaultValue={defaultDocumentNumber}
-              className={`mt-1.5 font-mono ${CONTROL_CLASSES}`}
+              className={`mt-1.5 font-mono bg-subtle text-muted cursor-not-allowed ${CONTROL_CLASSES}`}
             />
           </div>
 

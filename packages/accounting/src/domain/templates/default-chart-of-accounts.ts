@@ -19,6 +19,7 @@ const VENEZUELA_CHART_TEMPLATE: readonly AccountTemplateItem[] = [
   },
   { code: '1.1.03', name: 'Inventario de Mercancias', category: 'ASSET', isReconcilable: false },
   { code: '1.1.04', name: 'Criptoactivos y Divisas', category: 'ASSET', isReconcilable: true },
+  { code: '1.1.05', name: 'Credito Fiscal IVA', category: 'ASSET', isReconcilable: false },
   { code: '1.2.01', name: 'Cuentas por Cobrar a Socios', category: 'ASSET', isReconcilable: true },
   {
     code: '2.1.01',

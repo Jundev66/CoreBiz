@@ -34,6 +34,9 @@ describe('ReceiveGoodsController', () => {
       supplierId: dto.supplierId,
       lines: dto.lines,
       supplierReference: dto.supplierReference,
+      controlNumber: null,
+      officialRate: null,
+      appliedRate: null,
       notes: dto.notes,
     });
   });

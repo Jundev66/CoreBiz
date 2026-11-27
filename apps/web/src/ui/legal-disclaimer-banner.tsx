@@ -32,7 +32,7 @@ export function LegalDisclaimerBanner() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="flex shrink-0 items-center gap-1 rounded-pill bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand uppercase tracking-wider">
+            <span className="flex shrink-0 items-center gap-1 rounded-pill bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
               <ShieldAlert className="size-3" />
               <span>Demo</span>
             </span>

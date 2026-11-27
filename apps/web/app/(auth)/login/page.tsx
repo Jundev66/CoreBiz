@@ -12,8 +12,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('auth.login.title'), robots: { index: false, follow: false } };
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const t = await getTranslations();
+  const { next } = await searchParams;
 
   return (
     <>
@@ -24,6 +29,7 @@ export default async function LoginPage() {
         action={signInAction}
         submitLabel={t('auth.login.submit')}
         pendingLabel={t('auth.login.pending')}
+        next={next}
         fields={[
           {
             name: 'email',

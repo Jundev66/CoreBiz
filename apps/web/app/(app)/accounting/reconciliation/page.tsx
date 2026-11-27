@@ -350,7 +350,7 @@ export default async function BankReconciliationPage({
                 <textarea
                   name="linesJson"
                   rows={3}
-                  defaultValue='[{"id":"line-demo-01","lineType":"CREDIT","amount":"250.00","transactionDate":"2026-11-15T12:00:00.000Z","reference":"DEP-001","description":"Depósito Cliente Demo"}]'
+                  defaultValue='[{"id":"01936a1b-2c3d-7e4f-8a5b-6c7d8e9f0a1b","lineType":"CREDIT","amount":"250.00","transactionDate":"2026-11-15T12:00:00.000Z","reference":"DEP-001","description":"Depósito Cliente Demo"}]'
                   className="mt-1 w-full rounded-control border border-border bg-surface font-mono text-xs text-text"
                 />
               </div>

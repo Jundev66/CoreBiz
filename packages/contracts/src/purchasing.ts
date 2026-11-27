@@ -125,6 +125,19 @@ export const voidGoodsReceiptSchema = z
 
 export type VoidGoodsReceiptInput = z.infer<typeof voidGoodsReceiptSchema>;
 
+export const payGoodsReceiptSchema = z
+  .object({
+    amount: decimalStringSchema,
+    currency: currencySchema,
+    paymentDate: z.coerce.date(),
+    sourceAccountId: recordIdSchema,
+    payableAccountId: recordIdSchema.optional(),
+    reference: z.string().trim().max(120).optional().or(z.literal('')),
+  })
+  .strict();
+
+export type PayGoodsReceiptInput = z.infer<typeof payGoodsReceiptSchema>;
+
 export const confirmVisionReceiptSchema = z
   .object({
     supplierDecision: z.discriminatedUnion('mode', [

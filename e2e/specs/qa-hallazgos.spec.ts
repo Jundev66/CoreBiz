@@ -16,6 +16,9 @@ import { POSTGRES, signIn } from '../session';
 
 test.beforeEach(async ({ page }) => {
   await signIn(page);
+  await page.addInitScript(() => {
+    localStorage.setItem('corebiz_cookie_consent', 'accepted');
+  });
 });
 
 // ─── P1 ──────────────────────────────────────────────────────────────────────

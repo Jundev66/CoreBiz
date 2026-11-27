@@ -38,3 +38,4 @@ export const RUNTIME = Symbol('RUNTIME');
 export const INTEGRATIONS_RUNTIME = Symbol('INTEGRATIONS_RUNTIME');
 export const USE_CASES = Symbol('USE_CASES');
 export const JWT_VERIFIER = Symbol('JWT_VERIFIER');
+export const DEMO_SEEDER = Symbol('DEMO_SEEDER');

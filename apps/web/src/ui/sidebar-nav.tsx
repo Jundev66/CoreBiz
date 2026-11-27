@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -20,6 +21,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { Logo, LogoMark } from '@/ui/logo';
 import { NavLink } from '@/ui/nav-link';
 import { moduleTone, NAV_ICON } from '@/ui/module-tone';
 
@@ -60,6 +62,7 @@ export type SidebarNavItem =
 
 interface SidebarNavProps {
   readonly items: readonly SidebarNavItem[];
+  readonly appName?: string;
 }
 
 function isLeafActive(pathname: string, item: NavLeafItem): boolean {
@@ -86,7 +89,7 @@ function findActiveGroupId(pathname: string, items: readonly SidebarNavItem[]): 
   return bestGroupId;
 }
 
-export function SidebarNav({ items }: SidebarNavProps) {
+export function SidebarNav({ items, appName = 'CoreBiz' }: SidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -204,8 +207,22 @@ export function SidebarNav({ items }: SidebarNavProps) {
 
   return (
     <div
-      className={`flex h-full flex-col transition-all duration-200 ${isPanelOpen || q ? 'w-72' : 'w-[72px]'}`}
+      className={`flex h-full flex-col transition-all duration-200 ${isPanelOpen || q ? 'w-72' : 'w-[82px]'}`}
     >
+      {isPanelOpen || q ? (
+        <div className="flex h-16 shrink-0 items-center px-5">
+          <Link href="/" className="rounded-control">
+            <Logo name={appName} />
+          </Link>
+        </div>
+      ) : (
+        <div className="flex h-16 shrink-0 items-center justify-center">
+          <Link href="/" title={appName} aria-label={appName} className="rounded-control">
+            <LogoMark className="size-7" />
+          </Link>
+        </div>
+      )}
+
       {isPanelOpen || q ? (
         <div className="flex items-center gap-1.5 border-b border-nav-line/60 px-3 py-2.5">
           <div className="relative flex-1">
@@ -272,7 +289,9 @@ export function SidebarNav({ items }: SidebarNavProps) {
       ) : (
         <div className="flex min-h-0 flex-1">
           <div
-            className="flex w-[66px] shrink-0 flex-col items-center gap-2.5 border-r border-nav-line/60 bg-nav-raised/25 py-3 overflow-y-auto"
+            className={`flex shrink-0 flex-col items-center gap-2.5 bg-nav-raised/25 py-3 overflow-y-auto ${
+              isPanelOpen ? 'w-[74px] border-r border-nav-line/60' : 'w-full'
+            }`}
             role="tablist"
             aria-label="Módulos principales"
           >
@@ -283,6 +302,8 @@ export function SidebarNav({ items }: SidebarNavProps) {
                 return (
                   <button
                     type="button"
+                    role="tab"
+                    aria-selected={isHomeActive}
                     title={homeEntry.item.label}
                     aria-label={homeEntry.item.label}
                     onClick={() => router.push('/')}
@@ -298,8 +319,8 @@ export function SidebarNav({ items }: SidebarNavProps) {
                       <HomeIcon className="size-4" strokeWidth={2} />
                     </span>
                     <span
-                      className={`max-w-[58px] truncate text-[10px] font-medium ${
-                        isHomeActive ? 'text-brand font-semibold' : 'text-nav-muted'
+                      className={`max-w-[74px] truncate text-[10px] font-medium ${
+                        isHomeActive ? 'text-nav-ink font-semibold' : 'text-nav-muted'
                       }`}
                     >
                       {homeEntry.item.label}
@@ -345,8 +366,8 @@ export function SidebarNav({ items }: SidebarNavProps) {
                     )}
                   </span>
                   <span
-                    className={`max-w-[58px] truncate text-[10px] font-medium ${
-                      isSelected ? 'text-brand font-semibold' : 'text-nav-muted'
+                    className={`max-w-[74px] truncate text-[10px] font-medium ${
+                      isSelected ? 'text-nav-ink font-semibold' : 'text-nav-muted'
                     }`}
                   >
                     {group.label}

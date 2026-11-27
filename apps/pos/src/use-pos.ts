@@ -122,16 +122,17 @@ export function usePos(apiBaseUrl = '') {
       setSyncStatusMessage('Sincronizando con ERP...');
 
       try {
-        await syncCustomersFromErp(apiBaseUrl);
-
         const devIdEntry = await posDb.config.get('device_id');
         const tokenEntry = await posDb.config.get('device_token');
 
         const token = tokenEntry?.value || DEMO_DEVICE_TOKEN;
         const deviceId = devIdEntry?.value || DEMO_DEVICE_ID;
 
+        await syncCustomersFromErp(apiBaseUrl, token);
+
         try {
           await syncCatalog(apiBaseUrl, token);
+          await refreshState();
         } catch (e) {
           console.warn('Catalog sync error (non-blocking):', e);
         }
@@ -140,7 +141,7 @@ export function usePos(apiBaseUrl = '') {
         if (outboxResult.errors.length > 0) {
           console.error('POS Outbox sync errors:', outboxResult.errors);
           setSyncStatusMessage(
-            'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
+            `Error de sincronización (${outboxResult.failedCount}): ${outboxResult.errors.join(' | ')}`,
           );
         } else if (outboxResult.syncedCount > 0) {
           setSyncStatusMessage(
@@ -151,14 +152,13 @@ export function usePos(apiBaseUrl = '') {
         }
         return outboxResult;
       } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Error desconocido';
         console.error('POS Sync error:', err);
-        setSyncStatusMessage(
-          'Ocurrió un error al sincronizar con el ERP. Por favor, reintentá. Si el problema persiste, contactá con soporte.',
-        );
+        setSyncStatusMessage(`Error al sincronizar con el ERP: ${msg}`);
         return {
           syncedCount: 0,
           failedCount: 0,
-          errors: [err instanceof Error ? err.message : 'Error en sincronización'],
+          errors: [msg],
         };
       } finally {
         setIsSyncing(false);
@@ -674,8 +674,9 @@ export function usePos(apiBaseUrl = '') {
                 tenantId: string;
               };
               const prevTenantId = (await posDb.config.get('tenant_id'))?.value;
-              if (prevTenantId && prevTenantId !== data.tenantId) {
+              if (!prevTenantId || prevTenantId !== data.tenantId) {
                 await posDb.catalog.clear();
+                await posDb.customers.clear();
                 await posDb.sales.clear();
                 await posDb.outbox.clear();
                 await posDb.config.delete('last_catalog_sync_at');

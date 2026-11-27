@@ -38,12 +38,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AcceptInvitationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; error?: string }>;
 }) {
   const t = await getTranslations();
   const format = await getFormatter();
 
-  const { token } = await searchParams;
+  const { token, error: acceptError } = await searchParams;
 
   if (token === undefined || token === '') return <Invalid />;
 
@@ -93,7 +93,7 @@ export default async function AcceptInvitationPage({
     if (typeof raw !== 'string') redirect('/');
 
     const result = await acceptInvitationViaApi(await accessTokenOrRedirect(), raw);
-    if (!result.ok) redirect('/invitations/accept');
+    if (!result.ok) redirect(`/invitations/accept?token=${encodeURIComponent(raw)}&error=1`);
 
     // Se entra directamente a la empresa recien aceptada, sin obligar a buscarla
     // en el selector. Es lo que la persona acaba de pedir.
@@ -128,7 +128,12 @@ export default async function AcceptInvitationPage({
         })}
       </p>
 
-      <form action={accept} className="mt-6">
+      <form action={accept} className="mt-6 space-y-3">
+        {acceptError === '1' && (
+          <p role="alert" className="text-sm text-danger">
+            {t('invitation.invalidBody')}
+          </p>
+        )}
         <input type="hidden" name="token" value={token} />
         <button type="submit" className={buttonClasses({ size: 'lg', block: true })}>
           {t('invitation.accept')}

@@ -53,7 +53,7 @@ export async function readCompanyAccountMapping(
     inventoryAccountId: findAccount(['1.1.03', '1400'], 'ASSET'),
     payableAccountId: findAccount(['2.1.01', '2010'], 'LIABILITY'),
     taxPayableAccountId: findAccount(['2.1.02', '2050'], 'LIABILITY'),
-    taxCreditAccountId: findAccount(['1.1.05', '2.1.02', '2050'], 'LIABILITY'),
+    taxCreditAccountId: findAccount(['1.1.05', '2.1.02', '2050'], 'ASSET'),
     revenueAccountId: findAccount(['4.1.01', '4010'], 'REVENUE'),
     cogsAccountId: findAccount(['5.1.01', '5010'], 'COGS'),
   };

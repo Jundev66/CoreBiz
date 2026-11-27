@@ -24,6 +24,7 @@ export interface ExecuteTreasurySwapCommand {
   readonly counterpartyReference: string;
   readonly operatorUserId: string;
   readonly description?: string | undefined;
+  readonly validateAvailableBalance?: boolean | undefined;
 }
 
 export interface ExecuteTreasurySwapResult {
@@ -42,6 +43,7 @@ export interface ExecuteTreasurySwapError {
     | 'IdenticalAccounts'
     | 'InvalidAmount'
     | 'InvalidExchangeRate'
+    | 'InsufficientFunds'
     | 'JournalEntryError'
     | 'SwapValidationError';
   readonly details?: string | undefined;
@@ -84,6 +86,29 @@ export class ExecuteTreasurySwapCommandHandler {
     }
     if (sourceAccount.category !== 'ASSET') {
       return err({ kind: 'SourceAccountNotAsset' });
+    }
+
+    if (command.validateAvailableBalance) {
+      const entries = await this.journalEntryRepository.listByDateRange(
+        command.tenantId,
+        new Date('2000-01-01T00:00:00Z'),
+        new Date('2099-12-31T23:59:59Z'),
+      );
+      let availableMinor = 0n;
+      for (const entry of entries) {
+        if (entry.currency !== command.sourceCurrency) continue;
+        for (const line of entry.lines) {
+          if (line.accountId === command.sourceAccountId) {
+            availableMinor += line.debit.minorUnits - line.credit.minorUnits;
+          }
+        }
+      }
+      if (availableMinor < command.sourceAmountMinor) {
+        return err({
+          kind: 'InsufficientFunds',
+          details: `Available ${(Number(availableMinor) / 100).toFixed(2)} ${command.sourceCurrency}, required ${(Number(command.sourceAmountMinor) / 100).toFixed(2)} ${command.sourceCurrency}`,
+        });
+      }
     }
 
     const targetAccount = await this.accountRepository.findById(
@@ -174,7 +199,7 @@ export class ExecuteTreasurySwapCommandHandler {
     journalLines.push(sourceLineResult.value);
 
     const journalResult = JournalEntry.create({
-      id: `${command.id}-journal`,
+      id: crypto.randomUUID(),
       tenantId: command.tenantId,
       entryNumber: nextEntryNumber,
       date: command.date,

@@ -1,6 +1,7 @@
 export { IssueInvoiceController } from './issue-invoice.controller';
 export { ApplyPaymentController } from './apply-payment.controller';
 export { ListInvoicesController } from './list-invoices.controller';
+export { GetInvoiceByIdController } from './get-invoice-by-id.controller';
 export { CreateCollectionReceiptController } from './create-collection-receipt.controller';
 export { VoidCollectionReceiptController } from './void-collection-receipt.controller';
 export { ListInvoiceReceiptsController } from './list-invoice-receipts.controller';
