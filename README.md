@@ -14,23 +14,22 @@ PostgreSQL y una pirámide de tests completa.
 
 ## Qué demuestra este proyecto
 
-|                   |                                                                                                                                                                                                                                                |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                                                                     |
-| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                                                             |
-| **Testing**       | **497 tests**: 322 unitarios (Vitest + property-based con fast-check), 82 de integración contra Postgres real, 20 escenarios BDD en Gherkin y 73 E2E con Playwright, incluidas accesibilidad con axe y una pasada de aprobación por las rutas. |
-| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, y **ninguna clave capaz de saltarse RLS en el despliegue**. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                                            |
-| **SaaS**          | Multi-tenant con aislamiento probado, demostración efímera por visitante y un circuit breaker que protege el presupuesto de infraestructura.                                                                                                   |
+|                   |                                                                                                                                                                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Arquitectura**  | Hexagonal (puertos y adaptadores) con DDD táctico y CQRS ligero. El dominio no tiene **ni una** dependencia y una regla de CI lo verifica.                                                                                                                                     |
+| **Multi-tenancy** | Aislamiento en cuatro capas: RLS de Postgres, contexto inyectado en la transacción, filtrado explícito en los repositorios y una matriz de tests que lo comprueba tabla por tabla.                                                                                             |
+| **Testing**       | **1.140+ tests automatizados**: 994 unitarios (Vitest + property-based con fast-check), integración contra Postgres real, escenarios BDD en Gherkin y 148+ E2E con Playwright (incluyendo accesibilidad WCAG 2 AA con axe, seguridad CSP/headers y flujos contables/fiscales). |
+| **Seguridad**     | RBAC, audit log inmutable, CSP con nonce, rate limiting, y **ninguna clave capaz de saltarse RLS en el despliegue**. Documentado en [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).                                                                                            |
+| **SaaS**          | Multi-tenant con aislamiento probado, demostración efímera por visitante y un circuit breaker que protege el presupuesto de infraestructura.                                                                                                                                   |
 
 ## Stack
 
-**NestJS 11** · **Next.js 16** (App Router) · **TypeScript** · **Supabase** (Postgres, Auth) ·
+**NestJS 11** · **Next.js 16** (App Router) · **React 19** · **Vite PWA** (POS Offline-First) · **TypeScript** · **Supabase** (Postgres, Auth) ·
 **Prisma** · **Zod** · **Tailwind CSS** · **Vitest** · **Playwright** + `playwright-bdd`
 
-Dos procesos: una API REST en NestJS que aplica las reglas y habla con Postgres, y una
-interfaz en Next.js que la consume **desde el servidor** —el token nunca llega al
-navegador—. El núcleo (dominio y casos de uso) no sabe que existe ninguno de los dos, y
-esa es la parte que merece mirarse: cambiar el adaptador primario no obligó a tocarlo.
+Tres aplicaciones y seis bounded contexts: una API REST en NestJS que aplica las reglas y habla con Postgres, una
+interfaz ERP en Next.js que la consume **desde el servidor** —el token nunca llega al navegador—, y un Terminal POS PWA
+offline-first en Vite + Dexie. El núcleo (dominio y casos de uso) no sabe que existe ninguno de los adaptadores.
 
 Pensado para desplegarse en Vercel (la web y la API, como dos proyectos) y Supabase, los dos
 en plan gratuito, con un coste de infraestructura de **$0**. El recorrido completo está en
@@ -88,10 +87,14 @@ iniciada: no hay formulario de acceso entre tú y el sistema. Se apaga con
 
 ```
 packages/
+  shared-kernel/   Value Objects base (Money en bigint, Quantity, ExchangeRate, Result).
   domain/          Reglas de negocio puras. CERO dependencias — mira su package.json.
+  accounting/      Contabilidad por partida doble (Plan de Cuentas, Libro Diario, Balance, Tesorería, Aging, Forex).
+  fiscal/          Motor tributario multi-país (Venezuela SENIAT: IVA, IGTF 3%, Retenciones, Libros; US Sales Tax).
+  invoicing/       Facturación de ventas, cobros totales/parciales con diferencial FX, notas de crédito y débito.
   application/     Casos de uso y puertos (interfaces). Solo depende de domain.
   contracts/       Esquemas Zod compartidos entre servidor y cliente.
-  db/              Esquema de Prisma (introspeccionado) y cliente con su pool.
+  db/              Esquema de Prisma (introspeccionado), seeders sintéticos y cliente con su pool.
   infrastructure/  Adaptadores de Postgres: repositorios Prisma, modelos de lectura,
                    Unit of Work, limitador de peticiones y sandbox de demostración.
 apps/
@@ -99,6 +102,8 @@ apps/
                    Es quien monta los casos de uso y abre las transacciones.
   web/             Next.js. Server Components y Server Actions, que desde la migración
                    a la API son SOLO transporte: no queda una regla de negocio dentro.
+  pos/             Vite + React 19 + Dexie (IndexedDB). Punto de venta offline-first
+                   con cálculo multi-moneda (USD/VES), IGTF 3% y sincronización por lotes.
 e2e/               Features en Gherkin y specs de Playwright.
 supabase/          Migraciones SQL, semilla y RLS: políticas, funciones, triggers, pg_cron.
 ```
@@ -179,25 +184,13 @@ un ERP hay muchas pantallas a las que se hace clic una vez al mes.
 Los identificadores de las fichas y los documentos no van escritos: se descubren navegando desde
 sus listados. Si un enlace dejara de existir, la aprobación falla por el motivo correcto.
 
-### Lo que falta se dice, no se esconde
+### Módulos implementados (ERP + Fiscalidad Multi-País + Contabilidad + POS)
 
-Cobros, presupuestos y órdenes de compra **tienen su entrada en el menú, marcada como en
-desarrollo**, y cada una abre una pantalla que explica tres cosas: qué hará, por qué no está
-todavía, y qué usar mientras tanto.
-
-Esconderlas dejaría el menú más corto y el sistema más difícil de juzgar. Quien evalúa un ERP
-busca "cobros" en el primer minuto, y no encontrar ni la pantalla ni una explicación se lee como
-que el sistema es incompleto **y además** confuso. Con la marca delante, un hueco pasa a ser un
-alcance declarado.
-
-El caso de cobros es el que más se nota: **el límite de crédito ya está implementado y probado
-en el dominio**, pero la consulta de saldo pendiente devuelve siempre cero porque no hay cobros
-que restar. La regla existe y nunca llega a dispararse. Está dicho en la propia pantalla.
-
-Por el mismo motivo desaparecieron tres indicadores de plan —`dashboard`, `export_csv`,
-`multi_warehouse`— que estaban declarados "para más adelante" y que ningún código comprobaba.
-Una bandera que no bloquea nada no reserva nada: solo hace creer que la función existe a quien
-lee esa lista para saber qué ofrece el producto. Hay un test que impide que vuelvan a acumularse.
+- **Comercial, CxC y Cobros**: Clientes con límite de crédito estricto, Notas de Entrega imprimibles, Facturas de Venta (contado/crédito), cobros totales, parciales y multi-imputación con diferencial cambiario FX, anulación con motivo y Notas de Crédito/Débito.
+- **Compras, CxP y Visión IA**: Proveedores, Facturas de Compra en USD/VES con doble tasa, pagos totales/parciales a proveedores, escaneo/recepción asistida de remitos y ajuste automático de inventario.
+- **Contabilidad por Partida Doble**: Invariante $\sum \text{Débitos} \equiv \sum \text{Créditos}$ validado en dominio, Plan de Cuentas jerárquico por país, Balance de Comprobación, Libro Diario, Antigüedad de Saldos (CxC/CxP), Tesorería & Swaps, Gastos Operativos, Retiros de Socios, Conciliación Bancaria y Reexpresión Cambiaria.
+- **Motor Fiscal Multi-País (`FiscalJurisdictionPort`)**: Venezuela (`VE` · SENIAT: IVA 16%, IGTF 3%, Retenciones, Libros de Compras y Ventas, Rangos de Secuencias Fiscales) y Estados Unidos (`US` · Sales Tax por jurisdicción y EIN).
+- **Terminal POS Offline-First (`apps/pos`)**: Caja registradora PWA con apertura/arqueo ciego de turno, catálogo local en IndexedDB, soporte dual USD/VES con tasa BCV, cálculo automático de IGTF 3% en efectivo USD y sincronización idempotente hacia el ERP.
 
 ### Nadie escribe un código
 
