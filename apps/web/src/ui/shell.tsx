@@ -7,7 +7,6 @@ import { canOpen } from '@/auth/module-access';
 import { Toast } from '@/ui/toast';
 import { AssistantPanel } from '@/ui/assistant-panel';
 import { SidebarNav, type SidebarNavItem } from '@/ui/sidebar-nav';
-import { MobileNav, type MobileNavItem } from '@/ui/mobile-nav';
 import type { TenantContext } from '@corebiz/application';
 import { signOutAction, switchTenantAction } from '@/actions/auth';
 import type { SessionInfo } from '@/api/session';
@@ -176,18 +175,6 @@ export async function AppFrame({
     return entry.group.items.length > 0;
   });
 
-  const mobileItems: MobileNavItem[] = [
-    { href: '/', label: t('nav.home'), icon: 'home' as const, exact: true },
-    { href: '/invoicing', label: 'Facturas', short: 'Facturas', icon: 'fileText' as const },
-    { href: '/products', label: 'Stock', short: 'Stock', icon: 'package' as const },
-    { href: '/customers', label: t('nav.customers'), short: 'Clientes', icon: 'users' as const },
-    { href: '/accounting', label: 'Contabilidad', short: 'Contab.', icon: 'banknote' as const },
-    { href: '/purchases', label: t('nav.purchases'), short: 'Compras', icon: 'truck' as const },
-    { href: '/reports', label: t('nav.reports'), short: 'Reportes', icon: 'chart' as const },
-    { href: '/conflicts', label: 'Inconsistencias', short: 'Inconsist.', icon: 'alert' as const },
-    { href: '/settings', label: t('nav.settings'), short: 'Ajustes', icon: 'settings' as const },
-  ].filter(({ href }) => canOpen(ctx.actor, href));
-
   return (
     <div className="min-h-screen overflow-x-clip lg:flex">
       {/*
@@ -344,11 +331,9 @@ export async function AppFrame({
           {children}
         </main>
 
-        <footer className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6 lg:px-10 lg:pb-8">
+        <footer className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6 lg:px-10">
           <p className="border-t border-line pt-5 text-xs text-muted">{t('legal.notice')}</p>
         </footer>
-
-        <MobileNav items={mobileItems} moreLabel={t('nav.more')} />
       </div>
     </div>
   );
