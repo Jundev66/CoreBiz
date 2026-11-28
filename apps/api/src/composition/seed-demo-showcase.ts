@@ -138,26 +138,26 @@ export async function seedDemoShowcase(
   const openingLines = [
     JournalEntryLine.create(
       cashId,
-      Money.fromMinor(15000_00n, 'USD'),
+      Money.fromMinor(50000_00n, 'USD'),
       Money.zero('USD'),
       'Caja Principal apertura',
     ),
     JournalEntryLine.create(
       usdBankId,
-      Money.fromMinor(12000_00n, 'USD'),
+      Money.fromMinor(50000_00n, 'USD'),
       Money.zero('USD'),
       'Banco USD / Zelle apertura',
     ),
     JournalEntryLine.create(
       usdtWalletId,
-      Money.fromMinor(5000_00n, 'USD'),
+      Money.fromMinor(25000_00n, 'USD'),
       Money.zero('USD'),
       'Wallet USDT apertura',
     ),
     JournalEntryLine.create(
       equityId,
       Money.zero('USD'),
-      Money.fromMinor(32000_00n, 'USD'),
+      Money.fromMinor(125000_00n, 'USD'),
       'Capital Social inicial',
     ),
   ]
@@ -184,20 +184,20 @@ export async function seedDemoShowcase(
   const openingVesLines = [
     JournalEntryLine.create(
       cashId,
-      Money.fromMinor(500_000_00n, 'VES'),
+      Money.fromMinor(5_000_000_00n, 'VES'),
       Money.zero('VES'),
       'Fondo operativo apertura VES',
     ),
     JournalEntryLine.create(
       vesBankId,
-      Money.fromMinor(1_000_000_00n, 'VES'),
+      Money.fromMinor(10_000_000_00n, 'VES'),
       Money.zero('VES'),
       'Banco Nacional VES apertura',
     ),
     JournalEntryLine.create(
       equityId,
       Money.zero('VES'),
-      Money.fromMinor(1_500_000_00n, 'VES'),
+      Money.fromMinor(15_000_000_00n, 'VES'),
       'Capital de trabajo inicial VES',
     ),
   ]

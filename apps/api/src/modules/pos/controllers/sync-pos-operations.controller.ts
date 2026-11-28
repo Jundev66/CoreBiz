@@ -59,14 +59,30 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
     };
   },
   'cash.movement': (op) => {
-    const parsed = recordCashMovementSchema.parse(op.payload);
+    const raw = op.payload ?? {};
+    const movementId =
+      typeof raw.movementId === 'string' && raw.movementId.trim().length > 0
+        ? raw.movementId.trim()
+        : typeof op.operationId === 'string' && op.operationId.trim().length > 0
+          ? op.operationId.trim()
+          : sanitizeDeviceId(null);
+    const parsed = recordCashMovementSchema.parse({ ...raw, movementId });
     const { type: movementType, ...rest } = parsed;
     return { type: 'cash.movement', movementType, ...rest };
   },
-  'shift.close': (op) => ({
-    type: 'shift.close',
-    ...closeCashShiftSchema.parse(op.payload),
-  }),
+  'shift.close': (op) => {
+    const raw = op.payload ?? {};
+    const shiftId =
+      typeof raw.shiftId === 'string' && raw.shiftId.trim().length > 0
+        ? raw.shiftId.trim()
+        : typeof op.operationId === 'string' && op.operationId.trim().length > 0
+          ? op.operationId.trim()
+          : sanitizeDeviceId(null);
+    return {
+      type: 'shift.close',
+      ...closeCashShiftSchema.parse({ ...raw, shiftId }),
+    };
+  },
   'sale.issue': (op) => {
     const raw = op.payload ?? {};
     let paymentMethod = raw.paymentMethod;
@@ -145,8 +161,16 @@ export const COMMAND_DESERIALIZERS: Readonly<Record<string, CommandBuilder>> = {
         ? raw.shiftId.trim()
         : sanitizeDeviceId(null);
 
+    const operationId =
+      typeof raw.operationId === 'string' && raw.operationId.trim().length > 0
+        ? raw.operationId.trim()
+        : typeof op.operationId === 'string' && op.operationId.trim().length > 0
+          ? op.operationId.trim()
+          : sanitizeDeviceId(null);
+
     const normalized = {
       ...raw,
+      operationId,
       saleId,
       shiftId,
       ticketNumber,

@@ -1,9 +1,9 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { DollarSign } from 'lucide-react';
+import { ArrowRightLeft, DollarSign } from 'lucide-react';
 import { executeTreasurySwapAction, type TreasurySwapActionState } from '@/actions/treasury';
-import { Alert } from '@/ui/feedback';
+import { Alert, Badge } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 import { buttonClasses } from '@/ui/button';
 
@@ -25,8 +25,10 @@ export interface TreasuryExpenseAccountOption {
 
 const ERROR_MESSAGES: Record<string, string> = {
   IdenticalAccounts: 'La cuenta origen y la cuenta destino deben ser diferentes.',
-  InsufficientFunds: 'Fondos insuficientes en la cuenta origen seleccionada para esta moneda.',
-  InvalidAmount: 'Los montos deben ser mayores a cero y la comisión no puede superar el origen.',
+  InsufficientFunds:
+    'Fondos insuficientes en la cuenta origen seleccionada para cubrir el monto en VES.',
+  InvalidAmount:
+    'Los montos deben ser mayores a cero y la comisión no puede superar el monto de la operación.',
   InvalidExchangeRate: 'La tasa acordada debe ser mayor a cero.',
   SourceAccountNotFound: 'La cuenta origen seleccionada no existe.',
   TargetAccountNotFound: 'La cuenta destino seleccionada no existe.',
@@ -38,14 +40,16 @@ function fmtMinor(minorStr: string): string {
 }
 
 export function TreasurySwapForm({
-  assetAccounts,
+  sourceAccounts,
+  targetAccounts,
   expenseAccounts,
   defaultSourceId,
   defaultTargetId,
   defaultFeeId,
   defaultExchangeRate = 50,
 }: {
-  readonly assetAccounts: readonly TreasuryAssetAccountOption[];
+  readonly sourceAccounts: readonly TreasuryAssetAccountOption[];
+  readonly targetAccounts: readonly TreasuryAssetAccountOption[];
   readonly expenseAccounts: readonly TreasuryExpenseAccountOption[];
   readonly defaultSourceId: string;
   readonly defaultTargetId: string;
@@ -57,52 +61,35 @@ export function TreasurySwapForm({
   const [targetId, setTargetId] = useState<string>(
     defaultTargetId !== defaultSourceId
       ? defaultTargetId
-      : (assetAccounts.find((a) => a.id !== defaultSourceId)?.id ?? defaultTargetId),
+      : (targetAccounts.find((a) => a.id !== defaultSourceId)?.id ?? defaultTargetId),
   );
-  const [sourceCurrency, setSourceCurrency] = useState<'VES' | 'USD'>('VES');
-  const [targetCurrency, setTargetCurrency] = useState<'USD' | 'VES'>('USD');
   const [sourceAmount, setSourceAmount] = useState<string>('');
   const [exchangeRate, setExchangeRate] = useState<string>(String(defaultExchangeRate));
   const [feeAmount, setFeeAmount] = useState<string>('0.00');
   const [targetAmount, setTargetAmount] = useState<string>('');
   const [targetManual, setTargetManual] = useState<boolean>(false);
 
-  const selectedSource = assetAccounts.find((a) => a.id === sourceId);
-  const availableStr = selectedSource
-    ? sourceCurrency === 'USD'
-      ? `${fmtMinor(selectedSource.usdMinor)} USD`
-      : `${fmtMinor(selectedSource.vesMinor)} VES`
-    : '0.00';
+  const selectedSource = sourceAccounts.find((a) => a.id === sourceId);
+  const availableVesStr = selectedSource ? fmtMinor(selectedSource.vesMinor) : '0.00';
 
-  const recomputeTarget = (
-    srcAmtStr: string,
-    srcCurr: 'VES' | 'USD',
-    tgtCurr: 'USD' | 'VES',
-    rateStr: string,
-    feeStr: string,
-  ) => {
+  const recomputeTarget = (srcAmtStr: string, rateStr: string, feeStr: string) => {
     if (targetManual) return;
     const src = Number.parseFloat(srcAmtStr.replace(',', '.'));
     const rate = Number.parseFloat(rateStr.replace(',', '.'));
     const fee = Number.parseFloat(feeStr.replace(',', '.')) || 0;
-    if (!Number.isFinite(src) || src <= 0) {
+    if (!Number.isFinite(src) || src <= 0 || !Number.isFinite(rate) || rate <= 0) {
       setTargetAmount('');
       return;
     }
-    let grossTarget = src;
-    if (srcCurr === 'VES' && tgtCurr === 'USD' && Number.isFinite(rate) && rate > 0) {
-      grossTarget = src / rate;
-    } else if (srcCurr === 'USD' && tgtCurr === 'VES' && Number.isFinite(rate) && rate > 0) {
-      grossTarget = src * rate;
-    }
-    const net = Math.max(0, grossTarget - fee);
-    setTargetAmount(net.toFixed(2));
+    const grossUsd = src / rate;
+    const netUsd = Math.max(0, grossUsd - fee);
+    setTargetAmount(netUsd.toFixed(2));
   };
 
   const handleSourceChange = (nextId: string) => {
     setSourceId(nextId);
     if (nextId === targetId) {
-      const alt = assetAccounts.find((a) => a.id !== nextId);
+      const alt = targetAccounts.find((a) => a.id !== nextId);
       if (alt) setTargetId(alt.id);
     }
   };
@@ -110,32 +97,53 @@ export function TreasurySwapForm({
   const handleTargetChange = (nextId: string) => {
     setTargetId(nextId);
     if (nextId === sourceId) {
-      const alt = assetAccounts.find((a) => a.id !== nextId);
+      const alt = sourceAccounts.find((a) => a.id !== nextId);
       if (alt) setSourceId(alt.id);
     }
   };
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-5">
+      <input type="hidden" name="sourceCurrency" value="VES" />
+      <input type="hidden" name="targetCurrency" value="USD" />
+
       {state.status === 'error' && state.error && (
         <Alert tone="danger" role="alert">
           {ERROR_MESSAGES[state.error] ?? `No se pudo ejecutar la operación (${state.error}).`}
         </Alert>
       )}
 
-      <div className="mb-2 flex items-center gap-2">
-        <span className="grid size-8 place-items-center rounded-control bg-brand-soft text-brand">
-          <DollarSign className="size-4" strokeWidth={2} />
-        </span>
-        <h2 className="text-base font-semibold text-ink">
-          Registrar Swap de Tesorería (Compra de USDT / Divisas)
-        </h2>
+      {state.status === 'success' && state.message && (
+        <Alert tone="success" role="alert">
+          {state.message}
+        </Alert>
+      )}
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-4">
+        <div className="flex items-center gap-2">
+          <span className="grid size-8 place-items-center rounded-control bg-brand-soft text-brand">
+            <DollarSign className="size-4" strokeWidth={2} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-ink">
+              Swap de Tesorería: Compra de USDT / Divisas
+            </h2>
+            <p className="text-xs text-muted">
+              Liquidación de fondos en Bolívares (VES) para adquisición de criptoactivos o dólares
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone="warn">Origen: VES</Badge>
+          <ArrowRightLeft className="size-3.5 text-muted" />
+          <Badge tone="success">Destino: USD / USDT</Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label htmlFor="swap-date" className={LABEL_CLASSES}>
-            Fecha
+            Fecha de Operación
           </label>
           <input
             id="swap-date"
@@ -149,7 +157,7 @@ export function TreasurySwapForm({
 
         <div>
           <label htmlFor="swap-source-account" className={LABEL_CLASSES}>
-            Cuenta Origen (Sale Dinero)
+            Cuenta Origen (Sale Dinero VES)
           </label>
           <select
             id="swap-source-account"
@@ -159,38 +167,17 @@ export function TreasurySwapForm({
             className={`mt-1.5 ${CONTROL_CLASSES}`}
             required
           >
-            {assetAccounts.map((a) => (
+            {sourceAccounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.code} - {a.name} (${fmtMinor(a.usdMinor)} USD · {fmtMinor(a.vesMinor)} Bs)
+                {a.code} - {a.name} (Disp: {fmtMinor(a.vesMinor)} VES)
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label htmlFor="swap-source-currency" className={LABEL_CLASSES}>
-            Moneda Origen
-          </label>
-          <select
-            id="swap-source-currency"
-            name="sourceCurrency"
-            value={sourceCurrency}
-            onChange={(e) => {
-              const next = e.target.value as 'VES' | 'USD';
-              setSourceCurrency(next);
-              recomputeTarget(sourceAmount, next, targetCurrency, exchangeRate, feeAmount);
-            }}
-            className={`mt-1.5 ${CONTROL_CLASSES}`}
-            required
-          >
-            <option value="VES">VES (Bolívares)</option>
-            <option value="USD">USD (Dólares)</option>
-          </select>
-        </div>
-
-        <div>
           <label htmlFor="swap-source-amount" className={LABEL_CLASSES}>
-            Monto Origen Total
+            Monto a Convertir (VES)
           </label>
           <input
             id="swap-source-amount"
@@ -199,26 +186,41 @@ export function TreasurySwapForm({
             value={sourceAmount}
             onChange={(e) => {
               setSourceAmount(e.target.value);
-              recomputeTarget(
-                e.target.value,
-                sourceCurrency,
-                targetCurrency,
-                exchangeRate,
-                feeAmount,
-              );
+              recomputeTarget(e.target.value, exchangeRate, feeAmount);
             }}
-            placeholder="Ej: 5000.00"
+            placeholder="Ej: 50000.00"
             className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
             required
           />
-          <span className="mt-1 block text-[11px] text-muted">Disponible: {availableStr}</span>
+          <span className="mt-1 block text-[11px] text-muted">
+            Saldo disponible: {availableVesStr} VES
+          </span>
+        </div>
+
+        <div>
+          <label htmlFor="swap-exchange-rate" className={LABEL_CLASSES}>
+            Tasa Acordada (VES por USD)
+          </label>
+          <input
+            id="swap-exchange-rate"
+            type="text"
+            name="exchangeRate"
+            value={exchangeRate}
+            onChange={(e) => {
+              setExchangeRate(e.target.value);
+              recomputeTarget(sourceAmount, e.target.value, feeAmount);
+            }}
+            placeholder="Ej: 50.00"
+            className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
+            required
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label htmlFor="swap-target-account" className={LABEL_CLASSES}>
-            Cuenta Destino (Ingresa Activo)
+            Cuenta Destino (Ingresa Activo USD/USDT)
           </label>
           <select
             id="swap-target-account"
@@ -228,38 +230,17 @@ export function TreasurySwapForm({
             className={`mt-1.5 ${CONTROL_CLASSES}`}
             required
           >
-            {assetAccounts.map((a) => (
+            {targetAccounts.map((a) => (
               <option key={a.id} value={a.id} disabled={a.id === sourceId}>
-                {a.code} - {a.name} (${fmtMinor(a.usdMinor)} USD · {fmtMinor(a.vesMinor)} Bs)
+                {a.code} - {a.name} (Saldo: ${fmtMinor(a.usdMinor)} USD)
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label htmlFor="swap-target-currency" className={LABEL_CLASSES}>
-            Moneda Destino
-          </label>
-          <select
-            id="swap-target-currency"
-            name="targetCurrency"
-            value={targetCurrency}
-            onChange={(e) => {
-              const next = e.target.value as 'USD' | 'VES';
-              setTargetCurrency(next);
-              recomputeTarget(sourceAmount, sourceCurrency, next, exchangeRate, feeAmount);
-            }}
-            className={`mt-1.5 ${CONTROL_CLASSES}`}
-            required
-          >
-            <option value="USD">USD / USDT</option>
-            <option value="VES">VES</option>
-          </select>
-        </div>
-
-        <div>
           <label htmlFor="swap-target-amount" className={LABEL_CLASSES}>
-            Monto Destino Recibido
+            Monto Recibido Neto (USD / USDT)
           </label>
           <input
             id="swap-target-amount"
@@ -270,42 +251,18 @@ export function TreasurySwapForm({
               setTargetManual(true);
               setTargetAmount(e.target.value);
             }}
-            placeholder="Ej: 100.00"
-            className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
+            placeholder="Ej: 1000.00"
+            className={`mt-1.5 font-mono tabular-nums font-semibold text-ok ${CONTROL_CLASSES}`}
             required
           />
+          <span className="mt-1 block text-[11px] text-muted">
+            Calculado automáticamente según tasa y comisión
+          </span>
         </div>
 
-        <div>
-          <label htmlFor="swap-exchange-rate" className={LABEL_CLASSES}>
-            Tasa Acordada (VES/USD)
-          </label>
-          <input
-            id="swap-exchange-rate"
-            type="text"
-            name="exchangeRate"
-            value={exchangeRate}
-            onChange={(e) => {
-              setExchangeRate(e.target.value);
-              recomputeTarget(
-                sourceAmount,
-                sourceCurrency,
-                targetCurrency,
-                e.target.value,
-                feeAmount,
-              );
-            }}
-            placeholder="Ej: 50.00"
-            className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
-            required
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="swap-fee-account" className={LABEL_CLASSES}>
-            Cuenta de Comisión / Gas Fee
+            Cuenta Comisión / Gas Fee
           </label>
           <select
             id="swap-fee-account"
@@ -324,7 +281,7 @@ export function TreasurySwapForm({
 
         <div>
           <label htmlFor="swap-fee-amount" className={LABEL_CLASSES}>
-            Monto Comisión (Moneda Destino)
+            Comisión P2P / Red (USD)
           </label>
           <input
             id="swap-fee-amount"
@@ -333,50 +290,46 @@ export function TreasurySwapForm({
             value={feeAmount}
             onChange={(e) => {
               setFeeAmount(e.target.value);
-              recomputeTarget(
-                sourceAmount,
-                sourceCurrency,
-                targetCurrency,
-                exchangeRate,
-                e.target.value,
-              );
+              recomputeTarget(sourceAmount, exchangeRate, e.target.value);
             }}
             placeholder="Ej: 0.00"
             className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
           />
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="swap-reference" className={LABEL_CLASSES}>
-            Referencia Externa (P2P / Hash TX)
+            Referencia de Operación (N° Transferencia / Orden P2P / Hash)
           </label>
           <input
             id="swap-reference"
             type="text"
             name="counterpartyReference"
-            placeholder="Ej: BINANCE-P2P-12345"
+            placeholder="Ej: BINANCE-P2P-20261128-091"
             className={`mt-1.5 ${CONTROL_CLASSES}`}
             required
           />
         </div>
+
+        <div>
+          <label htmlFor="swap-description" className={LABEL_CLASSES}>
+            Concepto Contable
+          </label>
+          <input
+            id="swap-description"
+            type="text"
+            name="description"
+            placeholder="Ej: Adquisición de USDT vía P2P para liquidación de compromisos"
+            className={`mt-1.5 ${CONTROL_CLASSES}`}
+          />
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="swap-description" className={LABEL_CLASSES}>
-          Concepto / Notas
-        </label>
-        <input
-          id="swap-description"
-          type="text"
-          name="description"
-          placeholder="Ej: Compra de liquidez USDT en Binance P2P para pago a proveedor"
-          className={`mt-1.5 ${CONTROL_CLASSES}`}
-        />
-      </div>
-
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-2">
         <button type="submit" disabled={pending} className={buttonClasses({ size: 'md' })}>
-          {pending ? 'Ejecutando...' : 'Ejecutar Operación de Tesorería'}
+          {pending ? 'Ejecutando...' : 'Ejecutar Swap de Tesorería'}
         </button>
       </div>
     </form>

@@ -181,6 +181,9 @@ export async function syncOutbox(
 
         const normalizedPayload = {
           ...raw,
+          operationId: item.operationId,
+          saleId:
+            typeof raw.saleId === 'string' && raw.saleId.length > 0 ? raw.saleId : item.operationId,
           registerId: validRegisterId,
           deviceId: validDeviceId,
           paymentMethod,

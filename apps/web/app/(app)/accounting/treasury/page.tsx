@@ -43,15 +43,39 @@ export default async function TreasurySwapsPage() {
   const expenseAccounts = accounts.filter((a) => a.category === 'EXPENSE' || a.category === 'COGS');
   const accountById = new Map(accounts.map((a) => [a.id, a]));
 
+  const sourceCandidates = assetAccounts.filter((a) => {
+    const code = a.code.toLowerCase();
+    const name = a.name.toLowerCase();
+    if (name.includes('usdt') || name.includes('wallet') || name.includes('crypto')) return false;
+    if (code === '1.1.04' || code.startsWith('1.1.04')) return false;
+    if (
+      code === '1.1.01.01' ||
+      name.includes('zelle') ||
+      (name.includes('usd') && !name.includes('ves'))
+    )
+      return false;
+    return true;
+  });
+  const sourceAccounts = sourceCandidates.length > 0 ? sourceCandidates : assetAccounts;
+
+  const targetCandidates = assetAccounts.filter((a) => {
+    const code = a.code.toLowerCase();
+    const name = a.name.toLowerCase();
+    if (code === '1.1.01.02' || name.includes('nacional ves') || name.includes('bolívar'))
+      return false;
+    return true;
+  });
+  const targetAccounts = targetCandidates.length > 0 ? targetCandidates : assetAccounts;
+
   const defaultSourceAccount =
-    assetAccounts.find((a) => a.code === '1.1.01.02') ??
-    assetAccounts.find((a) => a.code.startsWith('1.1.01') || a.code === '1010') ??
-    assetAccounts[0];
+    sourceAccounts.find((a) => a.code === '1.1.01.02') ??
+    sourceAccounts.find((a) => a.code.startsWith('1.1.01') || a.code === '1010') ??
+    sourceAccounts[0];
   const defaultTargetAccount =
-    assetAccounts.find((a) => a.code === '1.1.04.01' && a.id !== defaultSourceAccount?.id) ??
-    assetAccounts.find((a) => a.code === '1.1.01.01' && a.id !== defaultSourceAccount?.id) ??
-    assetAccounts.find((a) => a.id !== defaultSourceAccount?.id) ??
-    assetAccounts[0];
+    targetAccounts.find((a) => a.code === '1.1.04.01' && a.id !== defaultSourceAccount?.id) ??
+    targetAccounts.find((a) => a.code === '1.1.01.01' && a.id !== defaultSourceAccount?.id) ??
+    targetAccounts.find((a) => a.id !== defaultSourceAccount?.id) ??
+    targetAccounts[0];
   const defaultFeeAccount =
     expenseAccounts.find((a) => a.code.startsWith('6.1.02') || a.code === '6050') ??
     expenseAccounts[0];
@@ -95,7 +119,14 @@ export default async function TreasurySwapsPage() {
       {can(ctx.actor, 'accounting:write') && (
         <Card className="mb-8 p-4 sm:p-6">
           <TreasurySwapForm
-            assetAccounts={assetAccounts.map((a) => ({
+            sourceAccounts={sourceAccounts.map((a) => ({
+              id: a.id,
+              code: a.code,
+              name: a.name,
+              usdMinor: (balanceByAccountCurrency.get(`${a.id}:USD`) ?? 0n).toString(),
+              vesMinor: (balanceByAccountCurrency.get(`${a.id}:VES`) ?? 0n).toString(),
+            }))}
+            targetAccounts={targetAccounts.map((a) => ({
               id: a.id,
               code: a.code,
               name: a.name,

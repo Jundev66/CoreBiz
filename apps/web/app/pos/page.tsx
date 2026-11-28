@@ -11,7 +11,7 @@ export default async function PosLandingPage() {
   const posUrl =
     process.env.NEXT_PUBLIC_POS_URL?.trim() ||
     (process.env.NODE_ENV === 'production' && !isLocalHost
-      ? 'https://corebiz-pos.vercel.app'
+      ? 'https://pos-pearl-one.vercel.app'
       : 'http://localhost:3025');
 
   try {
