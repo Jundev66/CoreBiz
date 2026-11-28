@@ -179,8 +179,8 @@ export function CollectInvoiceForm({
                   return (
                     <option key={inst.id} value={inst.id}>
                       Cuota #{inst.installmentNumber} · Vence{' '}
-                      {new Date(inst.dueDate).toLocaleDateString()} · Pendiente {left.toFixed(2)}{' '}
-                      {inst.currency}
+                      {new Date(inst.dueDate).toLocaleDateString('es-VE', { timeZone: 'UTC' })} ·
+                      Pendiente {left.toFixed(2)} {inst.currency}
                     </option>
                   );
                 })}

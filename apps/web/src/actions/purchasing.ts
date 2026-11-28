@@ -318,6 +318,7 @@ export async function payGoodsReceiptAction(
 
   revalidatePath('/purchases');
   revalidatePath(`/purchases/${goodsReceiptId}`);
+  revalidatePath('/accounting/payments');
   revalidatePath('/accounting/trial-balance');
   revalidatePath('/accounting/journal-entries');
   revalidatePath('/accounting/aging');

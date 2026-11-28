@@ -136,6 +136,8 @@ export async function issueInvoiceAction(
   }
 
   revalidatePath('/invoicing');
+  revalidatePath(`/invoicing/${result.value.invoiceId}`);
+  revalidatePath('/accounting/payments');
   revalidatePath('/accounting/trial-balance');
   revalidatePath('/accounting/journal-entries');
   revalidatePath('/accounting/aging');
@@ -223,6 +225,8 @@ export async function applyInvoicePaymentAction(
   }
 
   revalidatePath('/invoicing');
+  revalidatePath(`/invoicing/${result.value.invoiceId}`);
+  revalidatePath('/accounting/payments');
   revalidatePath('/accounting/trial-balance');
   revalidatePath('/accounting/journal-entries');
   revalidatePath('/accounting/aging');
