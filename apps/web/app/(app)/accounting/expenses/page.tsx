@@ -6,7 +6,7 @@ import { listDisbursements } from '@/api/disbursements';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Alert, Badge } from '@/ui/feedback';
 import { Card, SectionTitle, Stat } from '@/ui/primitives';
-import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
+import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field-classes';
 import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';

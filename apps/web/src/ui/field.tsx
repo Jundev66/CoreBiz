@@ -10,13 +10,15 @@ import { useTranslations } from 'next-intl';
  * components can import these constants: a Server Component would receive a client
  * reference instead of the text.
  */
-export const CONTROL_BASE_CLASSES =
-  'w-full rounded-control border border-line-strong bg-surface px-3 text-[15px] text-ink shadow-xs transition placeholder:text-n-400 focus:border-brand focus:ring-3 focus:ring-brand/15 focus:outline-none aria-invalid:border-danger disabled:cursor-not-allowed disabled:bg-subtle disabled:text-muted sm:text-sm';
-export const CONTROL_CLASSES = `h-10 ${CONTROL_BASE_CLASSES}`;
-export const TEXTAREA_CLASSES = `min-h-24 py-2 ${CONTROL_BASE_CLASSES}`;
-export const LABEL_CLASSES = 'block text-sm font-medium text-ink';
-export const HINT_CLASSES = 'mt-1.5 text-xs text-muted';
-export const ERROR_CLASSES = 'mt-1.5 text-xs text-danger-ink';
+export {
+  CONTROL_BASE_CLASSES,
+  CONTROL_CLASSES,
+  TEXTAREA_CLASSES,
+  LABEL_CLASSES,
+  HINT_CLASSES,
+  ERROR_CLASSES,
+} from '@/ui/field-classes';
+import { CONTROL_CLASSES, ERROR_CLASSES, HINT_CLASSES, LABEL_CLASSES } from '@/ui/field-classes';
 
 /**
  * El campo de formulario. UNO.

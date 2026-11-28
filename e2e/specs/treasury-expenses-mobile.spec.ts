@@ -12,6 +12,9 @@ test.describe('Tesorería, Logística, Facturación y PWA Móvil', () => {
       page.getByRole('heading', { name: /Tesorería & Adquisición de Activos/i }),
     ).toBeVisible();
 
+    const inputBox = await page.locator('input[name="sourceAmount"]').boundingBox();
+    expect(inputBox?.height ?? 0).toBeGreaterThanOrEqual(36);
+
     await page.locator('select[name="sourceCurrency"]').selectOption('USD');
     await page.locator('input[name="sourceAmount"]').fill('100.00');
     await page.locator('select[name="targetCurrency"]').selectOption('USD');
@@ -55,6 +58,8 @@ test.describe('Tesorería, Logística, Facturación y PWA Móvil', () => {
     await page.getByRole('button', { name: 'Abrir menú de módulos' }).click();
     const dialog = page.getByRole('dialog', { name: 'Menú de módulos' });
     await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(600);
     await expect(dialog.getByText('Contabilidad')).toBeVisible();
     await expect(dialog.getByRole('link', { name: /Abrir Terminal POS/i })).toBeVisible();
   });
