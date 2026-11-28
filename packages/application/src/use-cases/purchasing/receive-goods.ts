@@ -46,6 +46,17 @@ export interface ReceiveGoodsInput {
   readonly controlNumber?: string | null;
   readonly paymentCondition?: 'CASH' | 'CREDIT';
   readonly creditDays?: number;
+  readonly installmentFrequency?: 'SINGLE' | 'BIWEEKLY' | 'MONTHLY';
+  readonly installmentCount?: number;
+  readonly paymentMethod?:
+    | 'CASH_USD'
+    | 'CASH_VES'
+    | 'ZELLE'
+    | 'MOBILE_PAY'
+    | 'BANK_TRANSFER'
+    | 'USDT'
+    | 'POS_CARD'
+    | 'OTHER';
   readonly taxPercentage?: number;
   readonly currency?: Currency;
   readonly officialRate?: string | null;

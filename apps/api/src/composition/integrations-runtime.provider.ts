@@ -9,6 +9,7 @@ import { loadEnv } from '../config/env';
 import {
   MEMORY_TENANT,
   getMemoryUnitOfWork,
+  makeInMemoryDocumentPaymentStore,
   memoryReadModels,
   memoryAccountingRepos,
 } from './memory-driver';
@@ -75,6 +76,7 @@ export const integrationsRuntimeProvider: FactoryProvider = {
         bankStatements: accounting.bankStatements,
         treasurySwaps: accounting.treasurySwaps,
         partnerDrawings: accounting.partnerDrawings,
+        documentPayments: makeInMemoryDocumentPaymentStore(ctx.tenantId),
       };
     }
 

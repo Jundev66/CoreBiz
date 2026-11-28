@@ -12,6 +12,11 @@ import { CONTROL_CLASSES, Field, LABEL_CLASSES, TEXTAREA_CLASSES } from '@/ui/fi
 import { Card } from '@/ui/primitives';
 import { toast } from '@/ui/toast';
 import { SCANNED_PURCHASE_RECEIPT_KEY } from '@/ui/scan-purchase-receipt';
+import {
+  buildInstallmentPreview,
+  convertCurrencyAmount,
+  type InstallmentFrequencyOption,
+} from '@/ui/payment-methods';
 
 const INITIAL: PurchasingState = { status: 'idle' };
 
@@ -54,6 +59,7 @@ export function GoodsReceiptForm({
   suppliers,
   products,
   defaultCurrency = 'USD',
+  defaultExchangeRate = 50,
   fiscalCountry = 'VE',
   defaultTaxPercentage = 16,
   accountingConfigured = true,
@@ -61,6 +67,7 @@ export function GoodsReceiptForm({
   suppliers: readonly SupplierOption[];
   products: readonly ReceivableProduct[];
   defaultCurrency?: string;
+  defaultExchangeRate?: number;
   fiscalCountry?: string;
   defaultTaxPercentage?: number;
   accountingConfigured?: boolean;
@@ -70,16 +77,34 @@ export function GoodsReceiptForm({
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierReference, setSupplierReference] = useState<string>('');
   const [controlNumber, setControlNumber] = useState<string>('');
-  const [paymentCondition, setPaymentCondition] = useState<'CASH' | 'CREDIT'>('CASH');
+  const [paymentCondition, setPaymentCondition] = useState<'CASH' | 'CREDIT'>('CREDIT');
+  const [installmentFrequency, setInstallmentFrequency] =
+    useState<InstallmentFrequencyOption>('SINGLE');
+  const [installmentCount, setInstallmentCount] = useState<string>('3');
   const [creditDays, setCreditDays] = useState<string>('30');
   const [currency, setCurrency] = useState<string>(defaultCurrency);
-  const [officialRate, setOfficialRate] = useState<string>('');
+  const [officialRate, setOfficialRate] = useState<string>(String(defaultExchangeRate));
   const [appliedRate, setAppliedRate] = useState<string>('');
   const [taxPercentage, setTaxPercentage] = useState<string>(String(defaultTaxPercentage));
   const [notes, setNotes] = useState<string>('');
   const [lines, setLines] = useState<LineDraft[]>([
     { key: 0, productId: '', quantity: '', unitCost: '' },
   ]);
+
+  const activeRate = Number.parseFloat(officialRate.replace(',', '.')) || defaultExchangeRate || 50;
+
+  const handleCurrencyChange = (nextCurrency: string) => {
+    if (nextCurrency === currency) return;
+    setLines((prev) =>
+      prev.map((l) => {
+        const numeric = Number.parseFloat(l.unitCost.replace(',', '.'));
+        if (!Number.isFinite(numeric) || numeric <= 0) return l;
+        const converted = convertCurrencyAmount(numeric, currency, nextCurrency, activeRate);
+        return { ...l, unitCost: converted.toFixed(2) };
+      }),
+    );
+    setCurrency(nextCurrency);
+  };
 
   const fiscalCurrency = fiscalCountry === 'VE' ? 'VES' : 'USD';
   const showFxInputs = currency !== fiscalCurrency;
@@ -332,21 +357,60 @@ export function GoodsReceiptForm({
             </div>
 
             {paymentCondition === 'CREDIT' && (
-              <div>
-                <label htmlFor="creditDays" className={LABEL_CLASSES}>
-                  Días de Crédito
-                </label>
-                <input
-                  id="creditDays"
-                  name="creditDays"
-                  type="number"
-                  min="1"
-                  max="365"
-                  value={creditDays}
-                  onChange={(e) => setCreditDays(e.target.value)}
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                />
-              </div>
+              <>
+                <div>
+                  <label htmlFor="installmentFrequency" className={LABEL_CLASSES}>
+                    Modalidad de Crédito
+                  </label>
+                  <select
+                    id="installmentFrequency"
+                    name="installmentFrequency"
+                    value={installmentFrequency}
+                    onChange={(e) =>
+                      setInstallmentFrequency(e.target.value as InstallmentFrequencyOption)
+                    }
+                    className={`mt-1.5 ${CONTROL_CLASSES}`}
+                  >
+                    <option value="SINGLE">Pago Único (Al vencimiento)</option>
+                    <option value="BIWEEKLY">Cuotas Quincenales (cada 15 días)</option>
+                    <option value="MONTHLY">Cuotas Mensuales (cada mes)</option>
+                  </select>
+                </div>
+
+                {installmentFrequency === 'SINGLE' ? (
+                  <div>
+                    <label htmlFor="creditDays" className={LABEL_CLASSES}>
+                      Días de Crédito
+                    </label>
+                    <input
+                      id="creditDays"
+                      name="creditDays"
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={creditDays}
+                      onChange={(e) => setCreditDays(e.target.value)}
+                      className={`mt-1.5 ${CONTROL_CLASSES}`}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="installmentCount" className={LABEL_CLASSES}>
+                      Cantidad de Cuotas
+                    </label>
+                    <input
+                      id="installmentCount"
+                      name="installmentCount"
+                      type="number"
+                      min="2"
+                      max="48"
+                      value={installmentCount}
+                      onChange={(e) => setInstallmentCount(e.target.value)}
+                      className={`mt-1.5 ${CONTROL_CLASSES}`}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             <div>
@@ -357,7 +421,7 @@ export function GoodsReceiptForm({
                 id="currency"
                 name="currency"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
+                onChange={(e) => handleCurrencyChange(e.target.value)}
                 className={`mt-1.5 ${CONTROL_CLASSES}`}
               >
                 <option value="VES">VES (Bolívares)</option>
@@ -472,9 +536,16 @@ export function GoodsReceiptForm({
                       onChange={(event) => {
                         const newProductId = event.target.value;
                         const prod = products.find((p) => p.id === newProductId);
+                        const baseUsd = prod?.cost
+                          ? Number.parseFloat(prod.cost.replace(',', '.')) || 0
+                          : 0;
+                        const convertedCost =
+                          prod?.cost && currency === 'VES'
+                            ? (baseUsd * activeRate).toFixed(2)
+                            : prod?.cost;
                         update(line.key, {
                           productId: newProductId,
-                          unitCost: prod?.cost ? prod.cost : line.unitCost,
+                          unitCost: convertedCost ?? line.unitCost,
                         });
                         if (prod?.taxPercentage !== undefined && prod.taxPercentage !== null) {
                           setTaxPercentage(prod.taxPercentage);
@@ -606,6 +677,30 @@ export function GoodsReceiptForm({
                   ).toFixed(2)}{' '}
                   {fiscalCurrency}
                 </span>
+              </div>
+            )}
+            {paymentCondition === 'CREDIT' && installmentFrequency !== 'SINGLE' && (
+              <div className="border-t border-line pt-2 text-xs">
+                <div className="mb-1 font-medium text-muted">
+                  Cuotas ({installmentFrequency === 'BIWEEKLY' ? 'Quincenales' : 'Mensuales'}):
+                </div>
+                <div className="space-y-1">
+                  {buildInstallmentPreview(
+                    estimated * (1 + (Number(taxPercentage.replace(',', '.')) || 0) / 100),
+                    installmentFrequency,
+                    Number.parseInt(installmentCount, 10) || 1,
+                    Number.parseInt(creditDays, 10) || 30,
+                  ).map((item) => (
+                    <div key={item.number} className="flex items-center justify-between text-ink">
+                      <span>
+                        #{item.number} · {item.dueDate.toLocaleDateString()}
+                      </span>
+                      <span className="font-mono">
+                        {item.amount.toFixed(2)} {currency}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -307,7 +307,7 @@ export async function seedDemoShowcase(
 
   if (firstSupplier && firstProduct) {
     const receiveRecent = createPurchaseRecorder(daysAgo(today, 10));
-    await receiveRecent({
+    const pur1Res = await receiveRecent({
       supplierId: firstSupplier.id,
       lines: [
         {
@@ -332,7 +332,23 @@ export async function seedDemoShowcase(
       taxPercentage: 16,
       currency: 'USD',
       notes: 'Reposición inicial de inventario demo',
-    }).catch(() => {});
+    }).catch(() => null);
+
+    if (pur1Res?.ok) {
+      const total1 = secondProduct && secondProduct.id !== firstProduct.id ? 765_60n : 522_00n;
+      await runtime.documentPayments
+        .createInstallmentSchedule({
+          documentType: 'PURCHASE',
+          documentId: pur1Res.value.id,
+          frequency: 'MONTHLY',
+          count: 2,
+          startDate: daysAgo(today, 10),
+          creditDays: 30,
+          currency: 'USD',
+          totalMinor: total1,
+        })
+        .catch(() => {});
+    }
   }
 
   if (secondSupplier && thirdProduct) {
@@ -356,7 +372,20 @@ export async function seedDemoShowcase(
     }).catch(() => null);
 
     if (overdueRes?.ok) {
-      await payGoodsReceipt({
+      await runtime.documentPayments
+        .createInstallmentSchedule({
+          documentType: 'PURCHASE',
+          documentId: overdueRes.value.id,
+          frequency: 'BIWEEKLY',
+          count: 3,
+          startDate: daysAgo(today, 38),
+          creditDays: 15,
+          currency: 'USD',
+          totalMinor: 290_00n,
+        })
+        .catch(() => {});
+
+      const pay2Res = await payGoodsReceipt({
         receiptId: overdueRes.value.id,
         amountMinor: 120_00n,
         currency: 'USD',
@@ -364,7 +393,27 @@ export async function seedDemoShowcase(
         sourceAccountId: usdBankId,
         payableAccountId: apId,
         reference: 'ZELLE-PROV-002',
-      }).catch(() => {});
+      }).catch(() => null);
+
+      if (pay2Res?.ok) {
+        await runtime.documentPayments
+          .recordPayment({
+            direction: 'OUTBOUND',
+            documentType: 'PURCHASE',
+            documentId: overdueRes.value.id,
+            paymentMethod: 'ZELLE',
+            paymentCurrency: 'USD',
+            paymentAmountMinor: 120_00n,
+            documentCurrency: 'USD',
+            appliedAmountMinor: 120_00n,
+            exchangeRateScaled: 100_000_000n,
+            accountId: usdBankId,
+            journalEntryId: pay2Res.value.journalEntryId,
+            paymentDate: daysAgo(today, 18),
+            reference: 'ZELLE-PROV-002',
+          })
+          .catch(() => {});
+      }
     }
   }
 
@@ -389,7 +438,7 @@ export async function seedDemoShowcase(
     }).catch(() => null);
 
     if (paidRes?.ok) {
-      await payGoodsReceipt({
+      const pay3Res = await payGoodsReceipt({
         receiptId: paidRes.value.id,
         amountMinor: 255_20n,
         currency: 'USD',
@@ -397,7 +446,27 @@ export async function seedDemoShowcase(
         sourceAccountId: usdBankId,
         payableAccountId: apId,
         reference: 'TRANSF-PROV-003',
-      }).catch(() => {});
+      }).catch(() => null);
+
+      if (pay3Res?.ok) {
+        await runtime.documentPayments
+          .recordPayment({
+            direction: 'OUTBOUND',
+            documentType: 'PURCHASE',
+            documentId: paidRes.value.id,
+            paymentMethod: 'BANK_TRANSFER',
+            paymentCurrency: 'USD',
+            paymentAmountMinor: 255_20n,
+            documentCurrency: 'USD',
+            appliedAmountMinor: 255_20n,
+            exchangeRateScaled: 100_000_000n,
+            accountId: usdBankId,
+            journalEntryId: pay3Res.value.journalEntryId,
+            paymentDate: daysAgo(today, 4),
+            reference: 'TRANSF-PROV-003',
+          })
+          .catch(() => {});
+      }
     }
   }
 
@@ -437,7 +506,20 @@ export async function seedDemoShowcase(
       ],
     });
 
-    await applyPayment.execute({
+    await runtime.documentPayments
+      .createInstallmentSchedule({
+        documentType: 'INVOICE',
+        documentId: inv1Id,
+        frequency: 'BIWEEKLY',
+        count: 3,
+        startDate: inv1Date,
+        creditDays: 30,
+        currency: 'USD',
+        totalMinor: 487_20n,
+      })
+      .catch(() => {});
+
+    const payInv1Res = await applyPayment.execute({
       invoiceId: inv1Id,
       tenantId: rawTenantId,
       amountMinor: 200_00n,
@@ -450,10 +532,31 @@ export async function seedDemoShowcase(
       paymentExchangeRate: 50,
     });
 
+    if (payInv1Res.ok) {
+      await runtime.documentPayments
+        .recordPayment({
+          direction: 'INBOUND',
+          documentType: 'INVOICE',
+          documentId: inv1Id,
+          paymentMethod: 'ZELLE',
+          paymentCurrency: 'USD',
+          paymentAmountMinor: 200_00n,
+          documentCurrency: 'USD',
+          appliedAmountMinor: 200_00n,
+          exchangeRateScaled: 100_000_000n,
+          accountId: usdBankId,
+          journalEntryId: payInv1Res.value.journalEntryId,
+          paymentDate: daysAgo(today, 6),
+          reference: 'ZELLE-DEMO-01',
+        })
+        .catch(() => {});
+    }
+
     if (secondCustomer) {
       const inv2Date = daysAgo(today, 5);
-      await issueInvoice.execute({
-        id: uuidv7(),
+      const inv2Id = uuidv7();
+      const inv2Res = await issueInvoice.execute({
+        id: inv2Id,
         tenantId: rawTenantId,
         customerId: secondCustomer.id,
         documentType: 'STANDARD',
@@ -478,12 +581,32 @@ export async function seedDemoShowcase(
           },
         ],
       });
+      if (inv2Res.ok) {
+        await runtime.documentPayments
+          .recordPayment({
+            direction: 'INBOUND',
+            documentType: 'INVOICE',
+            documentId: inv2Id,
+            paymentMethod: 'CASH_USD',
+            paymentCurrency: 'USD',
+            paymentAmountMinor: 174_00n,
+            documentCurrency: 'USD',
+            appliedAmountMinor: 174_00n,
+            exchangeRateScaled: 100_000_000n,
+            accountId: cashId,
+            journalEntryId: inv2Res.value.journalEntryId,
+            paymentDate: inv2Date,
+            reference: 'FAC-000002',
+          })
+          .catch(() => {});
+      }
     }
 
     if (thirdCustomer) {
       const inv3Date = daysAgo(today, 32);
-      await issueInvoice.execute({
-        id: uuidv7(),
+      const inv3Id = uuidv7();
+      const inv3Res = await issueInvoice.execute({
+        id: inv3Id,
         tenantId: rawTenantId,
         customerId: thirdCustomer.id,
         documentType: 'STANDARD',
@@ -517,6 +640,20 @@ export async function seedDemoShowcase(
           },
         ],
       });
+      if (inv3Res.ok) {
+        await runtime.documentPayments
+          .createInstallmentSchedule({
+            documentType: 'INVOICE',
+            documentId: inv3Id,
+            frequency: 'MONTHLY',
+            count: 2,
+            startDate: inv3Date,
+            creditDays: 15,
+            currency: 'USD',
+            totalMinor: 348_00n,
+          })
+          .catch(() => {});
+      }
     }
 
     if (fourthCustomer) {
@@ -549,7 +686,20 @@ export async function seedDemoShowcase(
         ],
       });
 
-      await applyPayment.execute({
+      await runtime.documentPayments
+        .createInstallmentSchedule({
+          documentType: 'INVOICE',
+          documentId: inv4Id,
+          frequency: 'MONTHLY',
+          count: 3,
+          startDate: inv4Date,
+          creditDays: 15,
+          currency: 'USD',
+          totalMinor: 696_00n,
+        })
+        .catch(() => {});
+
+      const payInv4Res = await applyPayment.execute({
         invoiceId: inv4Id,
         tenantId: rawTenantId,
         amountMinor: 196_00n,
@@ -561,11 +711,32 @@ export async function seedDemoShowcase(
         issueExchangeRate: 50,
         paymentExchangeRate: 50,
       });
+
+      if (payInv4Res.ok) {
+        await runtime.documentPayments
+          .recordPayment({
+            direction: 'INBOUND',
+            documentType: 'INVOICE',
+            documentId: inv4Id,
+            paymentMethod: 'BANK_TRANSFER',
+            paymentCurrency: 'USD',
+            paymentAmountMinor: 196_00n,
+            documentCurrency: 'USD',
+            appliedAmountMinor: 196_00n,
+            exchangeRateScaled: 100_000_000n,
+            accountId: usdBankId,
+            journalEntryId: payInv4Res.value.journalEntryId,
+            paymentDate: daysAgo(today, 35),
+            reference: 'TRANSF-DEMO-02',
+          })
+          .catch(() => {});
+      }
     }
 
     const inv5Date = daysAgo(today, 3);
-    await issueInvoice.execute({
-      id: uuidv7(),
+    const inv5Id = uuidv7();
+    const inv5Res = await issueInvoice.execute({
+      id: inv5Id,
       tenantId: rawTenantId,
       customerId: firstCustomer.id,
       documentType: 'STANDARD',
@@ -590,6 +761,20 @@ export async function seedDemoShowcase(
         },
       ],
     });
+    if (inv5Res.ok) {
+      await runtime.documentPayments
+        .createInstallmentSchedule({
+          documentType: 'INVOICE',
+          documentId: inv5Id,
+          frequency: 'BIWEEKLY',
+          count: 2,
+          startDate: inv5Date,
+          creditDays: 30,
+          currency: 'VES',
+          totalMinor: 13_920_00n,
+        })
+        .catch(() => {});
+    }
   }
 
   const swapHandler = new ExecuteTreasurySwapCommandHandler(

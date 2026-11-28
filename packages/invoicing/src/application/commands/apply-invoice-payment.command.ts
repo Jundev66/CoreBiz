@@ -31,11 +31,14 @@ export class ApplyInvoicePaymentCommandHandler {
     private readonly journalEntryRepository: JournalEntryRepository,
   ) {}
 
-  async execute(
-    command: ApplyInvoicePaymentCommand,
-  ): Promise<
+  async execute(command: ApplyInvoicePaymentCommand): Promise<
     Result<
-      { invoiceId: string; remainingBalanceMinor: bigint; fxDifferenceMinor: bigint },
+      {
+        invoiceId: string;
+        journalEntryId: string;
+        remainingBalanceMinor: bigint;
+        fxDifferenceMinor: bigint;
+      },
       ApplyInvoicePaymentError
     >
   > {
@@ -104,6 +107,7 @@ export class ApplyInvoicePaymentCommandHandler {
 
     return ok({
       invoiceId: updatedInvoice.id,
+      journalEntryId: journalEntryResult.value.id,
       remainingBalanceMinor: updatedInvoice.remainingBalance.minorUnits,
       fxDifferenceMinor,
     });

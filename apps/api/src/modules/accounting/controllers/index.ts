@@ -19,3 +19,4 @@ export { RecordDisbursementController } from './record-disbursement.controller';
 export { ListDisbursementsController } from './list-disbursements.controller';
 export { GetArAgingController } from './get-ar-aging.controller';
 export { GetApAgingController } from './get-ap-aging.controller';
+export { ListDocumentPaymentsController } from './list-document-payments.controller';

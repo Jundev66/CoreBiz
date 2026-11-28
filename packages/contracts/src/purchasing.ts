@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { currencySchema, decimalStringSchema, recordIdSchema } from './common';
+import { documentPaymentMethodSchema, installmentFrequencySchema } from './invoicing';
 
 /**
  * Esquemas de entrada de compras.
@@ -98,6 +99,9 @@ export const receiveGoodsSchema = z
     controlNumber: z.string().trim().max(64).optional().or(z.literal('')),
     paymentCondition: z.enum(['CASH', 'CREDIT']).optional(),
     creditDays: z.number().int().min(0).max(365).optional(),
+    installmentFrequency: installmentFrequencySchema.optional(),
+    installmentCount: z.number().int().min(1).max(48).optional(),
+    paymentMethod: documentPaymentMethodSchema.optional(),
     taxPercentage: z.number().min(0).max(100).optional(),
     currency: currencySchema.optional(),
     officialRate: decimalStringSchema.optional().or(z.literal('')),
@@ -132,7 +136,11 @@ export const payGoodsReceiptSchema = z
     paymentDate: z.coerce.date(),
     sourceAccountId: recordIdSchema,
     payableAccountId: recordIdSchema.optional(),
+    paymentMethod: documentPaymentMethodSchema.optional(),
+    exchangeRate: decimalStringSchema.optional(),
+    installmentId: recordIdSchema.optional(),
     reference: z.string().trim().max(120).optional().or(z.literal('')),
+    notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
   .strict();
 

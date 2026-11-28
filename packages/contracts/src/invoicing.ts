@@ -6,6 +6,19 @@ export const invoiceTypeSchema = z.enum(['STANDARD', 'CREDIT_NOTE', 'DEBIT_NOTE'
 
 export const invoiceStatusSchema = z.enum(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOID']);
 
+export const installmentFrequencySchema = z.enum(['SINGLE', 'BIWEEKLY', 'MONTHLY']);
+
+export const documentPaymentMethodSchema = z.enum([
+  'CASH_USD',
+  'CASH_VES',
+  'ZELLE',
+  'MOBILE_PAY',
+  'BANK_TRANSFER',
+  'USDT',
+  'POS_CARD',
+  'OTHER',
+]);
+
 export const issueInvoiceLineSchema = z
   .object({
     description: z.string().trim().min(1).max(255),
@@ -32,6 +45,9 @@ export const issueInvoiceSchema = z
     paymentCondition: paymentConditionSchema.default('CREDIT'),
     cashAccountId: recordIdSchema.optional(),
     creditDays: z.number().int().min(0).max(365).optional(),
+    installmentFrequency: installmentFrequencySchema.optional(),
+    installmentCount: z.number().int().min(1).max(48).optional(),
+    paymentMethod: documentPaymentMethodSchema.optional(),
     lines: z.array(issueInvoiceLineSchema).min(1),
   })
   .strict();
@@ -44,7 +60,11 @@ export const applyInvoicePaymentSchema = z
     paymentDate: z.coerce.date(),
     cashAccountId: recordIdSchema,
     receivableAccountId: recordIdSchema,
+    paymentMethod: documentPaymentMethodSchema.optional(),
+    exchangeRate: decimalStringSchema.optional(),
+    installmentId: recordIdSchema.optional(),
     reference: z.string().trim().max(100).optional(),
+    notes: z.string().trim().max(300).optional(),
     issueExchangeRate: decimalStringSchema.optional(),
     paymentExchangeRate: decimalStringSchema.optional(),
     fxGainLossAccountId: recordIdSchema.optional(),
@@ -59,6 +79,8 @@ export const listInvoicesQuerySchema = z
 
 export type InvoiceType = z.infer<typeof invoiceTypeSchema>;
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
+export type InstallmentFrequency = z.infer<typeof installmentFrequencySchema>;
+export type DocumentPaymentMethod = z.infer<typeof documentPaymentMethodSchema>;
 export type IssueInvoiceLineInput = z.infer<typeof issueInvoiceLineSchema>;
 export type IssueInvoiceInput = z.infer<typeof issueInvoiceSchema>;
 export type ApplyInvoicePaymentInput = z.infer<typeof applyInvoicePaymentSchema>;

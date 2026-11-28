@@ -8,12 +8,17 @@ import {
   type UnitOfWork,
 } from '@corebiz/application';
 import type { VisionVectorStorePort } from '@synapse-vision/core';
-import { postgresRuntime, type AuditTrace } from '@corebiz/infrastructure';
+import {
+  postgresRuntime,
+  type AuditTrace,
+  type DocumentPaymentStore,
+} from '@corebiz/infrastructure';
 import { RUNTIME, TENANT_CONTEXT } from '../tokens';
 import { activeDriver, databaseUrl } from '../config/driver';
 import { loadEnv } from '../config/env';
 import {
   getMemoryUnitOfWork,
+  makeInMemoryDocumentPaymentStore,
   memoryReadModels,
   memoryVisionStore,
   memoryAccountingRepos,
@@ -46,6 +51,7 @@ export interface Runtime {
   readonly journalEntries: JournalEntryRepository;
   readonly invoices: InvoiceRepository;
   readonly bankStatements: BankStatementRepository;
+  readonly documentPayments: DocumentPaymentStore;
   readonly paymentReceipts?: PaymentReceiptRepository;
   readonly creditNotes?: CreditNoteRepository;
   readonly debitNotes?: DebitNoteRepository;
@@ -135,6 +141,7 @@ export const runtimeProvider: FactoryProvider = {
         partnerDrawings: accounting.partnerDrawings,
         disbursements: accounting.disbursements,
         taxRateConfigs: accounting.taxRateConfigs,
+        documentPayments: makeInMemoryDocumentPaymentStore(ctx.tenantId),
         ...(semantic ? { vectorStore: memoryVisionStore(env.VISION_EMBEDDINGS_MODEL) } : {}),
       };
     }

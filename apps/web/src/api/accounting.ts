@@ -112,3 +112,36 @@ export async function getApAging(
   const query = params.toString() ? `?${params.toString()}` : '';
   return get<AgingReportResponse>(`/v1/accounting/aging/ap${query}`);
 }
+
+export interface DocumentPaymentEntryApiItem {
+  readonly id: string;
+  readonly direction: 'INBOUND' | 'OUTBOUND';
+  readonly documentType: 'INVOICE' | 'PURCHASE';
+  readonly documentId: string;
+  readonly installmentId: string | null;
+  readonly paymentNumber: string;
+  readonly paymentMethod: string;
+  readonly paymentCurrency: string;
+  readonly paymentAmountMinor: string;
+  readonly documentCurrency: string;
+  readonly appliedAmountMinor: string;
+  readonly exchangeRateScaled: string;
+  readonly accountId: string;
+  readonly accountCode: string | null;
+  readonly accountName: string | null;
+  readonly journalEntryId: string | null;
+  readonly paymentDate: string;
+  readonly reference: string | null;
+  readonly notes: string | null;
+  readonly status: string;
+}
+
+export async function listDocumentPayments(
+  direction?: 'INBOUND' | 'OUTBOUND',
+): Promise<readonly DocumentPaymentEntryApiItem[]> {
+  const query = direction ? `?direction=${direction}` : '';
+  const response = await get<{ payments: readonly DocumentPaymentEntryApiItem[] }>(
+    `/v1/accounting/document-payments${query}`,
+  );
+  return response.payments;
+}

@@ -58,6 +58,9 @@ export default async function NewInvoicePage() {
 
   const defaultTax = taxRates.find((r) => r.isDefault) ?? taxRates[0];
   const defaultTaxPercentage = defaultTax ? defaultTax.rateBp / 100 : ctx.settings.taxRateBp / 100;
+  const defaultExchangeRate = ctx.settings.exchangeRateScaled
+    ? Number(ctx.settings.exchangeRateScaled) / 100_000_000
+    : 50;
 
   return (
     <Screen
@@ -85,6 +88,7 @@ export default async function NewInvoicePage() {
         }))}
         defaultDocumentNumber={`FAC-${nextNum}`}
         defaultCurrency={ctx.settings.baseCurrency}
+        defaultExchangeRate={defaultExchangeRate}
         defaultTaxPercentage={defaultTaxPercentage}
         taxRates={taxRates.map((r) => ({
           id: r.id,

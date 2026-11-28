@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Inject, Optional, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { z } from 'zod';
 import { issueInvoiceSchema } from '@corebiz/contracts';
@@ -7,7 +7,8 @@ import { PermissionsGuard } from '../../../auth/permissions.guard';
 import { RequirePermission } from '../../../auth/require-permission.decorator';
 import { unwrapOrThrow } from '../../../http/api-error';
 import { ZodValidationPipe } from '../../../http/zod-validation.pipe';
-import { TENANT_CONTEXT, USE_CASES } from '../../../tokens';
+import { RUNTIME, TENANT_CONTEXT, USE_CASES } from '../../../tokens';
+import type { Runtime } from '../../../composition/runtime.provider';
 import type { UseCases } from '../../../composition/use-cases.provider';
 import type { TenantContext } from '@corebiz/application';
 
@@ -19,6 +20,7 @@ export class IssueInvoiceController {
   constructor(
     @Inject(USE_CASES) private readonly useCases: UseCases,
     @Inject(TENANT_CONTEXT) private readonly ctx: TenantContext,
+    @Optional() @Inject(RUNTIME) private readonly runtime?: Runtime,
   ) {}
 
   @Post()
@@ -66,6 +68,41 @@ export class IssueInvoiceController {
       documentNumber: body.documentNumber,
       lines: body.lines,
     });
+
+    const createdInvoice = await this.runtime?.invoices.findById(this.ctx.tenantId, val.invoiceId);
+    const totalMinor = createdInvoice?.total.minorUnits ?? 0n;
+
+    if (totalMinor > 0n && this.runtime) {
+      if (body.paymentCondition === 'CREDIT') {
+        await this.runtime.documentPayments.createInstallmentSchedule({
+          documentType: 'INVOICE',
+          documentId: val.invoiceId,
+          frequency: body.installmentFrequency ?? 'SINGLE',
+          count: body.installmentCount ?? 1,
+          startDate: body.issueDate,
+          creditDays: body.creditDays ?? 30,
+          currency: body.currency,
+          totalMinor,
+        });
+      } else {
+        await this.runtime.documentPayments.recordPayment({
+          direction: 'INBOUND',
+          documentType: 'INVOICE',
+          documentId: val.invoiceId,
+          paymentMethod: body.paymentMethod ?? (body.currency === 'VES' ? 'CASH_VES' : 'CASH_USD'),
+          paymentCurrency: body.currency,
+          paymentAmountMinor: totalMinor,
+          documentCurrency: body.currency,
+          appliedAmountMinor: totalMinor,
+          exchangeRateScaled: 100_000_000n,
+          accountId: body.cashAccountId || body.receivableAccountId,
+          journalEntryId: val.journalEntryId,
+          paymentDate: body.issueDate,
+          reference: body.documentNumber,
+        });
+      }
+    }
+
     return {
       invoiceId: val.invoiceId,
       journalEntryId: val.journalEntryId,

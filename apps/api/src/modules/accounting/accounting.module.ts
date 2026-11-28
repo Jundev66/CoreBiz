@@ -21,6 +21,7 @@ import {
   ListDisbursementsController,
   GetArAgingController,
   GetApAgingController,
+  ListDocumentPaymentsController,
 } from './controllers';
 
 @Module({
@@ -46,6 +47,7 @@ import {
     ListDisbursementsController,
     GetArAgingController,
     GetApAgingController,
+    ListDocumentPaymentsController,
   ],
 })
 export class AccountingModule {}

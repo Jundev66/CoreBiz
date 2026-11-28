@@ -251,6 +251,11 @@ export function httpCommands() {
         controlNumber: orUndefined(input.controlNumber),
         ...(input.paymentCondition ? { paymentCondition: input.paymentCondition } : {}),
         ...(input.creditDays !== undefined ? { creditDays: input.creditDays } : {}),
+        ...(input.installmentFrequency ? { installmentFrequency: input.installmentFrequency } : {}),
+        ...(input.installmentCount !== undefined
+          ? { installmentCount: input.installmentCount }
+          : {}),
+        ...(input.paymentMethod ? { paymentMethod: input.paymentMethod } : {}),
         ...(input.taxPercentage !== undefined ? { taxPercentage: input.taxPercentage } : {}),
         ...(input.currency ? { currency: input.currency } : {}),
         officialRate: orUndefined(input.officialRate),
@@ -287,7 +292,11 @@ export function httpCommands() {
         paymentDate: input.paymentDate,
         sourceAccountId: input.sourceAccountId,
         ...(input.payableAccountId ? { payableAccountId: input.payableAccountId } : {}),
+        ...(input.paymentMethod ? { paymentMethod: input.paymentMethod } : {}),
+        ...(input.exchangeRate ? { exchangeRate: input.exchangeRate } : {}),
+        ...(input.installmentId ? { installmentId: input.installmentId } : {}),
         ...(input.reference ? { reference: input.reference } : {}),
+        ...(input.notes ? { notes: input.notes } : {}),
       }),
 
     // ── Cobros ────────────────────────────────────────────────────────────────

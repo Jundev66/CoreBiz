@@ -154,6 +154,9 @@ export async function receiveGoodsAction(
   const controlNumber = formData.get('controlNumber');
   const paymentCondition = formData.get('paymentCondition');
   const creditDaysRaw = formData.get('creditDays');
+  const installmentFrequency = formData.get('installmentFrequency');
+  const installmentCountRaw = formData.get('installmentCount');
+  const paymentMethod = formData.get('paymentMethod');
   const taxPercentRaw = formData.get('taxPercentage');
   const currencyRaw = formData.get('currency');
   const officialRate = formData.get('officialRate');
@@ -164,6 +167,10 @@ export async function receiveGoodsAction(
     typeof creditDaysRaw === 'string' && creditDaysRaw.trim() !== ''
       ? Number.parseInt(creditDaysRaw, 10)
       : 0;
+  const installmentCount =
+    typeof installmentCountRaw === 'string' && installmentCountRaw.trim() !== ''
+      ? Number.parseInt(installmentCountRaw, 10)
+      : 1;
   const taxPercentage =
     typeof taxPercentRaw === 'string' && taxPercentRaw.trim() !== ''
       ? Number.parseFloat(taxPercentRaw.replace(',', '.'))
@@ -177,6 +184,25 @@ export async function receiveGoodsAction(
     controlNumber: typeof controlNumber === 'string' && controlNumber !== '' ? controlNumber : '',
     ...(paymentCondition === 'CASH' || paymentCondition === 'CREDIT' ? { paymentCondition } : {}),
     ...(Number.isFinite(creditDays) ? { creditDays } : {}),
+    ...(installmentFrequency === 'SINGLE' ||
+    installmentFrequency === 'BIWEEKLY' ||
+    installmentFrequency === 'MONTHLY'
+      ? { installmentFrequency }
+      : {}),
+    ...(Number.isFinite(installmentCount) && installmentCount > 0 ? { installmentCount } : {}),
+    ...(typeof paymentMethod === 'string' && paymentMethod !== ''
+      ? {
+          paymentMethod: paymentMethod as
+            | 'CASH_USD'
+            | 'CASH_VES'
+            | 'ZELLE'
+            | 'MOBILE_PAY'
+            | 'BANK_TRANSFER'
+            | 'USDT'
+            | 'POS_CARD'
+            | 'OTHER',
+        }
+      : {}),
     ...(Number.isFinite(taxPercentage) ? { taxPercentage } : {}),
     ...(currencyRaw === 'USD' || currencyRaw === 'VES' || currencyRaw === 'EUR'
       ? { currency: currencyRaw }
@@ -254,7 +280,11 @@ export async function payGoodsReceiptAction(
   const currency = currencyRaw === 'VES' ? 'VES' : 'USD';
   const paymentDateRaw = campo(formData, 'paymentDate');
   const sourceAccountId = campo(formData, 'sourceAccountId');
+  const paymentMethod = campo(formData, 'paymentMethod');
+  const exchangeRate = campo(formData, 'exchangeRate');
+  const installmentId = campo(formData, 'installmentId');
   const reference = campo(formData, 'reference');
+  const notes = campo(formData, 'notes');
 
   const paymentDate = paymentDateRaw ? new Date(`${paymentDateRaw}T12:00:00.000Z`) : new Date();
 
@@ -265,7 +295,23 @@ export async function payGoodsReceiptAction(
     currency,
     paymentDate,
     sourceAccountId,
+    ...(paymentMethod
+      ? {
+          paymentMethod: paymentMethod as
+            | 'CASH_USD'
+            | 'CASH_VES'
+            | 'ZELLE'
+            | 'MOBILE_PAY'
+            | 'BANK_TRANSFER'
+            | 'USDT'
+            | 'POS_CARD'
+            | 'OTHER',
+        }
+      : {}),
+    ...(exchangeRate ? { exchangeRate: exchangeRate.replace(',', '.') } : {}),
+    ...(installmentId ? { installmentId } : {}),
     ...(reference ? { reference } : {}),
+    ...(notes ? { notes } : {}),
   });
 
   if (!result.ok) return failure(result.error);

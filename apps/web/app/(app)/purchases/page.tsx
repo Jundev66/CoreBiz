@@ -47,14 +47,38 @@ export default async function PurchasesPage({
   ]);
 
   const grossTotalByReceiptId = new Map<string, string>();
+  const totalMinorByReceiptId = new Map<string, bigint>();
+  const paidMinorByReceiptId = new Map<string, bigint>();
   for (const entry of journalEntries) {
     if (entry.sourceType === 'PURCHASE' && entry.sourceId) {
       const minor = BigInt(entry.totalCreditMinor || '0');
       const major = minor / 100n;
       const cents = (minor % 100n).toString().padStart(2, '0');
       grossTotalByReceiptId.set(entry.sourceId, `${major}.${cents}`);
+      totalMinorByReceiptId.set(entry.sourceId, minor);
+    } else if (entry.sourceType === 'PAYMENT' && entry.sourceId) {
+      const prev = paidMinorByReceiptId.get(entry.sourceId) ?? 0n;
+      paidMinorByReceiptId.set(entry.sourceId, prev + BigInt(entry.totalDebitMinor || '0'));
     }
   }
+
+  const getPurchasePaymentBadge = (receiptId: string, status: string) => {
+    if (status === 'voided') {
+      return <Badge tone="danger">Anulada</Badge>;
+    }
+    const total = totalMinorByReceiptId.get(receiptId);
+    const paid = paidMinorByReceiptId.get(receiptId) ?? 0n;
+    if (total === undefined) {
+      return <Badge tone="neutral">Registrada</Badge>;
+    }
+    if (paid >= total && total > 0n) {
+      return <Badge tone="success">Pagada Completa</Badge>;
+    }
+    if (paid > 0n) {
+      return <Badge tone="warn">Pagada Parcial</Badge>;
+    }
+    return <Badge tone="brand">Pendiente</Badge>;
+  };
 
   /*
    * The session and the list travel together; the role still decides what is shown. A 403
@@ -155,6 +179,9 @@ export default async function PurchasesPage({
                   <th scope="col" className={`${TH} text-right`}>
                     {t('purchases.lines')}
                   </th>
+                  <th scope="col" className={`${TH} text-center`}>
+                    Estado
+                  </th>
                   <th scope="col" className={`${TH} text-right`}>
                     {t('purchases.total')}
                   </th>
@@ -175,17 +202,15 @@ export default async function PurchasesPage({
                         >
                           {receipt.number}
                         </Link>
-                        {receipt.status === 'voided' && (
-                          <span className="ml-2">
-                            <Badge tone="danger">{t('purchases.voided')}</Badge>
-                          </span>
-                        )}
                       </td>
                       <td className="px-4 py-3 font-medium text-ink">{receipt.supplierName}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-muted">
                         {receivedOn(receipt.receivedAt)}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">{receipt.lineCount}</td>
+                      <td className="px-4 py-3 text-center">
+                        {getPurchasePaymentBadge(receipt.id, receipt.status)}
+                      </td>
                       <td className="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums">
                         $ {displayTotal}
                       </td>

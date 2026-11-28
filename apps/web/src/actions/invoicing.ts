@@ -28,6 +28,20 @@ const invoiceFormSchema = z.object({
   currency: z.enum(['USD', 'VES']),
   paymentCondition: z.enum(['CASH', 'CREDIT']),
   creditDays: z.coerce.number().int().min(0).max(365).default(0),
+  installmentFrequency: z.enum(['SINGLE', 'BIWEEKLY', 'MONTHLY']).optional(),
+  installmentCount: z.coerce.number().int().min(1).max(48).optional(),
+  paymentMethod: z
+    .enum([
+      'CASH_USD',
+      'CASH_VES',
+      'ZELLE',
+      'MOBILE_PAY',
+      'BANK_TRANSFER',
+      'USDT',
+      'POS_CARD',
+      'OTHER',
+    ])
+    .optional(),
   receivableAccountId: z.string().trim().min(1),
   revenueAccountId: z.string().trim().min(1),
   taxPayableAccountId: z.string().trim().min(1),
@@ -46,6 +60,9 @@ export async function issueInvoiceAction(
     currency: formData.get('currency'),
     paymentCondition: formData.get('paymentCondition'),
     creditDays: formData.get('creditDays') || 0,
+    installmentFrequency: formData.get('installmentFrequency') || undefined,
+    installmentCount: formData.get('installmentCount') || undefined,
+    paymentMethod: formData.get('paymentMethod') || undefined,
     receivableAccountId: formData.get('receivableAccountId'),
     revenueAccountId: formData.get('revenueAccountId'),
     taxPayableAccountId: formData.get('taxPayableAccountId'),
@@ -89,6 +106,15 @@ export async function issueInvoiceAction(
     ...(parsed.data.paymentCondition === 'CASH' && parsed.data.cashAccountId
       ? { cashAccountId: parsed.data.cashAccountId }
       : {}),
+    ...(parsed.data.paymentCondition === 'CASH' && parsed.data.paymentMethod
+      ? { paymentMethod: parsed.data.paymentMethod }
+      : {}),
+    ...(parsed.data.paymentCondition === 'CREDIT' && parsed.data.installmentFrequency
+      ? { installmentFrequency: parsed.data.installmentFrequency }
+      : {}),
+    ...(parsed.data.paymentCondition === 'CREDIT' && parsed.data.installmentCount
+      ? { installmentCount: parsed.data.installmentCount }
+      : {}),
     creditDays,
     lines: parsedLines.data.map((l) => ({
       description: l.description,
@@ -123,7 +149,22 @@ const collectPaymentFormSchema = z.object({
   currency: z.enum(['USD', 'VES']),
   cashAccountId: z.string().trim().min(1),
   receivableAccountId: z.string().trim().min(1),
+  paymentMethod: z
+    .enum([
+      'CASH_USD',
+      'CASH_VES',
+      'ZELLE',
+      'MOBILE_PAY',
+      'BANK_TRANSFER',
+      'USDT',
+      'POS_CARD',
+      'OTHER',
+    ])
+    .optional(),
+  exchangeRate: z.string().trim().optional(),
+  installmentId: z.string().trim().optional(),
   reference: z.string().trim().max(100).optional(),
+  notes: z.string().trim().max(300).optional(),
   issueExchangeRate: z.string().trim().optional(),
   paymentExchangeRate: z.string().trim().optional(),
 });
@@ -138,7 +179,11 @@ export async function applyInvoicePaymentAction(
     currency: formData.get('currency'),
     cashAccountId: formData.get('cashAccountId'),
     receivableAccountId: formData.get('receivableAccountId'),
+    paymentMethod: formData.get('paymentMethod') || undefined,
+    exchangeRate: formData.get('exchangeRate') || undefined,
+    installmentId: formData.get('installmentId') || undefined,
     reference: formData.get('reference') || undefined,
+    notes: formData.get('notes') || undefined,
     issueExchangeRate: formData.get('issueExchangeRate') || undefined,
     paymentExchangeRate: formData.get('paymentExchangeRate') || undefined,
   });
@@ -148,6 +193,7 @@ export async function applyInvoicePaymentAction(
   }
 
   const normalizedAmount = parsed.data.amount.replace(',', '.');
+  const exchangeRate = parsed.data.exchangeRate?.replace(',', '.');
   const issueRate = parsed.data.issueExchangeRate?.replace(',', '.');
   const paymentRate = parsed.data.paymentExchangeRate?.replace(',', '.');
 
@@ -158,7 +204,11 @@ export async function applyInvoicePaymentAction(
     paymentDate: new Date(),
     cashAccountId: parsed.data.cashAccountId,
     receivableAccountId: parsed.data.receivableAccountId,
+    ...(parsed.data.paymentMethod ? { paymentMethod: parsed.data.paymentMethod } : {}),
+    ...(exchangeRate ? { exchangeRate } : {}),
+    ...(parsed.data.installmentId ? { installmentId: parsed.data.installmentId } : {}),
     ...(parsed.data.reference ? { reference: parsed.data.reference } : {}),
+    ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
     ...(issueRate ? { issueExchangeRate: issueRate } : {}),
     ...(paymentRate ? { paymentExchangeRate: paymentRate } : {}),
   });

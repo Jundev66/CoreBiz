@@ -81,3 +81,6 @@ plans/
 e2e/test-results/
 e2e/playwright-report/
 .agents/
+
+.vercel
+.env*

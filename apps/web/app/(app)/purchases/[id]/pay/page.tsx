@@ -68,11 +68,25 @@ export default async function PayPurchasePage({ params }: { params: Promise<{ id
     .reduce((acc, e) => acc + BigInt(e.totalDebitMinor), 0n);
   const remainingMinor = totalMinor > paidMinor ? totalMinor - paidMinor : 0n;
   const currency = purchaseEntry?.lines[0]?.currency ?? ctx.settings.baseCurrency;
+  const defaultExchangeRate = ctx.settings.exchangeRateScaled
+    ? Number(ctx.settings.exchangeRateScaled) / 100_000_000
+    : 50;
+  const receiptWithInstallments = receipt as typeof receipt & {
+    installments?: ReadonlyArray<{
+      readonly id: string;
+      readonly installmentNumber: number;
+      readonly dueDate: string;
+      readonly currency: string;
+      readonly amountMinor: string;
+      readonly paidMinor: string;
+      readonly status: string;
+    }>;
+  };
 
   return (
     <Screen
       title={`Pagar Compra ${receipt.number}`}
-      subtitle={`Abono parcial o total a ${receipt.supplierName} desde cuenta de Activo / Divisa / USDT`}
+      subtitle={`Abono parcial o total a ${receipt.supplierName} con soporte multi-moneda USD ↔ VES`}
       back={{ href: `/purchases/${id}`, label: receipt.number }}
     >
       {remainingMinor <= 0n ? (
@@ -83,10 +97,12 @@ export default async function PayPurchasePage({ params }: { params: Promise<{ id
           receiptNumber={receipt.number}
           supplierName={receipt.supplierName}
           currency={currency}
+          defaultExchangeRate={defaultExchangeRate}
           totalFormatted={`${formatMinorDecimal(totalMinor)} ${currency}`}
           paidFormatted={`${formatMinorDecimal(paidMinor)} ${currency}`}
           remainingDecimal={formatMinorDecimal(remainingMinor)}
           assetAccounts={assetAccounts}
+          installments={receiptWithInstallments.installments ?? []}
         />
       )}
     </Screen>

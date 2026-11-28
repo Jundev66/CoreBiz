@@ -48,6 +48,11 @@ import {
 } from '@corebiz/fiscal';
 import { InMemoryCreditNoteRepository, InMemoryDebitNoteRepository } from '@corebiz/invoicing';
 import { InMemoryPayableBillsAdapter } from '@corebiz/accounting';
+import type {
+  DocumentInstallmentRow,
+  DocumentPaymentRow,
+  DocumentPaymentStore,
+} from '@corebiz/infrastructure';
 import type { VisionVectorStorePort } from '@synapse-vision/core';
 
 /**
@@ -91,6 +96,8 @@ interface MemoryStore extends SalesStores {
   physicalInventoryAuditRepo?: InMemoryPhysicalInventoryAuditRepository;
   payableBillsRepo?: InMemoryPayableBillsAdapter;
   taxRateConfigRepo?: InMemoryTaxRateConfigRepository;
+  documentInstallments?: Map<string, DocumentInstallmentRow[]>;
+  documentPayments?: Map<string, DocumentPaymentRow[]>;
   purchasesBookTransactions?: Map<string, PurchasesSourceTransaction[]>;
 }
 
@@ -602,4 +609,120 @@ export function memoryVisionStore(model: string): VisionVectorStorePort {
   const current = store();
   current.visionVectors ??= memoryVisionVectorStore({ model });
   return current.visionVectors;
+}
+
+export function makeInMemoryDocumentPaymentStore(tenantId: string): DocumentPaymentStore {
+  const current = store();
+  current.documentInstallments ??= new Map();
+  current.documentPayments ??= new Map();
+  const instMap = current.documentInstallments;
+  const payMap = current.documentPayments;
+
+  const keyFor = (docType: string, docId: string) => `${tenantId}:${docType}:${docId}`;
+
+  return {
+    createInstallmentSchedule(input) {
+      if (input.totalMinor <= 0n) return Promise.resolve([]);
+      const count = input.frequency === 'SINGLE' ? 1 : Math.max(1, Math.min(48, input.count));
+      const base = input.totalMinor / BigInt(count);
+      const rem = input.totalMinor % BigInt(count);
+      const rows: DocumentInstallmentRow[] = Array.from({ length: count }, (_, idx) => {
+        const n = idx + 1;
+        const dueDate = new Date(input.startDate.getTime());
+        if (input.frequency === 'BIWEEKLY') {
+          dueDate.setUTCDate(dueDate.getUTCDate() + n * 15);
+        } else if (input.frequency === 'MONTHLY') {
+          dueDate.setUTCMonth(dueDate.getUTCMonth() + n);
+        } else {
+          dueDate.setUTCDate(dueDate.getUTCDate() + Math.max(1, input.creditDays));
+        }
+        return {
+          id: crypto.randomUUID(),
+          documentType: input.documentType,
+          documentId: input.documentId,
+          installmentNumber: n,
+          frequency: input.frequency,
+          dueDate,
+          currency: input.currency,
+          amountMinor: idx === count - 1 ? base + rem : base,
+          paidMinor: 0n,
+          status: 'PENDING',
+        };
+      });
+      instMap.set(keyFor(input.documentType, input.documentId), rows);
+      return Promise.resolve(rows);
+    },
+
+    listInstallments(documentType, documentId) {
+      return Promise.resolve(instMap.get(keyFor(documentType, documentId)) ?? []);
+    },
+
+    recordPayment(input) {
+      const k = keyFor(input.documentType, input.documentId);
+      const installments = [...(instMap.get(k) ?? [])];
+      let remaining = input.appliedAmountMinor;
+      let linkedId = input.installmentId ?? null;
+
+      for (let i = 0; i < installments.length && remaining > 0n; i++) {
+        const inst = installments[i]!;
+        if (input.installmentId && inst.id !== input.installmentId) continue;
+        if (inst.status === 'PAID') continue;
+        if (!linkedId) linkedId = inst.id;
+        const left = inst.amountMinor - inst.paidMinor;
+        const applyHere = remaining >= left ? left : remaining;
+        const newPaid = inst.paidMinor + applyHere;
+        installments[i] = {
+          ...inst,
+          paidMinor: newPaid,
+          status: newPaid >= inst.amountMinor ? 'PAID' : 'PARTIALLY_PAID',
+        };
+        remaining -= applyHere;
+      }
+      if (installments.length > 0) {
+        instMap.set(k, installments);
+      }
+
+      const existingAll = payMap.get(tenantId) ?? [];
+      const dirCount = existingAll.filter((p) => p.direction === input.direction).length;
+      const prefix = input.direction === 'INBOUND' ? 'COB' : 'PAG';
+      const row: DocumentPaymentRow = {
+        id: crypto.randomUUID(),
+        direction: input.direction,
+        documentType: input.documentType,
+        documentId: input.documentId,
+        installmentId: linkedId,
+        paymentNumber: `${prefix}-${String(dirCount + 1).padStart(6, '0')}`,
+        paymentMethod: input.paymentMethod,
+        paymentCurrency: input.paymentCurrency,
+        paymentAmountMinor: input.paymentAmountMinor,
+        documentCurrency: input.documentCurrency,
+        appliedAmountMinor: input.appliedAmountMinor,
+        exchangeRateScaled: input.exchangeRateScaled,
+        accountId: input.accountId,
+        accountCode: null,
+        accountName: null,
+        journalEntryId: input.journalEntryId ?? null,
+        paymentDate: input.paymentDate,
+        reference: input.reference ?? null,
+        notes: input.notes ?? null,
+        status: 'POSTED',
+      };
+      payMap.set(tenantId, [row, ...existingAll]);
+      return Promise.resolve(row);
+    },
+
+    listPaymentsByDocument(documentType, documentId) {
+      return Promise.resolve(
+        (payMap.get(tenantId) ?? []).filter(
+          (p) => p.documentType === documentType && p.documentId === documentId,
+        ),
+      );
+    },
+
+    listPaymentsByDirection(direction, limit = 100) {
+      const all = payMap.get(tenantId) ?? [];
+      const filtered = direction ? all.filter((p) => p.direction === direction) : all;
+      return Promise.resolve(filtered.slice(0, limit));
+    },
+  };
 }

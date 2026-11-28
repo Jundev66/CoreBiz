@@ -95,3 +95,15 @@ export { UnitedStatesFiscalEngine } from './fiscal/united-states-fiscal-engine';
 export { PrismaAccountRepository } from './prisma/accounts';
 export { PrismaJournalEntryRepository } from './prisma/journal-entries';
 export { PrismaInvoiceRepository } from './prisma/invoices';
+export {
+  makePrismaDocumentPaymentStore,
+  convertMinorUnits,
+  scaleExchangeRate,
+  type DocumentPaymentStore,
+  type DocumentInstallmentRow,
+  type DocumentPaymentRow,
+  type InstallmentFrequency,
+  type DocumentPaymentMethod,
+  type DocumentKind,
+  type PaymentDirection,
+} from './prisma/document-payments';

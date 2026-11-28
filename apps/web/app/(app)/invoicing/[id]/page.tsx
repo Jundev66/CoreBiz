@@ -10,6 +10,7 @@ import { Badge } from '@/ui/feedback';
 import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { SectionTitle } from '@/ui/primitives';
+import { PAYMENT_METHOD_LABELS } from '@/ui/payment-methods';
 
 function formatMinor(minorStr: string, currency = 'USD'): string {
   const minor = BigInt(minorStr || '0');
@@ -30,9 +31,9 @@ const STATUS_TONES: Record<string, 'neutral' | 'brand' | 'success' | 'warn' | 'd
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Borrador',
-  ISSUED: 'Emitida',
-  PARTIALLY_PAID: 'Abonada Parcial',
-  PAID: 'Pagada Total',
+  ISSUED: 'Pendiente',
+  PARTIALLY_PAID: 'Pagada Parcial',
+  PAID: 'Pagada Completa',
   VOID: 'Anulada',
 };
 
@@ -215,6 +216,67 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </TableFrame>
         </section>
 
+        {(invoice.installments?.length ?? 0) > 0 && (
+          <section className="space-y-3">
+            <SectionTitle>Cronograma de Cuotas</SectionTitle>
+            <TableFrame>
+              <thead>
+                <tr className="border-b border-line bg-subtle/40 text-xs font-semibold uppercase text-muted">
+                  <th className="px-4 py-3">Cuota</th>
+                  <th className="px-4 py-3">Frecuencia</th>
+                  <th className="px-4 py-3">Vencimiento</th>
+                  <th className="px-4 py-3 text-right">Monto Cuota</th>
+                  <th className="px-4 py-3 text-right">Cobrado</th>
+                  <th className="px-4 py-3 text-center">Estado</th>
+                  <th className="px-4 py-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs text-ink">
+                {(invoice.installments ?? []).map((inst) => (
+                  <tr key={inst.id}>
+                    <td className="px-4 py-3 font-mono font-bold">#{inst.installmentNumber}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {inst.frequency === 'BIWEEKLY'
+                        ? 'Quincenal'
+                        : inst.frequency === 'MONTHLY'
+                          ? 'Mensual'
+                          : 'Única'}
+                    </td>
+                    <td className="px-4 py-3">{new Date(inst.dueDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {formatMinor(inst.amountMinor, inst.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatMinor(inst.paidMinor, inst.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge tone={STATUS_TONES[inst.status] ?? 'neutral'}>
+                        {inst.status === 'PAID'
+                          ? 'Pagada Completa'
+                          : inst.status === 'PARTIALLY_PAID'
+                            ? 'Pagada Parcial'
+                            : 'Pendiente'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canCollect && inst.status !== 'PAID' ? (
+                        <Link
+                          href={`/invoicing/${invoice.id}/collect`}
+                          className="font-semibold text-brand hover:underline"
+                        >
+                          Cobrar
+                        </Link>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          </section>
+        )}
+
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <SectionTitle>Cobros y Recibos</SectionTitle>
@@ -228,7 +290,44 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </Link>
             )}
           </div>
-          {receipts.length === 0 ? (
+          {(invoice.payments?.length ?? 0) > 0 ? (
+            <TableFrame>
+              <thead>
+                <tr className="border-b border-line bg-subtle/40 text-xs font-semibold uppercase text-muted">
+                  <th className="px-4 py-3">Nro. Cobro</th>
+                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3">Método</th>
+                  <th className="px-4 py-3">Cuenta</th>
+                  <th className="px-4 py-3">Referencia</th>
+                  <th className="px-4 py-3 text-right">Monto Recibido</th>
+                  <th className="px-4 py-3 text-right">Aplicado a Factura</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs text-ink">
+                {(invoice.payments ?? []).map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3 font-mono font-semibold">{p.paymentNumber}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {new Date(p.paymentDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      {PAYMENT_METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {p.accountCode ? `${p.accountCode} · ${p.accountName}` : p.accountId}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-muted">{p.reference ?? '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {formatMinor(p.paymentAmountMinor, p.paymentCurrency)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatMinor(p.appliedAmountMinor, p.documentCurrency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          ) : receipts.length === 0 ? (
             <Empty>
               {BigInt(invoice.paidMinor) > 0n
                 ? `Se registraron cobros directos por ${formatMinor(invoice.paidMinor, invoice.currency)} (ver asientos contables debajo).`

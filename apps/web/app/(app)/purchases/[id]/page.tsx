@@ -12,6 +12,7 @@ import { buttonClasses } from '@/ui/button';
 import { SectionTitle } from '@/ui/primitives';
 import { DetailList } from '@/ui/detail';
 import { VoidReceiptForm } from '@/ui/void-receipt-form';
+import { PAYMENT_METHOD_LABELS } from '@/ui/payment-methods';
 
 function formatMinor(minorStr: string, currency = 'USD'): string {
   const minor = BigInt(minorStr || '0');
@@ -97,6 +98,32 @@ export default async function GoodsReceiptDetailPage({
   const remainingMinor = totalMinor > paidMinor ? totalMinor - paidMinor : 0n;
   const currency = purchaseEntry?.lines[0]?.currency ?? ctx.settings.baseCurrency;
   const canPay = !voided && remainingMinor > 0n && can(ctx.actor, 'purchase:receive');
+  const receiptExt = receipt as typeof receipt & {
+    installments?: ReadonlyArray<{
+      readonly id: string;
+      readonly installmentNumber: number;
+      readonly frequency: string;
+      readonly dueDate: string;
+      readonly currency: string;
+      readonly amountMinor: string;
+      readonly paidMinor: string;
+      readonly status: string;
+    }>;
+    payments?: ReadonlyArray<{
+      readonly id: string;
+      readonly paymentNumber: string;
+      readonly paymentMethod: string;
+      readonly paymentCurrency: string;
+      readonly paymentAmountMinor: string;
+      readonly documentCurrency: string;
+      readonly appliedAmountMinor: string;
+      readonly accountId: string;
+      readonly accountCode: string | null;
+      readonly accountName: string | null;
+      readonly paymentDate: string;
+      readonly reference: string | null;
+    }>;
+  };
 
   return (
     <Screen
@@ -185,9 +212,76 @@ export default async function GoodsReceiptDetailPage({
           </TableFrame>
         </section>
 
-        {/* Anular solo se ofrece si la recepcion sigue viva Y quien mira puede hacerlo. El
-            caso de uso lo revalida igualmente: esto no es la seguridad, es no ensenar un
-            boton que va a decir que no. */}
+        {(receiptExt.installments?.length ?? 0) > 0 && (
+          <section className="space-y-3">
+            <SectionTitle>Cronograma de Cuotas</SectionTitle>
+            <TableFrame>
+              <thead>
+                <tr className="border-b border-line bg-subtle/40 text-xs font-semibold uppercase text-muted">
+                  <th className="px-4 py-3">Cuota</th>
+                  <th className="px-4 py-3">Frecuencia</th>
+                  <th className="px-4 py-3">Vencimiento</th>
+                  <th className="px-4 py-3 text-right">Monto Cuota</th>
+                  <th className="px-4 py-3 text-right">Pagado</th>
+                  <th className="px-4 py-3 text-center">Estado</th>
+                  <th className="px-4 py-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs text-ink">
+                {(receiptExt.installments ?? []).map((inst) => (
+                  <tr key={inst.id}>
+                    <td className="px-4 py-3 font-mono font-bold">#{inst.installmentNumber}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {inst.frequency === 'BIWEEKLY'
+                        ? 'Quincenal'
+                        : inst.frequency === 'MONTHLY'
+                          ? 'Mensual'
+                          : 'Única'}
+                    </td>
+                    <td className="px-4 py-3">{new Date(inst.dueDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {formatMinor(inst.amountMinor, inst.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatMinor(inst.paidMinor, inst.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge
+                        tone={
+                          inst.status === 'PAID'
+                            ? 'success'
+                            : inst.status === 'PARTIALLY_PAID'
+                              ? 'warn'
+                              : 'brand'
+                        }
+                      >
+                        {inst.status === 'PAID'
+                          ? 'Pagada Completa'
+                          : inst.status === 'PARTIALLY_PAID'
+                            ? 'Pagada Parcial'
+                            : 'Pendiente'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canPay && inst.status !== 'PAID' ? (
+                        <Link
+                          href={`/purchases/${receipt.id}/pay`}
+                          className="font-semibold text-brand hover:underline"
+                        >
+                          Pagar
+                        </Link>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          </section>
+        )}
+
+        {/* Anular solo se ofrece si la recepcion sigue viva Y quien mira puede hacerlo. */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <SectionTitle>Pagos al Proveedor</SectionTitle>
@@ -222,7 +316,44 @@ export default async function GoodsReceiptDetailPage({
             </div>
           </div>
 
-          {paymentEntries.length === 0 ? (
+          {(receiptExt.payments?.length ?? 0) > 0 ? (
+            <TableFrame>
+              <thead>
+                <tr className="border-b border-line bg-subtle/40 text-xs font-semibold uppercase text-muted">
+                  <th className="px-4 py-3">Nro. Pago</th>
+                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3">Método</th>
+                  <th className="px-4 py-3">Cuenta Origen</th>
+                  <th className="px-4 py-3">Referencia</th>
+                  <th className="px-4 py-3 text-right">Monto Pagado</th>
+                  <th className="px-4 py-3 text-right">Aplicado a Compra</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs text-ink">
+                {(receiptExt.payments ?? []).map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3 font-mono font-semibold">{p.paymentNumber}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {new Date(p.paymentDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      {PAYMENT_METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {p.accountCode ? `${p.accountCode} · ${p.accountName}` : p.accountId}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-muted">{p.reference ?? '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {formatMinor(p.paymentAmountMinor, p.paymentCurrency)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatMinor(p.appliedAmountMinor, p.documentCurrency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          ) : paymentEntries.length === 0 ? (
             <Empty>
               {isCashPurchase
                 ? 'Compra registrada al contado.'

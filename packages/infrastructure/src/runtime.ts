@@ -22,6 +22,10 @@ import { prismaReadModels } from './queries/read-models';
 import { PrismaAccountRepository } from './prisma/accounts';
 import { PrismaJournalEntryRepository } from './prisma/journal-entries';
 import { PrismaInvoiceRepository } from './prisma/invoices';
+import {
+  makePrismaDocumentPaymentStore,
+  type DocumentPaymentStore,
+} from './prisma/document-payments';
 
 /**
  * Punto de entrada del adaptador de Postgres.
@@ -54,6 +58,7 @@ export interface PostgresRuntime {
   readonly journalEntries: JournalEntryRepository;
   readonly invoices: InvoiceRepository;
   readonly bankStatements: BankStatementRepository;
+  readonly documentPayments: DocumentPaymentStore;
 }
 
 export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
@@ -113,6 +118,7 @@ export function postgresRuntime(deps: PostgresRuntimeDeps): PostgresRuntime {
         withTenant(prisma, deps.ctx, (tx) => new PrismaInvoiceRepository(tx).save(invoice)),
     },
     bankStatements: new InMemoryBankStatementRepository(),
+    documentPayments: makePrismaDocumentPaymentStore(prisma, deps.ctx),
     ...(deps.vectorModel !== undefined
       ? { vectorStore: prismaVisionVectorStore(prisma, deps.ctx, { model: deps.vectorModel }) }
       : {}),

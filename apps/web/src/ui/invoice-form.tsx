@@ -7,6 +7,12 @@ import { buttonClasses } from '@/ui/button';
 import { Alert } from '@/ui/feedback';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 import { Card } from '@/ui/primitives';
+import {
+  buildInstallmentPreview,
+  convertCurrencyAmount,
+  DOCUMENT_PAYMENT_METHODS,
+  type InstallmentFrequencyOption,
+} from '@/ui/payment-methods';
 
 const INITIAL: InvoiceFormState = { status: 'idle' };
 
@@ -50,6 +56,7 @@ export function InvoiceForm({
   products,
   defaultDocumentNumber,
   defaultCurrency,
+  defaultExchangeRate = 50,
   defaultTaxPercentage,
   taxRates = [],
   accounts,
@@ -59,14 +66,21 @@ export function InvoiceForm({
   products: readonly InvoiceProductOption[];
   defaultDocumentNumber: string;
   defaultCurrency: 'USD' | 'VES';
+  defaultExchangeRate?: number;
   defaultTaxPercentage: number;
   taxRates?: readonly InvoiceTaxOption[];
   accounts: InvoiceAccountDefaults;
   accountingConfigured?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(issueInvoiceAction, INITIAL);
-  const [paymentCondition, setPaymentCondition] = useState<'CASH' | 'CREDIT'>('CASH');
+  const [paymentCondition, setPaymentCondition] = useState<'CASH' | 'CREDIT'>('CREDIT');
+  const [installmentFrequency, setInstallmentFrequency] =
+    useState<InstallmentFrequencyOption>('SINGLE');
+  const [installmentCount, setInstallmentCount] = useState<string>('3');
+  const [creditDays, setCreditDays] = useState<string>('30');
+  const [paymentMethod, setPaymentMethod] = useState<string>('CASH_USD');
   const [currency, setCurrency] = useState<'USD' | 'VES'>(defaultCurrency);
+  const [exchangeRate, setExchangeRate] = useState<string>(String(defaultExchangeRate));
   const [lines, setLines] = useState<LineDraft[]>([
     {
       key: 1,
@@ -78,8 +92,28 @@ export function InvoiceForm({
     },
   ]);
 
+  const activeRate = Number.parseFloat(exchangeRate.replace(',', '.')) || defaultExchangeRate || 50;
+
   const updateLine = (key: number, patch: Partial<LineDraft>) => {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  };
+
+  const handleCurrencyChange = (nextCurrency: 'USD' | 'VES') => {
+    if (nextCurrency === currency) return;
+    setLines((prev) =>
+      prev.map((l) => {
+        const numeric = Number.parseFloat(l.unitPrice.replace(',', '.'));
+        if (!Number.isFinite(numeric) || numeric <= 0) return l;
+        const converted = convertCurrencyAmount(numeric, currency, nextCurrency, activeRate);
+        return { ...l, unitPrice: converted.toFixed(2) };
+      }),
+    );
+    setCurrency(nextCurrency);
+    if (nextCurrency === 'VES' && paymentMethod === 'CASH_USD') {
+      setPaymentMethod('CASH_VES');
+    } else if (nextCurrency === 'USD' && paymentMethod === 'CASH_VES') {
+      setPaymentMethod('CASH_USD');
+    }
   };
 
   const handleProductSelect = (key: number, productId: string) => {
@@ -88,10 +122,12 @@ export function InvoiceForm({
       updateLine(key, { productId: '' });
       return;
     }
+    const baseUsd = Number.parseFloat(found.price.replace(',', '.')) || 0;
+    const priceInCurrency = currency === 'VES' ? (baseUsd * activeRate).toFixed(2) : found.price;
     updateLine(key, {
       productId: found.id,
       description: found.name,
-      unitPrice: found.price,
+      unitPrice: priceInCurrency,
       taxPercentage:
         found.taxPercentage !== undefined && found.taxPercentage !== null
           ? found.taxPercentage
@@ -224,13 +260,30 @@ export function InvoiceForm({
               id="invoice-currency"
               name="currency"
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as 'USD' | 'VES')}
+              onChange={(e) => handleCurrencyChange(e.target.value as 'USD' | 'VES')}
               className={`mt-1.5 ${CONTROL_CLASSES}`}
             >
               <option value="USD">USD</option>
               <option value="VES">VES</option>
             </select>
           </div>
+
+          {currency === 'VES' && (
+            <div>
+              <label htmlFor="invoice-fx-rate" className={LABEL_CLASSES}>
+                Tasa BCV Conversión (Bs/USD)
+              </label>
+              <input
+                id="invoice-fx-rate"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
+                className={`mt-1.5 font-mono ${CONTROL_CLASSES}`}
+              />
+            </div>
+          )}
 
           <div>
             <label htmlFor="invoice-condition" className={LABEL_CLASSES}>
@@ -243,28 +296,118 @@ export function InvoiceForm({
               onChange={(e) => setPaymentCondition(e.target.value as 'CASH' | 'CREDIT')}
               className={`mt-1.5 ${CONTROL_CLASSES}`}
             >
-              <option value="CASH">Contado (Pago Inmediato)</option>
-              <option value="CREDIT">Crédito (Cuenta por Cobrar)</option>
+              <option value="CREDIT">Crédito (Pendiente / Cuotas)</option>
+              <option value="CASH">Contado (Cobro Inmediato)</option>
             </select>
           </div>
 
-          {paymentCondition === 'CREDIT' && (
+          {paymentCondition === 'CASH' && (
             <div>
-              <label htmlFor="invoice-credit-days" className={LABEL_CLASSES}>
-                Días de Crédito
+              <label htmlFor="invoice-payment-method" className={LABEL_CLASSES}>
+                Método de Cobro
               </label>
-              <input
-                id="invoice-credit-days"
-                name="creditDays"
-                type="number"
-                min={1}
-                max={365}
-                defaultValue={30}
+              <select
+                id="invoice-payment-method"
+                name="paymentMethod"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
                 className={`mt-1.5 ${CONTROL_CLASSES}`}
-              />
+              >
+                {DOCUMENT_PAYMENT_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
+
+          {paymentCondition === 'CREDIT' && (
+            <>
+              <div>
+                <label htmlFor="invoice-frequency" className={LABEL_CLASSES}>
+                  Modalidad de Crédito
+                </label>
+                <select
+                  id="invoice-frequency"
+                  name="installmentFrequency"
+                  value={installmentFrequency}
+                  onChange={(e) =>
+                    setInstallmentFrequency(e.target.value as InstallmentFrequencyOption)
+                  }
+                  className={`mt-1.5 ${CONTROL_CLASSES}`}
+                >
+                  <option value="SINGLE">Pago Único (Al vencimiento)</option>
+                  <option value="BIWEEKLY">Cuotas Quincenales (cada 15 días)</option>
+                  <option value="MONTHLY">Cuotas Mensuales (cada mes)</option>
+                </select>
+              </div>
+
+              {installmentFrequency === 'SINGLE' ? (
+                <div>
+                  <label htmlFor="invoice-credit-days" className={LABEL_CLASSES}>
+                    Días de Crédito
+                  </label>
+                  <input
+                    id="invoice-credit-days"
+                    name="creditDays"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={creditDays}
+                    onChange={(e) => setCreditDays(e.target.value)}
+                    className={`mt-1.5 ${CONTROL_CLASSES}`}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="invoice-installment-count" className={LABEL_CLASSES}>
+                    Cantidad de Cuotas
+                  </label>
+                  <input
+                    id="invoice-installment-count"
+                    name="installmentCount"
+                    type="number"
+                    min={2}
+                    max={48}
+                    value={installmentCount}
+                    onChange={(e) => setInstallmentCount(e.target.value)}
+                    className={`mt-1.5 ${CONTROL_CLASSES}`}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
+
+        {paymentCondition === 'CREDIT' && installmentFrequency !== 'SINGLE' && (
+          <div className="rounded-control border border-line bg-canvas p-3 text-xs">
+            <div className="mb-2 font-semibold text-ink">
+              Cronograma estimado de cuotas (
+              {installmentFrequency === 'BIWEEKLY' ? 'Quincenal' : 'Mensual'})
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-3">
+              {buildInstallmentPreview(
+                Number.parseFloat(totals.total) || 0,
+                installmentFrequency,
+                Number.parseInt(installmentCount, 10) || 1,
+                Number.parseInt(creditDays, 10) || 30,
+              ).map((item) => (
+                <div
+                  key={item.number}
+                  className="flex items-center justify-between rounded border border-line bg-surface px-2.5 py-1.5"
+                >
+                  <span className="text-muted">
+                    Cuota {item.number} · {item.dueDate.toLocaleDateString()}
+                  </span>
+                  <span className="font-mono font-semibold text-ink">
+                    {item.amount.toFixed(2)} {currency}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card className="p-5 sm:p-6 space-y-4">

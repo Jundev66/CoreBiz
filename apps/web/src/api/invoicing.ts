@@ -36,11 +36,43 @@ export interface InvoiceLineDetailApiItem {
   readonly totalMinor: string;
 }
 
+export interface DocumentInstallmentApiItem {
+  readonly id: string;
+  readonly installmentNumber: number;
+  readonly frequency: string;
+  readonly dueDate: string;
+  readonly currency: string;
+  readonly amountMinor: string;
+  readonly paidMinor: string;
+  readonly status: string;
+}
+
+export interface DocumentPaymentApiItem {
+  readonly id: string;
+  readonly paymentNumber: string;
+  readonly installmentId: string | null;
+  readonly paymentMethod: string;
+  readonly paymentCurrency: string;
+  readonly paymentAmountMinor: string;
+  readonly documentCurrency: string;
+  readonly appliedAmountMinor: string;
+  readonly exchangeRateScaled: string;
+  readonly accountId: string;
+  readonly accountCode: string | null;
+  readonly accountName: string | null;
+  readonly journalEntryId: string | null;
+  readonly paymentDate: string;
+  readonly reference: string | null;
+  readonly notes: string | null;
+}
+
 export interface InvoiceDetailApiItem extends InvoiceApiItem {
   readonly paymentCondition: string;
   readonly creditedMinor: string;
   readonly remainingBalanceMinor: string;
   readonly lines: readonly InvoiceLineDetailApiItem[];
+  readonly installments?: readonly DocumentInstallmentApiItem[];
+  readonly payments?: readonly DocumentPaymentApiItem[];
 }
 
 export interface InvoiceReceiptApiItem {

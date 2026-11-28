@@ -99,6 +99,11 @@ export async function AppFrame({
           },
           { href: '/accounting/journal-entries', label: 'Libro Diario', icon: 'receipt' as const },
           {
+            href: '/accounting/payments',
+            label: 'Cobros y Pagos (CxC/CxP)',
+            icon: 'banknote' as const,
+          },
+          {
             href: '/accounting/aging',
             label: 'Antigüedad de Deuda (Aging)',
             icon: 'chart' as const,

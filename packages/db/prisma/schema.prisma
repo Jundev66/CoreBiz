@@ -926,9 +926,11 @@ model tenants {
   accounts             accounts[]
   journal_entries      journal_entries[]
   journal_entry_lines  journal_entry_lines[]
-  invoices             invoices[]
-  invoice_lines        invoice_lines[]
-  fiscal_sequences     fiscal_sequences[]
+  invoices              invoices[]
+  invoice_lines         invoice_lines[]
+  fiscal_sequences      fiscal_sequences[]
+  document_installments document_installments[]
+  document_payments     document_payments[]
   audit_log            audit_log[]
   customers            customers[]
   delivery_note_lines  delivery_note_lines[]
@@ -1270,6 +1272,7 @@ model accounts {
   parent              accounts?             @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   children            accounts[]            @relation("AccountHierarchy")
   journal_entry_lines journal_entry_lines[]
+  document_payments   document_payments[]
   tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, code], map: "accounts_tenant_code_key")
@@ -1292,6 +1295,7 @@ model journal_entries {
   created_at          DateTime              @default(now()) @db.Timestamptz(6)
   updated_at          DateTime              @default(now()) @db.Timestamptz(6)
   journal_entry_lines journal_entry_lines[]
+  document_payments   document_payments[]
   tenants             tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, entry_number], map: "journal_entries_tenant_entry_number_key")
@@ -1382,5 +1386,59 @@ model fiscal_sequences {
   tenants        tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, document_type, prefix], map: "fiscal_sequences_tenant_type_prefix_key")
+  @@schema("public")
+}
+
+model document_installments {
+  id                 String              @id @db.Uuid
+  tenant_id          String              @db.Uuid
+  document_type      String
+  document_id        String              @db.Uuid
+  installment_number Int
+  frequency          String
+  due_date           DateTime            @db.Timestamptz(6)
+  currency           String
+  amount_minor       BigInt
+  paid_minor         BigInt              @default(0)
+  status             String              @default("PENDING")
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime            @default(now()) @db.Timestamptz(6)
+  document_payments  document_payments[]
+  tenants            tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, document_type, document_id, installment_number], map: "document_installments_doc_num_key")
+  @@index([tenant_id, document_type, document_id], map: "document_installments_tenant_doc_idx")
+  @@index([tenant_id, due_date], map: "document_installments_tenant_due_idx")
+  @@schema("public")
+}
+
+model document_payments {
+  id                    String                 @id @db.Uuid
+  tenant_id             String                 @db.Uuid
+  direction             String
+  document_type         String
+  document_id           String                 @db.Uuid
+  installment_id        String?                @db.Uuid
+  payment_number        String
+  payment_method        String
+  payment_currency      String
+  payment_amount_minor  BigInt
+  document_currency     String
+  applied_amount_minor  BigInt
+  exchange_rate_scaled  BigInt                 @default(100000000)
+  account_id            String                 @db.Uuid
+  journal_entry_id      String?                @db.Uuid
+  payment_date          DateTime               @db.Timestamptz(6)
+  reference             String?
+  notes                 String?
+  status                String                 @default("POSTED")
+  created_at            DateTime               @default(now()) @db.Timestamptz(6)
+  installment           document_installments? @relation(fields: [installment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  account               accounts               @relation(fields: [account_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  journal_entry         journal_entries?       @relation(fields: [journal_entry_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  tenants               tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenant_id, document_type, document_id], map: "document_payments_tenant_doc_idx")
+  @@index([tenant_id, direction, payment_date(sort: Desc)], map: "document_payments_tenant_dir_date_idx")
   @@schema("public")
 }

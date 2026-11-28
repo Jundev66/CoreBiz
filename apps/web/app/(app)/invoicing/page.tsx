@@ -28,9 +28,9 @@ const STATUS_TONES: Record<string, 'neutral' | 'brand' | 'success' | 'warn' | 'd
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Borrador',
-  ISSUED: 'Emitida',
-  PARTIALLY_PAID: 'Abonada Parcial',
-  PAID: 'Pagada Total',
+  ISSUED: 'Pendiente',
+  PARTIALLY_PAID: 'Pagada Parcial',
+  PAID: 'Pagada Completa',
   VOID: 'Anulada',
 };
 
