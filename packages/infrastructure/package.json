@@ -19,12 +19,12 @@
     "@corebiz/prisma-client": "workspace:*",
     "@corebiz/shared-kernel": "workspace:*",
     "@synapse-vision/core": "workspace:*",
-    "bullmq": "^6.5.2",
-    "ioredis": "^6.0.0",
+    "bullmq": "^6.7.10",
+    "ioredis": "^6.1.0",
     "postgres": "^3.4.7"
   },
   "devDependencies": {
-    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/adapter-pg": "7.10.1",
     "@types/node": "^26.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
