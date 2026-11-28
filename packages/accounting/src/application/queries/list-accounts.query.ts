@@ -3,7 +3,7 @@ import type { Account } from '../../domain/model/account';
 import type { AccountRepository } from '../../domain/port/accounting-repository';
 import {
   ChartOfAccountsRegistry,
-  deterministicAccountUuid,
+  createDefaultAccountsForJurisdiction,
 } from '../../domain/templates/default-chart-of-accounts';
 
 export interface ListAccountsQuery {
@@ -49,21 +49,23 @@ export class ListAccountsQueryHandler {
     }
 
     if (query.fiscalCountry && ChartOfAccountsRegistry.has(query.fiscalCountry)) {
-      const templates = ChartOfAccountsRegistry.get(query.fiscalCountry);
-      const items: AccountViewItem[] = templates.map((tmpl) => ({
-        id: deterministicAccountUuid(query.tenantId, tmpl.code),
-        code: tmpl.code,
-        name: tmpl.name,
-        category: tmpl.category,
-        parentId: null,
-        normalSide:
-          tmpl.category === 'ASSET' || tmpl.category === 'EXPENSE' || tmpl.category === 'COGS'
-            ? 'DEBIT'
-            : 'CREDIT',
-        isReconcilable: tmpl.isReconcilable,
-        isActive: true,
-      }));
-      return ok(items);
+      const jurisdiction = query.fiscalCountry === 'US' ? 'US' : 'VE';
+      const seeded = createDefaultAccountsForJurisdiction(query.tenantId, jurisdiction);
+      for (const acc of seeded) {
+        await this.accountRepository.save(acc).catch(() => {});
+      }
+      return ok(
+        seeded.map((acc) => ({
+          id: acc.id,
+          code: acc.code.value,
+          name: acc.name,
+          category: acc.category,
+          parentId: acc.parentId ?? null,
+          normalSide: acc.normalSide,
+          isReconcilable: acc.isReconcilable,
+          isActive: acc.isActive,
+        })),
+      );
     }
 
     return ok([]);

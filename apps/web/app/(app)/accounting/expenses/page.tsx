@@ -4,7 +4,7 @@ import { apiForRequest } from '@/api/session';
 import { listAccounts } from '@/api/accounting';
 import { listDisbursements } from '@/api/disbursements';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
-import { Badge } from '@/ui/feedback';
+import { Alert, Badge } from '@/ui/feedback';
 import { Card, SectionTitle, Stat } from '@/ui/primitives';
 import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field';
 import { buttonClasses } from '@/ui/button';
@@ -14,8 +14,13 @@ import { ArrowLeft, DollarSign, ReceiptText, ShieldCheck, Truck } from 'lucide-r
 import { recordDisbursementAction } from '@/actions/disbursements';
 import { filterLiquidAssetAccounts } from '@/ui/account-filters';
 
-export default async function ExpensesPage() {
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const { ctx } = await apiForRequest();
+  const { error: errorKind } = await searchParams;
 
   if (!can(ctx.actor, 'accounting:read')) {
     return (
@@ -46,7 +51,10 @@ export default async function ExpensesPage() {
 
   async function handleSubmit(formData: FormData) {
     'use server';
-    await recordDisbursementAction({ status: 'idle' }, formData);
+    const res = await recordDisbursementAction({ status: 'idle' }, formData);
+    if (res.status === 'error') {
+      redirect(`/accounting/expenses?error=${encodeURIComponent(res.error ?? 'Error')}`);
+    }
     redirect('/accounting/expenses');
   }
 
@@ -80,6 +88,13 @@ export default async function ExpensesPage() {
 
       {can(ctx.actor, 'accounting:write') && (
         <Card className="mb-8 p-4 sm:p-6">
+          {errorKind && (
+            <Alert tone="danger" role="alert" className="mb-4">
+              {errorKind === 'InsufficientFunds'
+                ? 'Fondos insuficientes en la cuenta origen seleccionada para registrar este egreso.'
+                : `No se pudo registrar el egreso (${errorKind}).`}
+            </Alert>
+          )}
           <div className="mb-4 flex items-center gap-2">
             <span className="grid size-8 place-items-center rounded-control bg-brand-soft text-brand">
               <Truck className="size-4" strokeWidth={2} />
