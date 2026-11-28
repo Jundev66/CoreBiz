@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { apiForRequest } from '@/api/session';
-import { listAccounts } from '@/api/accounting';
+import { listAccounts, listJournalEntries } from '@/api/accounting';
 import { listTreasurySwaps } from '@/api/treasury';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
 import { Alert, Badge } from '@/ui/feedback';
@@ -30,17 +30,37 @@ export default async function TreasurySwapsPage({
     );
   }
 
-  const [swaps, accounts] = await Promise.all([
+  const [swaps, accounts, journalEntries] = await Promise.all([
     listTreasurySwaps().catch(() => []),
     listAccounts().catch(() => []),
+    listJournalEntries().catch(() => []),
   ]);
+
+  const balanceByAccountCurrency = new Map<string, bigint>();
+  for (const entry of journalEntries) {
+    for (const line of entry.lines) {
+      const key = `${line.accountId}:${line.currency}`;
+      const prev = balanceByAccountCurrency.get(key) ?? 0n;
+      const delta = BigInt(line.debitMinor || '0') - BigInt(line.creditMinor || '0');
+      balanceByAccountCurrency.set(key, prev + delta);
+    }
+  }
+
+  const formatBalanceTag = (accountId: string) => {
+    const usd = balanceByAccountCurrency.get(`${accountId}:USD`) ?? 0n;
+    const ves = balanceByAccountCurrency.get(`${accountId}:VES`) ?? 0n;
+    const fmt = (m: bigint) => (Number(m) / 100).toFixed(2);
+    return `($${fmt(usd)} USD · ${fmt(ves)} Bs)`;
+  };
 
   const assetAccounts = filterLiquidAssetAccounts(accounts);
   const expenseAccounts = accounts.filter((a) => a.category === 'EXPENSE' || a.category === 'COGS');
   const accountById = new Map(accounts.map((a) => [a.id, a]));
 
   const defaultSourceAccount =
-    assetAccounts.find((a) => a.code.startsWith('1.1.01') || a.code === '1010') ?? assetAccounts[0];
+    assetAccounts.find((a) => a.code === '1.1.01.02') ??
+    assetAccounts.find((a) => a.code.startsWith('1.1.01') || a.code === '1010') ??
+    assetAccounts[0];
   const defaultTargetAccount =
     assetAccounts.find((a) => a.code.startsWith('1.1.04') || a.code === '1040') ??
     assetAccounts[1] ??
@@ -139,7 +159,7 @@ export default async function TreasurySwapsPage({
                 >
                   {assetAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.code} - {a.name}
+                      {a.code} - {a.name} {formatBalanceTag(a.id)}
                     </option>
                   ))}
                 </select>
@@ -190,7 +210,7 @@ export default async function TreasurySwapsPage({
                 >
                   {assetAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.code} - {a.name}
+                      {a.code} - {a.name} {formatBalanceTag(a.id)}
                     </option>
                   ))}
                 </select>
