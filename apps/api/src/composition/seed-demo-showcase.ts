@@ -13,9 +13,18 @@ import { makeReceiveGoods, systemClock, type TenantContext } from '@corebiz/appl
 import { asId, Money, Plan, type TenantId, type UserId } from '@corebiz/domain';
 import { postgresRuntime } from '@corebiz/infrastructure';
 import { DEMO_SEEDER } from '../tokens';
+import { makePayGoodsReceipt } from './pay-goods-receipt';
 import { memoryAccountingRepos } from './memory-driver';
 
 export type DemoSeeder = (url: string, rawTenantId: string, rawUserId: string) => Promise<void>;
+
+function daysAgo(base: Date, days: number): Date {
+  return new Date(base.getTime() - days * 86_400_000);
+}
+
+function daysFrom(base: Date, days: number): Date {
+  return new Date(base.getTime() + days * 86_400_000);
+}
 
 export async function seedDemoShowcase(
   url: string,
@@ -64,6 +73,7 @@ export async function seedDemoShowcase(
   const cryptoRoot = seededAccounts.find((a) => a.code.value === '1.1.04');
 
   let usdBankId = cashRoot?.id ?? '';
+  let vesBankId = cashRoot?.id ?? '';
   if (cashRoot) {
     const usdBankRes = await createAccHandler.execute({
       id: uuidv7(),
@@ -76,6 +86,19 @@ export async function seedDemoShowcase(
     });
     if (usdBankRes.ok) {
       usdBankId = usdBankRes.value.accountId;
+    }
+
+    const vesBankRes = await createAccHandler.execute({
+      id: uuidv7(),
+      tenantId: rawTenantId,
+      code: '1.1.01.02',
+      name: 'Banco Nacional VES',
+      category: 'ASSET',
+      isReconcilable: true,
+      parentId: cashRoot.id,
+    });
+    if (vesBankRes.ok) {
+      vesBankId = vesBankRes.value.accountId;
     }
   }
 
@@ -107,6 +130,10 @@ export async function seedDemoShowcase(
   const revenueId = findAcc('4.1.01');
   const feeAccId = findAcc('6.1.02');
   const logisticsAccId = findAcc('6.1.03');
+  const utilitiesAccId = findAcc('6.1.04');
+
+  const today = new Date();
+  const openingDate = daysAgo(today, 65);
 
   const openingLines = [
     JournalEntryLine.create(
@@ -117,27 +144,33 @@ export async function seedDemoShowcase(
     ),
     JournalEntryLine.create(
       usdBankId,
-      Money.fromMinor(2500_00n, 'USD'),
+      Money.fromMinor(4500_00n, 'USD'),
       Money.zero('USD'),
       'Banco USD / Zelle apertura',
     ),
     JournalEntryLine.create(
+      usdtWalletId,
+      Money.fromMinor(1200_00n, 'USD'),
+      Money.zero('USD'),
+      'Wallet USDT apertura',
+    ),
+    JournalEntryLine.create(
       equityId,
       Money.zero('USD'),
-      Money.fromMinor(7500_00n, 'USD'),
+      Money.fromMinor(10700_00n, 'USD'),
       'Capital Social inicial',
     ),
   ]
     .filter((r) => r.ok)
     .map((r) => r.value);
 
-  if (openingLines.length === 3) {
+  if (openingLines.length === 4) {
     const entryNumber = await runtime.journalEntries.nextEntryNumber(rawTenantId);
     const openingEntry = JournalEntry.create({
       id: uuidv7(),
       tenantId: rawTenantId,
       entryNumber,
-      date: new Date(),
+      date: openingDate,
       description: 'Asiento de apertura - Capital Social USD',
       sourceType: 'MANUAL',
       sourceId: rawTenantId,
@@ -151,27 +184,33 @@ export async function seedDemoShowcase(
   const openingVesLines = [
     JournalEntryLine.create(
       cashId,
-      Money.fromMinor(250_000_00n, 'VES'),
+      Money.fromMinor(150_000_00n, 'VES'),
       Money.zero('VES'),
       'Fondo operativo apertura VES',
     ),
     JournalEntryLine.create(
+      vesBankId,
+      Money.fromMinor(350_000_00n, 'VES'),
+      Money.zero('VES'),
+      'Banco Nacional VES apertura',
+    ),
+    JournalEntryLine.create(
       equityId,
       Money.zero('VES'),
-      Money.fromMinor(250_000_00n, 'VES'),
+      Money.fromMinor(500_000_00n, 'VES'),
       'Capital de trabajo inicial VES',
     ),
   ]
     .filter((r) => r.ok)
     .map((r) => r.value);
 
-  if (openingVesLines.length === 2) {
+  if (openingVesLines.length === 3) {
     const entryNumber = await runtime.journalEntries.nextEntryNumber(rawTenantId);
     const openingVesEntry = JournalEntry.create({
       id: uuidv7(),
       tenantId: rawTenantId,
       entryNumber,
-      date: new Date(),
+      date: openingDate,
       description: 'Asiento de apertura - Fondo operativo VES',
       sourceType: 'MANUAL',
       sourceId: rawTenantId,
@@ -187,17 +226,23 @@ export async function seedDemoShowcase(
     runtime.queries.products.list({ limit: 10 }),
     runtime.queries.purchasing.suppliers({ limit: 5 }),
   ]);
-  const firstCustomer =
-    customersPage.items.find((c) => c.code !== 'CLI-CF') ?? customersPage.items[0];
-  const secondCustomer = customersPage.items[1] ?? firstCustomer;
+  const customerPool = customersPage.items.filter((c) => c.code !== 'CLI-CF');
+  const firstCustomer = customerPool[0] ?? customersPage.items[0];
+  const secondCustomer = customerPool[1] ?? firstCustomer;
+  const thirdCustomer = customerPool[2] ?? firstCustomer;
+  const fourthCustomer = customerPool[3] ?? secondCustomer;
   const firstProduct = productsPage.items[0];
+  const secondProduct = productsPage.items[1] ?? firstProduct;
+  const thirdProduct = productsPage.items[2] ?? firstProduct;
+  const fourthProduct = productsPage.items[3] ?? firstProduct;
   const firstSupplier = suppliersPage.items[0];
+  const secondSupplier = suppliersPage.items[1] ?? firstSupplier;
 
-  if (firstSupplier && firstProduct) {
-    const receiveGoods = makeReceiveGoods({
+  const createPurchaseRecorder = (entryDate: Date) =>
+    makeReceiveGoods({
       uow: runtime.uow,
       ctx,
-      clock: systemClock,
+      clock: { now: () => entryDate },
       ids: { next: () => uuidv7() },
       onPurchaseRecorded: async (event) => {
         const subtotalMinor = event.receipt.total.minorUnits;
@@ -240,7 +285,7 @@ export async function seedDemoShowcase(
             id: uuidv7(),
             tenantId: rawTenantId,
             entryNumber,
-            date: event.receipt.receivedAt ?? new Date(),
+            date: event.receipt.receivedAt ?? entryDate,
             description: `Factura de compra ${docRef} (${event.supplier.name})`,
             sourceType: 'PURCHASE',
             sourceId: event.receipt.id,
@@ -253,7 +298,16 @@ export async function seedDemoShowcase(
       },
     });
 
-    await receiveGoods({
+  const payGoodsReceipt = makePayGoodsReceipt({
+    ctx,
+    purchasingQueries: runtime.queries.purchasing,
+    accounts: runtime.accounts,
+    journalEntries: runtime.journalEntries,
+  });
+
+  if (firstSupplier && firstProduct) {
+    const receiveRecent = createPurchaseRecorder(daysAgo(today, 10));
+    await receiveRecent({
       supplierId: firstSupplier.id,
       lines: [
         {
@@ -261,6 +315,15 @@ export async function seedDemoShowcase(
           quantity: '25',
           unitCost: '18.00',
         },
+        ...(secondProduct && secondProduct.id !== firstProduct.id
+          ? [
+              {
+                productId: secondProduct.id,
+                quantity: '15',
+                unitCost: '14.00',
+              },
+            ]
+          : []),
       ],
       supplierReference: 'FC-PROV-0001',
       controlNumber: '00-000412',
@@ -272,20 +335,89 @@ export async function seedDemoShowcase(
     }).catch(() => {});
   }
 
-  const today = new Date();
+  if (secondSupplier && thirdProduct) {
+    const receiveOverdue = createPurchaseRecorder(daysAgo(today, 38));
+    const overdueRes = await receiveOverdue({
+      supplierId: secondSupplier.id,
+      lines: [
+        {
+          productId: thirdProduct.id,
+          quantity: '20',
+          unitCost: '12.50',
+        },
+      ],
+      supplierReference: 'FC-PROV-0002',
+      controlNumber: '00-000389',
+      paymentCondition: 'CREDIT',
+      creditDays: 15,
+      taxPercentage: 16,
+      currency: 'USD',
+      notes: 'Compra a crédito con abono parcial y saldo vencido',
+    }).catch(() => null);
+
+    if (overdueRes?.ok) {
+      await payGoodsReceipt({
+        receiptId: overdueRes.value.id,
+        amountMinor: 120_00n,
+        currency: 'USD',
+        paymentDate: daysAgo(today, 18),
+        sourceAccountId: usdBankId,
+        payableAccountId: apId,
+        reference: 'ZELLE-PROV-002',
+      }).catch(() => {});
+    }
+  }
+
+  if (firstSupplier && fourthProduct) {
+    const receivePaid = createPurchaseRecorder(daysAgo(today, 4));
+    const paidRes = await receivePaid({
+      supplierId: firstSupplier.id,
+      lines: [
+        {
+          productId: fourthProduct.id,
+          quantity: '10',
+          unitCost: '22.00',
+        },
+      ],
+      supplierReference: 'FC-PROV-0003',
+      controlNumber: '00-000445',
+      paymentCondition: 'CASH',
+      creditDays: 0,
+      taxPercentage: 16,
+      currency: 'USD',
+      notes: 'Compra de contado liquidada en Banco USD',
+    }).catch(() => null);
+
+    if (paidRes?.ok) {
+      await payGoodsReceipt({
+        receiptId: paidRes.value.id,
+        amountMinor: 255_20n,
+        currency: 'USD',
+        paymentDate: daysAgo(today, 4),
+        sourceAccountId: usdBankId,
+        payableAccountId: apId,
+        reference: 'TRANSF-PROV-003',
+      }).catch(() => {});
+    }
+  }
+
   if (firstCustomer) {
     const issueInvoice = new IssueInvoiceCommandHandler(runtime.invoices, runtime.journalEntries);
-    const inv1Id = uuidv7();
-    const in30Days = new Date(today.getTime() + 30 * 86_400_000);
+    const applyPayment = new ApplyInvoicePaymentCommandHandler(
+      runtime.invoices,
+      runtime.journalEntries,
+    );
 
+    const inv1Id = uuidv7();
+    const inv1Date = daysAgo(today, 10);
     await issueInvoice.execute({
       id: inv1Id,
       tenantId: rawTenantId,
       customerId: firstCustomer.id,
       documentType: 'STANDARD',
       documentNumber: 'FAC-000001',
-      issueDate: today,
-      dueDate: in30Days,
+      issueDate: inv1Date,
+      dueDate: daysFrom(inv1Date, 30),
       currency: 'USD',
       receivableAccountId: arId,
       revenueAccountId: revenueId,
@@ -305,10 +437,6 @@ export async function seedDemoShowcase(
       ],
     });
 
-    const applyPayment = new ApplyInvoicePaymentCommandHandler(
-      runtime.invoices,
-      runtime.journalEntries,
-    );
     await applyPayment.execute({
       invoiceId: inv1Id,
       tenantId: rawTenantId,
@@ -316,21 +444,22 @@ export async function seedDemoShowcase(
       currency: 'USD',
       cashAccountId: usdBankId,
       receivableAccountId: arId,
-      paymentDate: today,
+      paymentDate: daysAgo(today, 6),
       reference: 'ZELLE-DEMO-01',
       issueExchangeRate: 50,
       paymentExchangeRate: 50,
     });
 
     if (secondCustomer) {
+      const inv2Date = daysAgo(today, 5);
       await issueInvoice.execute({
         id: uuidv7(),
         tenantId: rawTenantId,
         customerId: secondCustomer.id,
         documentType: 'STANDARD',
         documentNumber: 'FAC-000002',
-        issueDate: today,
-        dueDate: today,
+        issueDate: inv2Date,
+        dueDate: inv2Date,
         currency: 'USD',
         receivableAccountId: arId,
         revenueAccountId: revenueId,
@@ -350,6 +479,117 @@ export async function seedDemoShowcase(
         ],
       });
     }
+
+    if (thirdCustomer) {
+      const inv3Date = daysAgo(today, 32);
+      await issueInvoice.execute({
+        id: uuidv7(),
+        tenantId: rawTenantId,
+        customerId: thirdCustomer.id,
+        documentType: 'STANDARD',
+        documentNumber: 'FAC-000003',
+        issueDate: inv3Date,
+        dueDate: daysFrom(inv3Date, 15),
+        currency: 'USD',
+        receivableAccountId: arId,
+        revenueAccountId: revenueId,
+        taxPayableAccountId: taxPayableId,
+        cashAccountId: cashId,
+        paymentCondition: 'CREDIT',
+        lines: [
+          {
+            id: uuidv7(),
+            description: secondProduct?.name ?? 'Lote Mercancía Mayorista',
+            quantity: '8',
+            unitPriceMinor: 25_00n,
+            taxPercentage: 16,
+            productId: secondProduct?.id,
+            revenueAccountId: revenueId,
+          },
+          {
+            id: uuidv7(),
+            description: thirdProduct?.name ?? 'Suministro Complementario',
+            quantity: '4',
+            unitPriceMinor: 25_00n,
+            taxPercentage: 16,
+            productId: thirdProduct?.id,
+            revenueAccountId: revenueId,
+          },
+        ],
+      });
+    }
+
+    if (fourthCustomer) {
+      const inv4Id = uuidv7();
+      const inv4Date = daysAgo(today, 60);
+      await issueInvoice.execute({
+        id: inv4Id,
+        tenantId: rawTenantId,
+        customerId: fourthCustomer.id,
+        documentType: 'STANDARD',
+        documentNumber: 'FAC-000004',
+        issueDate: inv4Date,
+        dueDate: daysFrom(inv4Date, 15),
+        currency: 'USD',
+        receivableAccountId: arId,
+        revenueAccountId: revenueId,
+        taxPayableAccountId: taxPayableId,
+        cashAccountId: cashId,
+        paymentCondition: 'CREDIT',
+        lines: [
+          {
+            id: uuidv7(),
+            description: fourthProduct?.name ?? 'Despacho Corporativo Demo',
+            quantity: '15',
+            unitPriceMinor: 40_00n,
+            taxPercentage: 16,
+            productId: fourthProduct?.id,
+            revenueAccountId: revenueId,
+          },
+        ],
+      });
+
+      await applyPayment.execute({
+        invoiceId: inv4Id,
+        tenantId: rawTenantId,
+        amountMinor: 196_00n,
+        currency: 'USD',
+        cashAccountId: usdBankId,
+        receivableAccountId: arId,
+        paymentDate: daysAgo(today, 35),
+        reference: 'TRANSF-DEMO-02',
+        issueExchangeRate: 50,
+        paymentExchangeRate: 50,
+      });
+    }
+
+    const inv5Date = daysAgo(today, 3);
+    await issueInvoice.execute({
+      id: uuidv7(),
+      tenantId: rawTenantId,
+      customerId: firstCustomer.id,
+      documentType: 'STANDARD',
+      documentNumber: 'FAC-000005',
+      issueDate: inv5Date,
+      dueDate: daysFrom(inv5Date, 30),
+      currency: 'VES',
+      receivableAccountId: arId,
+      revenueAccountId: revenueId,
+      taxPayableAccountId: taxPayableId,
+      cashAccountId: vesBankId,
+      paymentCondition: 'CREDIT',
+      lines: [
+        {
+          id: uuidv7(),
+          description: firstProduct?.name ?? 'Venta Nacional en Bolívares',
+          quantity: '10',
+          unitPriceMinor: 1_200_00n,
+          taxPercentage: 16,
+          productId: firstProduct?.id,
+          revenueAccountId: revenueId,
+        },
+      ],
+    });
   }
 
   const swapHandler = new ExecuteTreasurySwapCommandHandler(
@@ -360,7 +600,7 @@ export async function seedDemoShowcase(
   await swapHandler.execute({
     id: uuidv7(),
     tenantId: rawTenantId,
-    date: today,
+    date: daysAgo(today, 2),
     sourceAccountId: usdBankId,
     sourceCurrency: 'USD',
     sourceAmountMinor: 500_00n,
@@ -375,6 +615,24 @@ export async function seedDemoShowcase(
     description: 'Adquisición de liquidez digital USDT para pagos internacionales',
   });
 
+  await swapHandler.execute({
+    id: uuidv7(),
+    tenantId: rawTenantId,
+    date: daysAgo(today, 1),
+    sourceAccountId: vesBankId,
+    sourceCurrency: 'VES',
+    sourceAmountMinor: 25_000_00n,
+    targetAccountId: usdBankId,
+    targetCurrency: 'USD',
+    targetAmountMinor: 500_00n,
+    feeAccountId: feeAccId,
+    feeAmountMinor: 0n,
+    exchangeRateScaled: 50_0000_0000n,
+    counterpartyReference: 'MESA-CAMBIO-DEMO-01',
+    operatorUserId: rawUserId,
+    description: 'Conversión de excedente en bolívares a USD a tasa BCV',
+  });
+
   const disbursementHandler = new RecordDisbursementCommandHandler(
     runtime.accounts,
     runtime.journalEntries,
@@ -383,7 +641,7 @@ export async function seedDemoShowcase(
   await disbursementHandler.execute({
     id: uuidv7(),
     tenantId: rawTenantId,
-    date: today,
+    date: daysAgo(today, 2),
     category: 'LOGISTICS',
     beneficiary: 'Logística Nacional Demo C.A.',
     taxId: 'J-40112233-9',
@@ -393,6 +651,21 @@ export async function seedDemoShowcase(
     currency: 'USD',
     amountMinor: 45_00n,
     notes: 'Flete de reposición de inventario',
+  });
+
+  await disbursementHandler.execute({
+    id: uuidv7(),
+    tenantId: rawTenantId,
+    date: daysAgo(today, 1),
+    category: 'UTILITIES_RENT',
+    beneficiary: 'Servicios Corporativos Demo C.A.',
+    taxId: 'J-40223344-1',
+    receiptNumber: 'SERV-DEMO-02',
+    sourceAccountId: vesBankId,
+    expenseAccountId: utilitiesAccId,
+    currency: 'VES',
+    amountMinor: 4_500_00n,
+    notes: 'Pago de servicios básicos y conectividad mensual',
   });
 
   const drawingHandler = new RecordPartnerCashDrawingCommandHandler(
