@@ -61,6 +61,12 @@ const COVERED = [
   'tenant_ai_settings',
   'payments',
   'payment_allocations',
+  'accounts',
+  'journal_entries',
+  'journal_entry_lines',
+  'invoices',
+  'invoice_lines',
+  'fiscal_sequences',
 ] as const;
 
 /**
