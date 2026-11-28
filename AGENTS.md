@@ -3,8 +3,8 @@
 ## Hard Rules (Inviolable)
 
 1. **Zero External Access & Navigation Lock**:
-   - Este repositorio es un proyecto autónomo. Las pruebas automatizadas (Playwright, Vitest) se ejecutan EXCLUSIVAMENTE contra el entorno local (`http://localhost:3000` / `http://localhost:3001`).
-   - Ningún agente o script debe intentar navegar a URLs externas, sistemas de terceros o plataformas productivas en la nube.
+   - Este repositorio es un proyecto autónomo. Las pruebas automatizadas (Playwright, Vitest) se ejecutan por defecto contra el entorno local (`http://localhost:3000` / `http://localhost:3001`).
+   - Ningún agente o script debe intentar navegar a URLs externas, sistemas de terceros o plataformas productivas en la nube, **con la única excepción explícita autorizada por el propietario**: verificación controlada en el sandbox demo público `https://corebiz-web.vercel.app/demo` (y sus rutas de sesión demo en `https://corebiz-web.vercel.app`).
 2. **Zero Comments Policy**: No comments (`//`, `/* */`, or `#`) in source code. Code must be 100% self-documenting through intention-revealing names, Value Objects, and strict typing.
 3. **Strict SOLID Compliance**:
    - **S (Single Responsibility)**: 1 controller = 1 cohesive business action. Prohibido crear controladores monstruosos o agrupar lógica dispar.
