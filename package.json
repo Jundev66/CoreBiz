@@ -52,13 +52,13 @@
     "dependency-cruiser": "^16.10.4",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-boundaries": "^7.2.0",
-    "lefthook": "^2.1.12",
-    "prettier": "^3.6.2",
+    "eslint-plugin-boundaries": "^7.4.4",
+    "lefthook": "^2.2.3",
+    "prettier": "^3.10.1",
     "supabase": "^2.117.0",
-    "turbo": "^2.5.9",
+    "turbo": "^2.11.13",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.70.0",
+    "typescript-eslint": "^8.74.0",
     "vitest": "^4.1.11"
   },
   "pnpm": {
