@@ -1,26 +1,19 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { apiForRequest } from '@/api/session';
 import { listAccounts, listJournalEntries } from '@/api/accounting';
 import { listTreasurySwaps } from '@/api/treasury';
 import { Screen, TableFrame, Empty } from '@/ui/shell';
-import { Alert, Badge } from '@/ui/feedback';
+import { Badge } from '@/ui/feedback';
 import { Card, SectionTitle, Stat } from '@/ui/primitives';
-import { CONTROL_CLASSES, LABEL_CLASSES } from '@/ui/field-classes';
 import { buttonClasses } from '@/ui/button';
 import { NoAccess } from '@/ui/no-access';
 import { can } from '@corebiz/domain';
-import { ArrowLeft, ArrowRightLeft, DollarSign, ShieldCheck, Wallet } from 'lucide-react';
-import { executeTreasurySwapAction } from '@/actions/treasury';
+import { ArrowLeft, ArrowRightLeft, ShieldCheck, Wallet } from 'lucide-react';
 import { filterLiquidAssetAccounts } from '@/ui/account-filters';
+import { TreasurySwapForm } from '@/ui/treasury-swap-form';
 
-export default async function TreasurySwapsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
+export default async function TreasurySwapsPage() {
   const { ctx } = await apiForRequest();
-  const { error: errorKind } = await searchParams;
 
   if (!can(ctx.actor, 'accounting:read')) {
     return (
@@ -46,13 +39,6 @@ export default async function TreasurySwapsPage({
     }
   }
 
-  const formatBalanceTag = (accountId: string) => {
-    const usd = balanceByAccountCurrency.get(`${accountId}:USD`) ?? 0n;
-    const ves = balanceByAccountCurrency.get(`${accountId}:VES`) ?? 0n;
-    const fmt = (m: bigint) => (Number(m) / 100).toFixed(2);
-    return `($${fmt(usd)} USD · ${fmt(ves)} Bs)`;
-  };
-
   const assetAccounts = filterLiquidAssetAccounts(accounts);
   const expenseAccounts = accounts.filter((a) => a.category === 'EXPENSE' || a.category === 'COGS');
   const accountById = new Map(accounts.map((a) => [a.id, a]));
@@ -62,21 +48,16 @@ export default async function TreasurySwapsPage({
     assetAccounts.find((a) => a.code.startsWith('1.1.01') || a.code === '1010') ??
     assetAccounts[0];
   const defaultTargetAccount =
-    assetAccounts.find((a) => a.code.startsWith('1.1.04') || a.code === '1040') ??
-    assetAccounts[1] ??
+    assetAccounts.find((a) => a.code === '1.1.04.01' && a.id !== defaultSourceAccount?.id) ??
+    assetAccounts.find((a) => a.code === '1.1.01.01' && a.id !== defaultSourceAccount?.id) ??
+    assetAccounts.find((a) => a.id !== defaultSourceAccount?.id) ??
     assetAccounts[0];
   const defaultFeeAccount =
     expenseAccounts.find((a) => a.code.startsWith('6.1.02') || a.code === '6050') ??
     expenseAccounts[0];
-
-  async function handleSwapSubmit(formData: FormData) {
-    'use server';
-    const res = await executeTreasurySwapAction({ status: 'idle' }, formData);
-    if (res.status === 'error') {
-      redirect(`/accounting/treasury?error=${encodeURIComponent(res.error ?? 'Error')}`);
-    }
-    redirect('/accounting/treasury');
-  }
+  const defaultExchangeRate = ctx.settings.exchangeRateScaled
+    ? Number(ctx.settings.exchangeRateScaled) / 100_000_000
+    : 50;
 
   return (
     <Screen
@@ -113,209 +94,24 @@ export default async function TreasurySwapsPage({
 
       {can(ctx.actor, 'accounting:write') && (
         <Card className="mb-8 p-4 sm:p-6">
-          {errorKind && (
-            <Alert tone="danger" role="alert" className="mb-4">
-              {errorKind === 'InsufficientFunds'
-                ? 'Fondos insuficientes en la cuenta origen seleccionada para ejecutar esta operación.'
-                : `No se pudo ejecutar la operación (${errorKind}).`}
-            </Alert>
-          )}
-
-          <div className="mb-4 flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-control bg-brand-soft text-brand">
-              <DollarSign className="size-4" strokeWidth={2} />
-            </span>
-            <h2 className="text-base font-semibold text-ink">
-              Registrar Swap de Tesorería (Compra de USDT / Divisas)
-            </h2>
-          </div>
-
-          <form action={handleSwapSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label htmlFor="swap-date" className={LABEL_CLASSES}>
-                  Fecha
-                </label>
-                <input
-                  id="swap-date"
-                  type="date"
-                  name="date"
-                  defaultValue={new Date().toISOString().slice(0, 10)}
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="swap-source-account" className={LABEL_CLASSES}>
-                  Cuenta Origen (Sale Dinero)
-                </label>
-                <select
-                  id="swap-source-account"
-                  name="sourceAccountId"
-                  defaultValue={defaultSourceAccount?.id}
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                >
-                  {assetAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} - {a.name} {formatBalanceTag(a.id)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="swap-source-currency" className={LABEL_CLASSES}>
-                  Moneda Origen
-                </label>
-                <select
-                  id="swap-source-currency"
-                  name="sourceCurrency"
-                  defaultValue="VES"
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                >
-                  <option value="VES">VES (Bolívares)</option>
-                  <option value="USD">USD (Dólares)</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="swap-source-amount" className={LABEL_CLASSES}>
-                  Monto Origen Total
-                </label>
-                <input
-                  id="swap-source-amount"
-                  type="text"
-                  name="sourceAmount"
-                  placeholder="Ej: 100000.00"
-                  className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label htmlFor="swap-target-account" className={LABEL_CLASSES}>
-                  Cuenta Destino (Ingresa Activo)
-                </label>
-                <select
-                  id="swap-target-account"
-                  name="targetAccountId"
-                  defaultValue={defaultTargetAccount?.id}
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                >
-                  {assetAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} - {a.name} {formatBalanceTag(a.id)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="swap-target-currency" className={LABEL_CLASSES}>
-                  Moneda Destino
-                </label>
-                <select
-                  id="swap-target-currency"
-                  name="targetCurrency"
-                  defaultValue="USD"
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                >
-                  <option value="USD">USD / USDT</option>
-                  <option value="VES">VES</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="swap-target-amount" className={LABEL_CLASSES}>
-                  Monto Destino Recibido
-                </label>
-                <input
-                  id="swap-target-amount"
-                  type="text"
-                  name="targetAmount"
-                  placeholder="Ej: 1995.00"
-                  className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="swap-exchange-rate" className={LABEL_CLASSES}>
-                  Tasa Acordada (VES/USD)
-                </label>
-                <input
-                  id="swap-exchange-rate"
-                  type="text"
-                  name="exchangeRate"
-                  placeholder="Ej: 50.00"
-                  className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label htmlFor="swap-fee-account" className={LABEL_CLASSES}>
-                  Cuenta de Comisión / Gas Fee
-                </label>
-                <select
-                  id="swap-fee-account"
-                  name="feeAccountId"
-                  defaultValue={defaultFeeAccount?.id}
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                >
-                  {expenseAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} - {a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="swap-fee-amount" className={LABEL_CLASSES}>
-                  Monto Comisión (Moneda Destino)
-                </label>
-                <input
-                  id="swap-fee-amount"
-                  type="text"
-                  name="feeAmount"
-                  defaultValue="0.00"
-                  placeholder="Ej: 5.00"
-                  className={`mt-1.5 font-mono tabular-nums ${CONTROL_CLASSES}`}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="swap-reference" className={LABEL_CLASSES}>
-                  Referencia Externa (P2P / Hash TX)
-                </label>
-                <input
-                  id="swap-reference"
-                  type="text"
-                  name="counterpartyReference"
-                  placeholder="Ej: BINANCE-P2P-12345"
-                  className={`mt-1.5 ${CONTROL_CLASSES}`}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-              <button type="submit" className={buttonClasses({ size: 'md' })}>
-                Ejecutar y Asentar Swap
-              </button>
-            </div>
-          </form>
+          <TreasurySwapForm
+            assetAccounts={assetAccounts.map((a) => ({
+              id: a.id,
+              code: a.code,
+              name: a.name,
+              usdMinor: (balanceByAccountCurrency.get(`${a.id}:USD`) ?? 0n).toString(),
+              vesMinor: (balanceByAccountCurrency.get(`${a.id}:VES`) ?? 0n).toString(),
+            }))}
+            expenseAccounts={expenseAccounts.map((a) => ({
+              id: a.id,
+              code: a.code,
+              name: a.name,
+            }))}
+            defaultSourceId={defaultSourceAccount?.id ?? ''}
+            defaultTargetId={defaultTargetAccount?.id ?? ''}
+            defaultFeeId={defaultFeeAccount?.id ?? ''}
+            defaultExchangeRate={defaultExchangeRate}
+          />
         </Card>
       )}
 
